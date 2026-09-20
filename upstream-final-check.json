@@ -1,0 +1,465 @@
+{
+  "checked_at": "2026-09-20T20:40:54.169288+00:00",
+  "sources_checked": 73,
+  "sources": [
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10141",
+      "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10198",
+      "head_sha": "35f3354ed122decab94b0507d6c633b45cd9d0a0",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10331",
+      "head_sha": "6872374822badc716a150e39385569f7b782618c",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10458",
+      "head_sha": "5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10462",
+      "head_sha": "c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10582",
+      "head_sha": "e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10713",
+      "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10807",
+      "head_sha": "eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+      "state": "closed",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10808",
+      "head_sha": "7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "state": "closed",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10810",
+      "head_sha": "88cdd1508ad0a031602e56ab814948e56445c1d6",
+      "state": "closed",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10877",
+      "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11017",
+      "head_sha": "a49800201b8d99aa55062338d29cceada694acc2",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11259",
+      "head_sha": "12a48bc62a321421bd0fa8fed0ef95f953f702c8",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11273",
+      "head_sha": "277ea6f6b4ad5555ddca88c8fec92098c684991a",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11381",
+      "head_sha": "24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11434",
+      "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11516",
+      "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11616",
+      "head_sha": "955fac3c60d3f2b37079a3730c25061ede28e79c",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11624",
+      "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11625",
+      "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11900",
+      "head_sha": "24417bf191e09fc4d672c74c34e184449e92aeda",
+      "state": "merged",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11901",
+      "head_sha": "8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "state": "merged",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11904",
+      "head_sha": "2f27ee35051e043f2dd46da0ce7c7e5450444fe3",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11952",
+      "head_sha": "6d88ae46fe0ac3d27ea2d66a0dfaea7fb066400b",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12007",
+      "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12067",
+      "head_sha": "8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12072",
+      "head_sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12074",
+      "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12076",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12090",
+      "head_sha": "40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12201",
+      "head_sha": "d4a213883c62234dee9317983bcb9951980b48df",
+      "state": "closed",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12210",
+      "head_sha": "45a478ad6712b2a436f880f5b0c3dbc28a386648",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12249",
+      "head_sha": "e1a95dfc6e4ec36aee1b428021d56c50eb5b30d5",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12286",
+      "head_sha": "81860f352c58b9576ef34b48a193c62102165ec0",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12314",
+      "head_sha": "84e001d85936f8f15b5a65bd41f90e4f8ca29984",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12328",
+      "head_sha": "33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12350",
+      "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12420",
+      "head_sha": "939ab0b65da61edeeb01bea9baf9f2f86acc837f",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12426",
+      "head_sha": "c4291018f3cf19b29dc553f8aeb560fa6b4508e2",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12435",
+      "head_sha": "e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12502",
+      "head_sha": "6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12614",
+      "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+      "state": "closed",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12616",
+      "head_sha": "aa4630f75ce5dea81a386ebe09c3fbda6967f40d",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12634",
+      "head_sha": "5b76c3a9778ee6b400db252acef12823b175439b",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12652",
+      "head_sha": "df15b9b14a36445c91c51339c43847a423f2feab",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12667",
+      "head_sha": "828ac78883f5ec1c53f695422af21b9d34a6d20a",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/6834",
+      "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/6921",
+      "head_sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7064",
+      "head_sha": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7140",
+      "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7146",
+      "head_sha": "ebd47f66314922cc4f2af64646d9c4480913d5be",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7487",
+      "head_sha": "eb8c83e8b5f7931e883adcada3f8eab38f650a93",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7671",
+      "head_sha": "d5493deb522c8288b4bad2566d195b57f655cfe5",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7950",
+      "head_sha": "c391c2ef85891cd628730ee674168476b15fd098",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/8285",
+      "head_sha": "4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9181",
+      "head_sha": "992c4b8ed6a1e46f34c66c3b6cec73f718bfe601",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9516",
+      "head_sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9692",
+      "head_sha": "7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9735",
+      "head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9880",
+      "head_sha": "2d49be5e65c514f029ba3a99b8ebaf9ec5da0147",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-iso/pull/182",
+      "head_sha": "b507a20b7e0406cd10779ca332105f9a89754731",
+      "state": "merged",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-iso/pull/183",
+      "head_sha": "f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-iso/pull/184",
+      "head_sha": "1daf1202d49147223341c8e88ed2cb5a65b75bed",
+      "state": "merged",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/152",
+      "head_sha": "67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/153",
+      "head_sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/155",
+      "head_sha": "bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+      "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/298",
+      "head_sha": "b6495c494e15bf3239a758422142c98d57549f4d",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/315",
+      "head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/445",
+      "head_sha": "b34de5c29ed8181ff362c866f47b79b405fedb9e",
+      "state": "merged",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/454",
+      "head_sha": "dee4caf7bcc3fdea467d277814c1aba31edd598b",
+      "state": "merged",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/sunoxen-lab/omarchy/pull/1",
+      "head_sha": "579cef09d0de94caf0d2ead147344483aed3f161",
+      "state": "open",
+      "changes": {}
+    },
+    {
+      "url": "https://github.com/leifliddy/macbook12-audio-driver/pull/60",
+      "head_sha": "c09495c66135e7c26dcd1faa9efa2666057eb3c3",
+      "state": "merged",
+      "changes": {}
+    }
+  ],
+  "source_changes": [],
+  "targets": {
+    "omacom/omarchy": {
+      "branch": "quattro",
+      "sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "expected_sha": "45748a2812f42e32f915b053caf4074e150e2048"
+    },
+    "omacom/omarchy-pkgs": {
+      "branch": "master",
+      "sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "expected_sha": "30e862935e6593545546a6dc8363bc80c34987a1"
+    },
+    "omacom/omarchy-iso": {
+      "branch": "quattro",
+      "sha": "7cfb7111a06873d61c45d37034577d4ba08d3f4f",
+      "expected_sha": "7cfb7111a06873d61c45d37034577d4ba08d3f4f"
+    }
+  },
+  "targets_unchanged": true,
+  "read_only": true,
+  "remote_writes": 0
+}

@@ -1,0 +1,1986 @@
+diff --git a/bin/omarchy-hyprland-monitor-clamshell b/bin/omarchy-hyprland-monitor-clamshell
+index f33f23af903..00cb122f48b 100755
+--- a/bin/omarchy-hyprland-monitor-clamshell
++++ b/bin/omarchy-hyprland-monitor-clamshell
+@@ -3,15 +3,55 @@
+ # omarchy:summary=Apply clamshell display state to Hyprland monitors
+ # omarchy:hidden=true
+ 
++# This command manages one thing: an overlay that disables the internal panel
++# while the lid is closed and an external monitor is active. The overlay is a
++# toggle file the config includes, so Hyprland reads it like the rest of the
++# config on reload, and taking it away is what re-enables the panel -- Hyprland
++# re-applies whatever the config says about it. Nothing here reads the config
++# or writes a monitor value: the compositor is the only reader of its own
++# config, and nothing overrides its answer two seconds later.
++#
++# Everything the command does is bounded, serialized, and either idempotent or
++# undone: see docs/clamshell.md for the invariant this is written to.
++
+ TOGGLES_DIR="$HOME/.local/state/omarchy/toggles/hypr"
+ CLAMSHELL_FLAG="$TOGGLES_DIR/internal-monitor-clamshell.lua"
+ MANUAL_DISABLE_FLAG="$TOGGLES_DIR/internal-monitor-disable.lua"
+-SCALE_STATE="$TOGGLES_DIR/internal-monitor-scale"
+-MONITOR_LUA="$HOME/.config/hypr/monitors.lua"
+-
+-INTERNAL=$(omarchy-hyprland-monitor-laptop)
+-
+-# INTERNAL is written into generated Lua and hyprctl eval/dispatch below, so a
++MIRROR_FLAG="$TOGGLES_DIR/internal-monitor-mirror.lua"
++LOCK="${XDG_RUNTIME_DIR:-/tmp}/omarchy-monitor-clamshell.lock"
++
++# Every invocation is serialized, blocking without a deadline so a lid event is
++# queued rather than dropped. A lock that cannot be taken is a run that must
++# not happen: nothing below may run unserialized. What bounds the wait is that
++# every call below that can reach Hyprland carries a timeout, so a hung
++# compositor cannot hold the lock. The timeout is a knob only so tests can
++# hang a stub cheaply.
++exec 9>"$LOCK" || exit 1
++flock 9 || exit 1
++
++# TERM at the deadline, KILL a second later: a callee that ignores TERM would
++# otherwise be waited on forever, holding the lock. The lock descriptor is not
++# lent to these bounded callees -- the only calls that can outlive the command
++# -- since timeout escalates only its direct child, and a descendant that
++# outlives it would otherwise keep holding fd 9 after this command has exited.
++bounded() {
++  timeout --kill-after=1 "${OMARCHY_HYPRCTL_TIMEOUT:-15}" "$@" 9>&-
++}
++
++# A predicate answers true, false, or unknown: exit 0, its contracted exit 1,
++# or a timeout and anything else. Unknown is never taken for false.
++tri() {
++  bounded "$@" >/dev/null 2>&1
++  case $? in
++    0) return 0 ;;
++    1) return 1 ;;
++    *) return 2 ;;
++  esac
++}
++
++INTERNAL=$(bounded omarchy-hyprland-monitor-laptop) || INTERNAL=""
++
++# INTERNAL is written into generated Lua and a hyprctl dispatch below, so a
+ # name that is not a plain connector string could execute on the next reload.
+ # Names come from hyprctl; a user-created headless output can carry anything.
+ if [[ -n $INTERNAL && ! $INTERNAL =~ ^[A-Za-z0-9._-]+$ ]]; then
+@@ -19,234 +59,177 @@ if [[ -n $INTERNAL && ! $INTERNAL =~ ^[A-Za-z0-9._-]+$ ]]; then
+   exit 1
+ fi
+ 
+-valid_scale() {
+-  [[ $1 =~ ^[0-9]+([.][0-9]+)?$ ]]
+-}
+-
+-scales_match() {
+-  local left="$1"
+-  local right="$2"
+-
+-  valid_scale "$left" && valid_scale "$right" || return 1
+-  awk -v left="$left" -v right="$right" 'BEGIN {
+-    diff = left - right
+-    if (diff < 0) diff = -diff
+-    exit(diff < 0.001 ? 0 : 1)
+-  }'
+-}
+-
+-lua_identifier() {
+-  [[ $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]
+-}
+-
+-# Value assigned by `local <name> = ...`, without its quotes or trailing comment.
+-# Only a lone scalar counts: an expression like `1080 / 720` must stay unresolved
+-# so the caller falls back rather than applying the first half of the sum.
+-lua_local_value() {
+-  local name="$1" value
+-  lua_identifier "$name" && [[ -f $MONITOR_LUA ]] || return 0
+-
+-  value=$(sed -nE 's/^[[:space:]]*local[[:space:]]+'"$name"'[[:space:]]*=[[:space:]]*("[^"]*"|[^"[:space:]]+)[[:space:]]*(--.*)?$/\1/p' "$MONITOR_LUA" | head -1)
+-  [[ $value == \"*\" ]] && value="${value:1:-1}"
+-  printf '%s\n' "$value"
+-}
+-
+-# A quoted capture is a Lua string and stands for itself; a bare word may instead
+-# name a local the rule refers to, as the shipped scale = omarchy_monitor_scale
+-# does. A bare word naming no local is left alone to fail validation.
+-lua_scalar() {
+-  local value="$1" resolved
++# A run killed harder than its own trap -- SIGKILL, which
++# omarchy-system-sleep-lock deals in -- can leave its temporary or backup file
++# behind. Neither is ever loaded (the toggles loader takes only *.lua), and
++# under the lock no live run owns one, so any found here is a killed run's
++# debris: swept before either hosted helper can end this run early. The
++# unsafe-name refusal above rightly comes first -- refuse before any effect.
++rm -f "$TOGGLES_DIR"/.internal-monitor-clamshell.* 2>/dev/null || true
++
++# Two recoveries this command hosts for the watcher: a manual disable or a
++# mirror left on after the external monitor went away. Each is entered only
++# when the toggle it exists to recover is present, since with it absent each
++# would be a no-op that still asks Hyprland several questions every poll. One
++# that fails or times out may have made half of its own transition, so the run
++# stops here rather than carry on over it. A helper killed between removing
++# its flag and its reload leaves the flag absent and the rule still held; the
++# repair below answers that where it strands the machine (no external
++# active), and with an external still up the rule stands until the next
++# transition or an unrelated reload -- the user has a display meanwhile.
++if [[ -f $MANUAL_DISABLE_FLAG ]]; then
++  bounded omarchy-hyprland-monitor-internal recover >/dev/null 2>&1 || exit 0
++fi
++if [[ -f $MIRROR_FLAG ]]; then
++  bounded omarchy-hyprland-monitor-internal-mirror recover >/dev/null 2>&1 || exit 0
++fi
+ 
+-  if [[ $value == \"*\" ]]; then
+-    printf '%s\n' "${value:1:-1}"
+-    return
++# Reading the prior state writes nothing. The backup that makes a rollback
++# exact is taken by the transition itself, right before it changes the file,
++# so a run that changes nothing creates nothing either.
++prior_exists=0
++[[ -f $CLAMSHELL_FLAG ]] && prior_exists=1
++backup=""
++trap '[[ -n $backup ]] && rm -f "$backup"' EXIT
++
++# The prior bytes, kept as a file: a shell variable would drop trailing
++# newlines, and a rollback puts back exactly what was there.
++keep_prior() {
++  (( prior_exists )) || return 0
++  backup=$(mktemp "$TOGGLES_DIR/.internal-monitor-clamshell.prior.XXXXXX") && cp -p "$CLAMSHELL_FLAG" "$backup"
++}
++
++# A uniquely named temporary file and a rename, so no reader sees a partial
++# overlay, no fixed path can be planted ahead of time, and a failure leaves
++# nothing behind. The rename names its target as a file, so a directory left
++# at the overlay's path fails the transition instead of collecting overlays.
++place_overlay() {
++  local tmp
++  tmp=$(mktemp "$TOGGLES_DIR/.internal-monitor-clamshell.XXXXXX") || return 1
++  if printf '%s\n' "$1" >"$tmp" && mv -fT "$tmp" "$CLAMSHELL_FLAG"; then
++    return 0
+   fi
+-
+-  resolved=$(lua_local_value "$value")
+-  printf '%s\n' "${resolved:-$value}"
+-}
+-
+-# The config with its comments cut away, so commented-out text can pose neither
+-# as a rule nor as one of its keys.
+-monitor_rules() {
+-  [[ -f $MONITOR_LUA ]] || return 0
+-
+-  sed -E -e 's/--\[\[[^]]*\]\]//g' -e 's/--.*$//' "$MONITOR_LUA"
+-}
+-
+-monitor_rule_regex() {
+-  printf '^[[:space:]]*hl\\.monitor\\(\\{.*output[[:space:]]*=[[:space:]]*"%s"' "$1"
+-}
+-
+-# A key is preceded by a table separator, so a longer key cannot stand in for it,
+-# and its value is the whole of what sits between the `=` and the next separator.
+-# Anything else is an expression this cannot evaluate.
+-configured_monitor_value() {
+-  local output="$1" key="$2" value
+-
+-  value=$(monitor_rules | sed -nE '/'"$(monitor_rule_regex "$output")"'/s/.*[{,;[:space:]]'"$key"'[[:space:]]*=[[:space:]]*("[^"]*"|[^,;}[:space:]]+)[[:space:]]*([,;}].*)?$/\1/p' | head -1)
+-  lua_scalar "$value"
+-}
+-
+-configured_internal_monitor_value() {
+-  [[ -n $INTERNAL ]] || return 0
+-
+-  configured_monitor_value "$INTERNAL" "$1"
+-}
+-
+-configured_monitor_scale() {
+-  local scale
+-  scale=$(configured_internal_monitor_value scale)
+-  # An internal rule that names a scale settles it, even when the name resolves
+-  # to nothing usable. Only a rule that names none at all defers to the catch-all,
+-  # which is the scale Omarchy has always applied for that config.
+-  [[ -n $scale ]] || scale=$(configured_monitor_value "" scale)
+-  # No rule carries a scale at all: fall back to Omarchy's own knob.
+-  [[ -n $scale ]] || scale=$(lua_local_value omarchy_monitor_scale)
+-
+-  printf '%s\n' "$scale"
+-}
+-
+-current_internal_scale() {
+-  [[ -n $INTERNAL ]] || return 0
+-  hyprctl monitors all -j | jq -r --arg internal "$INTERNAL" '.[] | select(.name == $internal and .disabled != true) | .scale' | head -1
+-}
+-
+-store_internal_scale() {
+-  local scale="$1"
+-  valid_scale "$scale" || return 0
+-
+-  mkdir -p "$TOGGLES_DIR"
+-  printf '%s\n' "$scale" >"$SCALE_STATE"
+-}
+-
+-remember_internal_scale() {
+-  local scale
+-  scale=$(current_internal_scale)
+-  store_internal_scale "$scale"
++  rm -f "$tmp"
++  return 1
+ }
+ 
+-# $1 is the configured scale when the caller has already read it, so one sync
+-# does not parse the config twice.
+-read_monitor_scale() {
+-  local scale
+-
+-  if (( $# )); then
+-    scale="$1"
++# The bytes that were there, by rename; never a freshly written overlay.
++restore_prior() {
++  if (( prior_exists )); then
++    mv -fT "$backup" "$CLAMSHELL_FLAG" && backup=""
+   else
+-    scale=$(configured_monitor_scale)
+-  fi
+-
+-  if valid_scale "$scale"; then
+-    echo "$scale"
+-    return
+-  fi
+-
+-  if [[ -f $SCALE_STATE ]]; then
+-    scale=$(<"$SCALE_STATE")
+-    if valid_scale "$scale"; then
+-      echo "$scale"
+-      return
+-    fi
++    rm -f "$CLAMSHELL_FLAG"
+   fi
+-
+-  echo 2
+ }
+ 
+-read_monitor_position() {
+-  local position
+-  position=$(configured_internal_monitor_value position)
+-  if [[ $position =~ ^[-[:alnum:]_.+]+$ ]]; then
+-    echo "$position"
+-    return
+-  fi
+-
+-  echo auto
++reload_hyprland() {
++  bounded hyprctl reload >/dev/null 2>&1
+ }
+ 
+-enable_internal_output() {
++# In clamshell the overlay is present and exact. Without a name there is
++# nothing to write; with the manual toggle on the panel is disabled already and
++# the overlay is left as it is. Otherwise the overlay is placed when absent or
++# different, followed by one reload, undone if the reload does not take.
++disable_internal() {
+   [[ -n $INTERNAL ]] || return 0
+-  local scale="${1:-}"
+-  local position
+-  [[ -n $scale ]] || scale=$(read_monitor_scale)
+-  position=$(read_monitor_position)
+-  hyprctl eval "hl.monitor({ output = \"$INTERNAL\", mode = \"preferred\", position = \"$position\", scale = $scale })" >/dev/null 2>&1 || true
+-}
++  [[ -f $MANUAL_DISABLE_FLAG ]] && return 0
+ 
+-sync_internal_scale() {
+-  [[ -n $INTERNAL ]] || return 0
+-  local configured_scale
+-  local desired_scale
+-  local active_scale
+-
+-  configured_scale=$(configured_monitor_scale)
+-  active_scale=$(current_internal_scale)
+-
+-  # A config without a usable number -- the default "auto", or an expression
+-  # only Hyprland's Lua can evaluate -- delegates the scale to the compositor,
+-  # so whatever it resolved for the enabled panel IS the configured scale.
+-  # There is no number to correct it toward: substituting one makes the scale
+-  # flap between that number and the compositor's own value on every idle-wake.
+-  # Only a panel that is off altogether still gets a hand below, from the
+-  # remembered scale.
+-  if ! valid_scale "$configured_scale" && valid_scale "$active_scale"; then
++  local overlay
++  overlay=$(printf 'hl.monitor({ output = "%s", disabled = true })' "$INTERNAL")
++  if (( prior_exists )) && [[ $(< "$CLAMSHELL_FLAG") == "$overlay" ]]; then
+     return 0
+   fi
+ 
+-  desired_scale=$(read_monitor_scale "$configured_scale")
+-  scales_match "$active_scale" "$desired_scale" && return 0
++  mkdir -p "$TOGGLES_DIR"
++  keep_prior || return 0
++  place_overlay "$overlay" || return 0
++  reload_hyprland || restore_prior
++}
++
++# What the compositor holds for the panel: 0 disabled, 1 enabled, 2 unknown
++# (a failed or timed-out query, no such output, or nothing recognizable --
++# the query's status is checked before its output is parsed, so a valid
++# answer followed by a failure is still an unknown). Never the config.
++panel_state() {
++  local answer held
++  if ! answer=$(bounded hyprctl monitors all -j 2>/dev/null); then
++    return 2
++  fi
++  if ! held=$(jq -r --arg name "$INTERNAL" '[.[] | select(.name == $name)] | first | .disabled' <<<"$answer" 2>/dev/null); then
++    return 2
++  fi
++  case $held in
++    true) return 0 ;;
++    false) return 1 ;;
++    *) return 2 ;;
++  esac
++}
++
++# A panel the compositor holds disabled while nothing on disk wants it off --
++# no overlay, no manual toggle -- and no external monitor active is a machine
++# with no usable display, which a helper killed between removing its flag and
++# its reload leaves behind. One reload lets the config answer again; a panel
++# that comes back is woken, one the config still reports disabled is the
++# config's own answer and is not. The compositor cannot say WHY a panel is
++# off, so that answer is not remembered: while the gate stays open a later
++# run reloads again -- one idempotent reload per reconciliation invocation: a
++# lid event is one, a monitor-change retry chain is up to four, and there is
++# no undocked poll to multiply it further -- and a reload that brings another
++# output up closes the gate instead. Any unknown, at either query, repairs
++# and wakes nothing.
++repair_disabled_panel() {
++  [[ -n $INTERNAL ]] || return 0
++  [[ -f $MANUAL_DISABLE_FLAG ]] && return 0
++  (( external == 1 )) || return 0
+ 
+-  enable_internal_output "$desired_scale"
+-}
++  panel_state
++  (( $? == 0 )) || return 0
+ 
+-dpms_internal() {
+-  local action="$1"
++  reload_hyprland || return 0
+ 
+-  [[ -n $INTERNAL ]] || return 0
+-  hyprctl dispatch "hl.dsp.dpms({ action = \"$action\", monitor = \"$INTERNAL\" })" >/dev/null 2>&1 || true
++  panel_state
++  (( $? == 1 )) || return 0
++  bounded hyprctl dispatch "hl.dsp.dpms({ action = \"enable\", monitor = \"$INTERNAL\" })" >/dev/null 2>&1 || true
+ }
+ 
++# Out of clamshell the overlay is absent, whoever it was for. Removing it is
++# followed by one reload, undone if the reload does not take; then the panel is
++# woken, unless there is no panel to name, or the manual toggle is on while an
++# external monitor is active or cannot be told to be. The wake is best-effort:
++# any key or pointer input re-lights the panel.
+ enable_internal() {
+-  local changed=0
+-
+-  if [[ -f $CLAMSHELL_FLAG ]]; then
+-    rm -f "$CLAMSHELL_FLAG"
+-    changed=1
+-  fi
+-
+-  if (( changed )); then
+-    hyprctl reload >/dev/null 2>&1 || true
++  if (( ! prior_exists )); then
++    repair_disabled_panel
++    return 0
+   fi
+ 
+-  [[ -f $MANUAL_DISABLE_FLAG ]] && omarchy-hyprland-monitor-external-active && return 0
+-  sync_internal_scale
+-
+-  if (( changed )); then
+-    dpms_internal enable
++  keep_prior || return 0
++  rm -f "$CLAMSHELL_FLAG" || return 0
++  if ! reload_hyprland; then
++    restore_prior
++    return 0
+   fi
+-}
+ 
+-disable_internal() {
+-  [[ -n $INTERNAL ]] || exit 0
+-  [[ -f $MANUAL_DISABLE_FLAG ]] && return 0
+-
+-  mkdir -p "$TOGGLES_DIR"
+-  remember_internal_scale
+-
+-  local config
+-  config=$(printf 'hl.monitor({ output = "%s", disabled = true })' "$INTERNAL")
+-
+-  if [[ ! -f $CLAMSHELL_FLAG ]] || [[ $(< "$CLAMSHELL_FLAG") != $config ]]; then
+-    printf '%s\n' "$config" >"$CLAMSHELL_FLAG"
+-    hyprctl reload >/dev/null 2>&1 || true
++  [[ -n $INTERNAL ]] || return 0
++  if [[ -f $MANUAL_DISABLE_FLAG ]]; then
++    tri omarchy-hyprland-monitor-external-active
++    (( $? != 1 )) && return 0
+   fi
++  bounded hyprctl dispatch "hl.dsp.dpms({ action = \"enable\", monitor = \"$INTERNAL\" })" >/dev/null 2>&1 || true
+ }
+ 
+-omarchy-hyprland-monitor-internal recover >/dev/null 2>&1 || true
+-omarchy-hyprland-monitor-internal-mirror recover >/dev/null 2>&1 || true
++# Clamshell is the lid closed while an external monitor is active: a
++# three-valued conjunction. One known false is a complete answer; both true is
++# clamshell; anything else is unknown, and an unknown changes nothing.
++tri omarchy-hw-clamshell
++lid=$?
++tri omarchy-hyprland-monitor-external-active
++external=$?
+ 
+-if omarchy-hw-clamshell && omarchy-hyprland-monitor-external-active; then
+-  disable_internal
+-else
++if (( lid == 1 || external == 1 )); then
+   enable_internal
++elif (( lid == 2 || external == 2 )); then
++  exit 0
++else
++  disable_internal
+ fi
+diff --git a/bin/omarchy-hyprland-monitor-external-active b/bin/omarchy-hyprland-monitor-external-active
+index 7fde41a50d4..80b62ec619c 100755
+--- a/bin/omarchy-hyprland-monitor-external-active
++++ b/bin/omarchy-hyprland-monitor-external-active
+@@ -3,4 +3,23 @@
+ # omarchy:summary=Returns true when Hyprland has an active external monitor
+ # omarchy:hidden=true
+ 
+-hyprctl monitors all -j | jq -e '.[] | select(.name | test("^(eDP|LVDS|DSI)-") | not) | select(.disabled == false)' >/dev/null 2>&1
++# A tri-state answer (docs/clamshell.md, P1): exit 0 when an enabled
++# non-internal output exists, the contracted exit 1 when the query succeeded
++# and none does, and exit 2 when the query itself failed. jq alone would
++# answer 4 for "no match" and for "no input" alike, and a consumer reading
++# this as a tri-state must never take a failed query for false.
++#
++# FALLBACK is Hyprland's own placeholder: an enabled headless output, under a
++# name the compositor reserves, used when no real output remains. It is not a
++# monitor: counting it would answer "external active" in exactly the recovery
++# states the monitor helpers exist for.
++if ! monitors=$(hyprctl monitors all -j); then
++  exit 2
++fi
++
++jq -e 'any(.[] | select(.name | test("^(eDP|LVDS|DSI)-") | not) | select(.name != "FALLBACK") | select(.disabled == false); true)' <<<"$monitors" >/dev/null 2>&1
++case $? in
++  0) exit 0 ;;
++  1) exit 1 ;;
++  *) exit 2 ;;
++esac
+diff --git a/bin/omarchy-hyprland-monitor-watch b/bin/omarchy-hyprland-monitor-watch
+index 33e8f2c5999..82713b368ee 100755
+--- a/bin/omarchy-hyprland-monitor-watch
++++ b/bin/omarchy-hyprland-monitor-watch
+@@ -3,14 +3,12 @@
+ # omarchy:summary=Watch Hyprland monitor events and recover monitor toggles when a monitor is removed
+ 
+ SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+-LOCK="${XDG_RUNTIME_DIR:-/tmp}/omarchy-monitor-clamshell.lock"
+ MODELESS_LOCK="${XDG_RUNTIME_DIR:-/tmp}/omarchy-monitor-modeless.lock"
+ 
++# The command serializes itself, waiting its turn rather than dropping a run:
++# a lid event that lands while the poll is inside it is queued, not lost.
+ sync_clamshell() {
+-  (
+-    flock -n 9 || exit 0
+-    omarchy-hyprland-monitor-clamshell
+-  ) 9>"$LOCK"
++  omarchy-hyprland-monitor-clamshell
+ }
+ 
+ sync_clamshell_after_monitor_change() {
+diff --git a/docs/clamshell.md b/docs/clamshell.md
+new file mode 100644
+index 00000000000..65e0e196052
+--- /dev/null
++++ b/docs/clamshell.md
+@@ -0,0 +1,66 @@
++# Clamshell display recovery
++
++Clamshell is a laptop with its lid closed and an external monitor active. Omarchy then disables the internal panel, and enables it again when the lid opens or the external monitor goes away. `bin/omarchy-hyprland-monitor-clamshell` does this; it is run by the lid switch bind in `default/hypr/bindings/utilities.lua`, by `omarchy-system-wake`, and by `omarchy-hyprland-monitor-watch` on every monitor add or remove (with retries at 1, 3 and 7 seconds) and every 2 seconds while docked.
++
++This document is the invariant that command is written to, the assumptions it makes about Hyprland, and how each is tested. A change to the command is checked against this document, not against the previous implementation.
++
++## The overlay
++
++The command manages one thing: an overlay, `~/.local/state/omarchy/toggles/hypr/internal-monitor-clamshell.lua`, holding one rule:
++
++```lua
++hl.monitor({ output = "eDP-1", disabled = true })
++```
++
++`default/hypr/toggles.lua` requires every `.lua` file in that directory, so the overlay is part of the config Hyprland reads on reload, alongside `~/.config/hypr/monitors.lua` and everything `hyprland.lua` reaches. Disabling the panel is placing the overlay and reloading. Enabling it is removing the overlay and reloading: Hyprland re-applies whatever the config says about the panel, at whatever scale, position and mode the user configured, wherever they configured it.
++
++Nothing else is written. Earlier versions also evaluated an explicit `hl.monitor(...)` for the panel after the reload, with a scale read out of `monitors.lua`, and so needed to read that file the way Hyprland does — an obligation no parser closes, since rules also come from `hyprland.lua`, from required files and from toggles. The compositor is the only reader of its own config, and nothing this command does overrides its answer.
++
++## The invariant
++
++- **I1 — authorship.** The only monitor property the command authors is the overlay above. It never authors geometry (scale, position, mode) and never authors `disabled = false`. The overlay is authored only for a known internal name that is safe to write into Lua and into a `hyprctl` argument (`[A-Za-z0-9._-]+`); an unsafe name is refused with exit 1 before any effect, and no overlay is ever authored for an empty name.
++
++- **I2 — the transition relation.** The inputs are the internal name (unsafe, unknown, or known), the clamshell condition, and the manual-disable toggle (`internal-monitor-disable.lua`). Each predicate — `omarchy-hw-clamshell`, `omarchy-hyprland-monitor-external-active` — is read as a tri-state: exit 0 is true, exit 1 is false, a timeout or any other status is unknown. Clamshell is their three-valued conjunction: false if either is false, true if both are true, unknown otherwise. An unknown is never taken for false. That reading is only as honest as the predicates' exits (P1): each must answer 0 for true, 1 for its known false, and anything else only when it does not know. `omarchy-hyprland-monitor-external-active` originally ended in `jq -e`, whose exit 4 for "no match" turned every undocked laptop's "no active external" into an unknown — suppressing the manual-toggle wake in production (measured); and it counted `FALLBACK`, the enabled placeholder output Hyprland uses under a reserved name when no real output remains, so the machines in exactly the states the recovery helpers exist for read as docked, deadening those helpers' own guards. It now distinguishes a failed query (unknown, exit 2) from a successful one finding no active external (the contracted exit 1), and never counts `FALLBACK` — deliberately restoring the helpers' stated semantics.
++
++  | internal name | clamshell | manual toggle | desired overlay | the run |
++  |---|---|---|---|---|
++  | unsafe | any | any | refuse | exit 1 before any effect, hosted helpers included |
++  | any | unknown | any | untouched | changes nothing |
++  | unknown | true | any | untouched | no name to author an overlay for |
++  | unknown | false | any | absent | an overlay does not outlive clamshell, whoever it was for; no wake, since there is no panel to name |
++  | known | true | on | untouched | the toggle disables the panel already |
++  | known | true | off | exactly the overlay | placed when absent or different |
++  | known | false | any | absent | removed when present, then the DPMS wake — unless the manual toggle is on and an external monitor is active or unknown to be |
++  | known | false | off | already absent | the repair check: a panel the compositor holds disabled while nothing on disk wants it off, with no external monitor active, gets one reload so the config answers again — a panel that comes back is woken; one the config still reports disabled is not. The compositor cannot say *why* a panel is off and that answer is not remembered, so while the gate stays open — the panel still config-disabled and still no real external active — a later run reloads again: one idempotent reload per reconciliation invocation — a lid event is one invocation, a monitor-change retry chain is up to four (immediately, then after 1, 3 and 7 s), and there is no undocked poll to multiply it further; a reload that brings another real output up closes the gate instead, and no further reload is spent. Any unknown at either step — a failed, hung or unreadable query included, even one that produced a valid answer first — an active or unknown external, or the manual toggle repairs and wakes nothing |
++
++  Idempotence is defined against this table: where the desired state is *untouched* or *refuse* a run performs no transition, and otherwise a run whose disk state already equals the desired state performs no write, no reload and no dispatch. A run that changes nothing creates nothing either, not even transiently. The one declared exception is conditional: where a config-disabled panel persists with no real external active, each reconciliation invocation spends one idempotent reload re-asking — a lid event is one invocation, a monitor-change retry chain up to four — and never a wake, and never a write (measured; there is no undocked poll to multiply it); if another real output comes up in that reload the gate closes for later runs, and if the panel comes back later runs do nothing.
++
++- **I3 — one attempt per transition, exact rollback, retry.** A transition is an atomic placement (a uniquely named temporary file in the same directory, then a rename) or removal of the overlay, followed by exactly one bounded `hyprctl reload`. A transition that cannot be made attempts no reload and leaves no debris. If the reload fails or times out, the prior state is put back exactly — whether the file existed, and its exact bytes, kept as a file copy since a shell variable drops trailing newlines — so the next run retries. Nothing is synthesized on rollback. A run killed harder than its own trap — SIGKILL, which `omarchy-system-sleep-lock` deals in — can leave its temporary or backup file behind; neither is ever loaded (the toggles loader takes only `*.lua`), and the next run that passes name validation sweeps them under the lock, before either hosted helper can end it early — the unsafe-name refusal rightly stays first.
++
++  One residual on this path is stated rather than closed: a run killed between placing the overlay and its reload leaves the desired bytes on disk with Hyprland never told, and later runs, seeing disk already as desired, do not reload — the panel stays lit behind the closed lid until the next lid open/close cycle or any reload from elsewhere. This shape predates this change (every prior version had it), is reachable under the same 0.4 s bound cited above, self-heals, and costs light rather than a display. The straightforward closure considered — asking the compositor on the disable path the way the repair does on the enable path — would put a `hyprctl monitors` query on every docked 2 s poll, and is declined for now; other designs exist, such as a durable pending-reload marker cleared after a successful reload, which would retry without the hot-path query at the price of another piece of transaction state and a possible harmless duplicate reload. None is taken up in this change.
++
++- **I4 — serialization without loss.** The command takes its own lock, `${XDG_RUNTIME_DIR:-/tmp}/omarchy-monitor-clamshell.lock`, blocking without a deadline, so a lid event queues rather than drops. A lock that cannot be taken — the lock file unopenable, or `flock` failing — is a run that must not happen: the command exits 1 before any lookup, helper or transition. Every call inside the lock that can reach Hyprland carries a timeout (`OMARCHY_HYPRCTL_TIMEOUT`, 15 s) that escalates from TERM to KILL, and the lock descriptor is not lent to its bounded callees — the only calls that can outlive the command; the plain file utilities are waited on and spawn nothing — since `timeout` escalates only its direct child, and a surviving descendant would otherwise keep the lock after the command exits: neither a hung compositor, a callee that ignores TERM, nor a callee's leftover descendant can hold the lock. The watcher calls the command plainly; it must not take the same lock around it, since the child would then wait on its parent.
++
++The DPMS wake on the enable side is best-effort and not retried: any key or pointer input re-lights the panel.
++
++## Hosted helpers
++
++Before the clamshell branch the command runs `omarchy-hyprland-monitor-internal recover` and `omarchy-hyprland-monitor-internal-mirror recover`, each only when the toggle it exists to recover (`internal-monitor-disable.lua`, `internal-monitor-mirror.lua`) is present. Each acts when its toggle is on and the predicate does not report an active external — the intended gate is *no active external*, and the truthiness residual below is how an unknown slips through it — and then turns the toggle off. A helper that fails or times out stops the run before the clamshell branch, since it may have made half of its own transition. What a killed helper can leave: `omarchy-hyprland-toggle … off` removes the flag and only then reloads, so a helper killed between the two — and `omarchy-system-sleep-lock` bounds this command hard enough to do that — leaves the flag absent and the disable rule still held by Hyprland. The enable path's repair check answers the case where that strands the machine: with no overlay, no manual toggle and no active external monitor, a panel the compositor reports disabled gets one reload, so the config governs again. That covers the disable toggle's residual only — the repair's gate opens on a compositor-disabled panel, and a killed mirror helper leaves no disabled panel, so its stale rule has no repair by construction and stands until an unrelated reload. One more residual of the helpers is stated here: both read the external predicate as plain truthiness, so the predicate's *unknown* (exit 2) lands there as if it were the contracted false — pre-existing, and unchanged by the predicate's new honesty, whose old exit 4 behaved the same way — meaning a transient query failure while an external is active can still remove the user's toggle. Reading those two commands through the tri-state is the pattern when this is taken up; it is out of this change's scope. With an external monitor active the user still has a display, and the stale rule stands until the next transition or an unrelated reload — that half stays a stated residual; transactional helper recovery is separate work. When a stale manual toggle and an overlay coexist, the helper's transition comes first, then the clamshell one: two reloads and two wakes in one locked run.
++
++## What is assumed of Hyprland
++
++- **A1.** `hyprctl reload` rebuilds the monitor rules from the config; rules do not accumulate across reloads.
++- **A2.** After a reload whose rules no longer disable a monitor, Hyprland enables it and applies the rule that governs it.
++- **A3.** A reload of an unchanged config leaves every output where it was. After the overlay's removal the fields the config determines — scale, mode, refresh rate, transform, and an explicit position — come back identical. An `auto` position is not a stored slot: Hyprland lays the enabled outputs out afresh on each reload, so a panel disabled out of the middle of an auto row comes back at its end — deterministically, and identically under the previous command and after a physical replug (measured on Hyprland 0.56.2).
++- **A4.** The overlay takes part in the config through `toggles.lua`.
++- **A5.** `hyprctl reload` exits non-zero when there is no compositor to reach, and the command's timeout bounds a hang; those are the failures rollback answers. A config Lua rejects still reloads with exit 0 — the error surfaces only in `hyprctl configerrors`, and the toggles directory loads independently of `monitors.lua`, so the overlay transition takes effect beside a broken user config (measured on Hyprland 0.56.2).
++- **A6.** A headless output can be created under a chosen name, so the internal-panel predicate — the first `eDP|LVDS|DSI` output in `hyprctl monitors all -j` — can be satisfied in a VM without such hardware.
++
++A real Hyprland bringing the panel back in a state that differs from the one it had before the disable is a finding against A2 or A3, and it reopens this document; it does not authorize writing a monitor value.
++
++## Tests
++
++- `test/shell.d/monitor-clamshell-test.sh` (`./test/shell`): T1 reads the command's text — no `hyprctl eval` or `keyword`, no `awk` or `lua`, no `monitors.lua`, a lock; P1 runs the real external-active predicate against a controlled `hyprctl` through its whole contract, `FALLBACK` rows included; T2 makes both transitions under configs any reader would answer differently and requires the same calls; T3 walks the table above from both starting states with every collaborator stubbed, including the 3×3 predicate matrix, byte-exact rollback, a read-only toggles directory, idempotent runs against a read-only directory, the lock (queueing, refusal, and a callee's surviving descendant), every call class hung in turn — TERM-ignoring callees included — and the repair row with each of its gates: the wake following only a panel that actually came back, the config-disabled state run twice to pin the declared reload-per-invocation trade, and a query that produces a valid answer and then hangs or fails treated as unknown at either step. In the acceptance VM the repair is reached last, by removing the test's headless external and disabling `Virtual-1` at runtime; the staged state holds Hyprland's reserved `FALLBACK` placeholder, which the predicate must not count, and the repair cases run through a forwarding `hyprctl` wrapper that logs each verb and execs the real binary, so the claimed effects — one real reload per gated run, a wake only for a panel that came back — are observed, not inferred.
++- `test/acceptance.d/clamshell-test.sh` (the disposable VM, run with `--sync-all`, see `agents/skills/acceptance-tests.md`): T4 checks A1–A6 against a real Hyprland with headless outputs standing in for the panel and the external monitor, the hardware predicates stubbed, and a corpus of `monitors.lua` shapes: each transition round-trips and the panel comes back as it was — every config-determined field exactly, an explicit position in place, an auto position as the deterministic fresh layout A3 describes.
++
++A finding that violates I1–I4 or A1–A6 is a defect. A finding about how Lua should be read is, by design, out of scope: the command reads no Lua.
+diff --git a/migrations/1787996352.sh b/migrations/1787996352.sh
+new file mode 100644
+index 00000000000..862fcbacf54
+--- /dev/null
++++ b/migrations/1787996352.sh
+@@ -0,0 +1,3 @@
++echo "Remove the internal monitor scale state the clamshell command no longer keeps"
++
++rm -f "$HOME/.local/state/omarchy/toggles/hypr/internal-monitor-scale"
+diff --git a/test/acceptance.d/clamshell-test.sh b/test/acceptance.d/clamshell-test.sh
+new file mode 100644
+index 00000000000..2126be21fc4
+--- /dev/null
++++ b/test/acceptance.d/clamshell-test.sh
+@@ -0,0 +1,394 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++# The clamshell command's assumptions about Hyprland (docs/clamshell.md, A1-A6),
++# checked against a real one. Two headless outputs stand in for the panel and
++# the external monitor; the two hardware predicates are stubbed, since a VM has
++# no lid; everything that reaches Hyprland is real. Each transition is made by
++# the real command, and the panel must come back as it was: every field the
++# config determines exactly, and an auto position as Hyprland's fresh, but
++# deterministic, layout of the enabled outputs.
++
++internal="eDP-1"
++external="HDMI-A-1"
++monitor_lua="$HOME/.config/hypr/monitors.lua"
++overlay="$HOME/.local/state/omarchy/toggles/hypr/internal-monitor-clamshell.lua"
++expected_overlay="hl.monitor({ output = \"$internal\", disabled = true })"
++
++work=$(mktemp -d)
++stub_bin="$work/bin"
++backup=""
++created=()
++watcher_paused=0
++
++# The lid reads a file the test flips; external monitors are always connected.
++mkdir -p "$stub_bin"
++printf '#!/bin/bash\n[[ $(< "%s/lid") == "closed" ]]\n' "$work" >"$stub_bin/omarchy-hw-laptop-closed"
++printf '#!/bin/bash\nexit 0\n' >"$stub_bin/omarchy-hw-external-monitors"
++chmod +x "$stub_bin"/*
++printf 'open' >"$work/lid"
++
++output_present() {
++  hyprctl monitors all -j | jq -e --arg name "$1" '.[] | select(.name == $name)' >/dev/null
++}
++
++panel() {
++  hyprctl monitors all -j | jq -c --arg name "$internal" '[.[] | select(.name == $name)] | first // empty'
++}
++
++panel_enabled() { [[ $(panel | jq -r '.disabled') == "false" ]]; }
++panel_disabled() { [[ $(panel | jq -r '.disabled') == "true" ]]; }
++panel_upright() { [[ $(panel | jq -r '.transform') == "0" ]]; }
++
++snapshot() {
++  panel | jq -c '{scale, x, y, width, height, refreshRate, transform, disabled}'
++}
++
++# An auto position is not a stored slot: Hyprland lays the enabled outputs out
++# afresh on every reload, so a panel disabled out of the middle of an auto row
++# comes back at its end — identically under the previous command, and after a
++# physical replug. For auto shapes the fields the config determines must come
++# back exactly and the arrangement must be deterministic; only an explicit
++# position must come back in place.
++snapshot_sans_position() {
++  panel | jq -c '{scale, width, height, refreshRate, transform, disabled}'
++}
++
++# Reload applies asynchronously: poll for the expected state, bounded.
++await() {
++  local attempt
++  for ((attempt = 0; attempt < 25; attempt++)); do
++    "$@" >/dev/null 2>&1 && return 0
++    sleep 0.2
++  done
++  return 1
++}
++
++set_lid() { printf '%s' "$1" >"$work/lid"; }
++
++run_command() {
++  PATH="$stub_bin:$PATH" omarchy-hyprland-monitor-clamshell
++}
++
++apply_config() {
++  cat >"$monitor_lua"
++  hyprctl reload >/dev/null
++}
++
++cleanup() {
++  trap - EXIT
++  if [[ -n $backup ]]; then
++    cp "$backup" "$monitor_lua"
++  elif [[ -e $work/config-written ]]; then
++    rm -f "$monitor_lua"
++  fi
++  rm -f "$overlay"
++  hyprctl reload >/dev/null 2>&1 || true
++  if [[ -e $work/config-written ]]; then
++    await output_present "$internal" || true
++  fi
++  local name
++  for name in "${created[@]}"; do
++    hyprctl output remove "$name" >/dev/null 2>&1 || true
++  done
++  if (( watcher_paused )); then
++    pkill -CONT -f omarchy-hyprland-monitor-watch >/dev/null 2>&1 || true
++  fi
++  rm -rf "$work"
++}
++trap cleanup EXIT
++
++! omarchy-hw-laptop || fail "the clamshell acceptance test runs on a machine without a lid"
++
++# The watcher runs the same command on every monitor event with the real lid
++# predicate, which in a VM answers open; disabling the panel is such an event.
++# It stands still while the test flips the stubbed lid.
++if pkill -STOP -f omarchy-hyprland-monitor-watch >/dev/null 2>&1; then
++  watcher_paused=1
++fi
++
++# A6: outputs under chosen names.
++for name in "$internal" "$external"; do
++  if ! output_present "$name"; then
++    hyprctl output create headless "$name" >/dev/null || fail "A6: a headless output can be created as $name"
++    created+=("$name")
++  fi
++done
++await output_present "$internal" || fail "A6: a headless output can be created as $internal"
++[[ $(omarchy-hyprland-monitor-laptop) == "$internal" ]] || fail "A6: the internal-panel predicate answers $internal" "$(omarchy-hyprland-monitor-laptop)"
++omarchy-hyprland-monitor-external-active || fail "A6: an external output is active"
++pass "A6: headless outputs stand in for the panel and the external monitor"
++
++if [[ -e $monitor_lua ]]; then
++  backup="$work/monitors.lua.prior"
++  cp "$monitor_lua" "$backup"
++fi
++: >"$work/config-written"
++
++description=$(panel | jq -r '.description // ""')
++catch_all='hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })'
++
++# Procedure A: for a config that leaves the panel enabled, disable it through
++# the command, enable it through the command, and compare the panel field for
++# field with what it was. These test Hyprland's reading of each shape, not ours.
++round_trip() {
++  local case="$1" positions="${2:-auto}" before after second
++  apply_config
++  await panel_enabled || fail "A2 ($case): the panel is enabled under the config" "$(panel)"
++  sleep 1
++  before=$(snapshot)
++  screenshot "success-clamshell-$case-baseline"
++
++  set_lid closed
++  run_command || fail "A2 ($case): the command runs into clamshell"
++  await panel_disabled || fail "A2 ($case): the overlay disables the panel" "$(panel)"
++  [[ -f $overlay && $(< "$overlay") == "$expected_overlay" ]] || fail "I1 ($case): the overlay is exactly the disable rule" "$(cat "$overlay" 2>/dev/null)"
++  screenshot "success-clamshell-$case-clamshell"
++
++  set_lid open
++  run_command || fail "A2 ($case): the command runs out of clamshell"
++  await panel_enabled || fail "A2 ($case): a reload without the overlay enables the panel" "$(panel)"
++  [[ ! -e $overlay ]] || fail "I2 ($case): the overlay is gone out of clamshell"
++  sleep 1
++  after=$(snapshot)
++  if [[ $positions == exact ]]; then
++    [[ $after == "$before" ]] || fail "A3 ($case): the panel comes back as it was" "before: $before
++after:  $after"
++  else
++    [[ $(jq -c 'del(.x, .y)' <<<"$after") == $(jq -c 'del(.x, .y)' <<<"$before") ]] || fail "A3 ($case): scale, mode, refresh and transform come back as they were" "before: $before
++after:  $after"
++    set_lid closed
++    run_command || fail "A3 ($case): a second cycle enters clamshell"
++    await panel_disabled || fail "A3 ($case): a second cycle disables the panel" "$(panel)"
++    set_lid open
++    run_command || fail "A3 ($case): a second cycle leaves clamshell"
++    await panel_enabled || fail "A3 ($case): a second cycle enables the panel" "$(panel)"
++    sleep 1
++    second=$(snapshot)
++    [[ $second == "$after" ]] || fail "A3 ($case): a second cycle reproduces the same arrangement" "first:  $after
++second: $second"
++  fi
++  screenshot "success-clamshell-$case-restored"
++  pass "A2, A3 ($case): the panel round-trips and comes back as it was: $after"
++}
++
++round_trip catch-all <<LUA
++$catch_all
++LUA
++
++round_trip explicit-scale <<LUA
++hl.monitor({ output = "$internal", mode = "preferred", position = "auto", scale = 1.5 })
++$catch_all
++LUA
++
++round_trip multiline <<LUA
++hl.monitor({
++  output = "$internal",
++  mode = "preferred",
++  position = "auto",
++  scale = 1.25,
++})
++$catch_all
++LUA
++
++round_trip local-key <<LUA
++local panel = "$internal"
++local panel_scale = 1.25
++hl.monitor({ output = panel, mode = "preferred", position = "auto", scale = panel_scale })
++$catch_all
++LUA
++
++round_trip position exact <<LUA
++hl.monitor({ output = "$internal", mode = "preferred", position = "100x50", scale = 1 })
++hl.monitor({ output = "$external", mode = "preferred", position = "2100x0", scale = 1 })
++LUA
++
++round_trip mode <<LUA
++hl.monitor({ output = "$internal", mode = "1280x720@60", position = "auto", scale = 1 })
++$catch_all
++LUA
++
++round_trip one-line <<LUA
++hl.monitor({ output = "$internal", scale = 1.25 }) hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
++LUA
++
++round_trip split-call <<LUA
++hl
++  .monitor({ output = "$internal", scale = 1.25 })
++$catch_all
++LUA
++
++if [[ -n $description ]]; then
++  round_trip description <<LUA
++hl.monitor({ output = "desc:$description", mode = "preferred", position = "auto", scale = 1.25 })
++$catch_all
++LUA
++else
++  pass "description: skipped, the headless output reports no description"
++fi
++
++round_trip transform <<LUA
++hl.monitor({ output = "$internal", mode = "preferred", position = "auto", scale = 1, transform = 1 })
++$catch_all
++LUA
++
++# A1: the rotated rule does not survive into a config without it.
++apply_config <<LUA
++$catch_all
++LUA
++await panel_upright || fail "A1: rules do not accumulate across reloads" "$(panel)"
++pass "A1: a reload rebuilds the rules; the transform of the previous config is gone"
++
++# Procedure B: the user's own rule disables the panel. The overlay is placed in
++# clamshell and removed out of it, and the user's rule governs throughout.
++apply_config <<LUA
++hl.monitor({ output = "$internal", disabled = true })
++$catch_all
++LUA
++await panel_disabled || fail "B: the user's rule disables the panel" "$(panel)"
++before=$(snapshot)
++set_lid closed
++run_command || fail "B: the command runs into clamshell"
++[[ -f $overlay && $(< "$overlay") == "$expected_overlay" ]] || fail "B: the overlay is placed over the user's rule"
++sleep 2
++panel_disabled || fail "B: the panel stays disabled in clamshell" "$(panel)"
++set_lid open
++run_command || fail "B: the command runs out of clamshell"
++[[ ! -e $overlay ]] || fail "B: the overlay is removed out of clamshell"
++sleep 2
++panel_disabled || fail "B: the user's rule keeps the panel disabled out of clamshell" "$(panel)"
++[[ $(snapshot) == "$before" ]] || fail "B: the disabled panel is as it was" "before: $before
++after:  $(snapshot)"
++screenshot "success-clamshell-user-disabled"
++pass "B: a panel the user disabled stays disabled through clamshell and out of it"
++
++# A5, as measured: hyprctl reload exits 0 even when Lua rejects monitors.lua —
++# the error surfaces only in configerrors, and the toggles directory still
++# loads, so the overlay transition takes effect beside the broken config.
++# Rollback under I3 therefore fires on an unreachable or hung reload, not on a
++# Lua error in the user's config. Asserted so a Hyprland that starts failing
++# the reload instead shows up here — and the transition half is asserted too:
++# both command-driven transitions are made under the rejected config.
++apply_config <<LUA
++$catch_all
++LUA
++await panel_enabled || fail "A5: the panel is enabled before the config breaks" "$(panel)"
++printf 'local x = (\n' >"$monitor_lua"
++status=0
++hyprctl reload >/dev/null 2>&1 || status=$?
++errors=$(hyprctl configerrors 2>/dev/null || true)
++(( status == 0 )) || fail "A5: hyprctl reload exits 0 on a config Hyprland rejects" "exit $status"
++[[ $errors == *monitors.lua* ]] || fail "A5: configerrors names the rejected config" "$errors"
++set_lid closed
++run_command || fail "A5: the command runs into clamshell beside the rejected config"
++await panel_disabled || fail "A5: the overlay still disables the panel beside the rejected config" "$(panel)"
++[[ -f $overlay && $(< "$overlay") == "$expected_overlay" ]] || fail "A5: the overlay is exact beside the rejected config" "$(cat "$overlay" 2>/dev/null)"
++set_lid open
++run_command || fail "A5: the command runs out of clamshell beside the rejected config"
++await panel_enabled || fail "A5: removing the overlay still enables the panel beside the rejected config" "$(panel)"
++[[ ! -e $overlay ]] || fail "A5: the overlay is gone beside the rejected config"
++pass "A5: a rejected config reloads 'ok' with the error in configerrors, and the overlay transitions still apply beside it"
++
++# The repair path, last so every earlier case keeps the normal topology.
++# Every non-internal output is made inactive: the test's own HDMI-A-1 removed,
++# the VM's Virtual-1 -- removable by nothing -- disabled at runtime with
++# hyprctl eval (test scaffolding, never the command). Hyprland then runs its
++# reserved FALLBACK placeholder, which the predicate must not count -- part of
++# the case. From here the command runs through a forwarding hyprctl wrapper
++# that logs each verb and execs the real binary, so the claimed effects --
++# exactly one real reload per gated run, a wake only when the panel came back
++# -- are observed, not inferred; Hyprland-facing behavior stays real.
++hyprctl_log="$work/hyprctl.log"
++cat >"$stub_bin/hyprctl" <<SH
++#!/bin/bash
++printf '%s\n' "\$1" >>"$hyprctl_log"
++exec $(command -v hyprctl) "\$@"
++SH
++chmod +x "$stub_bin/hyprctl"
++real_calls() { grep -c "^$1\$" "$hyprctl_log" || true; }
++no_active_external() {
++  local status=0
++  PATH="$stub_bin:$PATH" omarchy-hyprland-monitor-external-active >/dev/null 2>&1 || status=$?
++  (( status == 1 ))
++}
++virtual_disabled() { [[ $(hyprctl monitors all -j | jq -r '[.[] | select(.name == "Virtual-1")] | first | .disabled') == "true" ]]; }
++# A strict enabled assertion: an absent output or an unreadable answer must
++# fail the case, not pass as "not disabled".
++virtual_enabled() { [[ $(hyprctl monitors all -j | jq -r '[.[] | select(.name == "Virtual-1")] | first | .disabled') == "false" ]]; }
++# The placeholder itself, asserted rather than assumed: without this the
++# predicate answering false below reads the same whether FALLBACK is there or
++# Hyprland stopped making one.
++fallback_enabled() { [[ $(hyprctl monitors all -j | jq -r '[.[] | select(.name == "FALLBACK")] | first | .disabled') == "false" ]]; }
++eval_disable() { hyprctl eval "hl.monitor({ output = \"$1\", disabled = true })" >/dev/null 2>&1; }
++
++apply_config <<LUA
++$catch_all
++LUA
++await panel_enabled || fail "P1 repair: the panel is enabled at the start" "$(panel)"
++hyprctl output remove "$external" >/dev/null 2>&1 || true
++eval_disable Virtual-1
++await virtual_disabled || fail "P1 repair: Virtual-1 can be disabled at runtime" "$(hyprctl monitors all -j | jq -c '[.[] | {name, disabled}]')"
++no_active_external || fail "P1 repair: with no enabled non-internal output, the predicate answers the contracted false" "exit was not 1"
++
++# The stranded state: the compositor holds the panel disabled, disk is empty.
++# Hyprland's enabled FALLBACK placeholder is present; the predicate is
++# asserted again against it.
++eval_disable "$internal"
++await panel_disabled || fail "P1 repair: the stranded state can be staged" "$(panel)"
++await fallback_enabled || fail "P1 repair: Hyprland runs its enabled FALLBACK placeholder once no real output is left" "$(hyprctl monitors all -j | jq -c '[.[] | {name, disabled}]')"
++no_active_external || fail "P1 repair: the FALLBACK placeholder is not an active external" "$(hyprctl monitors all -j | jq -c '[.[] | {name, disabled}]')"
++rm -f "$overlay"
++set_lid open
++: >"$hyprctl_log"
++run_command || fail "P1 repair: the command runs on the stranded state"
++await panel_enabled || fail "P1 repair: the repair enables a stranded panel through a real reload" "$(panel)"
++(( $(real_calls reload) == 1 && $(real_calls dispatch) == 1 )) || fail "P1 repair: exactly one real reload and one wake" "$(cat "$hyprctl_log")"
++pass "P1 repair: a stranded panel with no active external is repaired by the real command -- one reload, one wake, observed"
++
++# The conditional reload-per-invocation exception, pinned for real: a config
++# disabling the panel and Virtual-1 stages the state with one reload -- both
++# disabled, FALLBACK up -- and each of two runs provably enters the gate,
++# spends exactly one observed reload, and never wakes. The repair's reload
++# preserves the topology, so the second round is a genuine re-entry. Valid
++# only on a fresh compositor session, which every harness run provides.
++apply_config <<LUA
++hl.monitor({ output = "$internal", disabled = true })
++hl.monitor({ output = "Virtual-1", disabled = true })
++$catch_all
++LUA
++await panel_disabled || fail "P1 repair (two-run): the config disables the panel" "$(panel)"
++await virtual_disabled || fail "P1 repair (two-run): the config disables Virtual-1 too" "$(hyprctl monitors all -j | jq -c '[.[] | {name, disabled}]')"
++for round in 1 2; do
++  no_active_external || fail "P1 repair (two-run): the gate is provably open before run $round" "exit was not 1"
++  : >"$hyprctl_log"
++  run_command || fail "P1 repair (two-run): run $round completes"
++  sleep 2
++  panel_disabled || fail "P1 repair (two-run): the panel stays disabled after run $round" "$(panel)"
++  (( $(real_calls reload) == 1 && $(real_calls dispatch) == 0 )) || fail "P1 repair (two-run): run $round spends exactly one reload and no wake" "$(cat "$hyprctl_log")"
++done
++pass "P1 repair: a config-disabled panel enters the gate on both runs, spends one observed reload each, and is never woken"
++
++# The gate-closure variant, once: the config disables only the panel,
++# Virtual-1 is eval-disabled so FALLBACK opens the gate; the repair's reload
++# clears the eval, Virtual-1 returns, the config keeps the panel disabled --
++# no wake, observed -- and the gate honestly closes.
++apply_config <<LUA
++hl.monitor({ output = "$internal", disabled = true })
++$catch_all
++LUA
++await panel_disabled || fail "P1 repair (gate-closure): the config disables the panel" "$(panel)"
++eval_disable Virtual-1
++await virtual_disabled || fail "P1 repair (gate-closure): Virtual-1 can be disabled at runtime" "$(hyprctl monitors all -j | jq -c '[.[] | {name, disabled}]')"
++no_active_external || fail "P1 repair (gate-closure): the repair gate is provably open" "exit was not 1"
++: >"$hyprctl_log"
++run_command || fail "P1 repair (gate-closure): the run completes"
++await virtual_enabled || fail "P1 repair (gate-closure): the repair's reload brings Virtual-1 back" "$(hyprctl monitors all -j | jq -c '[.[] | {name, disabled}]')"
++sleep 2
++panel_disabled || fail "P1 repair (gate-closure): the config still governs the panel through the repair's reload" "$(panel)"
++(( $(real_calls reload) == 1 && $(real_calls dispatch) == 0 )) || fail "P1 repair (gate-closure): one reload, no wake, observed" "$(cat "$hyprctl_log")"
++PATH="$stub_bin:$PATH" omarchy-hyprland-monitor-external-active >/dev/null 2>&1 || fail "P1 repair (gate-closure): the gate closes once a real output is back"
++pass "P1 repair: a config-disabled panel is never woken; the reload restores the other output and closes the gate"
++screenshot "success-clamshell-repair"
+diff --git a/test/shell.d/monitor-clamshell-scale-test.sh b/test/shell.d/monitor-clamshell-scale-test.sh
+deleted file mode 100644
+index 1ba617cbe29..00000000000
+--- a/test/shell.d/monitor-clamshell-scale-test.sh
++++ /dev/null
+@@ -1,413 +0,0 @@
+-#!/bin/bash
+-
+-set -euo pipefail
+-
+-source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
+-
+-test_tmp=$(mktemp -d)
+-trap 'rm -rf "$test_tmp"' EXIT
+-
+-stub_bin="$test_tmp/bin"
+-home_dir="$test_tmp/home"
+-monitor_lua="$home_dir/.config/hypr/monitors.lua"
+-eval_log="$test_tmp/hyprctl-eval.log"
+-state_dir="$home_dir/.local/state/omarchy/toggles/hypr"
+-scale_state="$state_dir/internal-monitor-scale"
+-
+-mkdir -p "$stub_bin" "$home_dir/.config/hypr"
+-
+-cat >"$stub_bin/hyprctl" <<'SH'
+-#!/bin/bash
+-
+-if [[ $1 == "monitors" && $2 == "all" && $3 == "-j" ]]; then
+-  if [[ ${OMARCHY_TEST_INTERNAL_DISABLED:-false} == "true" ]]; then
+-    printf '[{"name":"eDP-1","disabled":true,"scale":null}]'
+-  else
+-    printf '[{"name":"eDP-1","disabled":false,"scale":%s}]' "${OMARCHY_TEST_INTERNAL_SCALE:-2}"
+-  fi
+-elif [[ $1 == "eval" ]]; then
+-  printf '%s\n' "$2" >>"$OMARCHY_TEST_HYPRCTL_EVAL_LOG"
+-elif [[ $1 == "reload" ]]; then
+-  printf 'reload\n' >>"$OMARCHY_TEST_HYPRCTL_EVAL_LOG"
+-elif [[ $1 == "dispatch" ]]; then
+-  printf 'dispatch %s\n' "$2" >>"$OMARCHY_TEST_HYPRCTL_EVAL_LOG"
+-else
+-  exit 1
+-fi
+-SH
+-
+-cat >"$stub_bin/omarchy-hyprland-monitor-internal" <<'SH'
+-#!/bin/bash
+-exit 0
+-SH
+-
+-cat >"$stub_bin/omarchy-hyprland-monitor-internal-mirror" <<'SH'
+-#!/bin/bash
+-exit 0
+-SH
+-
+-cat >"$stub_bin/omarchy-hyprland-monitor-laptop" <<'SH'
+-#!/bin/bash
+-echo eDP-1
+-SH
+-
+-cat >"$stub_bin/omarchy-hyprland-monitor-external-active" <<'SH'
+-#!/bin/bash
+-[[ ${OMARCHY_TEST_EXTERNAL_ACTIVE:-false} == "true" ]]
+-SH
+-
+-cat >"$stub_bin/omarchy-hw-clamshell" <<'SH'
+-#!/bin/bash
+-[[ ${OMARCHY_TEST_CLAMSHELL:-false} == "true" ]]
+-SH
+-
+-chmod +x "$stub_bin"/*
+-
+-write_auto_monitor_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_gdk_scale = 2
+-local omarchy_monitor_scale = "auto"
+-LUA
+-}
+-
+-# The shipped default's own shape: the catch-all rule hands the panel a
+-# bare-word reference to the "auto" local.
+-write_default_auto_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_gdk_scale = 2
+-local omarchy_monitor_scale = "auto"
+-
+-hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
+-LUA
+-}
+-
+-write_internal_monitor_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "0x0", scale = 1.25 })
+-hl.monitor({ output = "", mode = "preferred", position = "auto-right", scale = 1 })
+-LUA
+-}
+-
+-# A specific-output rule that references the omarchy_monitor_scale variable
+-# (the default template's pattern) instead of a literal value. The variable
+-# must be resolved, not captured as the literal string "omarchy_monitor_scale".
+-write_internal_monitor_var_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_gdk_scale = 1.5
+-local omarchy_monitor_scale = 1.5
+-hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
+-LUA
+-}
+-
+-# An explicit non-numeric scale on the internal rule, alongside an unrelated
+-# omarchy_monitor_scale local that must not be substituted for it.
+-write_internal_monitor_auto_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_monitor_scale = 2
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "auto" })
+-LUA
+-}
+-
+-# The internal rule names a local that does not exist. The catch-all rule below
+-# it never applies to an output that has its own rule, so it must not be read.
+-write_internal_monitor_unresolvable_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = my_scale })
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+-LUA
+-}
+-
+-# The shipped default: no rule for the internal panel, and the catch-all rule
+-# references the omarchy_monitor_scale local. Quoted here, and commented below.
+-write_catch_all_var_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_monitor_scale = "1.5"
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
+-LUA
+-}
+-
+-write_commented_catch_all_var_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_monitor_scale = 1.25 -- HiDPI panel
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
+-LUA
+-}
+-
+-# A position that references a local, the same pattern the scale key allows.
+-write_internal_monitor_position_var_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_monitor_position = "0x0"
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = omarchy_monitor_position, scale = 1.25 })
+-LUA
+-}
+-
+-# An internal rule that names no scale at all, so the catch-all supplies one.
+-write_internal_monitor_scaleless_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", transform = 1 })
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+-LUA
+-}
+-
+-# A local holding an expression rather than a scalar. Half of it is not a scale.
+-write_expression_scale_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local omarchy_monitor_scale = 3 / 2
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = omarchy_monitor_scale })
+-LUA
+-}
+-
+-# A local that happens to be named after a quoted scale value. The quotes make
+-# the rule's "auto" a string, so the local must not be substituted for it.
+-write_shadowed_auto_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-local auto = 1.5
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "auto" })
+-LUA
+-}
+-
+-# An expression written straight into the rule rather than into a local.
+-write_expression_rule_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 3 / 2 })
+-LUA
+-}
+-
+-# Commented-out text after a rule is not a rule, and not one of its keys either.
+-write_commented_rule_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "DP-1", mode = "preferred", position = "auto", scale = 1 }) -- output = "eDP-1"
+-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.5 })
+-LUA
+-}
+-
+-write_commented_internal_rule_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = 1.25 }) -- scale = 3
+-LUA
+-}
+-
+-# A nested table before the keys, and semicolons for separators. Both are Lua a
+-# user can reasonably write, and neither ends the rule.
+-write_nested_table_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1", reserved_area = { top = 24 }, position = "0x0", scale = 1.25 })
+-LUA
+-}
+-
+-write_block_comment_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1", --[[ internal panel ]] position = "0x0", scale = 1.25 })
+-LUA
+-}
+-
+-write_semicolon_config() {
+-  cat >"$monitor_lua" <<'LUA'
+-hl.monitor({ output = "eDP-1"; position = "0x0"; scale = 1.25; transform = 1 })
+-LUA
+-}
+-
+-remember_scale() {
+-  mkdir -p "$state_dir"
+-  printf '%s\n' "$1" >"$scale_state"
+-}
+-
+-run_clamshell() {
+-  HOME="$home_dir" \
+-    PATH="$stub_bin:$PATH" \
+-    OMARCHY_TEST_HYPRCTL_EVAL_LOG="$eval_log" \
+-    OMARCHY_TEST_INTERNAL_SCALE="${OMARCHY_TEST_INTERNAL_SCALE:-2}" \
+-    OMARCHY_TEST_INTERNAL_DISABLED="${OMARCHY_TEST_INTERNAL_DISABLED:-false}" \
+-    OMARCHY_TEST_EXTERNAL_ACTIVE="${OMARCHY_TEST_EXTERNAL_ACTIVE:-false}" \
+-    OMARCHY_TEST_CLAMSHELL="${OMARCHY_TEST_CLAMSHELL:-false}" \
+-    "$ROOT/bin/omarchy-hyprland-monitor-clamshell"
+-}
+-
+-# Regression (#7265, #7301): with scale = "auto" the compositor's resolution of
+-# it IS the configured scale, not a transient to correct. Forcing a number here
+-# made the scale flap: every idle-wake applied the fallback 2, every config
+-# reload resolved auto back to the panel's own value.
+-write_auto_monitor_config
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=3 run_clamshell
+-! grep -F 'scale = ' "$eval_log" >/dev/null || fail "clamshell recovery leaves an auto-scaled panel alone"
+-[[ ! -f $scale_state ]] || fail "clamshell recovery does not remember transient scale"
+-pass "clamshell recovery leaves an auto-scaled panel alone"
+-
+-# The same delegation through the shipped default config, where "auto" reaches
+-# the panel via the catch-all rule's bare-word reference to the local.
+-write_default_auto_config
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=3 run_clamshell
+-! grep -F 'scale = ' "$eval_log" >/dev/null || fail "clamshell recovery leaves the shipped auto default alone"
+-pass "clamshell recovery leaves the shipped auto default alone"
+-
+-# A numeric config keeps both sync behaviors: a matching active scale is not
+-# reapplied, and a drifted one is corrected back to the configured value.
+-write_internal_monitor_config
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=1.25 run_clamshell
+-! grep -F 'scale = ' "$eval_log" >/dev/null || fail "clamshell recovery does not reapply matching scale"
+-pass "clamshell recovery avoids redundant scale apply"
+-
+-write_internal_monitor_config
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=3 run_clamshell
+-grep -F 'scale = 1.25' "$eval_log" >/dev/null || fail "clamshell recovery corrects a drifted numeric scale"
+-pass "clamshell recovery corrects a drifted numeric scale"
+-
+-write_auto_monitor_config
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=1.6 OMARCHY_TEST_EXTERNAL_ACTIVE=true OMARCHY_TEST_CLAMSHELL=true run_clamshell
+-[[ -f $scale_state ]] || fail "clamshell disable remembers internal scale"
+-[[ $(<"$scale_state") == "1.6" ]] || fail "clamshell disable remembers internal scale value"
+-pass "clamshell disable remembers internal scale"
+-
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.6' "$eval_log" >/dev/null || fail "clamshell recovery uses remembered internal scale"
+-! grep -F 'scale = "auto"' "$eval_log" >/dev/null || fail "clamshell recovery avoids auto after disabled internal display"
+-pass "clamshell recovery uses remembered internal scale"
+-
+-# Recovery of a panel that is off, under an auto config with nothing
+-# remembered, still needs a number: the historical default 2.
+-write_auto_monitor_config
+-rm -f "$scale_state"
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 2' "$eval_log" >/dev/null || fail "clamshell recovery falls back to the default scale"
+-pass "clamshell recovery falls back to the default scale"
+-
+-write_internal_monitor_config
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'position = "0x0"' "$eval_log" >/dev/null || fail "clamshell recovery uses configured internal position"
+-grep -F 'scale = 1.25' "$eval_log" >/dev/null || fail "clamshell recovery uses configured internal scale"
+-pass "clamshell recovery uses configured internal monitor rule"
+-
+-# Regression: specific-output rule referencing the omarchy_monitor_scale
+-# variable must resolve to the variable's value, not fall back to the default.
+-write_internal_monitor_var_config
+-rm -f "$scale_state"
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.5' "$eval_log" >/dev/null || fail "clamshell recovery resolves omarchy_monitor_scale variable reference"
+-pass "clamshell recovery resolves omarchy_monitor_scale variable reference"
+-
+-# An explicit "auto" on the internal rule is a value, not a variable reference,
+-# so it must not pick up an unrelated omarchy_monitor_scale local.
+-write_internal_monitor_auto_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.75' "$eval_log" >/dev/null || fail "clamshell recovery keeps auto scale off the omarchy_monitor_scale local"
+-pass "clamshell recovery keeps auto scale off the omarchy_monitor_scale local"
+-
+-# The catch-all rule does not apply to an output that has its own rule.
+-write_internal_monitor_unresolvable_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.75' "$eval_log" >/dev/null || fail "clamshell recovery ignores the catch-all rule when the internal panel has its own"
+-pass "clamshell recovery ignores the catch-all rule when the internal panel has its own"
+-
+-write_catch_all_var_config
+-rm -f "$scale_state"
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.5' "$eval_log" >/dev/null || fail "clamshell recovery resolves a quoted scale through the catch-all rule"
+-pass "clamshell recovery resolves a quoted scale through the catch-all rule"
+-
+-write_commented_catch_all_var_config
+-rm -f "$scale_state"
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.25' "$eval_log" >/dev/null || fail "clamshell recovery ignores a trailing comment on the scale local"
+-pass "clamshell recovery ignores a trailing comment on the scale local"
+-
+-write_internal_monitor_position_var_config
+-rm -f "$scale_state"
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'position = "0x0"' "$eval_log" >/dev/null || fail "clamshell recovery resolves a position variable reference"
+-pass "clamshell recovery resolves a position variable reference"
+-
+-# An internal rule that names no scale leaves the catch-all to supply one. Only
+-# a rule that names a scale keeps the catch-all away from the internal panel.
+-write_internal_monitor_scaleless_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1' "$eval_log" >/dev/null || fail "clamshell recovery takes the catch-all scale when the internal rule omits one"
+-! grep -F 'scale = 1.75' "$eval_log" >/dev/null || fail "clamshell recovery prefers the catch-all scale over the remembered one"
+-pass "clamshell recovery takes the catch-all scale when the internal rule omits one"
+-
+-# Half of `3 / 2` is not the scale the user asked for.
+-write_expression_scale_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.75' "$eval_log" >/dev/null || fail "clamshell recovery leaves an expression scale unresolved"
+-pass "clamshell recovery leaves an expression scale unresolved"
+-
+-# An expression is Hyprland's to evaluate, not this parser's: like "auto", it
+-# names no number to correct an enabled panel toward.
+-write_expression_scale_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=3 run_clamshell
+-! grep -F 'scale = ' "$eval_log" >/dev/null || fail "clamshell recovery leaves an expression-scaled panel alone"
+-pass "clamshell recovery leaves an expression-scaled panel alone"
+-
+-# A quoted value is a string, not a reference to a local of the same name.
+-write_shadowed_auto_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.75' "$eval_log" >/dev/null || fail "clamshell recovery does not resolve a quoted scale against a local"
+-pass "clamshell recovery does not resolve a quoted scale against a local"
+-
+-# An explicit "auto" on the internal rule delegates just the same: while the
+-# panel is enabled, it is not corrected toward the remembered scale.
+-write_shadowed_auto_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_SCALE=3 run_clamshell
+-! grep -F 'scale = ' "$eval_log" >/dev/null || fail "clamshell recovery leaves an explicitly auto panel alone"
+-pass "clamshell recovery leaves an explicitly auto panel alone"
+-
+-# Half of `3 / 2` is no better inside the rule than inside a local.
+-write_expression_rule_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.75' "$eval_log" >/dev/null || fail "clamshell recovery leaves an expression scale in a rule unresolved"
+-pass "clamshell recovery leaves an expression scale in a rule unresolved"
+-
+-# A commented-out output must not pass for a rule the internal panel owns.
+-write_commented_rule_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.5' "$eval_log" >/dev/null || fail "clamshell recovery does not read a rule out of a trailing comment"
+-pass "clamshell recovery does not read a rule out of a trailing comment"
+-
+-# Nor must a commented-out key displace the real one.
+-write_commented_internal_rule_config
+-remember_scale 1.75
+-: >"$eval_log"
+-OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-grep -F 'scale = 1.25' "$eval_log" >/dev/null || fail "clamshell recovery does not read a scale out of a trailing comment"
+-pass "clamshell recovery does not read a scale out of a trailing comment"
+-
+-for config in nested_table semicolon block_comment; do
+-  "write_${config}_config"
+-  remember_scale 1.75
+-  : >"$eval_log"
+-  OMARCHY_TEST_INTERNAL_DISABLED=true run_clamshell
+-  grep -F 'position = "0x0"' "$eval_log" >/dev/null || fail "clamshell recovery reads the position out of a ${config//_/ } rule"
+-  grep -F 'scale = 1.25' "$eval_log" >/dev/null || fail "clamshell recovery reads the scale out of a ${config//_/ } rule"
+-  pass "clamshell recovery reads a ${config//_/ } rule"
+-done
+diff --git a/test/shell.d/monitor-clamshell-test.sh b/test/shell.d/monitor-clamshell-test.sh
+new file mode 100755
+index 00000000000..3aceeed0265
+--- /dev/null
++++ b/test/shell.d/monitor-clamshell-test.sh
+@@ -0,0 +1,535 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++# The clamshell command against its invariant (docs/clamshell.md):
++#   I1  it authors one thing, the clamshell overlay, and never a monitor value
++#   I2  a run whose desired overlay state is already on disk changes nothing
++#   I3  one reload per transition, exact rollback on failure, retry next run
++#   I4  every invocation is serialized, nothing is dropped, nothing can hang
++# T1 reads the command's text; T2 shows the config cannot matter; T3 walks the
++# transition relation with every collaborator stubbed and controllable.
++
++command_path="$ROOT/bin/omarchy-hyprland-monitor-clamshell"
++
++test_tmp=$(mktemp -d)
++trap 'chmod -R u+w "$test_tmp" 2>/dev/null; rm -rf "$test_tmp"' EXIT
++
++stub_bin="$test_tmp/bin"
++home_dir="$test_tmp/home"
++run_dir="$test_tmp/run"
++ctl="$test_tmp/ctl"
++log="$test_tmp/calls.log"
++toggles="$home_dir/.local/state/omarchy/toggles/hypr"
++overlay_file="$toggles/internal-monitor-clamshell.lua"
++manual_flag="$toggles/internal-monitor-disable.lua"
++mirror_flag="$toggles/internal-monitor-mirror.lua"
++monitor_lua="$home_dir/.config/hypr/monitors.lua"
++lock="$run_dir/omarchy-monitor-clamshell.lock"
++bound=1
++
++mkdir -p "$stub_bin" "$toggles" "$home_dir/.config/hypr" "$run_dir" "$ctl"
++
++# Every collaborator is a stub that logs what it was asked and answers as the
++# control directory says: a file named hang-<stub> makes it sleep past the
++# command's bound; stubborn-<stub> makes it ignore TERM while doing so, which
++# only a KILL escalation bounds; fail-<stub> makes it exit 1; odd-<stub> exit 3.
++cat >"$stub_bin/hyprctl" <<'SH'
++#!/bin/bash
++printf 'hyprctl %s\n' "$*" >>"$OMARCHY_TEST_LOG"
++case $1 in
++  monitors)
++    [[ -e $OMARCHY_TEST_CTL/hang-monitors ]] && sleep 5
++    cat "$OMARCHY_TEST_CTL/monitors.json"
++    # A valid answer followed by a failure: the reader must treat the query as
++    # unknown, never as the printed value.
++    [[ -e $OMARCHY_TEST_CTL/slow-monitors ]] && sleep 5
++    [[ -e $OMARCHY_TEST_CTL/sour-monitors ]] && exit 1
++    exit 0
++    ;;
++  reload)
++    [[ -e $OMARCHY_TEST_CTL/hang-reload ]] && sleep 5
++    [[ -e $OMARCHY_TEST_CTL/fail-reload ]] && exit 1
++    # What the config would answer once re-read: repair-flips models a config
++    # that re-enables the panel; repair-slows and repair-sours make the answer
++    # after the reload arrive and then hang, or arrive and then fail.
++    [[ -e $OMARCHY_TEST_CTL/repair-flips ]] && printf '[{"name":"eDP-1","description":"Test Panel","disabled":false,"scale":1.25}]' >"$OMARCHY_TEST_CTL/monitors.json"
++    [[ -e $OMARCHY_TEST_CTL/repair-slows ]] && touch "$OMARCHY_TEST_CTL/slow-monitors"
++    [[ -e $OMARCHY_TEST_CTL/repair-sours ]] && touch "$OMARCHY_TEST_CTL/sour-monitors"
++    exit 0 ;;
++  dispatch) [[ -e $OMARCHY_TEST_CTL/hang-dispatch ]] && sleep 5; exit 0 ;;
++  *) printf 'hyprctl UNEXPECTED %s\n' "$*" >>"$OMARCHY_TEST_LOG"; exit 1 ;;
++esac
++SH
++
++cat >"$stub_bin/omarchy-hyprland-monitor-laptop" <<'SH'
++#!/bin/bash
++printf 'laptop\n' >>"$OMARCHY_TEST_LOG"
++[[ -e $OMARCHY_TEST_CTL/hang-laptop ]] && sleep 5
++[[ -e $OMARCHY_TEST_CTL/stubborn-laptop ]] && { trap '' TERM; sleep 5 >/dev/null 2>&1; }
++cat "$OMARCHY_TEST_CTL/internal"
++SH
++
++# The command's own flock, interposable: fail-flock refuses acquisition, so the
++# refusal path can be walked; otherwise the real flock runs.
++cat >"$stub_bin/flock" <<SH
++#!/bin/bash
++[[ -e \$OMARCHY_TEST_CTL/fail-flock ]] && exit 1
++exec $(command -v flock) "\$@"
++SH
++
++for predicate in omarchy-hw-clamshell omarchy-hyprland-monitor-external-active; do
++  short=${predicate##*-}
++  cat >"$stub_bin/$predicate" <<SH
++#!/bin/bash
++printf '$short\n' >>"\$OMARCHY_TEST_LOG"
++[[ -e \$OMARCHY_TEST_CTL/hang-$short ]] && sleep 5
++[[ -e \$OMARCHY_TEST_CTL/odd-$short ]] && exit 3
++exit "\$(cat "\$OMARCHY_TEST_CTL/$short")"
++SH
++done
++
++# The hosted helpers, stubbed to record their invocation and, when told the
++# toggle is stale, to do what the real one does: drop the flag, reload, wake.
++for helper in internal internal-mirror; do
++  cat >"$stub_bin/omarchy-hyprland-monitor-$helper" <<SH
++#!/bin/bash
++printf 'helper $helper %s\n' "\$*" >>"\$OMARCHY_TEST_LOG"
++[[ -e \$OMARCHY_TEST_CTL/hang-helper-$helper ]] && sleep 5
++[[ -e \$OMARCHY_TEST_CTL/stubborn-helper-$helper ]] && { trap '' TERM; sleep 5 >/dev/null 2>&1; }
++[[ -e \$OMARCHY_TEST_CTL/escapee-helper-$helper ]] && { (trap '' TERM; exec sleep 5) >/dev/null 2>&1 & exec sleep 5; }
++[[ -e \$OMARCHY_TEST_CTL/fail-helper-$helper ]] && exit 1
++if [[ -e \$OMARCHY_TEST_CTL/stale-helper-$helper ]]; then
++  rm -f "\$OMARCHY_TEST_FLAG_$(tr '-' '_' <<<"$helper")"
++  hyprctl reload >/dev/null
++  hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })' >/dev/null
++fi
++exit 0
++SH
++done
++
++chmod +x "$stub_bin"/*
++
++expected_overlay='hl.monitor({ output = "eDP-1", disabled = true })'
++stale_overlay='hl.monitor({ output = "OLD-1", disabled = true })'
++
++# The default state is a known panel, lid open, an external active, no toggles
++# and no overlay: a run with nothing to do. Cases adjust it with prep strings.
++reset_state() {
++  chmod -R u+w "$toggles" 2>/dev/null || true
++  rm -rf "$ctl" "$toggles"
++  mkdir -p "$ctl" "$toggles"
++  : >"$log"
++  printf 'eDP-1\n' >"$ctl/internal"
++  printf '1\n' >"$ctl/clamshell"
++  printf '1\n' >"$ctl/active"
++  printf '[{"name":"eDP-1","description":"Test Panel","disabled":false,"scale":1.25}]' >"$ctl/monitors.json"
++  rm -f "$monitor_lua"
++  printf 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.25 })\n' >"$monitor_lua"
++}
++
++clamshell() { printf 0 >"$ctl/clamshell"; printf 0 >"$ctl/active"; }
++no_name() { : >"$ctl/internal"; }
++stale() { printf '%s' "$stale_overlay" >"$overlay_file"; }
++
++run_command() {
++  local status=0
++  HOME="$home_dir" \
++    PATH="$stub_bin:$PATH" \
++    XDG_RUNTIME_DIR="$run_dir" \
++    OMARCHY_TEST_LOG="$log" \
++    OMARCHY_TEST_CTL="$ctl" \
++    OMARCHY_TEST_FLAG_internal="$manual_flag" \
++    OMARCHY_TEST_FLAG_internal_mirror="$mirror_flag" \
++    OMARCHY_HYPRCTL_TIMEOUT="$bound" \
++    "$command_path" >/dev/null 2>&1 || status=$?
++  return $status
++}
++
++count_calls() { grep -c "^$1" "$log" || true; }
++reloads() { count_calls 'hyprctl reload'; }
++dispatches() { count_calls 'hyprctl dispatch'; }
++evals() { count_calls 'hyprctl eval'; }
++helper_calls() { count_calls 'helper'; }
++
++overlay_equals() {
++  [[ -f $overlay_file ]] && [[ $(< "$overlay_file") == "$1" ]]
++}
++
++listing() { ls -liA --time-style=full-iso "$toggles"; }
++
++# ---------------------------------------------------------------- T1: the text
++
++! grep -qE 'hyprctl[[:space:]]+(eval|keyword)' "$command_path" || fail "T1: the command does not write monitor values with hyprctl eval or keyword"
++! grep -qE '(^|[^A-Za-z0-9_./-])(awk|gawk|lua|lua5\.[0-9])([^A-Za-z0-9_.-]|$)' "$command_path" || fail "T1: the command invokes no reader (awk or lua)"
++! grep -q 'monitors\.lua' "$command_path" || fail "T1: the command does not name the config file"
++verbs=$(grep -oE 'hyprctl[[:space:]]+[a-z]+' "$command_path" | awk '{print $2}' | sort -u | tr '\n' ' ')
++for verb in $verbs; do
++  case $verb in monitors|reload|dispatch) ;; *) fail "T1: hyprctl verb $verb is not one of monitors, reload, dispatch" ;; esac
++done
++grep -q 'flock' "$command_path" || fail "T1: the command serializes itself with a lock"
++pass "T1: the command's text authors nothing but the overlay and reads no config"
++
++# ------------------------------- P1: the external-active predicate's contract
++
++# The tri-state reading is only as honest as the predicates' exits: 0 true,
++# 1 known false, anything else only for a genuine unknown. The real predicate
++# is run against a controlled hyprctl: the query succeeding with no active
++# external is the contracted false, the query failing is never taken for it,
++# and Hyprland's reserved FALLBACK placeholder is never a monitor.
++p1_ctl="$test_tmp/p1-ctl"; p1_bin="$test_tmp/p1-bin"
++mkdir -p "$p1_ctl" "$p1_bin"
++cat >"$p1_bin/hyprctl" <<'SH'
++#!/bin/bash
++[[ -e $P1_CTL/fail ]] && exit 1
++cat "$P1_CTL/out"
++SH
++chmod +x "$p1_bin/hyprctl"
++p1_case() {
++  local expect="$1" label="$2" got=0
++  P1_CTL="$p1_ctl" PATH="$p1_bin:$PATH" "$ROOT/bin/omarchy-hyprland-monitor-external-active" >/dev/null 2>&1 || got=$?
++  (( got == expect )) || fail "P1 ($label): exit $expect" "got $got"
++}
++printf '[{"name":"eDP-1","disabled":false},{"name":"HDMI-A-1","disabled":false}]' >"$p1_ctl/out"
++p1_case 0 "an enabled external is true"
++printf '[{"name":"eDP-1","disabled":false}]' >"$p1_ctl/out"
++p1_case 1 "only the internal panel is the contracted false"
++printf '[{"name":"eDP-1","disabled":false},{"name":"HDMI-A-1","disabled":true}]' >"$p1_ctl/out"
++p1_case 1 "a disabled external is the contracted false"
++printf '[]' >"$p1_ctl/out"
++p1_case 1 "no outputs listed is the contracted false"
++printf '[{"name":"eDP-1","disabled":true},{"name":"Virtual-1","disabled":true},{"name":"FALLBACK","disabled":false}]' >"$p1_ctl/out"
++p1_case 1 "the FALLBACK placeholder beside disabled outputs is not an external"
++printf '[{"name":"eDP-1","disabled":true},{"name":"FALLBACK","disabled":false},{"name":"HDMI-A-1","disabled":false}]' >"$p1_ctl/out"
++p1_case 0 "a real enabled external beside FALLBACK is still true"
++printf 'not json' >"$p1_ctl/out"
++p1_case 2 "an unreadable answer is unknown"
++: >"$p1_ctl/out"
++p1_case 2 "an empty answer is unknown"
++touch "$p1_ctl/fail"
++p1_case 2 "a failing query is unknown, never false"
++rm -f "$p1_ctl/fail"
++pass "P1: the external-active predicate answers 0, 1, or unknown -- and a failure is never false"
++
++# ------------------------------------------------- T2: the config cannot matter
++
++# Both transitions are made under configs that any reader would answer
++# differently: the panel at another scale, no file, a file that cannot be read,
++# one Lua rejects, and one that answers by whether it runs in a sandbox. The
++# calls to Hyprland are the same under every one of them.
++t2_calls() {
++  reset_state
++  [[ $2 == enable ]] && stale || clamshell
++  case $1 in
++    plain) ;;
++    other) printf 'hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = 2 })\n' >"$monitor_lua" ;;
++    absent) rm -f "$monitor_lua" ;;
++    unreadable) chmod 000 "$monitor_lua" ;;
++    rejected) printf 'local x = (\n' >"$monitor_lua" ;;
++    adversarial) printf 'local seen = os ~= nil\nhl.monitor({ output = "eDP-1", position = seen and "left" or "0x0", scale = seen and 3 or 1.25 })\n' >"$monitor_lua" ;;
++  esac
++  run_command || fail "T2: the $2 transition runs with a $1 config"
++  grep '^hyprctl' "$log" || true
++}
++for transition in enable disable; do
++  baseline=$(t2_calls plain "$transition")
++  for kind in other absent unreadable rejected adversarial; do
++    [[ $(t2_calls "$kind" "$transition") == "$baseline" ]] || fail "T2: the $transition transition makes the same calls with a $kind config" "$baseline"
++  done
++  (( $(reloads) == 1 && $(evals) == 0 )) || fail "T2: the $transition transition is one reload and no written value" "$baseline"
++done
++pass "T2: the config's content cannot matter, since the command never reads it"
++
++# ---------------------------------------- T3: the transition relation (I2, I3, I4)
++
++# Rows of the relation, from both starting states.
++for start in absent stale; do
++  prime() {
++    reset_state
++    [[ $start == stale ]] && stale
++    eval "$1"
++  }
++  untouched_after() {
++    if [[ $start == stale ]]; then overlay_equals "$stale_overlay"; else [[ ! -e $overlay_file ]]; fi
++  }
++
++  # unsafe name: refuse before any effect
++  prime 'printf "eDP-1; rm -rf x\n" >"$ctl/internal"; clamshell; touch "$manual_flag" "$mirror_flag"'
++  ! run_command || fail "T3 ($start): an unsafe internal name is refused with exit 1"
++  untouched_after || fail "T3 ($start): an unsafe name leaves the overlay untouched"
++  (( $(reloads) == 0 && $(dispatches) == 0 && $(evals) == 0 && $(helper_calls) == 0 )) || fail "T3 ($start): an unsafe name causes no effect, and the helpers are not entered"
++
++  # unknown name + clamshell: untouched
++  prime 'no_name; clamshell'
++  run_command || fail "T3 ($start): unknown name in clamshell runs"
++  untouched_after || fail "T3 ($start): unknown name in clamshell leaves the overlay untouched"
++  (( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 ($start): unknown name in clamshell reloads and dispatches nothing"
++
++  # unknown name, not clamshell: absent, one reload, no wake
++  prime 'no_name'
++  run_command || fail "T3 ($start): unknown name out of clamshell runs"
++  [[ ! -e $overlay_file ]] || fail "T3 ($start): unknown name out of clamshell leaves no overlay"
++  if [[ $start == stale ]]; then (( $(reloads) == 1 )) || fail "T3 (stale): removing a stale overlay for no known panel reloads exactly once"; else (( $(reloads) == 0 )) || fail "T3 (absent): nothing to remove, no reload"; fi
++  (( $(dispatches) == 0 )) || fail "T3 ($start): no panel to wake without a known name"
++
++  # known + clamshell + manual toggle: untouched
++  prime 'clamshell; touch "$manual_flag"'
++  run_command || fail "T3 ($start): manual toggle in clamshell runs"
++  untouched_after || fail "T3 ($start): the manual toggle leaves the overlay untouched"
++  (( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 ($start): the manual toggle in clamshell reloads and dispatches nothing"
++
++  # known + clamshell: exact overlay, one reload; again: nothing
++  prime 'clamshell'
++  run_command || fail "T3 ($start): clamshell runs"
++  overlay_equals "$expected_overlay" || fail "T3 ($start): clamshell writes exactly the overlay"
++  (( $(reloads) == 1 && $(dispatches) == 0 && $(evals) == 0 )) || fail "T3 ($start): clamshell reloads exactly once and writes no value"
++  : >"$log"; run_command || fail "T3 ($start): clamshell again runs"
++  (( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 ($start): clamshell with the overlay in place does nothing"
++  overlay_equals "$expected_overlay" || fail "T3 ($start): the overlay is unchanged by an idempotent run"
++
++  # known, not clamshell: absent, one reload, one wake
++  prime ':'
++  run_command || fail "T3 ($start): out of clamshell runs"
++  [[ ! -e $overlay_file ]] || fail "T3 ($start): out of clamshell leaves no overlay"
++  if [[ $start == stale ]]; then
++    (( $(reloads) == 1 && $(dispatches) == 1 )) || fail "T3 (stale): leaving clamshell reloads once and wakes once"
++    grep -q 'dispatch hl.dsp.dpms({ action = "enable", monitor = "eDP-1" })' "$log" || fail "T3 (stale): the wake names the panel"
++  else
++    (( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 (absent): out of clamshell with no overlay does nothing"
++  fi
++done
++pass "T3: every row of the relation from both starting states"
++
++# The wake guard on the enable path: manual toggle on, external active / not / unknown.
++for active in 0 1 hang; do
++  reset_state; stale; touch "$manual_flag"
++  if [[ $active == hang ]]; then touch "$ctl/hang-active"; printf 1 >"$ctl/active"; else printf "$active" >"$ctl/active"; fi
++  run_command || fail "T3: enable with manual toggle and active=$active runs"
++  [[ ! -e $overlay_file ]] && (( $(reloads) == 1 )) || fail "T3: enable with manual toggle removes the overlay and reloads once (active=$active)"
++  if [[ $active == 1 ]]; then (( $(dispatches) == 1 )) || fail "T3: manual toggle with no external active still wakes"; else (( $(dispatches) == 0 )) || fail "T3: manual toggle with external active or unknown suppresses the wake (active=$active)"; fi
++done
++pass "T3: the wake guard treats unknown as active"
++
++# The 3x3 predicate matrix, overlay present and stale, name known.
++for lid in 0 1 2; do
++  for ext in 0 1 2; do
++    reset_state; stale
++    for pair in "clamshell:$lid" "active:$ext"; do
++      p=${pair%%:*}; v=${pair##*:}
++      if (( v == 2 )); then touch "$ctl/hang-$p"; printf 1 >"$ctl/$p"; else printf "$v" >"$ctl/$p"; fi
++    done
++    run_command || fail "T3 matrix ($lid,$ext): runs"
++    if (( lid == 1 || ext == 1 )); then
++      [[ ! -e $overlay_file ]] && (( $(reloads) == 1 && $(dispatches) == 1 )) || fail "T3 matrix ($lid,$ext): a known false is not clamshell: overlay removed, one reload, one wake"
++    elif (( lid == 2 || ext == 2 )); then
++      overlay_equals "$stale_overlay" && (( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 matrix ($lid,$ext): unknown leaves the overlay untouched"
++    else
++      overlay_equals "$expected_overlay" && (( $(reloads) == 1 )) || fail "T3 matrix (0,0): clamshell rewrites a stale overlay and reloads once"
++    fi
++  done
++done
++pass "T3: the three-valued conjunction: false dominates, unknown suspends, both true is clamshell"
++
++# Rollback is byte-exact, from a file, never synthesized.
++for trailing in 0 3; do
++  reset_state; clamshell; touch "$ctl/fail-reload"
++  { stale; for ((i = 0; i < trailing; i++)); do printf '\n'; done >>"$overlay_file"; }
++  cp "$overlay_file" "$test_tmp/prior"
++  run_command || fail "T3 rollback ($trailing newlines): runs"
++  cmp -s "$overlay_file" "$test_tmp/prior" || fail "T3 rollback ($trailing newlines): a failed reload puts back the exact prior bytes"
++  (( $(reloads) == 1 )) || fail "T3 rollback ($trailing newlines): one reload attempt"
++  rm -f "$ctl/fail-reload"; : >"$log"
++  run_command || fail "T3 rollback ($trailing newlines): the next run runs"
++  overlay_equals "$expected_overlay" && (( $(reloads) == 1 )) || fail "T3 rollback ($trailing newlines): the next run retries the transition"
++done
++reset_state; no_name; stale; touch "$ctl/fail-reload"; cp "$overlay_file" "$test_tmp/prior"
++run_command || fail "T3 rollback (unknown name): runs"
++cmp -s "$overlay_file" "$test_tmp/prior" || fail "T3 rollback (unknown name): the enable side puts back the exact prior bytes"
++! grep -rq 'output = ""' "$toggles" || fail "T3 rollback (unknown name): no overlay for an empty name is ever written"
++rm -f "$ctl/fail-reload"; : >"$log"; run_command || true
++[[ ! -e $overlay_file ]] && (( $(reloads) == 1 )) || fail "T3 rollback (unknown name): the next run removes the stale overlay"
++pass "T3: rollback restores the exact prior bytes and the next run retries"
++
++# No debris, both sides, including a directory that cannot be written.
++for side in place remove; do
++  reset_state
++  if [[ $side == place ]]; then clamshell; else stale; cp "$overlay_file" "$test_tmp/prior"; fi
++  chmod 555 "$toggles"
++  run_command || fail "T3 read-only ($side): runs"
++  if [[ $side == place ]]; then [[ ! -e $overlay_file ]] || fail "T3 read-only (place): no overlay appears"; else cmp -s "$overlay_file" "$test_tmp/prior" || fail "T3 read-only (remove): the overlay stands byte-for-byte"; fi
++  (( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 read-only ($side): a transition that cannot be made attempts no reload and no wake"
++  chmod 755 "$toggles"
++  [[ $(ls -A "$toggles" | grep -v '^internal-monitor-clamshell.lua$' | wc -l) -eq 0 ]] || fail "T3 read-only ($side): no debris"
++done
++reset_state; clamshell; mkdir "$overlay_file"
++run_command || fail "T3 directory: a directory at the overlay's path runs"
++[[ -d $overlay_file && -z $(ls -A "$overlay_file") ]] && (( $(reloads) == 0 )) || fail "T3 directory: a directory at the overlay's path is left as it is, with nothing in it, and no reload" "$(ls -lA "$toggles" "$overlay_file")"
++[[ $(ls -A "$toggles" | wc -l) -eq 1 ]] || fail "T3 directory: no debris beside it"
++pass "T3: a transition that cannot be made is not attempted and leaves nothing"
++
++# A killed run's debris -- the EXIT trap does not run on SIGKILL -- is swept
++# under the lock by the next run that passes name validation, before either
++# hosted helper can end that run early.
++reset_state; clamshell; printf 'orphan' >"$toggles/.internal-monitor-clamshell.tmpXYZ"; printf 'old bytes' >"$toggles/.internal-monitor-clamshell.prior.XYZ123"
++run_command || fail "T3 sweep: runs over a killed run's debris"
++[[ ! -e $toggles/.internal-monitor-clamshell.tmpXYZ && ! -e $toggles/.internal-monitor-clamshell.prior.XYZ123 ]] || fail "T3 sweep: the debris is gone" "$(ls -A "$toggles")"
++overlay_equals "$expected_overlay" && (( $(reloads) == 1 )) || fail "T3 sweep: the run's own transition still happens"
++reset_state; printf 'orphan' >"$toggles/.internal-monitor-clamshell.prior.ABC456"
++run_command || fail "T3 sweep: an idempotent run still sweeps"
++[[ ! -e $toggles/.internal-monitor-clamshell.prior.ABC456 ]] || fail "T3 sweep: debris does not survive a no-op run"
++(( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 sweep: sweeping is not a transition"
++reset_state; touch "$manual_flag" "$ctl/fail-helper-internal"; printf 'orphan' >"$toggles/.internal-monitor-clamshell.prior.DEF789"
++run_command || true
++[[ ! -e $toggles/.internal-monitor-clamshell.prior.DEF789 ]] || fail "T3 sweep: a failing helper cannot end the run before the sweep"
++pass "T3: a killed run's leftover files are swept by the next run that passes name validation, before either helper can exit early"
++
++# Nothing is created on an idempotent run: the same run with the directory read-only is identical.
++idempotent_case() {
++  local label="$1"
++  reset_state; eval "$2"
++  run_command || fail "T3 idempotent ($label): runs"; first=$(grep '^hyprctl' "$log" || true); before=$(listing)
++  : >"$log"; chmod 555 "$toggles"
++  run_command || fail "T3 idempotent ($label): runs read-only"; second=$(grep '^hyprctl' "$log" || true); after=$(listing)
++  chmod 755 "$toggles"
++  [[ $first == "$second" && $before == "$after" ]] || fail "T3 idempotent ($label): an idempotent run creates nothing and behaves the same read-only"
++}
++idempotent_case "clamshell with the exact overlay" 'clamshell; printf "%s\n" "$expected_overlay" >"$overlay_file"'
++idempotent_case "manual toggle with a stale overlay" 'clamshell; touch "$manual_flag"; stale'
++idempotent_case "unknown name in clamshell" 'no_name; clamshell; stale'
++idempotent_case "out of clamshell with no overlay" ':'
++pass "T3: idempotent runs create no file, not even transiently"
++
++# The lock: a holder delays but never drops; two at once make one transition.
++reset_state; clamshell
++( flock 9; sleep 3 ) 9>"$lock" &
++holder=$!; sleep 0.3
++started=$SECONDS; run_command || fail "T3 lock: a queued run completes"; elapsed=$(( SECONDS - started ))
++wait "$holder" 2>/dev/null || true
++(( elapsed >= 2 )) || fail "T3 lock: the run waited for the holder" "elapsed ${elapsed}s"
++overlay_equals "$expected_overlay" && (( $(reloads) == 1 )) || fail "T3 lock: the queued run made its transition"
++reset_state; clamshell
++run_command & one=$!; run_command & two=$!; wait "$one" "$two" || true
++overlay_equals "$expected_overlay" && (( $(reloads) == 1 )) || fail "T3 lock: two runs at once make one transition and one reload"
++pass "T3: the lock queues and never drops, and serializes concurrent runs"
++
++# Every call class bounded: the command finishes, the lock is released, and the state is the conservative one.
++hang_case() {
++  local what="$1" prep="$2" check="$3"
++  reset_state; eval "$prep"; touch "$ctl/hang-$what"
++  started=$SECONDS; run_command || true; elapsed=$(( SECONDS - started ))
++  (( elapsed <= bound + 2 )) || fail "T3 hang ($what): the command finishes within the bound" "elapsed ${elapsed}s"
++  flock -n "$lock" true || fail "T3 hang ($what): the lock is released"
++  eval "$check" || fail "T3 hang ($what): the conservative outcome"
++}
++# A callee that ignores TERM: only the KILL escalation bounds it. The same
++# assertions as a hang, held under the harder stub.
++stubborn_case() {
++  local what="$1" prep="$2" check="$3"
++  reset_state; eval "$prep"; touch "$ctl/stubborn-$what"
++  started=$SECONDS; run_command || true; elapsed=$(( SECONDS - started ))
++  (( elapsed <= bound + 3 )) || fail "T3 stubborn ($what): the command finishes within the bound and the kill grace" "elapsed ${elapsed}s"
++  flock -n "$lock" true || fail "T3 stubborn ($what): the lock is released"
++  eval "$check" || fail "T3 stubborn ($what): the conservative outcome"
++}
++
++still_stale='overlay_equals "$stale_overlay" && (( $(reloads) == 0 ))'
++hang_case laptop 'clamshell; stale' "$still_stale"
++hang_case clamshell 'printf 0 >"$ctl/active"; stale' "$still_stale"
++hang_case clamshell 'printf 1 >"$ctl/active"; stale' '[[ ! -e $overlay_file ]] && (( $(reloads) == 1 ))'
++hang_case active 'printf 0 >"$ctl/clamshell"; stale' "$still_stale"
++hang_case reload 'clamshell' '[[ ! -e $overlay_file ]] && (( $(reloads) == 1 ))'
++hang_case dispatch 'stale' '[[ ! -e $overlay_file ]] && (( $(reloads) == 1 && $(dispatches) == 1 ))'
++hang_case helper-internal 'touch "$manual_flag"; stale' "$still_stale"
++hang_case helper-internal-mirror 'touch "$mirror_flag"; stale' "$still_stale"
++stubborn_case laptop 'clamshell; stale' "$still_stale"
++stubborn_case helper-internal 'touch "$manual_flag"; stale' "$still_stale"
++pass "T3: every call class is bounded, releases the lock, and fails toward untouched"
++
++# A callee that dies on TERM but leaves a TERM-ignoring descendant behind: the
++# descendant must not have the lock descriptor to hold, so the lock is free the
++# moment the command exits.
++reset_state; touch "$manual_flag" "$ctl/escapee-helper-internal"; stale
++started=$SECONDS; run_command || true; elapsed=$(( SECONDS - started ))
++(( elapsed <= bound + 3 )) || fail "T3 escapee: the command finishes within the bound" "elapsed ${elapsed}s"
++flock -n "$lock" true || fail "T3 escapee: no descendant holds the lock after the command exits"
++overlay_equals "$stale_overlay" && (( $(reloads) == 0 )) || fail "T3 escapee: the conservative outcome"
++pass "T3: a surviving descendant of a bounded callee cannot hold the lock"
++
++# A lock that cannot be taken is a run that must not happen: exit 1 before any
++# lookup, helper or transition.
++reset_state; clamshell; touch "$manual_flag" "$ctl/fail-flock"
++! run_command || fail "T3 flock: a lock that cannot be taken exits non-zero"
++[[ ! -s $log ]] || fail "T3 flock: no collaborator is called unserialized" "$(cat "$log")"
++[[ ! -e $overlay_file ]] || fail "T3 flock: no transition is made unserialized"
++reset_state; clamshell; rm -f "$lock"; chmod 555 "$run_dir"
++! run_command || fail "T3 flock: a lock file that cannot be opened exits non-zero"
++chmod 755 "$run_dir"
++[[ ! -s $log ]] || fail "T3 flock: no collaborator is called without a lock file" "$(cat "$log")"
++pass "T3: a lock that cannot be taken stops the run before any effect"
++
++# The repair: a compositor holding the panel disabled while nothing on disk
++# wants it off -- what a helper killed between its flag removal and its reload
++# leaves behind -- gets one reload, only while no external monitor is active;
++# the wake follows only when the reload actually brought the panel back. A
++# config that keeps the panel disabled is reloaded again on a later run -- the
++# stated stateless trade -- but never woken; every unknown repairs nothing,
++# including a valid answer followed by a hang or a failure, at either query.
++panel_held() { printf '[{"name":"eDP-1","description":"Test Panel","disabled":%s,"scale":1.25}]' "$1" >"$ctl/monitors.json"; }
++reset_state; panel_held true; touch "$ctl/repair-flips"
++run_command || fail "T3 repair: runs"
++(( $(reloads) == 1 && $(dispatches) == 1 )) || fail "T3 repair: a stale disabled panel gets one reload and one wake" "$(cat "$log")"
++[[ ! -e $overlay_file ]] && [[ $(ls -A "$toggles" | wc -l) -eq 0 ]] || fail "T3 repair: nothing is written"
++: >"$log"; run_command || fail "T3 repair: runs once repaired"
++(( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 repair: a panel the compositor reports enabled repairs nothing"
++reset_state; panel_held true
++run_command || fail "T3 repair (config-disabled): runs"
++(( $(reloads) == 1 && $(dispatches) == 0 )) || fail "T3 repair: a config that keeps the panel disabled is never woken" "$(cat "$log")"
++: >"$log"; run_command || fail "T3 repair (config-disabled): runs again"
++(( $(reloads) == 1 && $(dispatches) == 0 )) || fail "T3 repair: the stateless trade reloads again on a later run, and still never wakes" "$(cat "$log")"
++reset_state; printf 'not json' >"$ctl/monitors.json"
++run_command || fail "T3 repair (unreadable before): runs"
++(( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 repair: an unreadable answer before the reload repairs nothing"
++reset_state; panel_held true; touch "$ctl/slow-monitors"
++run_command || fail "T3 repair (masked hang before): runs"
++(( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 repair: a valid answer followed by a hang is an unknown, not a repair" "$(cat "$log")"
++reset_state; panel_held true; touch "$ctl/sour-monitors"
++run_command || fail "T3 repair (masked failure before): runs"
++(( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 repair: a valid answer followed by a failure is an unknown, not a repair"
++reset_state; panel_held true; touch "$ctl/repair-flips" "$ctl/repair-slows"
++run_command || fail "T3 repair (masked hang after): runs"
++(( $(reloads) == 1 && $(dispatches) == 0 )) || fail "T3 repair: a valid answer followed by a hang after the reload wakes nothing" "$(cat "$log")"
++reset_state; panel_held true; touch "$ctl/repair-flips" "$ctl/repair-sours"
++run_command || fail "T3 repair (masked failure after): runs"
++(( $(reloads) == 1 && $(dispatches) == 0 )) || fail "T3 repair: a valid answer followed by a failure after the reload wakes nothing"
++reset_state; printf 0 >"$ctl/active"; panel_held true
++run_command || fail "T3 repair (external active): runs"
++(( $(reloads) == 0 && $(dispatches) == 0 )) || fail "T3 repair: an active external monitor suppresses the repair"
++reset_state; touch "$manual_flag"; panel_held true
++run_command || fail "T3 repair (manual toggle): runs"
++(( $(reloads) == 0 )) && ! grep -q '^hyprctl monitors' "$log" || fail "T3 repair: an intentional disable repairs nothing and asks nothing"
++reset_state; no_name; panel_held true
++run_command || fail "T3 repair (unknown name): runs"
++(( $(reloads) == 0 )) && ! grep -q '^hyprctl monitors' "$log" || fail "T3 repair: no name, no question, no repair"
++reset_state; panel_held true; touch "$ctl/hang-monitors"
++started=$SECONDS; run_command || true; elapsed=$(( SECONDS - started ))
++(( elapsed <= bound + 3 && $(reloads) == 0 )) || fail "T3 repair: an unanswered compositor is an unknown, bounded and repairing nothing" "elapsed ${elapsed}s"
++reset_state; panel_held true; touch "$ctl/fail-reload"
++run_command || fail "T3 repair (failed reload): runs"
++(( $(reloads) == 1 && $(dispatches) == 0 )) || fail "T3 repair: a failed repair reload wakes nothing"
++rm -f "$ctl/fail-reload"; touch "$ctl/repair-flips"; : >"$log"; run_command || fail "T3 repair (retry): runs"
++(( $(reloads) == 1 && $(dispatches) == 1 )) || fail "T3 repair: the next run retries the repair"
++pass "T3: a stale compositor-held disable is repaired exactly when it strands the machine, and no masked query is believed"
++
++# The hosted helpers: not entered without their flags; entered and ordered with them; a failure stops the run.
++reset_state; run_command || true
++(( $(helper_calls) == 0 )) || fail "T3 helpers: with both toggle flags absent, neither helper is invoked"
++reset_state; touch "$manual_flag" "$ctl/stale-helper-internal"; stale
++run_command || fail "T3 helpers: the combined case runs"
++[[ $(grep -E '^(helper|hyprctl (reload|dispatch))' "$log" | sed 's/ hl\.dsp.*//' | tr '\n' ';') == "helper internal recover;hyprctl reload;hyprctl dispatch;hyprctl reload;hyprctl dispatch;" ]] || fail "T3 helpers: the helper's transition precedes the clamshell transition, two reloads and two wakes" "$(cat "$log")"
++[[ ! -e $manual_flag && ! -e $overlay_file ]] || fail "T3 helpers: both the stale toggle and the overlay are gone"
++reset_state; touch "$manual_flag" "$ctl/fail-helper-internal"; stale
++run_command || true
++overlay_equals "$stale_overlay" && (( $(reloads) == 0 )) || fail "T3 helpers: a failing helper stops the run before the clamshell transition"
++pass "T3: the hosted helpers are gated by their flags, ordered, and stop the run when they fail"
+diff --git a/test/shell.d/monitor-output-name-test.sh b/test/shell.d/monitor-output-name-test.sh
+index 14cd8852f98..37e49555cce 100644
+--- a/test/shell.d/monitor-output-name-test.sh
++++ b/test/shell.d/monitor-output-name-test.sh
+@@ -43,6 +43,7 @@ run_monitor() {
+   : >"$eval_log"
+   HOME="$home_dir" \
+     XDG_STATE_HOME="$home_dir/.local/state" \
++    XDG_RUNTIME_DIR="$tmpdir" \
+     LAPTOP_NAME="${LAPTOP_NAME:-eDP-1}" \
+     MONITORS_JSON="$monitors_json" \
+     EVAL_LOG="$eval_log" \
+diff --git a/test/shell.d/monitor-recovery-test.sh b/test/shell.d/monitor-recovery-test.sh
+index 3401abc18da..f79c71d7cc9 100755
+--- a/test/shell.d/monitor-recovery-test.sh
++++ b/test/shell.d/monitor-recovery-test.sh
+@@ -19,7 +19,7 @@ utilities="$ROOT/default/hypr/bindings/utilities.lua"
+ grep -F 'sleep "$delay"' "$monitor_watch" >/dev/null
+ grep -F 'for delay in 1 3 7; do' "$monitor_watch" >/dev/null
+ grep -F 'poll_clamshell_state &' "$monitor_watch" >/dev/null
+-grep -F 'flock -n 9' "$monitor_watch" >/dev/null
++! grep -F 'omarchy-monitor-clamshell.lock' "$monitor_watch" >/dev/null
+ grep -F 'omarchy-hyprland-monitor-clamshell' "$monitor_watch" >/dev/null
+ pass "monitor watcher retries internal monitor recovery after removal"
+ 
+@@ -70,20 +70,17 @@ grep -F 'select(.name | test("^(eDP|LVDS|DSI)-") | not)' "$monitor_external_acti
+ grep -F 'select(.disabled == false)' "$monitor_external_active" >/dev/null
+ pass "active external monitor helper sees mirrors and ignores monitors disabled on purpose"
+ 
+-grep -F 'omarchy-hyprland-monitor-internal recover >/dev/null 2>&1 || true' "$clamshell" >/dev/null
+-grep -F 'omarchy-hyprland-monitor-internal-mirror recover >/dev/null 2>&1 || true' "$clamshell" >/dev/null
++grep -F 'omarchy-hyprland-monitor-internal recover >/dev/null 2>&1 || exit 0' "$clamshell" >/dev/null
++grep -F 'omarchy-hyprland-monitor-internal-mirror recover >/dev/null 2>&1 || exit 0' "$clamshell" >/dev/null
+ grep -F 'internal-monitor-clamshell.lua' "$clamshell" >/dev/null
+ grep -F 'disabled = true' "$clamshell" >/dev/null
+ grep -F 'MANUAL_DISABLE_FLAG' "$clamshell" >/dev/null
+ ! grep -F 'rm -f "$MANUAL_DISABLE_FLAG"' "$clamshell" >/dev/null
+ ! grep -F '>"$MANUAL_DISABLE_FLAG"' "$clamshell" >/dev/null
+-grep -F 'read_monitor_scale' "$clamshell" >/dev/null
+-grep -F 'scale = $scale' "$clamshell" >/dev/null
+-grep -F 'hyprctl dispatch "hl.dsp.dpms({ action = \"$action\", monitor = \"$INTERNAL\" })"' "$clamshell" >/dev/null
+-grep -F 'hyprctl monitors all -j' "$clamshell" >/dev/null
++grep -F 'hyprctl dispatch "hl.dsp.dpms({ action = \"enable\", monitor = \"$INTERNAL\" })"' "$clamshell" >/dev/null
+ grep -F 'omarchy-hyprland-monitor-external-active' "$clamshell" >/dev/null
+ grep -F 'omarchy-hw-clamshell' "$clamshell" >/dev/null
+-pass "clamshell monitor sync disables laptop output and force-recovers it"
++pass "clamshell monitor sync disables laptop output and lets a reload recover it"
+ 
+ grep -F "hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })' >/dev/null 2>&1 || true" "$monitor_internal" >/dev/null
+ grep -F 'omarchy-hyprland-monitor-laptop' "$monitor_internal" >/dev/null

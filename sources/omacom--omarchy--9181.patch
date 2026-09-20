@@ -1,0 +1,647 @@
+diff --git a/bin/omarchy-system-sleep-monitor b/bin/omarchy-system-sleep-monitor
+index 2100ceebf49..6bac1fa5305 100755
+--- a/bin/omarchy-system-sleep-monitor
++++ b/bin/omarchy-system-sleep-monitor
+@@ -14,6 +14,8 @@ consume_sleep_events() {
+       return 0
+     fi
+   done
++
++  return 1
+ }
+ 
+ monitor_sleep_events() {
+@@ -40,6 +42,95 @@ monitor_sleep_events() {
+   return "$status"
+ }
+ 
++preparing_for_sleep() {
++  local state
++  state=$(timeout --kill-after=0.1s 1s busctl get-property \
++    org.freedesktop.login1 /org/freedesktop/login1 \
++    org.freedesktop.login1.Manager PreparingForSleep 2>/dev/null) || return 2
++
++  [[ ${state##* } == "true" ]]
++}
++
++notify_shell_resumed() {
++  local reply
++
++  reply=$(OMARCHY_SHELL_IPC_TIMEOUT=1 \
++    timeout --kill-after=0.1s 1s omarchy-shell lock resumeFromSleep 2>/dev/null) || return 1
++  [[ $reply == "ok" || $reply == "idle" ]]
++}
++
++wait_for_resume() {
++  local attempts=0 state
++
++  # The property remains true from the pre-sleep signal until logind emits its
++  # matching post-resume signal. Querying it also covers a missed D-Bus signal
++  # and a sleep request cancelled after the delay inhibitor was released.
++  while true; do
++    preparing_for_sleep
++    state=$?
++    if (( state == 0 )); then
++      attempts=0
++      sleep 0.1
++    elif (( state == 1 )); then
++      break
++    else
++      # Never report resume from an unknown logind state. Returning lets the
++      # persistent outer loop query the property again rather than guessing.
++      (( ++attempts >= 300 )) && return 1
++      sleep 0.1
++    fi
++  done
++}
++
++notify_shell_resumed_with_retry() {
++  local attempts=0
++
++  # The user shell can be unavailable briefly while the session thaws. The
++  # next delay inhibitor is already armed before this retry loop begins.
++  until notify_shell_resumed; do
++    (( ++attempts >= 120 )) && {
++      printf 'omarchy-system-sleep-monitor: resume notification timed out\n' >&2
++      return 1
++    }
++    sleep 0.25
++  done
++}
++
++start_inhibited_cycle() {
++  local sleep_monitor
++  (( inhibitor_pid == 0 )) || return 0
++  sleep_monitor="$OMARCHY_PATH/bin/omarchy-system-sleep-monitor"
++
++  systemd-inhibit \
++    --what=sleep \
++    --mode=delay \
++    --who=Omarchy \
++    --why="Lock screen before suspend" \
++    "$sleep_monitor" --inhibited &
++  inhibitor_pid=$!
++}
++
++wait_inhibited_cycle() {
++  local status
++  (( inhibitor_pid > 0 )) || return 1
++  wait "$inhibitor_pid"
++  status=$?
++  inhibitor_pid=0
++  return "$status"
++}
++
++inhibitor_pid=0
++
++cleanup_cycle() {
++  (( inhibitor_pid > 0 )) || return 0
++  kill "$inhibitor_pid" 2>/dev/null || true
++  wait "$inhibitor_pid" 2>/dev/null || true
++  inhibitor_pid=0
++}
++
++trap cleanup_cycle EXIT
++trap 'cleanup_cycle; exit 0' TERM INT
++
+ case ${1:-} in
+   --consume)
+     consume_sleep_events
+@@ -47,15 +138,53 @@ case ${1:-} in
+     ;;
+   --inhibited)
+     monitor_sleep_events
+-    exit 0
++    exit $?
++    ;;
++  --cycle)
++    start_inhibited_cycle
++    wait_inhibited_cycle || exit $?
++    wait_for_resume
++    notify_shell_resumed_with_retry
++    exit $?
+     ;;
+ esac
+ 
+-sleep_monitor="$OMARCHY_PATH/bin/omarchy-system-sleep-monitor"
++# Keep the service process alive across sleep. The inhibited child exits after
++# securing the session, which releases the delay inhibitor; this outer process
++# remains available to deliver the post-resume event and then arms the next
++# cycle without relying on a systemd restart race.
++while true; do
++  preparing_for_sleep
++  state=$?
++  if (( state == 2 )); then
++    sleep 1
++    continue
++  fi
++  if (( state == 0 )); then
++    until wait_for_resume; do
++      sleep 1
++    done
++  fi
++  break
++done
++
++# Arm the next sleep cycle before delivering a startup/recovery notification.
++# The same ordering below prevents a slow shell from leaving rapid successive
++# suspend requests without the lock inhibitor.
++start_inhibited_cycle
++notify_shell_resumed_with_retry || true
++
++while true; do
++  if ! wait_inhibited_cycle; then
++    sleep 1
++    start_inhibited_cycle
++    continue
++  fi
++
++  until wait_for_resume; do
++    sleep 1
++  done
+ 
+-exec systemd-inhibit \
+-  --what=sleep \
+-  --mode=delay \
+-  --who=Omarchy \
+-  --why="Lock screen before suspend" \
+-  "$sleep_monitor" --inhibited
++  start_inhibited_cycle
++  notify_shell_resumed_with_retry || true
++done
+diff --git a/shell/plugins/lock/LockView.qml b/shell/plugins/lock/LockView.qml
+index c2deae0fac0..cbc3f41e308 100644
+--- a/shell/plugins/lock/LockView.qml
++++ b/shell/plugins/lock/LockView.qml
+@@ -3,9 +3,11 @@ import QtQuick.Effects
+ import qs.Commons
+ import qs.Ui
+ 
+-Item {
++FocusScope {
+   id: root
+ 
++  focus: true
++
+   property string backgroundPath: ""
+   property int backgroundVersion: 0
+   property bool fingerprintConfigured: false
+@@ -16,6 +18,7 @@ Item {
+   property bool loadBackground: true
+   property string passwordText: ""
+   property bool syncingPasswordText: false
++  property int focusGeneration: 0
+ 
+   readonly property string placeholderText: "Enter Password"
+   readonly property int fieldWidth: 381
+@@ -33,6 +36,7 @@ Item {
+     ? Math.min(1, (passwordInput.width - 4) / dotMetrics.advanceWidth)
+     : 1
+   readonly property bool showPasswordCursor: inputEnabled && !authenticatingPassword && failureMessage.length === 0
++  readonly property bool passwordFocused: passwordInput.activeFocus
+   readonly property bool errorState: failureMessage.length > 0
+   readonly property var inputBorderSpec: errorState
+     ? Border.surfaceSpec("lock", "border-error", Color.lock.borderError, root.outlineThickness, "border-alpha")
+@@ -42,6 +46,7 @@ Item {
+   signal passwordTextEdited(string password)
+   signal clearFailureRequested()
+   signal wakeRequested()
++  signal passwordFocusAcquired()
+ 
+   // Cache-busts the lock background by appending `?v=`. Adding a query
+   // string keeps Image's loader happy while forcing it to reload when the
+@@ -69,11 +74,20 @@ Item {
+ 
+   onPasswordTextChanged: syncPasswordText()
+   onInputEnabledChanged: {
+-    if (inputEnabled) Qt.callLater(forcePasswordFocus)
++    if (inputEnabled && !authenticatingPassword) Qt.callLater(forcePasswordFocus)
++  }
++  onAuthenticatingPasswordChanged: {
++    if (inputEnabled && !authenticatingPassword) Qt.callLater(forcePasswordFocus)
++  }
++  onFocusGenerationChanged: {
++    if (inputEnabled && !authenticatingPassword) Qt.callLater(forcePasswordFocus)
++  }
++  onPasswordFocusedChanged: {
++    if (passwordFocused) root.passwordFocusAcquired()
+   }
+   Component.onCompleted: {
+     syncPasswordText()
+-    if (inputEnabled) Qt.callLater(forcePasswordFocus)
++    if (inputEnabled && !authenticatingPassword) Qt.callLater(forcePasswordFocus)
+   }
+ 
+   // Measures the masked password at full size; passwordDotScale compares this
+@@ -141,6 +155,7 @@ Item {
+         verticalAlignment: TextInput.AlignVCenter
+         horizontalAlignment: TextInput.AlignHCenter
+         activeFocusOnPress: true
++        focus: true
+         clip: true
+         enabled: root.inputEnabled && !root.authenticatingPassword
+         readOnly: root.authenticatingPassword
+diff --git a/shell/plugins/lock/Service.qml b/shell/plugins/lock/Service.qml
+index 9ecb1cc09be..29178a49865 100644
+--- a/shell/plugins/lock/Service.qml
++++ b/shell/plugins/lock/Service.qml
+@@ -29,6 +29,8 @@ Item {
+   property int failedAttempts: 0
+   property string backgroundPath: ""
+   property int backgroundVersion: 0
++  property int passwordFocusGeneration: 0
++  property bool passwordFocusAcquired: false
+   property string lastEvent: "init"
+   property string lastEventAt: ""
+   property bool strandedLock: false
+@@ -53,6 +55,28 @@ Item {
+     return realScreenCount() > 0
+   }
+ 
++  function requestPasswordFocus() {
++    if (!root.lockRequested || root.authenticatingPassword) return
++    root.passwordFocusGeneration += 1
++  }
++
++  function beginPasswordFocusRecovery(completeBudget) {
++    if (!root.lockRequested) return
++
++    if (root.authenticatingPassword) {
++      focusRecoveryTimer.stop()
++      focusRecoveryTimer.remaining = 0
++      focusRecoveryTimer.completeBudget = false
++      return
++    }
++
++    root.passwordFocusAcquired = false
++    focusRecoveryTimer.completeBudget = Boolean(completeBudget)
++    focusRecoveryTimer.remaining = focusRecoveryTimer.attemptBudget
++    requestPasswordFocus()
++    focusRecoveryTimer.restart()
++  }
++
+   function queueSessionLock() {
+     pendingSessionLock = true
+     if (!sessionLockStabilizeTimer.running) logEvent("lock-pending: screen-stabilizing")
+@@ -154,6 +178,9 @@ Item {
+     pendingSessionLockTimer.stop()
+     resetAuthenticationState()
+     idleBlankTimer.stop()
++    focusRecoveryTimer.stop()
++    focusRecoveryTimer.remaining = 0
++    focusRecoveryTimer.completeBudget = false
+     sessionLock.locked = false
+     logEvent("unlocked")
+     runWake()
+@@ -238,6 +265,7 @@ Item {
+         root.pendingSessionLock = false
+         sessionLockStabilizeTimer.stop()
+         pendingSessionLockTimer.stop()
++        root.beginPasswordFocusRecovery()
+         root.startFingerprint()
+       }
+     }
+@@ -277,10 +305,12 @@ Item {
+         inputEnabled: root.lockRequested
+         loadBackground: root.locked
+         passwordText: root.enteredPassword
++        focusGeneration: root.passwordFocusGeneration
+         onPasswordTextEdited: function(password) { root.enteredPassword = password }
+         onSubmitPassword: function(password) { root.submitPassword(password) }
+         onClearFailureRequested: root.failureMessage = ""
+         onWakeRequested: root.runWake()
++        onPasswordFocusAcquired: root.passwordFocusAcquired = true
+       }
+ 
+     }
+@@ -431,6 +461,37 @@ Item {
+     }
+   }
+ 
++  Timer {
++    id: focusRecoveryTimer
++    interval: 500
++    repeat: true
++    // A resume retry lasts twelve seconds, matching the interval over which
++    // input devices and preserved single-output lock surfaces can settle.
++    readonly property int attemptBudget: 24
++    property int remaining: 0
++    property bool completeBudget: false
++    onTriggered: {
++      if (!root.lockRequested || root.authenticatingPassword || remaining <= 0) {
++        completeBudget = false
++        stop()
++        return
++      }
++
++      remaining -= 1
++      root.requestPasswordFocus()
++
++      if (remaining <= 0) {
++        completeBudget = false
++        stop()
++        return
++      }
++
++      // Keep retrying briefly after the first acknowledgement because outputs
++      // can be recreated one after another during multi-monitor resume.
++      if (!completeBudget && root.passwordFocusAcquired && remaining <= attemptBudget - 4) stop()
++    }
++  }
++
+   Timer {
+     id: sessionLockStabilizeTimer
+     interval: 500
+@@ -468,6 +529,7 @@ Item {
+     target: Quickshell
+     function onScreensChanged() {
+       root.requestSessionLock()
++      root.beginPasswordFocusRecovery()
+ 
+       // A monitor still coming up has no workspace, so cannot answer yet.
+       strandedLockRetryTimer.rearm()
+@@ -477,8 +539,15 @@ Item {
+ 
+   onAuthenticatingPasswordChanged: {
+     if (!lockRequested) return
+-    if (authenticatingPassword) idleBlankTimer.stop()
+-    else armBlankTimer()
++    if (authenticatingPassword) {
++      idleBlankTimer.stop()
++      focusRecoveryTimer.stop()
++      focusRecoveryTimer.remaining = 0
++      focusRecoveryTimer.completeBudget = false
++    } else {
++      armBlankTimer()
++      beginPasswordFocusRecovery()
++    }
+   }
+ 
+   FileView {
+@@ -516,6 +585,12 @@ Item {
+       return "ok"
+     }
+ 
++    function resumeFromSleep(): string {
++      if (!root.lockRequested) return "idle"
++      root.beginPasswordFocusRecovery(true)
++      return "ok"
++    }
++
+     function isLocked(): string {
+       return root.locked ? "true" : "false"
+     }
+@@ -531,6 +606,9 @@ Item {
+         passwordPam: root.passwordPamConfigured,
+         fingerprint: root.fingerprintConfigured,
+         authenticating: root.authenticating,
++        passwordFocusAcquired: root.passwordFocusAcquired,
++        focusRecoveryRemaining: focusRecoveryTimer.remaining,
++        focusRecoveryCompleteBudget: focusRecoveryTimer.completeBudget,
+         lastEvent: root.lastEvent,
+         lastEventAt: root.lastEventAt
+       })
+diff --git a/test/shell.d/lock-blank-fingerprint-test.sh b/test/shell.d/lock-blank-fingerprint-test.sh
+index 1c9cd9d6e8b..559a541c525 100755
+--- a/test/shell.d/lock-blank-fingerprint-test.sh
++++ b/test/shell.d/lock-blank-fingerprint-test.sh
+@@ -22,7 +22,7 @@ assert(
+ )
+ 
+ assert(
+-  /onAuthenticatingPasswordChanged: \{\s*if \(!lockRequested\) return\s*if \(authenticatingPassword\) idleBlankTimer\.stop\(\)\s*else armBlankTimer\(\)/.test(serviceQml),
++  /onAuthenticatingPasswordChanged:\s*\{[\s\S]*?if \(authenticatingPassword\) \{[\s\S]*?idleBlankTimer\.stop\(\)[\s\S]*?\} else \{[\s\S]*?armBlankTimer\(\)/.test(serviceQml),
+   'the blank timer is held off by password entry and re-armed when it finishes'
+ )
+ 
+diff --git a/test/shell.d/lock-focus-recovery-test.sh b/test/shell.d/lock-focus-recovery-test.sh
+new file mode 100755
+index 00000000000..221a0da8de6
+--- /dev/null
++++ b/test/shell.d/lock-focus-recovery-test.sh
+@@ -0,0 +1,66 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++run_node_test <<'JS'
++const fs = require('fs')
++const serviceQml = fs.readFileSync(`${root}/shell/plugins/lock/Service.qml`, 'utf8')
++const viewQml = fs.readFileSync(`${root}/shell/plugins/lock/LockView.qml`, 'utf8')
++
++assert(
++  /function beginPasswordFocusRecovery\(completeBudget\)[\s\S]*focusRecoveryTimer\.completeBudget = Boolean\(completeBudget\)[\s\S]*focusRecoveryTimer\.remaining = focusRecoveryTimer\.attemptBudget[\s\S]*requestPasswordFocus\(\)[\s\S]*focusRecoveryTimer\.restart\(\)/.test(serviceQml),
++  'focus recovery starts with a complete retry budget'
++)
++
++assert(
++  /function onScreensChanged\(\) \{[\s\S]*root\.requestSessionLock\(\)[\s\S]*root\.beginPasswordFocusRecovery\(\)/.test(serviceQml),
++  'output recreation restarts password focus recovery'
++)
++
++assert(
++  /onAuthenticatingPasswordChanged: \{[\s\S]*if \(authenticatingPassword\) \{[\s\S]*focusRecoveryTimer\.stop\(\)[\s\S]*else \{[\s\S]*beginPasswordFocusRecovery\(\)/.test(serviceQml),
++  'password focus recovery restarts after PAM releases the disabled field'
++)
++
++assert(
++  /function requestPasswordFocus\(\) \{\s*if \(!root\.lockRequested \|\| root\.authenticatingPassword\) return/.test(serviceQml),
++  'focus requests never target the disabled field during authentication'
++)
++
++assert(
++  /if \(!root\.lockRequested \|\| root\.authenticatingPassword \|\| remaining <= 0\)[\s\S]*if \(!completeBudget && root\.passwordFocusAcquired && remaining <= attemptBudget - 4\) stop\(\)/.test(serviceQml),
++  'focus recovery survives sequential multi-monitor recreation'
++)
++
++assert(
++  /remaining -= 1[\s\S]*if \(remaining <= 0\) \{[\s\S]*completeBudget = false[\s\S]*stop\(\)/.test(serviceQml),
++  'a complete resume recovery budget stops cleanly when exhausted'
++)
++
++assert(
++  /function resumeFromSleep\(\): string \{[\s\S]*if \(!root\.lockRequested\) return "idle"[\s\S]*root\.beginPasswordFocusRecovery\(true\)/.test(serviceQml),
++  'an explicit post-resume event starts the complete focus retry budget'
++)
++
++assert(
++  /FocusScope \{[\s\S]*focus: true/.test(viewQml),
++  'the lock view owns a keyboard focus scope'
++)
++
++assert(
++  /onFocusGenerationChanged: \{\s*if \(inputEnabled && !authenticatingPassword\) Qt\.callLater\(forcePasswordFocus\)/.test(viewQml),
++  'service focus requests reach the password input'
++)
++
++assert(
++  /onAuthenticatingPasswordChanged: \{\s*if \(inputEnabled && !authenticatingPassword\) Qt\.callLater\(forcePasswordFocus\)/.test(viewQml),
++  'the re-enabled password input requests focus after a failed attempt'
++)
++
++assert(
++  /readonly property bool passwordFocused: passwordInput\.activeFocus[\s\S]*if \(passwordFocused\) root\.passwordFocusAcquired\(\)/.test(viewQml),
++  'the password input acknowledges acquired focus'
++)
++JS
+diff --git a/test/shell.d/sleep-monitor-test.sh b/test/shell.d/sleep-monitor-test.sh
+index 20850d4b6df..8680d2df01a 100755
+--- a/test/shell.d/sleep-monitor-test.sh
++++ b/test/shell.d/sleep-monitor-test.sh
+@@ -12,11 +12,16 @@ mock_bin="$tmpdir/bin"
+ mock_omarchy="$tmpdir/omarchy"
+ producer_pid_file="$tmpdir/producer-pid"
+ lock_log="$tmpdir/lock-log"
++resume_log="$tmpdir/resume-log"
++resume_order_log="$tmpdir/resume-order-log"
++inhibitor_armed_file="$tmpdir/inhibitor-armed"
+ mkdir -p "$mock_bin" "$mock_omarchy/bin"
+ 
+ cat >"$mock_bin/systemd-inhibit" <<'SH'
+ #!/bin/bash
+ 
++[[ -z ${INHIBITOR_ARMED_FILE:-} ]] || : >"$INHIBITOR_ARMED_FILE"
++
+ while [[ $1 == --* ]]; do
+   shift
+ done
+@@ -32,6 +37,26 @@ printf '   boolean true\n'
+ exec sleep 30
+ SH
+ 
++cat >"$mock_bin/busctl" <<'SH'
++#!/bin/bash
++
++printf 'b false\n'
++SH
++
++cat >"$mock_bin/omarchy-shell" <<'SH'
++#!/bin/bash
++
++if [[ -n ${RESUME_ORDER_LOG:-} ]]; then
++  if [[ -e ${INHIBITOR_ARMED_FILE:-} ]]; then
++    printf 'armed\n' >"$RESUME_ORDER_LOG"
++  else
++    printf 'unarmed\n' >"$RESUME_ORDER_LOG"
++  fi
++fi
++printf '%s\n' "$*" >>"$RESUME_LOG"
++printf 'ok\n'
++SH
++
+ cat >"$mock_omarchy/bin/omarchy-system-sleep-lock" <<'SH'
+ #!/bin/bash
+ 
+@@ -41,6 +66,8 @@ SH
+ chmod +x \
+   "$mock_bin/systemd-inhibit" \
+   "$mock_bin/dbus-monitor" \
++  "$mock_bin/busctl" \
++  "$mock_bin/omarchy-shell" \
+   "$mock_omarchy/bin/omarchy-system-sleep-lock"
+ ln -s "$sleep_monitor" "$mock_omarchy/bin/omarchy-system-sleep-monitor"
+ 
+@@ -49,7 +76,8 @@ OMARCHY_PATH="$mock_omarchy" \
+   PATH="$mock_bin:$PATH" \
+   PRODUCER_PID_FILE="$producer_pid_file" \
+   LOCK_LOG="$lock_log" \
+-  "$sleep_monitor"
++  RESUME_LOG="$resume_log" \
++  "$sleep_monitor" --cycle
+ elapsed_us=$((10#${EPOCHREALTIME//[!0-9]/} - 10#$start_us))
+ 
+ [[ $(<"$lock_log") == "locked" ]] ||
+@@ -60,12 +88,67 @@ pass "sleep monitor invokes the lock helper for a sleep event"
+   fail "sleep monitor releases the inhibitor after locking" "elapsed: ${elapsed_us}us"
+ pass "sleep monitor releases the inhibitor after locking"
+ 
++[[ $(<"$resume_log") == "lock resumeFromSleep" ]] ||
++  fail "sleep monitor reports the completed resume to the shell"
++pass "sleep monitor reports the completed resume to the shell"
++
+ producer_pid=$(<"$producer_pid_file")
+ if kill -0 "$producer_pid" 2>/dev/null; then
+   fail "sleep monitor reaps its event producer" "producer still running: $producer_pid"
+ fi
+ pass "sleep monitor reaps its event producer"
+ 
++# Losing the D-Bus event source before PrepareForSleep(true) is not a completed
++# sleep cycle and must not synthesize a resume notification.
++resume_count=$(wc -l <"$resume_log")
++cat >"$mock_bin/dbus-monitor" <<'SH'
++#!/bin/bash
++
++echo "$$" >"$PRODUCER_PID_FILE"
++exit 1
++SH
++chmod +x "$mock_bin/dbus-monitor"
++
++if OMARCHY_PATH="$mock_omarchy" \
++  PATH="$mock_bin:$PATH" \
++  PRODUCER_PID_FILE="$producer_pid_file" \
++  LOCK_LOG="$lock_log" \
++  RESUME_LOG="$resume_log" \
++  "$sleep_monitor" --cycle; then
++  fail "sleep monitor rejects a cycle whose event source disappeared"
++fi
++(( $(wc -l <"$resume_log") == resume_count )) ||
++  fail "sleep monitor does not report resume without a sleep event"
++pass "sleep monitor rejects a lost event source without reporting resume"
++
++# An unreadable logind state must never be interpreted as resume.
++cat >"$mock_bin/busctl" <<'SH'
++#!/bin/bash
++exit 1
++SH
++chmod +x "$mock_bin/busctl"
++
++OMARCHY_PATH="$mock_omarchy" \
++  PATH="$mock_bin:$PATH" \
++  PRODUCER_PID_FILE="$producer_pid_file" \
++  LOCK_LOG="$lock_log" \
++  RESUME_LOG="$resume_log" \
++  "$sleep_monitor" &
++unknown_state_pid=$!
++sleep 0.2
++kill "$unknown_state_pid"
++wait "$unknown_state_pid" 2>/dev/null || true
++
++(( $(wc -l <"$resume_log") == resume_count )) ||
++  fail "sleep monitor keeps resume unknown when logind cannot answer"
++pass "sleep monitor keeps resume unknown when logind cannot answer"
++
++cat >"$mock_bin/busctl" <<'SH'
++#!/bin/bash
++printf 'b false\n'
++SH
++chmod +x "$mock_bin/busctl"
++
+ # Terminating the monitor must also clean up the producer instead of orphaning
+ # it under the user systemd instance.
+ cat >"$mock_bin/dbus-monitor" <<'SH'
+@@ -82,11 +165,14 @@ OMARCHY_PATH="$mock_omarchy" \
+   PATH="$mock_bin:$PATH" \
+   PRODUCER_PID_FILE="$producer_pid_file" \
+   LOCK_LOG="$lock_log" \
++  RESUME_LOG="$resume_log" \
++  RESUME_ORDER_LOG="$resume_order_log" \
++  INHIBITOR_ARMED_FILE="$inhibitor_armed_file" \
+   "$sleep_monitor" &
+ monitor_pid=$!
+ 
+ for _ in {1..100}; do
+-  [[ -s $producer_pid_file ]] && break
++  [[ -s $producer_pid_file && -s $resume_order_log ]] && break
+   sleep 0.01
+ done
+ if [[ ! -s $producer_pid_file ]]; then
+@@ -104,3 +190,7 @@ if kill -0 "$producer_pid" 2>/dev/null; then
+   fail "sleep monitor cleans up its producer when terminated" "producer still running: $producer_pid"
+ fi
+ pass "sleep monitor cleans up its producer when terminated"
++
++[[ $(<"$resume_order_log") == "armed" ]] ||
++  fail "sleep monitor rearms the inhibitor before notifying the shell"
++pass "sleep monitor rearms the inhibitor before notifying the shell"

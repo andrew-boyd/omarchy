@@ -1,7 +1,7 @@
 {
   "passed": true,
   "proposals_verified": 17,
-  "unique_source_prs": 67,
+  "unique_source_prs": 73,
   "original_source_refs_covered": 52,
   "entries": [
     {
@@ -10,6 +10,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 2,
       "body_and_links": true,
       "checks_disclosed": true
@@ -20,6 +21,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 9,
       "body_and_links": true,
       "checks_disclosed": true
@@ -30,6 +32,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 5,
       "body_and_links": true,
       "checks_disclosed": true
@@ -40,7 +43,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 8,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 12,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -50,7 +54,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 2,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 3,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -60,7 +65,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 3,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 4,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -70,7 +76,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 1,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 2,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -80,6 +87,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 2,
       "body_and_links": true,
       "checks_disclosed": true
@@ -90,6 +98,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 2,
       "body_and_links": true,
       "checks_disclosed": true
@@ -100,7 +109,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 2,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 3,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -110,7 +120,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 6,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 7,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -120,6 +131,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 12,
       "body_and_links": true,
       "checks_disclosed": true
@@ -130,6 +142,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 12,
       "body_and_links": true,
       "checks_disclosed": true
@@ -140,7 +153,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 14,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 19,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -150,7 +164,8 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
-      "source_rows_complete": 14,
+      "upstream_rebase_source_fidelity_verified": true,
+      "source_rows_complete": 19,
       "body_and_links": true,
       "checks_disclosed": true
     },
@@ -160,6 +175,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 2,
       "body_and_links": true,
       "checks_disclosed": true
@@ -170,6 +186,7 @@
       "test_input_unchanged": true,
       "native_author_and_coauthors_verified": true,
       "metadata_only_rewrite_verified": true,
+      "upstream_rebase_source_fidelity_verified": true,
       "source_rows_complete": 1,
       "body_and_links": true,
       "checks_disclosed": true

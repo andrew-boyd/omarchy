@@ -1,17 +1,23 @@
 {
   "id": "baseline",
   "command": "./test/all",
-  "commit": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-  "tree_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-  "package_input": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+  "commit": "45748a2812f42e32f915b053caf4074e150e2048",
+  "tree_sha": "ad14a1cc2a3d01775846c736bc8de702d770fc11",
+  "package_input": "30e862935e6593545546a6dc8363bc80c34987a1",
   "exit_code": 1,
   "timeout": false,
-  "elapsed_seconds": 249.74,
+  "elapsed_seconds": 343.49,
   "passed": false,
   "assertions_passed": 3402,
   "explicit_failures": [
     "not ok - the superseded migration must not install the PTL variant first",
     "not ok - the root-authorized development checkout can publish Plymouth assets"
+  ],
+  "failed_files": [
+    "test/shell.d/locate-test.sh",
+    "test/shell.d/network-qr-test.sh",
+    "test/shell.d/omarchy-kernel-migration-test.sh",
+    "test/shell.d/plymouth-set-test.sh"
   ],
   "skip_lines": [
     "ok - no Wayland compositor; skipping bar icon geometry test",
@@ -33,15 +39,9 @@
     "ok - automatic subordinate-id namespace unavailable; skipping root Windows VM boundary probe"
   ],
   "log": "baseline.log",
-  "log_sha256": "4c5a5aa8967790c987c5b30a18600ab6c42f8e443ac75c65d02ce8baedcd02c4",
+  "log_sha256": "ecca9c0af855a90b26b5d97fb0d3d5748a8014d9f967b1f390a41a0c71a8ae65",
   "isolation": "Disconnected bubblewrap; writable disposable copy of candidate; read-only source/packages/ISO/root; private home/tmp/run/sys/proc/dev; cleared environment; umask 022; no host compositor or service sockets.",
   "isolation_version": 2,
   "hardware_verified": false,
-  "failed_files": [
-    "test/shell.d/locate-test.sh",
-    "test/shell.d/network-qr-test.sh",
-    "test/shell.d/omarchy-kernel-migration-test.sh",
-    "test/shell.d/plymouth-set-test.sh"
-  ],
-  "original_log_sha256": "6d32f76f44854809342878821229e4a5b441ffd669527ced48c3008480e39733"
+  "original_log_sha256": "96a0b2e0052e19d37422471ac371b04ee2a0f8c485c326b38edd1b5a70224a24"
 }

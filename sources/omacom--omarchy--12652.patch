@@ -1,0 +1,164 @@
+diff --git a/shell/plugins/lock/LockView.qml b/shell/plugins/lock/LockView.qml
+index e7a430ac67f..9c838e09ae1 100644
+--- a/shell/plugins/lock/LockView.qml
++++ b/shell/plugins/lock/LockView.qml
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import QtQuick.Effects
++import QtQuick.Window
+ import qs.Commons
+ import qs.Ui
+ 
+@@ -52,6 +53,15 @@ Item {
+     passwordInput.forceActiveFocus()
+   }
+ 
++  function ensurePasswordFocus() {
++    var window = root.Window.window
++    if (!window || !window.active || !root.inputEnabled || root.authenticatingPassword
++        || window.activeFocusItem === passwordInput)
++      return
++
++    root.forcePasswordFocus()
++  }
++
+   function clearPassword() {
+     passwordTextEdited("")
+   }
+@@ -72,6 +82,24 @@ Item {
+     if (inputEnabled) Qt.callLater(forcePasswordFocus)
+   }
+ 
++  // The session-lock surface is the only interactive surface while locked,
++  // but output teardown during suspend can leave its window active without an
++  // active focus item. Reclaim focus whenever the window becomes active or
++  // focus moves away from the enabled password input.
++  Connections {
++    id: windowFocus
++    target: root.Window.window
++
++    function onActiveChanged() {
++      if (windowFocus.target && windowFocus.target.active)
++        Qt.callLater(root.ensurePasswordFocus)
++    }
++
++    function onActiveFocusItemChanged() {
++      Qt.callLater(root.ensurePasswordFocus)
++    }
++  }
++
+   // Measures the masked password at full size; passwordDotScale compares this
+   // against the field width to decide how far the dots must shrink to fit.
+   TextMetrics {
+diff --git a/test/shell.d/fixtures/lock-focus/shell.qml b/test/shell.d/fixtures/lock-focus/shell.qml
+new file mode 100644
+index 00000000000..6e1ff1991c6
+--- /dev/null
++++ b/test/shell.d/fixtures/lock-focus/shell.qml
+@@ -0,0 +1,63 @@
++import QtQuick
++import QtQuick.Window
++import Quickshell
++import "./LockPlugin" as LockPlugin
++
++ShellRoot {
++  Window {
++    id: window
++    width: 800
++    height: 600
++    visible: true
++
++    LockPlugin.LockView {
++      anchors.fill: parent
++      inputEnabled: true
++      loadBackground: false
++    }
++
++    TextInput {
++      id: focusSink
++      visible: false
++    }
++
++    Timer {
++      interval: 50
++      repeat: true
++      running: true
++      property int attempts: 0
++      onTriggered: {
++        attempts += 1
++        if (!window.activeFocusItem || window.activeFocusItem.echoMode !== TextInput.Password) {
++          if (attempts < 40) return
++          stop()
++          console.error("LOCK_FOCUS_TEST_FAIL: password input was not initially focused")
++          Qt.quit()
++          return
++        }
++
++        stop()
++        focusSink.forceActiveFocus()
++        if (!focusSink.activeFocus) {
++          console.error("LOCK_FOCUS_TEST_FAIL: competing input could not take focus")
++          Qt.quit()
++          return
++        }
++
++        focusRecoveryCheck.start()
++      }
++    }
++
++    Timer {
++      id: focusRecoveryCheck
++      interval: 250
++      onTriggered: {
++        if (!window.activeFocusItem || window.activeFocusItem.echoMode !== TextInput.Password)
++          console.error("LOCK_FOCUS_TEST_FAIL: password input did not reclaim focus")
++        else
++          console.log("LOCK_FOCUS_TEST_PASS: password input reclaimed focus")
++        Qt.quit()
++      }
++    }
++  }
++}
+diff --git a/test/shell.d/lock-focus-test.sh b/test/shell.d/lock-focus-test.sh
+new file mode 100755
+index 00000000000..6b86d812eca
+--- /dev/null
++++ b/test/shell.d/lock-focus-test.sh
+@@ -0,0 +1,37 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++test_root=$(mktemp -d)
++runtime_root=$(mktemp -d)
++
++cleanup() {
++  rm -rf -- "$test_root" "$runtime_root"
++}
++trap cleanup EXIT
++
++chmod 700 "$runtime_root"
++cp "$SHELL_TEST_DIR/fixtures/lock-focus/shell.qml" "$test_root/shell.qml"
++ln -s "$ROOT/shell/plugins/lock" "$test_root/LockPlugin"
++ln -s "$ROOT/shell/Ui" "$test_root/Ui"
++ln -s "$ROOT/shell/Commons" "$test_root/Commons"
++mkdir -p "$test_root/home"
++
++output=$(
++  HOME="$test_root/home" \
++    XDG_RUNTIME_DIR="$runtime_root" \
++    QT_QPA_PLATFORM=offscreen \
++    QT_QUICK_BACKEND=software \
++    QT_QPA_PLATFORMTHEME= \
++    DISPLAY= \
++    WAYLAND_DISPLAY= \
++    OMARCHY_PATH="$ROOT" \
++    timeout 10s quickshell -p "$test_root" --no-color 2>&1
++) || fail "lock focus fixture exits cleanly" "$output"
++
++rg -q "LOCK_FOCUS_TEST_PASS" <<<"$output" ||
++  fail "lock password input reclaims focus without a pointer click" "$output"
++
++pass "lock password input reclaims focus without a pointer click"

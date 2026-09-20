@@ -1,0 +1,121 @@
+{
+  "checked_at": "2026-09-20T20:18:11.839228+00:00",
+  "added_source_prs": 6,
+  "sources_total": 73,
+  "feature_source_rows": 83,
+  "decisions": {
+    "12652": [
+      "alternative",
+      "Window-event focus recovery for an already active lock surface; separate from #12435's logind monitor and #9181's resume/PAM retry ownership. Preserve as a follow-up; not stacked into accepted fingerprint work."
+    ],
+    "12614": [
+      "predecessor",
+      "Closed in favor of #12652 to correct commit attribution; preserve the original source and exact production comparison."
+    ],
+    "12667": [
+      "context",
+      "Shared lock numeric-keypad handling with an attributed Apple Magic Keyboard report. Separate from T1 provider and fingerprint lifecycle; retained as follow-up context, not a new prerequisite."
+    ],
+    "7146": [
+      "alternative",
+      "Complete clamshell-overlay proposal replaces its former parser, changes external-active truth/unknown handling and modifies the watcher shared with P05. Retain separately; it is not the accepted P04 lid-lock component or P05 filtering patch."
+    ],
+    "9181": [
+      "alternative",
+      "Broader FocusScope/focus-generation recovery changes the sleep monitor, explicit resume IPC and post-PAM retry policy. Preserve separately from #12652 and #12435; no mixed focus ownership is invented."
+    ],
+    "10141": [
+      "broader",
+      "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle."
+    ]
+  },
+  "predecessor_LockView_diff_identical": true,
+  "mechanical_layering_probes": [
+    {
+      "plan_id": "P04",
+      "source_number": 7146,
+      "on_candidate_commit": "b5e64f295902651b5d78b9dcf197a9857cc8f0dc",
+      "raw_patch_applies": true,
+      "error": "",
+      "qualification": "Mechanical layering probe only; does not establish policy, lifecycle or hardware compatibility. Source remains unselected."
+    },
+    {
+      "plan_id": "P05",
+      "source_number": 7146,
+      "on_candidate_commit": "93ace98045d0945ad7f374a396c58c9b5936a8c7",
+      "raw_patch_applies": true,
+      "error": "",
+      "qualification": "Mechanical layering probe only; does not establish policy, lifecycle or hardware compatibility. Source remains unselected."
+    },
+    {
+      "plan_id": "P12",
+      "source_number": 12652,
+      "on_candidate_commit": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+      "raw_patch_applies": true,
+      "error": "",
+      "qualification": "Mechanical layering probe only; does not establish policy, lifecycle or hardware compatibility. Source remains unselected."
+    },
+    {
+      "plan_id": "P12",
+      "source_number": 12614,
+      "on_candidate_commit": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+      "raw_patch_applies": true,
+      "error": "",
+      "qualification": "Mechanical layering probe only; does not establish policy, lifecycle or hardware compatibility. Source remains unselected."
+    },
+    {
+      "plan_id": "P12",
+      "source_number": 12667,
+      "on_candidate_commit": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+      "raw_patch_applies": true,
+      "error": "",
+      "qualification": "Mechanical layering probe only; does not establish policy, lifecycle or hardware compatibility. Source remains unselected."
+    },
+    {
+      "plan_id": "P12",
+      "source_number": 9181,
+      "on_candidate_commit": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+      "raw_patch_applies": false,
+      "error": "error: patch failed: shell/plugins/lock/LockView.qml:3\nerror: shell/plugins/lock/LockView.qml: patch does not apply\nerror: patch failed: shell/plugins/lock/Service.qml:29\nerror: shell/plugins/lock/Service.qml: patch does not apply",
+      "qualification": "Mechanical layering probe only; does not establish policy, lifecycle or hardware compatibility. Source remains unselected."
+    }
+  ],
+  "jev": {
+    "model": "jev-1.13.0",
+    "answers": {
+      "scope": {
+        "type": "choice",
+        "choice": "preserve_as_related_work",
+        "confidence": 1.0,
+        "probabilities": {
+          "preserve_as_related_work": 1.0,
+          "insufficient_source_evidence": 0.0,
+          "required_missing_source": 0.0
+        }
+      },
+      "competing_focus_implementations": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "hardware_fix_requested": {
+        "type": "noul",
+        "noul": 0.03
+      }
+    },
+    "usage": {
+      "input_tokens": 6613,
+      "output_tokens": 96
+    }
+  },
+  "accepted_candidates_changed": false,
+  "scope_holds": [],
+  "separate_intake": [
+    {
+      "repository": "omacom/omarchy-pkgs",
+      "number": 544,
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/544",
+      "title": "linux-omarchy: carry ACPICA PCI bus fix for resume delays",
+      "disposition": "Separate kernel/Alpine Ridge source-review queue outside the current 14 patches; no new feature/companion count and no implementation adopted."
+    }
+  ]
+}

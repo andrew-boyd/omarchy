@@ -1,3 +1,12 @@
+diff --git a/pkgbuilds/apple-ib-drv-dkms/.omarchy/package.json b/pkgbuilds/apple-ib-drv-dkms/.omarchy/package.json
+new file mode 100644
+index 000000000..2a9719d3f
+--- /dev/null
++++ b/pkgbuilds/apple-ib-drv-dkms/.omarchy/package.json
+@@ -0,0 +1,3 @@
++{
++  "source": "local"
++}
 diff --git a/pkgbuilds/apple-ib-drv-dkms/99-ibridge.rules b/pkgbuilds/apple-ib-drv-dkms/99-ibridge.rules
 new file mode 100644
 index 000000000..ad9669b47

@@ -26,6 +26,6 @@ test_updates_both_arches_without_running_build_functions (__main__.WatchTest.tes
 test_vendor_feeds_preserve_version_schemes (__main__.WatchTest.test_vendor_feeds_preserve_version_schemes) ... ok
 
 ----------------------------------------------------------------------
-Ran 26 tests in 0.910s
+Ran 26 tests in 1.166s
 
 OK

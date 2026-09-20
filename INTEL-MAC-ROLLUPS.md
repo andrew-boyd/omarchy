@@ -1,6 +1,6 @@
 # Intel Mac consolidation targets
 
-14 feature roll-ups and 3 package companions organize 67 reviewed source/context PRs (52 original references plus later related discoveries). Existing PRs remain credited; closure recommendations are conditional. Scope: 64-bit Intel Macs. No hardware certification or complete release-wide integration is claimed.
+14 feature roll-ups and 3 package companions organize 73 reviewed source/context PRs (52 original references plus later related discoveries). Existing PRs remain credited; closure recommendations are conditional. Scope: 64-bit Intel Macs. No hardware certification or complete release-wide integration is claimed.
 
 **14/14 feature groups + 3 package companions ready for draft review.** All 17 packets are assembled; 17 are eligible for later draft publication. No groups are held. See [current scope decisions](scope-decisions.json). P04 retains connector/debounce future work; P09 retains custom-unit preservation/applicability gaps and its alternative. P06 requires the existing manual T1Bridge replacement before removal; P10 is a provisional pre/post recovery target with its documented gaps.
 
@@ -11,18 +11,18 @@
 | P01 | [[Intel Mac P01] Keep keyboard layout tracking on typing devices](bodies/P01.md) | [andrew-boyd/omarchy:intel-mac/p01-keyboard-layout](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p01-keyboard-layout) | 2 | Draft review |
 | P02 | [[Intel Mac P02] Repair headers for retained stock kernels](bodies/P02.md) | [andrew-boyd/omarchy:intel-mac/p02-kernel-headers](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p02-kernel-headers) | 9 | Draft review |
 | P03 | [[Intel Mac P03] Consolidate Apple hardware detection](bodies/P03.md) | [andrew-boyd/omarchy:intel-mac/p03-hardware-detection](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p03-hardware-detection) | 5 | Draft review |
-| P04 | [[Intel Mac P04] Consolidate lid handling and display classification](bodies/P04.md) | [andrew-boyd/omarchy:intel-mac/p04-lid-handling](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p04-lid-handling) | 8 | Draft review |
-| P05 | [[Intel Mac P05] Handle ghost internal displays](bodies/P05.md) | [andrew-boyd/omarchy:intel-mac/p05-ghost-displays](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p05-ghost-displays) | 2 | Draft review |
-| P06 | [[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge](bodies/P06.md) | [andrew-boyd/omarchy:intel-mac/p06-spi-retirement](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p06-spi-retirement) | 3 | Draft review |
-| P07 | [[Intel Mac P07] Preserve the MacBook8,1 SPI PIO workaround](bodies/P07.md) | [andrew-boyd/omarchy:intel-mac/p07-spi-pio](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p07-spi-pio) | 1 | Draft review |
+| P04 | [[Intel Mac P04] Consolidate lid handling and display classification](bodies/P04.md) | [andrew-boyd/omarchy:intel-mac/p04-lid-handling](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p04-lid-handling) | 12 | Draft review |
+| P05 | [[Intel Mac P05] Handle ghost internal displays](bodies/P05.md) | [andrew-boyd/omarchy:intel-mac/p05-ghost-displays](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p05-ghost-displays) | 3 | Draft review |
+| P06 | [[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge](bodies/P06.md) | [andrew-boyd/omarchy:intel-mac/p06-spi-retirement](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p06-spi-retirement) | 4 | Draft review |
+| P07 | [[Intel Mac P07] Preserve the MacBook8,1 SPI PIO workaround](bodies/P07.md) | [andrew-boyd/omarchy:intel-mac/p07-spi-pio](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p07-spi-pio) | 2 | Draft review |
 | P08 | [[Intel Mac P08] Consolidate FaceTime PCIe camera support](bodies/P08.md) | [andrew-boyd/omarchy:intel-mac/p08-facetime-camera](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p08-facetime-camera) | 2 | Draft review |
 | P08-packages | [[Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages](bodies/P08-packages.md) | [andrew-boyd/omarchy-pkgs:intel-mac/p08-facetime-camera](https://github.com/andrew-boyd/omarchy-pkgs/tree/intel-mac/p08-facetime-camera) | 2 | Draft review |
-| P09 | [[Intel Mac P09] Consolidate NVMe suspend applicability](bodies/P09.md) | [andrew-boyd/omarchy:intel-mac/p09-nvme-suspend](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p09-nvme-suspend) | 2 | Draft review |
-| P10 | [[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery](bodies/P10.md) | [andrew-boyd/omarchy:intel-mac/p10-broadcom-wifi](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p10-broadcom-wifi) | 6 | Draft review |
+| P09 | [[Intel Mac P09] Consolidate NVMe suspend applicability](bodies/P09.md) | [andrew-boyd/omarchy:intel-mac/p09-nvme-suspend](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p09-nvme-suspend) | 3 | Draft review |
+| P10 | [[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery](bodies/P10.md) | [andrew-boyd/omarchy:intel-mac/p10-broadcom-wifi](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p10-broadcom-wifi) | 7 | Draft review |
 | P11 | [[Intel Mac P11] Consolidate model-specific Cirrus audio support](bodies/P11.md) | [andrew-boyd/omarchy:intel-mac/p11-cirrus-audio](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p11-cirrus-audio) | 12 | Draft review |
 | P11-packages | [[Intel Mac P11/packages] Consolidate model-specific Cirrus audio packages](bodies/P11-packages.md) | [andrew-boyd/omarchy-pkgs:intel-mac/p11-cirrus-audio](https://github.com/andrew-boyd/omarchy-pkgs/tree/intel-mac/p11-cirrus-audio) | 12 | Draft review |
-| P12 | [[Intel Mac P12] Consolidate T1Bridge support and fingerprint UI](bodies/P12.md) | [andrew-boyd/omarchy:intel-mac/p12-t1bridge](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p12-t1bridge) | 14 | Draft review |
-| P12-packages | [[Intel Mac P12/packages] Package the existing T1Bridge stack](bodies/P12-packages.md) | [andrew-boyd/omarchy-pkgs:intel-mac/p12-t1bridge](https://github.com/andrew-boyd/omarchy-pkgs/tree/intel-mac/p12-t1bridge) | 14 | Draft review |
+| P12 | [[Intel Mac P12] Consolidate T1Bridge support and fingerprint UI](bodies/P12.md) | [andrew-boyd/omarchy:intel-mac/p12-t1bridge](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p12-t1bridge) | 19 | Draft review |
+| P12-packages | [[Intel Mac P12/packages] Package the existing T1Bridge stack](bodies/P12-packages.md) | [andrew-boyd/omarchy-pkgs:intel-mac/p12-t1bridge](https://github.com/andrew-boyd/omarchy-pkgs/tree/intel-mac/p12-t1bridge) | 19 | Draft review |
 | P13 | [[Intel Mac P13] Consolidate the Intel Mac kernel migration policy](bodies/P13.md) | [andrew-boyd/omarchy:intel-mac/p13-kernel-policy](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p13-kernel-policy) | 2 | Draft review |
 | P14 | [[Intel Mac P14] Consolidate suspend diagnostics](bodies/P14.md) | [andrew-boyd/omarchy:intel-mac/p14-suspend-diagnostics](https://github.com/andrew-boyd/omarchy/tree/intel-mac/p14-suspend-diagnostics) | 1 | Draft review |
 
@@ -43,3 +43,5 @@ Available Omarchy labels include `mac`, `compatibility`, `sleep`, `bug`, `docume
 Follow repository AGENTS/contribution rules, atomic commits and prescribed tests; visual changes need actual before/after evidence before readiness is claimed. No mandatory PR title/body template was found. [Publication metadata](manifest.json), [source coverage](source-coverage.json) and [publication procedure](PUBLICATION.md) pin the scope and exact local candidates.
 
 Original Git authors and co-author trailers are preserved in the prepared commits; [attribution details](AUTHORSHIP.md) distinguish actual contributing identities from PR openers. Preserve this metadata during later squash/rebase.
+
+[Latest upstream refresh](UPSTREAM-REFRESH.md): rebased candidates, source dispositions and refreshed check receipts. The accepted P04/P09 scope remains unchanged.

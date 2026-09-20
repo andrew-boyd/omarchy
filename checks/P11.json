@@ -1,17 +1,23 @@
 {
   "id": "P11",
   "command": "./test/all",
-  "commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
-  "tree_sha": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
-  "package_input": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+  "commit": "b006a68c0da31e06504f9f3b0025a13302c3fff5",
+  "tree_sha": "5e194ca2f90601beab38d2dd6b75bf2779dbcdae",
+  "package_input": "0a5195bbd3af5304500b246b46098d5769318708",
   "exit_code": 1,
   "timeout": false,
-  "elapsed_seconds": 296.04,
+  "elapsed_seconds": 257.02,
   "passed": false,
   "assertions_passed": 3455,
   "explicit_failures": [
     "not ok - the superseded migration must not install the PTL variant first",
     "not ok - the root-authorized development checkout can publish Plymouth assets"
+  ],
+  "failed_files": [
+    "test/shell.d/locate-test.sh",
+    "test/shell.d/network-qr-test.sh",
+    "test/shell.d/omarchy-kernel-migration-test.sh",
+    "test/shell.d/plymouth-set-test.sh"
   ],
   "skip_lines": [
     "ok - no Wayland compositor; skipping bar icon geometry test",
@@ -33,17 +39,10 @@
     "ok - automatic subordinate-id namespace unavailable; skipping root Windows VM boundary probe"
   ],
   "log": "P11.log",
-  "log_sha256": "8172c212e79585247192678ed6831c4ebd2558d4889e576340bc56f5eb27ea4c",
+  "log_sha256": "876521abd676f264ceb0e1d61c24de897080e22ff75c77098f66fd9e29b4f625",
   "isolation": "Disconnected bubblewrap; writable disposable copy of candidate; read-only source/packages/ISO/root; private home/tmp/run/sys/proc/dev; cleared environment; umask 022; no host compositor or service sockets.",
   "isolation_version": 2,
   "hardware_verified": false,
-  "failed_files": [
-    "test/shell.d/locate-test.sh",
-    "test/shell.d/network-qr-test.sh",
-    "test/shell.d/omarchy-kernel-migration-test.sh",
-    "test/shell.d/plymouth-set-test.sh"
-  ],
-  "original_log_sha256": "6acd472c8c83ae1060abf2626b61bc032dbe8254178263dc39da60cb6d4000c0",
-  "reused_for_commit": "b19fe49bd33075c07aa577d1ac5efee2dcf0d3eb",
-  "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
+  "original_log_sha256": "b7d4f918773d7ab85381f5a8c774ef377b521770815059608a39414a528b1652",
+  "tested_after_upstream_reconciliation": true
 }

@@ -1,0 +1,94 @@
+{
+  "candidate_commit": "eb1b6090e7e3866ab098afa6162c9b72b16315a7",
+  "baseline_commit": "45748a2812f42e32f915b053caf4074e150e2048",
+  "relevant_files_identical_to_baseline": [
+    "test/shell.d/preinstalls-test.sh",
+    "bin/omarchy-install-preinstalls",
+    "bin/omarchy-remove-preinstalls",
+    "install/omarchy-base.packages"
+  ],
+  "command": "bash test/shell.d/preinstalls-test.sh",
+  "runs": [
+    {
+      "input": "candidate",
+      "iteration": 1,
+      "exit_code": 0,
+      "log": "candidate-1.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "candidate",
+      "iteration": 2,
+      "exit_code": 0,
+      "log": "candidate-2.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "candidate",
+      "iteration": 3,
+      "exit_code": 0,
+      "log": "candidate-3.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "candidate",
+      "iteration": 4,
+      "exit_code": 0,
+      "log": "candidate-4.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "candidate",
+      "iteration": 5,
+      "exit_code": 0,
+      "log": "candidate-5.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "baseline",
+      "iteration": 1,
+      "exit_code": 0,
+      "log": "baseline-1.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "baseline",
+      "iteration": 2,
+      "exit_code": 0,
+      "log": "baseline-2.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "baseline",
+      "iteration": 3,
+      "exit_code": 0,
+      "log": "baseline-3.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "baseline",
+      "iteration": 4,
+      "exit_code": 0,
+      "log": "baseline-4.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    },
+    {
+      "input": "baseline",
+      "iteration": 5,
+      "exit_code": 0,
+      "log": "baseline-5.log",
+      "log_sha256": "81cfe916a75cc508e76f09e06426afcf9c98589a0ec3175857387af446d51085",
+      "failures": []
+    }
+  ],
+  "hardware_verified": false
+}

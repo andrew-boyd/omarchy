@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12652",
+  "repository": "omacom/omarchy",
+  "number": 12652,
+  "title": "Fix lock password focus after resume",
+  "author": "dexteresc",
+  "head_sha": "df15b9b14a36445c91c51339c43847a423f2feab",
+  "state": "open",
+  "updated_at": "2026-09-20T18:15:09Z",
+  "body": "## Status\n\nThis is a narrow, event-driven alternative for the case where an already-active lock window loses its focus item. It intentionally does not add the explicit resume IPC, retry budget, or post-PAM recovery implemented by #9181, so it remains a draft while that overlap is resolved.\n\nRelated: #12525, #9180, #9418, #9181.\n\n## Summary\n\n- Restore keyboard focus when the active lock window loses its focused item.\n- Reclaim focus when the lock window becomes active after resume.\n- Recheck lock and authentication state before a deferred focus request runs.\n- Add a headless behavioral regression test that uses the real `LockView`.\n\n## Root cause\n\nThe lock surface can stay mounted while displays are blanked and the machine suspends. The existing focus requests only run when the component is created or input is enabled, so neither necessarily runs when an existing lock window becomes active again or loses its active focus item.\n\n## Test plan\n\n- [x] Simplified regression fails against `origin/quattro` with `password input did not reclaim focus`.\n- [x] Simplified regression passes 10 consecutive runs against this branch.\n- [x] `test/shell.d/lock-focus-test.sh`\n- [x] Focused lock test set\n- [x] `git diff --check`\n- [x] `bash -n test/shell.d/lock-focus-test.sh`\n- [x] `./test/all` executed; the new lock-focus test passes.\n\nThe full local suite reports 9 unrelated baseline/environment failures in `config-test`, `factory-reset-accounts-test`, `launch-about-test`, `locate-test`, `network-qr-test`, `omarchy-kernel-migration-test`, `snapper-test`, `unowned-system-paths-test`, and `update-pacman-test`. None of those files or their production paths are changed by this branch.\n\nThe regression harness is 100 lines, down from 213 in the first draft, and no longer requires a live compositor, `jq`, result files, or layer-shell setup.\n\nNo before/after media is attached yet. Keyboard focus is verified behaviorally by stealing focus from the real password input and confirming that it returns without a pointer click.\n",
+  "original_source_changed": false
+}

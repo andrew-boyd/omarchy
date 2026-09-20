@@ -33,13 +33,13 @@ These are recommendations for original authors and maintainers. No original PR i
 
 ## Validation and provenance
 
-- Base: `omacom/omarchy-pkgs:master` at `bda2a070f4641fd44e5d02bd9cbf7da3fce4e345`.
-- Prepared commit: `65c17cb1a24626945c273e55ab9a0d1698fdcff9`; tree: `6d084ddd8be492d394135e050e046c1a5a98c39e`.
-- [Exact patch](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/patches/P11-packages.patch), SHA-256 `f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050`. The candidate tree matches the already-reviewed consolidation; publication preparation changes no implementation.
-- Available package CI self-tests: **10/10 command groups passed**, including the workflow-approval tests; changed recipe syntax/JSON checks recorded. These ran on this actual tree in a disconnected disposable filesystem.
+- Base: `omacom/omarchy-pkgs:master` at `30e862935e6593545546a6dc8363bc80c34987a1`.
+- Prepared commit: `bc89b86ef8397b000e73ceb60cd97e0b6e088db6`; tree: `0a5195bbd3af5304500b246b46098d5769318708`.
+- [Exact patch](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/patches/P11-packages.patch), SHA-256 `f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050`. The contribution diff matches the accepted consolidation; the [upstream refresh](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/UPSTREAM-REFRESH.md) advances its base without changing that contribution.
+- Available package CI self-tests: **11/11 command groups passed**, including the workflow-approval tests; changed recipe syntax/JSON checks recorded. These ran on this actual tree in a disconnected disposable filesystem.
 - Unrun: publish-artifact fixture (`rclone` unavailable), Docker build-isolation job, remote build-pr approval and fresh signed target-kernel delivery. The local subset does not equal passing upstream CI.
 - [Check logs and receipts](https://github.com/andrew-boyd/omarchy/tree/intel-mac/review-index/checks) and [focused evidence / hardware checklist](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/evidence/P11/README.md). Observations reproducing defects are not successful hardware behavior. No real module load, firmware write, suspend or host configuration change occurred.
-- Tests ran at `bd6bc96b69a9eb793ef651ac81f52d344054b4ea`. Results are reused for this identical tree after an authorship-only metadata correction; no new code or test result is implied.
+- Tests ran at this rebased commit, `bc89b86ef8397b000e73ceb60cd97e0b6e088db6`. The prior commits remain audit evidence; these results belong to the current candidate tree.
 
 ## Known gaps and follow-up work
 

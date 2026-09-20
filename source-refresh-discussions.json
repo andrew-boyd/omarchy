@@ -1,0 +1,35 @@
+{
+  "scope": "New September 20 discussion only; statements remain attributed author reports, not independent hardware verification.",
+  "sources": [
+    {
+      "repository": "omacom/omarchy",
+      "number": 7671,
+      "comments": [
+        {
+          "author": "monomyth",
+          "url": "https://github.com/omacom/omarchy/pull/7671#issuecomment-5751453039",
+          "updated_at": "2026-09-20T17:34:10Z",
+          "body": "@gunars Thanks for the bidirectional tests and for distinguishing AP-side association evidence from NetworkManager secret-agent failures. Your 0157-calibration results are useful evidence for retaining this PR's 14,2/14,3 boundary rather than widening it to 13,3.\n\nOne limit on generalization: our MacBookPro13,3 / `106b:015a`, using the separate 285753-based calibration in #10141, was connected at **5600 MHz, channel 120 / 80 MHz** on custom `7.2.4-arch1-2-mbp133` on September 15. That was a live SSH/`iw link` observation, not merely channels listed by a scan. The result is recorded in https://github.com/omacom/omarchy/pull/10141#issuecomment-5688899475. Therefore \u201cany 5 GHz AP for these machines has to be on channels 36\u201348\u201d is broader than the evidence supports.\n\nOn September 16, after booting custom `7.2.5-4-omarchy-mbp133`, the same host connected on **2412 MHz** with those calibration files unchanged (SHA-256 `a1a13fe89cf570ce94237cd27de36030584e8ec7084c3447c20c4fd668411dba`); 5 GHz networks were also visible. This is across different boots, not a same-kernel controlled dual-band A/B test, and we did not collect AP-side registration tables.\n\nThese observations do not refute your specific machine/file result, isolate `sromrev` here, or establish the CLM behavior across models. We have not tested your 144-key file or its single-line variants and have not changed our working calibration or reloaded the radio for this reply.\n\n@gutterguys1 Thank you for the additional 14,2 report; it supports the existing model gate. Successful 2.4 GHz association with the installed file remains a separate test from stronger 2.4 GHz scan signal.\n"
+        }
+      ]
+    },
+    {
+      "repository": "omacom/omarchy-pkgs",
+      "number": 298,
+      "comments": [
+        {
+          "author": "monomyth",
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/298#issuecomment-5751453105",
+          "updated_at": "2026-09-20T17:34:11Z",
+          "body": "@angellindo Yes, the identity/ancestry checks, unexpected-owner refusal and rollback tests are useful candidates for incremental work on this package. Thank you for publishing the reference and keeping the 14,3 observations separate from a test of this PR's exact archive/patch stack.\n\nI read the loader and service at `c06bcaa` and the verification report. I would split the proposed contribution:\n1. Read-only preflight plus identity/ownership/refusal checks and their fixture tests.\n2. Any late-loading or HID handover behavior, as a separate opt-in change with an explicit rollback contract.\n\nPlease keep the hard-coded 14,3 gate, `fnmode=2`, disabled idle/dim timeouts and `power/wakeup=disabled` policy out of a generic safety-only extraction. Those alter model scope or user/power behavior beyond adding checks. The present handover rollback handles its individual bind operation; a later failure can occur after earlier device configuration, power or bindings changed. An integration should document and test the whole failed-start outcome rather than promise a transaction-wide rollback from that helper alone.\n\nA focused contribution against the existing `apple-ib-drv-dkms` package, retaining the current pinned source/patch stack, would be easiest to review. The clean-chroot build you identified and validation of the resulting exact package on 14,3 are still needed, followed by 13,3 regression testing before automatic behavior changes.\n\nI have not imported or executed your loader on Isengard. Your follow-up does not establish a failure in this PR's exact package, and I agree that S3/SMU, Wi-Fi/Thunderbolt recovery and low-power residency remain separate unresolved work.\n"
+        },
+        {
+          "author": "monomyth",
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/298#issuecomment-5751453204",
+          "updated_at": "2026-09-20T17:34:12Z",
+          "body": "@ryanrhughes Fixed in `b6495c4`: added `pkgbuilds/apple-ib-drv-dkms/.omarchy/package.json` with `{\"source\":\"local\"}`, using the documented minimal metadata for a maintained local package. No skip-build flag or fast-ring override was added.\n\nValidation used the current upstream planner (`bda2a07`) in an isolated, unprivileged Linux fixture on Isengard: both explicit and unscoped x86_64/edge dry-runs select `apple-ib-drv-dkms`. JSON/shell syntax and `git diff --check` pass. No Docker, package installation or live driver reload was used.\n\nThe PKGBUILD, driver sources, patches and package version are unchanged, so this is planner/metadata validation, not a new binary build or hardware test. The requested DKMS review is still needed.\n"
+        }
+      ]
+    }
+  ]
+}

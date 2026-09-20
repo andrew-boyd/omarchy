@@ -1,18 +1,25 @@
 {
   "id": "P14",
   "command": "./test/all",
-  "commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
-  "tree_sha": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
-  "package_input": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+  "commit": "213d7f6b4179960882e46b7a678bba466878d6c9",
+  "tree_sha": "ebc09c2f839079b943048cd6fe1c12f7fd0a9c5a",
+  "package_input": "30e862935e6593545546a6dc8363bc80c34987a1",
   "exit_code": 1,
   "timeout": false,
-  "elapsed_seconds": 277.95,
+  "elapsed_seconds": 240.3,
   "passed": false,
   "assertions_passed": 3400,
   "explicit_failures": [
     "not ok - bin commands use command helpers",
     "not ok - the superseded migration must not install the PTL variant first",
     "not ok - the root-authorized development checkout can publish Plymouth assets"
+  ],
+  "failed_files": [
+    "test/shell.d/bin-style-test.sh",
+    "test/shell.d/locate-test.sh",
+    "test/shell.d/network-qr-test.sh",
+    "test/shell.d/omarchy-kernel-migration-test.sh",
+    "test/shell.d/plymouth-set-test.sh"
   ],
   "skip_lines": [
     "ok - no Wayland compositor; skipping bar icon geometry test",
@@ -34,18 +41,10 @@
     "ok - automatic subordinate-id namespace unavailable; skipping root Windows VM boundary probe"
   ],
   "log": "P14.log",
-  "log_sha256": "4f4fec4f3613ec2b7a4e591d1d6c1aa76e856b4f14c2f733ceea5da6cc2b754f",
+  "log_sha256": "b6affa32b86bda5e5c132af3f30a2f8c04910c29cdc798534073975f336bdf3e",
   "isolation": "Disconnected bubblewrap; writable disposable copy of candidate; read-only source/packages/ISO/root; private home/tmp/run/sys/proc/dev; cleared environment; umask 022; no host compositor or service sockets.",
   "isolation_version": 2,
   "hardware_verified": false,
-  "failed_files": [
-    "test/shell.d/bin-style-test.sh",
-    "test/shell.d/locate-test.sh",
-    "test/shell.d/network-qr-test.sh",
-    "test/shell.d/omarchy-kernel-migration-test.sh",
-    "test/shell.d/plymouth-set-test.sh"
-  ],
-  "original_log_sha256": "26c8786fbd80cef40cce08671359098c828c9dfb279fd4630af3502090fe0829",
-  "reused_for_commit": "027ceda817926af794e1ff605d1ea9bf67535ee0",
-  "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
+  "original_log_sha256": "5e7335aa8922d33564c8770df9927d8a76a56f2139d1b40ff6d6c3d39bf76c55",
+  "tested_after_upstream_reconciliation": true
 }

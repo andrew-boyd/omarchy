@@ -1,0 +1,6 @@
+PASS: packages.tar holds the packages only, no signature or database
+PASS: the artifact path carries no colon
+PASS: epoch filename and bytes survive the round trip
+PASS: a bare pre-packing artifact still unpacks
+PASS: empty build dir refused
+PASS: empty artifact refused

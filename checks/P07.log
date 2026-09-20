@@ -1340,10 +1340,10 @@ ok - bash env provides a default editor
 ok - bash env preserves the inherited editor
 ok - sudo uses the default editor
 ==> test/shell.d/elsewhen-default-migration-test.sh
-ok - package failure stops before linking or changing the shell
-ok - migration and fresh installs link to the package
+ok - package failure stops before changing the shell
+ok - migration and fresh installs rely on the packaged plugin directory
 ok - real bar helper enables and places before the clock without restarting during reload
-ok - migration can be rerun with its package link present
+ok - migration can be rerun without a user plugin link
 ok - existing checkout and local files are preserved
 ok - existing symlink is preserved, including a missing target
 ok - SCAN_STATUS=1 leaves the migration pending
@@ -2828,17 +2828,6 @@ ok - battery service applies profiles through Omarchy command
 ok - power profile menu persists selections through Omarchy command
 ==> test/shell.d/preinstalls-test.sh
 ok - Install and Remove Preinstalls cover the same packages
-ok - every preinstall is shipped in omarchy-base.packages
-ok - preinstalls cover the Omacom apps
-ok - restore keeps the opt-out marker when packages fail to install
-ok - restore clears the opt-out marker once the packages are back
-ok - declining Remove Preinstalls changes nothing
-ok - Remove Preinstalls records the opt-out
-ok - Remove Preinstalls deletes the Omarchy Hermes wrapper
-ok - Remove Preinstalls keeps the desktop app's Hermes command
-ok - Remove Preinstalls keeps an official Hermes install
-ok - Remove Preinstalls keeps a wrapper that merely mentions the installer
-ok - Remove Preinstalls keeps a foreign hermes link
 ==> test/shell.d/privileged-heredoc-test.sh
 ok - the scan reaches the privileged-write scripts (132 files)
 ok - no privileged write embeds an install-time expansion through an unquoted heredoc
@@ -3669,7 +3658,7 @@ ok - input cannot inject a host path or compose field
 ok - password with quote, backslash, and dollar round-trips
 ok - privileged action dispatch is allowlisted
 ok - pkexec target is only the canonical packaged regular file, never a PATH symlink
-Migrating Windows VM configuration to /tmp/tmp.UWK5cONHAM/win/docker-compose.yml ...
+Migrating Windows VM configuration to /tmp/tmp.DhO0VkyQ17/win/docker-compose.yml ...
 ok - migration preserves data and symlinks while hardening permissions
 ok - bring-up rejects tampered, duplicate, unprotected, and writable compose inputs
 ok - invalid second source leaves paths and anchors untouched and leaks no FD
@@ -3709,7 +3698,7 @@ ok - the migration applies the workaround and asks for a reboot
 ok - a failing apply leaves the migration pending without marking reboot-required
 ok - the migration no-ops on other hardware
 find: ‘/home/reviewer/.config/omarchy/themes/’: No such file or directory
-omarchy-agent-usage-codex: cache unavailable ([Errno 20] Not a directory: '/tmp/tmp.wZd8L20700/not-a-dir/omarchy/agent-usage'); scanning directly
+omarchy-agent-usage-codex: cache unavailable ([Errno 20] Not a directory: '/tmp/tmp.gpHeCllS54/not-a-dir/omarchy/agent-usage'); scanning directly
 jq: parse error: Invalid numeric literal at line 1, column 6
 visudo: /etc/sudo.conf is owned by uid 65534, should be 0
 visudo: /etc/sudo.conf is owned by uid 65534, should be 0
@@ -3732,7 +3721,7 @@ Traceback (most recent call last):
     return f.read()
            ~~~~~~^^
   File "<frozen codecs>", line 325, in decode
-UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe3 in position 8: invalid continuation byte
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xb8 in position 8: invalid start byte
 mise trusted ~/Work
 mise untrusted ~/Work
 mise untrusted ~/Work
@@ -3753,24 +3742,27 @@ mise trusted ~/Work
 mise ignored ~/Work
 mise untrusted ~/Work
 not ok - the superseded migration must not install the PTL variant first
-omarchy-plymouth-set: refusing to publish: destination /tmp/tmp.sWXfms2Pww/run.M624L1Cn/root/usr/share/plymouth/themes/omarchy/bullet.png failed validation
+omarchy-plymouth-set: refusing to publish: destination /tmp/tmp.IK2tCSRdiW/run.F1b7kQ9A/root/usr/share/plymouth/themes/omarchy/bullet.png failed validation
 not ok - the root-authorized development checkout can publish Plymouth assets
+cliamp is not shipped
+not ok - every preinstall is shipped in omarchy-base.packages
 Cannot complete the privileged installer-artifact repair. An administrator must run omarchy-migrate to repair this machine.
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/system-sleep/keyboard-backlight at /tmp/tmp.gApaH6PUnS/quarantine/keyboard-backlight.N1r7Rh/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/system-sleep/force-igpu at /tmp/tmp.gApaH6PUnS/quarantine/force-igpu.ZzEDRt/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.gApaH6PUnS/quarantine/delay-start.conf.FwJBUw/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.gApaH6PUnS/quarantine/delay-start.conf.E37uMh/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/system-sleep/keyboard-backlight at /tmp/tmp.VNiPrhHr5i/quarantine/keyboard-backlight.r4rvT6/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/system-sleep/force-igpu at /tmp/tmp.VNiPrhHr5i/quarantine/force-igpu.0vUojF/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.VNiPrhHr5i/quarantine/delay-start.conf.k3vTe9/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.VNiPrhHr5i/quarantine/delay-start.conf.6Jt4HV/original for administrator review
 Could not reload systemd after repairing the supergfxd configuration; the migration will retry
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/system-sleep/force-igpu at /tmp/tmp.gApaH6PUnS/quarantine/force-igpu.nEhNrG/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/system-sleep/keyboard-backlight at /tmp/tmp.gApaH6PUnS/quarantine/keyboard-backlight.XI66ka/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/system-sleep/keyboard-backlight at /tmp/tmp.gApaH6PUnS/quarantine/keyboard-backlight.uKGhI1/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.gApaH6PUnS/system-sleep/keyboard-backlight at /tmp/tmp.gApaH6PUnS/quarantine/keyboard-backlight.LspeyX/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/system-sleep/force-igpu at /tmp/tmp.VNiPrhHr5i/quarantine/force-igpu.N4etPO/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/system-sleep/keyboard-backlight at /tmp/tmp.VNiPrhHr5i/quarantine/keyboard-backlight.y4bnFv/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/system-sleep/keyboard-backlight at /tmp/tmp.VNiPrhHr5i/quarantine/keyboard-backlight.QJeGbG/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.VNiPrhHr5i/system-sleep/keyboard-backlight at /tmp/tmp.VNiPrhHr5i/quarantine/keyboard-backlight.xsrhXj/original for administrator review
 
-4 of 246 test files failed:
+5 of 246 test files failed:
   test/shell.d/locate-test.sh
   test/shell.d/network-qr-test.sh
   test/shell.d/omarchy-kernel-migration-test.sh
   test/shell.d/plymouth-set-test.sh
+  test/shell.d/preinstalls-test.sh
 
 1 of 2 suites failed:
   test/shell

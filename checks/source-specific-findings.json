@@ -13,5 +13,17 @@
     "finding": "Unchanged source uses command -v rtcwake where target bin-style-test.sh requires the Omarchy command helper. No source fix applied.",
     "disposition": "Explicit follow-up in the draft body; allowed under source-consolidation/draft-readiness scope.",
     "hardware_verified": false
+  },
+  "P07": {
+    "expected_additional_failed_files": [
+      "test/shell.d/preinstalls-test.sh"
+    ],
+    "expected_additional_assertions": [
+      "not ok - every preinstall is shipped in omarchy-base.packages"
+    ],
+    "finding": "The full suite reported cliamp missing from the shipped preinstall list. The test, package list and preinstall scripts are byte-identical to upstream and include cliamp. Five isolated repetitions pass on P07 and five on upstream. The extra full-suite failure did not reproduce; its cause remains unestablished. No implementation or test fix applied.",
+    "disposition": "Retain the original full-suite failure and focused diagnostic evidence in the draft; follow up before merge.",
+    "diagnostic": "checks/P07-preinstalls-diagnostic/report.json",
+    "hardware_verified": false
   }
 }

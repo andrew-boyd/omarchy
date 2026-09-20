@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12614",
+  "repository": "omacom/omarchy",
+  "number": 12614,
+  "title": "Fix lock password focus after resume",
+  "author": "dexteresc",
+  "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+  "state": "closed",
+  "updated_at": "2026-09-20T17:33:08Z",
+  "body": "## Summary\n\n- Restore keyboard focus to the password input when the lock window becomes active after resume.\n- Reclaim focus if the active lock surface is left without its only interactive input.\n- Recheck the current lock/authentication state before a deferred focus request runs.\n- Add a compositor-backed regression test for focus loss and recovery.\n\n## Root cause\n\nThe lock surface stays mounted while the displays are blanked and the machine suspends. The existing focus requests only run when the component is created or input is enabled, so neither necessarily runs after opening the lid. The resumed window can therefore be active without an active focus item until the user clicks the password box.\n\n## Test plan\n\n- [x] `test/shell.d/lock-focus-test.sh`\n- [x] `test/shell.d/lock-password-overflow-test.sh`\n- [x] `test/shell.d/lock-fingerprint-indicator-test.sh`\n- [x] `test/shell.d/lock-blank-fingerprint-test.sh`\n- [x] `test/shell.d/lock-stranded-recovery-test.sh`\n- [x] `git diff --check`\n\nThe full local suite was also run. It currently has eight unrelated environment/baseline failures, including tests that require a sibling `omarchy-pkgs` checkout and a shell-service responsiveness check; the focused lock tests above pass against the active Wayland compositor.\n",
+  "original_source_changed": false
+}

@@ -1340,10 +1340,10 @@ ok - bash env provides a default editor
 ok - bash env preserves the inherited editor
 ok - sudo uses the default editor
 ==> test/shell.d/elsewhen-default-migration-test.sh
-ok - package failure stops before linking or changing the shell
-ok - migration and fresh installs link to the package
+ok - package failure stops before changing the shell
+ok - migration and fresh installs rely on the packaged plugin directory
 ok - real bar helper enables and places before the clock without restarting during reload
-ok - migration can be rerun with its package link present
+ok - migration can be rerun without a user plugin link
 ok - existing checkout and local files are preserved
 ok - existing symlink is preserved, including a missing target
 ok - SCAN_STATUS=1 leaves the migration pending
@@ -3675,7 +3675,7 @@ ok - input cannot inject a host path or compose field
 ok - password with quote, backslash, and dollar round-trips
 ok - privileged action dispatch is allowlisted
 ok - pkexec target is only the canonical packaged regular file, never a PATH symlink
-Migrating Windows VM configuration to /tmp/tmp.Q8KX8BXAHc/win/docker-compose.yml ...
+Migrating Windows VM configuration to /tmp/tmp.BbX3jOTD1L/win/docker-compose.yml ...
 ok - migration preserves data and symlinks while hardening permissions
 ok - bring-up rejects tampered, duplicate, unprotected, and writable compose inputs
 ok - invalid second source leaves paths and anchors untouched and leaks no FD
@@ -3715,7 +3715,7 @@ ok - the migration applies the workaround and asks for a reboot
 ok - a failing apply leaves the migration pending without marking reboot-required
 ok - the migration no-ops on other hardware
 find: ‘/home/reviewer/.config/omarchy/themes/’: No such file or directory
-omarchy-agent-usage-codex: cache unavailable ([Errno 20] Not a directory: '/tmp/tmp.vDAi46X3Ij/not-a-dir/omarchy/agent-usage'); scanning directly
+omarchy-agent-usage-codex: cache unavailable ([Errno 20] Not a directory: '/tmp/tmp.PhrMXO45p0/not-a-dir/omarchy/agent-usage'); scanning directly
 jq: parse error: Invalid numeric literal at line 1, column 6
 visudo: /etc/sudo.conf is owned by uid 65534, should be 0
 visudo: /etc/sudo.conf is owned by uid 65534, should be 0
@@ -3738,7 +3738,7 @@ Traceback (most recent call last):
     return f.read()
            ~~~~~~^^
   File "<frozen codecs>", line 325, in decode
-UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfe in position 8: invalid start byte
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xbb in position 8: invalid start byte
 mise trusted ~/Work
 mise untrusted ~/Work
 mise untrusted ~/Work
@@ -3759,18 +3759,18 @@ mise trusted ~/Work
 mise ignored ~/Work
 mise untrusted ~/Work
 not ok - the superseded migration must not install the PTL variant first
-omarchy-plymouth-set: refusing to publish: destination /tmp/tmp.NRTgoYcQXs/run.mFrX3U8C/root/usr/share/plymouth/themes/omarchy/bullet.png failed validation
+omarchy-plymouth-set: refusing to publish: destination /tmp/tmp.rBIqgIOPwr/run.2dghr5B6/root/usr/share/plymouth/themes/omarchy/bullet.png failed validation
 not ok - the root-authorized development checkout can publish Plymouth assets
 Cannot complete the privileged installer-artifact repair. An administrator must run omarchy-migrate to repair this machine.
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/system-sleep/keyboard-backlight at /tmp/tmp.7MTjw8DugO/quarantine/keyboard-backlight.8GFpnH/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/system-sleep/force-igpu at /tmp/tmp.7MTjw8DugO/quarantine/force-igpu.8NjABg/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.7MTjw8DugO/quarantine/delay-start.conf.L9YuGQ/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.7MTjw8DugO/quarantine/delay-start.conf.xTvafs/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/system-sleep/keyboard-backlight at /tmp/tmp.d8rTfDNiBn/quarantine/keyboard-backlight.L6iaHv/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/system-sleep/force-igpu at /tmp/tmp.d8rTfDNiBn/quarantine/force-igpu.wwc56U/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.d8rTfDNiBn/quarantine/delay-start.conf.maBv37/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/systemd/supergfxd.service.d/delay-start.conf at /tmp/tmp.d8rTfDNiBn/quarantine/delay-start.conf.oHqTN9/original for administrator review
 Could not reload systemd after repairing the supergfxd configuration; the migration will retry
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/system-sleep/force-igpu at /tmp/tmp.7MTjw8DugO/quarantine/force-igpu.GPDn3K/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/system-sleep/keyboard-backlight at /tmp/tmp.7MTjw8DugO/quarantine/keyboard-backlight.KyiCvm/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/system-sleep/keyboard-backlight at /tmp/tmp.7MTjw8DugO/quarantine/keyboard-backlight.Ge0Mrn/original for administrator review
-Preserved unsafe custom content from /tmp/tmp.7MTjw8DugO/system-sleep/keyboard-backlight at /tmp/tmp.7MTjw8DugO/quarantine/keyboard-backlight.583j47/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/system-sleep/force-igpu at /tmp/tmp.d8rTfDNiBn/quarantine/force-igpu.wRbMrN/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/system-sleep/keyboard-backlight at /tmp/tmp.d8rTfDNiBn/quarantine/keyboard-backlight.p00Byo/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/system-sleep/keyboard-backlight at /tmp/tmp.d8rTfDNiBn/quarantine/keyboard-backlight.acujVs/original for administrator review
+Preserved unsafe custom content from /tmp/tmp.d8rTfDNiBn/system-sleep/keyboard-backlight at /tmp/tmp.d8rTfDNiBn/quarantine/keyboard-backlight.LJJ3fT/original for administrator review
 
 4 of 246 test files failed:
   test/shell.d/locate-test.sh

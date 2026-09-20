@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12667",
+  "repository": "omacom/omarchy",
+  "number": 12667,
+  "title": "Accept keypad digits on the lock screen while NumLock is desynced",
+  "author": "prabhchintan",
+  "head_sha": "828ac78883f5ec1c53f695422af21b9d34a6d20a",
+  "state": "open",
+  "updated_at": "2026-09-20T20:01:02Z",
+  "body": "## Problem\n\nTyping a digit on the numeric keypad does nothing in the lock screen's password field. The same digit on the number row types fine. Anyone whose password has digits typed on the keypad has to toggle NumLock off and on at every lock (#8552).\n\n## Cause\n\nQt never reads the compositor's NumLock state at startup (QTBUG-32687). Even with NumLock on, the keypad reaches the field as Home, Up, PageUp and the rest with `Qt.KeypadModifier` set and no text, and `TextInput` treats them as cursor movement.\n\n## Fix\n\nMap those keys back to their digits in the field's key handler when `KeypadModifier` is set. Digits that already carry text, the top row and plain cursor keys are untouched, and nothing is inserted while the field is read-only during authentication.\n\nSame approach as #10530 takes for the polkit dialog. The lock keeps its own model so the two can land independently; if both land, the two helpers can fold into one.\n\n## Test plan\n\n- [x] `test/shell.d/lock-keypad-test.sh` covers the mapping and the keys that must stay untouched\n- [x] A Quickshell harness driving the real `LockView` field: keypad Home, End and Delete type `71.`, plain Home stays cursor movement, `Key_7` with text is left to the field, nothing is inserted while authenticating\n- [x] Neighbouring `polkit`, `lock-*` and `menu` shell tests pass\n- [x] Live on Omarchy 4.0.4 (Apple Magic Keyboard with Numeric Keypad, NumLock on in Hyprland): digits type on the lock screen, the number row still works\n",
+  "original_source_changed": false
+}

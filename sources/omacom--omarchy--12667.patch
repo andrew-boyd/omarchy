@@ -1,0 +1,106 @@
+diff --git a/shell/plugins/lock/LockModel.js b/shell/plugins/lock/LockModel.js
+new file mode 100644
+index 00000000000..b649ec743b2
+--- /dev/null
++++ b/shell/plugins/lock/LockModel.js
+@@ -0,0 +1,25 @@
++// Qt never reads the compositor's NumLock state at startup (QTBUG-32687), so
++// keypad digits reach the password field as cursor keys carrying no text.
++// Values are Qt::Key_* from qnamespace.h; QML enums are not visible here.
++function keypadDigit(key) {
++  switch (key) {
++    case 0x01000006: return "0" // Key_Insert
++    case 0x01000011: return "1" // Key_End
++    case 0x01000015: return "2" // Key_Down
++    case 0x01000017: return "3" // Key_PageDown
++    case 0x01000012: return "4" // Key_Left
++    case 0x0100000b: return "5" // Key_Clear
++    case 0x01000014: return "6" // Key_Right
++    case 0x01000010: return "7" // Key_Home
++    case 0x01000013: return "8" // Key_Up
++    case 0x01000016: return "9" // Key_PageUp
++    case 0x01000007: return "." // Key_Delete
++  }
++  return ""
++}
++
++if (typeof module !== "undefined") {
++  module.exports = {
++    keypadDigit: keypadDigit
++  }
++}
+diff --git a/shell/plugins/lock/LockView.qml b/shell/plugins/lock/LockView.qml
+index e7a430ac67f..d5d7d11bf32 100644
+--- a/shell/plugins/lock/LockView.qml
++++ b/shell/plugins/lock/LockView.qml
+@@ -2,6 +2,7 @@ import QtQuick
+ import QtQuick.Effects
+ import qs.Commons
+ import qs.Ui
++import "LockModel.js" as LockModel
+ 
+ Item {
+   id: root
+@@ -52,6 +53,17 @@ Item {
+     passwordInput.forceActiveFocus()
+   }
+ 
++  // With NumLock desynced the keypad sends Home, Up, PageUp and so on with
++  // KeypadModifier set and no text, which the field would otherwise treat as
++  // cursor movement. The top row never carries the modifier, so it is untouched.
++  function insertKeypadDigit(event) {
++    if (passwordInput.readOnly || !(event.modifiers & Qt.KeypadModifier)) return false
++    var digit = LockModel.keypadDigit(event.key)
++    if (digit === "") return false
++    passwordInput.insert(passwordInput.cursorPosition, digit)
++    return true
++  }
++
+   function clearPassword() {
+     passwordTextEdited("")
+   }
+@@ -181,6 +193,8 @@ Item {
+           if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
+             root.passwordTextEdited("")
+             event.accepted = true
++          } else if (root.insertKeypadDigit(event)) {
++            event.accepted = true
+           }
+         }
+       }
+diff --git a/test/shell.d/lock-keypad-test.sh b/test/shell.d/lock-keypad-test.sh
+new file mode 100644
+index 00000000000..11579309929
+--- /dev/null
++++ b/test/shell.d/lock-keypad-test.sh
+@@ -0,0 +1,30 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++run_node_test <<'JS'
++const lock = requireFromRoot('shell/plugins/lock/LockModel.js')
++
++const desynced = [
++  [0x01000006, "0", "Insert"],
++  [0x01000011, "1", "End"],
++  [0x01000015, "2", "Down"],
++  [0x01000017, "3", "PageDown"],
++  [0x01000012, "4", "Left"],
++  [0x0100000b, "5", "Clear"],
++  [0x01000014, "6", "Right"],
++  [0x01000010, "7", "Home"],
++  [0x01000013, "8", "Up"],
++  [0x01000016, "9", "PageUp"],
++  [0x01000007, ".", "Delete"]
++]
++for (const [key, digit, name] of desynced) {
++  assertEqual(lock.keypadDigit(key), digit, `keypad ${digit} arrives as ${name} when NumLock is desynced`)
++}
++
++assertEqual(lock.keypadDigit(0x34), "", "a digit that already carries text is not remapped")
++assertEqual(lock.keypadDigit(0x01000004), "", "Return is not a keypad digit")
++assertEqual(lock.keypadDigit(0x01000000), "", "Escape is not a keypad digit")
++JS

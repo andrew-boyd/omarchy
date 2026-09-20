@@ -1,5 +1,5 @@
 {
-  "unique_source_prs": 67,
+  "unique_source_prs": 73,
   "original_refs": 52,
   "by_proposal": {
     "P01": [
@@ -296,6 +296,54 @@
         "treatment": "context",
         "rationale": "Foreground display wake with asynchronous keyboard/clamshell restoration; different trigger and scope from lid policy.",
         "recommended_action": "Retain as related context; no closure recommendation from this roll-up."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12652",
+        "repository": "omacom/omarchy",
+        "number": 12652,
+        "title": "Fix lock password focus after resume",
+        "author": "dexteresc",
+        "head_sha": "df15b9b14a36445c91c51339c43847a423f2feab",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Window-event focus recovery for an already active lock surface; separate from #12435's logind monitor and #9181's resume/PAM retry ownership. Preserve as a follow-up; not stacked into accepted fingerprint work.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12614",
+        "repository": "omacom/omarchy",
+        "number": 12614,
+        "title": "Fix lock password focus after resume",
+        "author": "dexteresc",
+        "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+        "state": "closed",
+        "treatment": "predecessor",
+        "rationale": "Closed in favor of #12652 to correct commit attribution; preserve the original source and exact production comparison.",
+        "recommended_action": "Already closed; retain attribution and context. No action proposed."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/7146",
+        "repository": "omacom/omarchy",
+        "number": 7146,
+        "title": "Disable the panel by overlay alone in clamshell recovery",
+        "author": "mkelk",
+        "head_sha": "ebd47f66314922cc4f2af64646d9c4480913d5be",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Complete clamshell-overlay proposal replaces its former parser, changes external-active truth/unknown handling and modifies the watcher shared with P05. Retain separately; it is not the accepted P04 lid-lock component or P05 filtering patch.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/9181",
+        "repository": "omacom/omarchy",
+        "number": 9181,
+        "title": "Restore lock password focus after resume",
+        "author": "ClGratton",
+        "head_sha": "992c4b8ed6a1e46f34c66c3b6cec73f718bfe601",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Broader FocusScope/focus-generation recovery changes the sleep monitor, explicit resume IPC and post-PAM retry policy. Preserve separately from #12652 and #12435; no mixed focus ownership is invented.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       }
     ],
     "P05": [
@@ -322,6 +370,18 @@
         "treatment": "partial",
         "rationale": "Backend enumeration filter incorporated. Duplicate frontend geometry filter and its assertion excluded because they discard real temporarily 0x0 displays.",
         "recommended_action": "Keep uncovered portions open; consider closure only after author/maintainer agreement on complete coverage."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/7146",
+        "repository": "omacom/omarchy",
+        "number": 7146,
+        "title": "Disable the panel by overlay alone in clamshell recovery",
+        "author": "mkelk",
+        "head_sha": "ebd47f66314922cc4f2af64646d9c4480913d5be",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Complete clamshell-overlay proposal replaces its former parser, changes external-active truth/unknown handling and modifies the watcher shared with P05. Retain separately; it is not the accepted P04 lid-lock component or P05 filtering patch.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       }
     ],
     "P06": [
@@ -360,6 +420,18 @@
         "treatment": "context",
         "rationale": "Merged package source establishes four old SPI/T1 module responsibilities; release-watch infrastructure is outside the roll-up.",
         "recommended_action": "Already merged; retain attribution and context. No action proposed."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/10141",
+        "repository": "omacom/omarchy",
+        "number": 10141,
+        "title": "Stabilize MacBookPro13,3 hardware support",
+        "author": "monomyth",
+        "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+        "state": "open",
+        "treatment": "broader",
+        "rationale": "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle.",
+        "recommended_action": "Keep uncovered scope open. This narrower roll-up does not fully supersede it."
       }
     ],
     "P07": [
@@ -374,6 +446,18 @@
         "treatment": "incorporated",
         "rationale": "Complete MacBook8,1 SPI-PIO candidate, including inherited boot/sleep/rollback limitations. No replacement hardware policy authored.",
         "recommended_action": "Recommend closure in favor of this feature roll-up after maintainers accept preserved coverage."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/10141",
+        "repository": "omacom/omarchy",
+        "number": 10141,
+        "title": "Stabilize MacBookPro13,3 hardware support",
+        "author": "monomyth",
+        "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+        "state": "open",
+        "treatment": "broader",
+        "rationale": "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle.",
+        "recommended_action": "Keep uncovered scope open. This narrower roll-up does not fully supersede it."
       }
     ],
     "P08": [
@@ -452,6 +536,18 @@
         "treatment": "incorporated",
         "rationale": "Complete narrower Apple-controller starting point; custom-unit overwrite/deletion and unknown-state findings preserved. Accepted as a provisional consolidation target with those documented gaps.",
         "recommended_action": "Recommend closure in favor of this feature roll-up after maintainers accept preserved coverage."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/10141",
+        "repository": "omacom/omarchy",
+        "number": 10141,
+        "title": "Stabilize MacBookPro13,3 hardware support",
+        "author": "monomyth",
+        "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+        "state": "open",
+        "treatment": "broader",
+        "rationale": "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle.",
+        "recommended_action": "Keep uncovered scope open. This narrower roll-up does not fully supersede it."
       }
     ],
     "P10": [
@@ -524,8 +620,20 @@
         "head_sha": "d5493deb522c8288b4bad2566d195b57f655cfe5",
         "state": "open",
         "treatment": "incorporated",
-        "rationale": "Separate MacBookPro14,2/14,3 calibration data, MAC handling and migration.",
+        "rationale": "Separate MacBookPro14,2/14,3 calibration data, MAC handling and migration. September 20 reports reinforce retaining its 14,2/14,3 boundary; separate 13,3 observations do not establish universal 5 GHz channel limits.",
         "recommended_action": "Recommend closure in favor of this feature roll-up after maintainers accept preserved coverage."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/10141",
+        "repository": "omacom/omarchy",
+        "number": 10141,
+        "title": "Stabilize MacBookPro13,3 hardware support",
+        "author": "monomyth",
+        "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+        "state": "open",
+        "treatment": "broader",
+        "rationale": "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle.",
+        "recommended_action": "Keep uncovered scope open. This narrower roll-up does not fully supersede it."
       }
     ],
     "P11": [
@@ -947,10 +1055,10 @@
         "number": 298,
         "title": "Package freeze-safe Apple T1 Touch Bar driver",
         "author": "monomyth",
-        "head_sha": "9df28e3726df4ca80d89a71a781e8a82995b6677",
+        "head_sha": "b6495c494e15bf3239a758422142c98d57549f4d",
         "state": "open",
         "treatment": "alternative",
-        "rationale": "AJ/freeze-safe legacy provider with different reports and no legacy ALS module; not evidence for T1Bridge behavior.",
+        "rationale": "AJ/freeze-safe legacy provider with different reports and no legacy ALS module; not evidence for T1Bridge behavior. Refreshed head b6495c4 adds only local-package planner metadata; runtime stack and version remain unchanged.",
         "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
@@ -988,6 +1096,66 @@
         "treatment": "context",
         "rationale": "Overlapping shared lock/resume lifecycle reviewed with P04. Keep separate from the selected #11273/#11952 service until the differing triggers and reader behavior are reconciled.",
         "recommended_action": "Retain as related context; no closure recommendation from this roll-up."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12652",
+        "repository": "omacom/omarchy",
+        "number": 12652,
+        "title": "Fix lock password focus after resume",
+        "author": "dexteresc",
+        "head_sha": "df15b9b14a36445c91c51339c43847a423f2feab",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Window-event focus recovery for an already active lock surface; separate from #12435's logind monitor and #9181's resume/PAM retry ownership. Preserve as a follow-up; not stacked into accepted fingerprint work.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12614",
+        "repository": "omacom/omarchy",
+        "number": 12614,
+        "title": "Fix lock password focus after resume",
+        "author": "dexteresc",
+        "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+        "state": "closed",
+        "treatment": "predecessor",
+        "rationale": "Closed in favor of #12652 to correct commit attribution; preserve the original source and exact production comparison.",
+        "recommended_action": "Already closed; retain attribution and context. No action proposed."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12667",
+        "repository": "omacom/omarchy",
+        "number": 12667,
+        "title": "Accept keypad digits on the lock screen while NumLock is desynced",
+        "author": "prabhchintan",
+        "head_sha": "828ac78883f5ec1c53f695422af21b9d34a6d20a",
+        "state": "open",
+        "treatment": "context",
+        "rationale": "Shared lock numeric-keypad handling with an attributed Apple Magic Keyboard report. Separate from T1 provider and fingerprint lifecycle; retained as follow-up context, not a new prerequisite.",
+        "recommended_action": "Retain as related context; no closure recommendation from this roll-up."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/9181",
+        "repository": "omacom/omarchy",
+        "number": 9181,
+        "title": "Restore lock password focus after resume",
+        "author": "ClGratton",
+        "head_sha": "992c4b8ed6a1e46f34c66c3b6cec73f718bfe601",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Broader FocusScope/focus-generation recovery changes the sleep monitor, explicit resume IPC and post-PAM retry policy. Preserve separately from #12652 and #12435; no mixed focus ownership is invented.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/10141",
+        "repository": "omacom/omarchy",
+        "number": 10141,
+        "title": "Stabilize MacBookPro13,3 hardware support",
+        "author": "monomyth",
+        "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+        "state": "open",
+        "treatment": "broader",
+        "rationale": "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle.",
+        "recommended_action": "Keep uncovered scope open. This narrower roll-up does not fully supersede it."
       }
     ],
     "P12-packages": [
@@ -1117,10 +1285,10 @@
         "number": 298,
         "title": "Package freeze-safe Apple T1 Touch Bar driver",
         "author": "monomyth",
-        "head_sha": "9df28e3726df4ca80d89a71a781e8a82995b6677",
+        "head_sha": "b6495c494e15bf3239a758422142c98d57549f4d",
         "state": "open",
         "treatment": "alternative",
-        "rationale": "AJ/freeze-safe legacy provider with different reports and no legacy ALS module; not evidence for T1Bridge behavior.",
+        "rationale": "AJ/freeze-safe legacy provider with different reports and no legacy ALS module; not evidence for T1Bridge behavior. Refreshed head b6495c4 adds only local-package planner metadata; runtime stack and version remain unchanged.",
         "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
@@ -1158,6 +1326,66 @@
         "treatment": "context",
         "rationale": "Overlapping shared lock/resume lifecycle reviewed with P04. Keep separate from the selected #11273/#11952 service until the differing triggers and reader behavior are reconciled.",
         "recommended_action": "Retain as related context; no closure recommendation from this roll-up."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12652",
+        "repository": "omacom/omarchy",
+        "number": 12652,
+        "title": "Fix lock password focus after resume",
+        "author": "dexteresc",
+        "head_sha": "df15b9b14a36445c91c51339c43847a423f2feab",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Window-event focus recovery for an already active lock surface; separate from #12435's logind monitor and #9181's resume/PAM retry ownership. Preserve as a follow-up; not stacked into accepted fingerprint work.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12614",
+        "repository": "omacom/omarchy",
+        "number": 12614,
+        "title": "Fix lock password focus after resume",
+        "author": "dexteresc",
+        "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+        "state": "closed",
+        "treatment": "predecessor",
+        "rationale": "Closed in favor of #12652 to correct commit attribution; preserve the original source and exact production comparison.",
+        "recommended_action": "Already closed; retain attribution and context. No action proposed."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/12667",
+        "repository": "omacom/omarchy",
+        "number": 12667,
+        "title": "Accept keypad digits on the lock screen while NumLock is desynced",
+        "author": "prabhchintan",
+        "head_sha": "828ac78883f5ec1c53f695422af21b9d34a6d20a",
+        "state": "open",
+        "treatment": "context",
+        "rationale": "Shared lock numeric-keypad handling with an attributed Apple Magic Keyboard report. Separate from T1 provider and fingerprint lifecycle; retained as follow-up context, not a new prerequisite.",
+        "recommended_action": "Retain as related context; no closure recommendation from this roll-up."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/9181",
+        "repository": "omacom/omarchy",
+        "number": 9181,
+        "title": "Restore lock password focus after resume",
+        "author": "ClGratton",
+        "head_sha": "992c4b8ed6a1e46f34c66c3b6cec73f718bfe601",
+        "state": "open",
+        "treatment": "alternative",
+        "rationale": "Broader FocusScope/focus-generation recovery changes the sleep monitor, explicit resume IPC and post-PAM retry policy. Preserve separately from #12652 and #12435; no mixed focus ownership is invented.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
+      },
+      {
+        "url": "https://github.com/omacom/omarchy/pull/10141",
+        "repository": "omacom/omarchy",
+        "number": 10141,
+        "title": "Stabilize MacBookPro13,3 hardware support",
+        "author": "monomyth",
+        "head_sha": "b83e57f6c4043a450e22c1d913559075abd55443",
+        "state": "open",
+        "treatment": "broader",
+        "rationale": "Existing MacBookPro13,3 bundle combines separate calibration, legacy T1/SPI, NVMe and experimental Radeon work. Retain relevant device reports and model boundaries; this roll-up does not cover or endorse the full bundle.",
+        "recommended_action": "Keep uncovered scope open. This narrower roll-up does not fully supersede it."
       }
     ],
     "P13": [

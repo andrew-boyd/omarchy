@@ -3,16 +3,16 @@
   "policy": "Preserve a contributing source author as Git Author; credit other included commit authors with Co-authored-by, and retain original source-declared co-author trailers. The coordinator remains Committer. PR openers, merge-only identities, excluded alternatives and transitive dependency authors are not substituted for actual contributing authors.",
   "github_profile_limit": "Original identities are preserved, including unlinked identities. GitHub profile/contribution attribution depends on email association and the eventual merge strategy; no email is invented or replaced with a guessed noreply address.",
   "source_commits_reused_unchanged": false,
-  "candidate_trees_unchanged": true,
-  "test_results_reused_by_identical_tree": true,
+  "candidate_trees_unchanged": false,
+  "test_results_reused_by_identical_tree": false,
   "remote_writes": 0,
   "entries": [
     {
       "id": "P01",
       "previous_commit": "65b280d9e2a8789c36a152bbb5d1a033588971e6",
-      "commit": "6cdb1f52e0f96dde74f5805ac9bbb5ba5547c394",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "c2bd98b8f0a904094b023973f1523bacc081b972",
+      "commit": "cee527ff2501df3b38308cb2958889b502015c62",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "373b1104d9eb4b2d91578f4476d73ece9fd2cd10",
       "author": {
         "name": "Roman Elizarov",
         "email": "elizarov.rr@gmail.com",
@@ -82,15 +82,35 @@
         }
       ],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P01",
+        "repository": "omacom/omarchy",
+        "previous_commit": "6cdb1f52e0f96dde74f5805ac9bbb5ba5547c394",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "c2bd98b8f0a904094b023973f1523bacc081b972",
+        "commit": "cee527ff2501df3b38308cb2958889b502015c62",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "373b1104d9eb4b2d91578f4476d73ece9fd2cd10",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+          "test/shell.d/keyboard-layout-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P01"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P02",
       "previous_commit": "15f8b5970c1279950bc3335f474c2793189e82e0",
-      "commit": "d8acbbfbf39c27b7f238bd4867a0f9e6ad62f4fa",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
+      "commit": "82a7f77444e446ae10758f385ded7301fcf584f1",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "0ae9580df508453e069b411ae4fde8802606701b",
       "author": {
         "name": "Oliver Oxenham",
         "email": "oliver.oxenham@gmail.com",
@@ -141,15 +161,35 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P02",
+        "repository": "omacom/omarchy",
+        "previous_commit": "d8acbbfbf39c27b7f238bd4867a0f9e6ad62f4fa",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
+        "commit": "82a7f77444e446ae10758f385ded7301fcf584f1",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "0ae9580df508453e069b411ae4fde8802606701b",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "migrations/1789546355.sh",
+          "test/shell.d/broadcom-wl-headers-migration-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P02"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P03",
       "previous_commit": "da27f6caa989360a0689ecde5433c075f51f2342",
-      "commit": "ad416ff12f1172641016de721feaecc320b1749b",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
+      "commit": "3c64ee2d0c88c26351ef6a35063d3aa16c46df39",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "fe5800651d956e73d72c04168c372988f7899a1b",
       "author": {
         "name": "Taksh",
         "email": "takshkothari09@gmail.com",
@@ -323,15 +363,45 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P03",
+        "repository": "omacom/omarchy",
+        "previous_commit": "ad416ff12f1172641016de721feaecc320b1749b",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
+        "commit": "3c64ee2d0c88c26351ef6a35063d3aa16c46df39",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "fe5800651d956e73d72c04168c372988f7899a1b",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "bin/omarchy-hw-bcm43xx",
+          "bin/omarchy-hw-t2",
+          "install/hardware/apple/fix-t2.sh",
+          "install/hardware/fix-bcm43xx.sh",
+          "install/hardware/nvidia.sh",
+          "install/hardware/pacman.sh",
+          "install/hardware/vulkan.sh",
+          "test/shell.d/hw-bcm43xx-test.sh",
+          "test/shell.d/hw-t2-test.sh",
+          "test/shell.d/nvidia-hw-detect-test.sh",
+          "test/shell.d/pci-detection-integration-test.sh",
+          "test/shell.d/vulkan-sysfs-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P03"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P04",
       "previous_commit": "eb9d9c358cad7dc6ef00fb82278c39394f45c2cf",
-      "commit": "34adcf55c77e25510d25ccd4d6d7b15ec7e005ac",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "9bb1fb0cd95cb5ed565ae553343a21351dc0d4db",
+      "commit": "b5e64f295902651b5d78b9dcf197a9857cc8f0dc",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "d32b7413a6814beb4be542ce6a672b3e4af480bf",
       "author": {
         "name": "adityagarud",
         "email": "garudaditya079@gmail.com",
@@ -376,15 +446,36 @@
         }
       ],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P04",
+        "repository": "omacom/omarchy",
+        "previous_commit": "34adcf55c77e25510d25ccd4d6d7b15ec7e005ac",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "9bb1fb0cd95cb5ed565ae553343a21351dc0d4db",
+        "commit": "b5e64f295902651b5d78b9dcf197a9857cc8f0dc",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "d32b7413a6814beb4be542ce6a672b3e4af480bf",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "bin/omarchy-system-lid-close",
+          "test/shell.d/lid-active-display-integration-test.sh",
+          "test/shell.d/lid-close-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P04"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P05",
       "previous_commit": "ebf2c823ddb26188edc15b2f3e6ff70b4044e21f",
-      "commit": "dbc2abab13c63f26266ef9420ab39c02f1134266",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "40a1c0dcac181830688141bdc956b54c013ea307",
+      "commit": "93ace98045d0945ad7f374a396c58c9b5936a8c7",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "bf0a638decd2403d585daaafa1804ced9f775cbc",
       "author": {
         "name": "Piotr Synowiec",
         "email": "piotr@synowiec.co",
@@ -474,15 +565,39 @@
           "identity_source": "omacom/omarchy#10198@35f3354ed122decab94b0507d6c633b45cd9d0a0"
         }
       ],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P05",
+        "repository": "omacom/omarchy",
+        "previous_commit": "dbc2abab13c63f26266ef9420ab39c02f1134266",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "40a1c0dcac181830688141bdc956b54c013ea307",
+        "commit": "93ace98045d0945ad7f374a396c58c9b5936a8c7",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "bf0a638decd2403d585daaafa1804ced9f775cbc",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "bin/omarchy-hyprland-monitor-disable-ghosts",
+          "bin/omarchy-hyprland-monitor-watch",
+          "bin/omarchy-monitor-state",
+          "test/shell.d/monitor-modeless-test.sh",
+          "test/shell.d/monitor-panel-pipeline-test.sh",
+          "test/shell.d/monitor-state-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P05"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P06",
       "previous_commit": "b569a71fce64d8f9522d8293f3c168274608b1b1",
-      "commit": "fe0928850d125db300d8a91ffa4809d5ef0558ce",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
+      "commit": "c04f77539ad3bca02182b3be5ba5257d3e972ff8",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "468121b45bfaf34bff75b06dea00bdc137c66141",
       "author": {
         "name": "Josh Hudson",
         "email": "313875020+hudsonwa@users.noreply.github.com",
@@ -573,15 +688,37 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P06",
+        "repository": "omacom/omarchy",
+        "previous_commit": "fe0928850d125db300d8a91ffa4809d5ef0558ce",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
+        "commit": "c04f77539ad3bca02182b3be5ba5257d3e972ff8",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "468121b45bfaf34bff75b06dea00bdc137c66141",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "install/hardware/apple/fix-spi-keyboard.sh",
+          "install/omarchy-other.packages",
+          "migrations/1788476400.sh",
+          "test/shell.d/spi-keyboard-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P06"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P07",
       "previous_commit": "0df69f595201dda4666138a86387edb5df9fee62",
-      "commit": "14f9a8fc232f55bc4798795a7b0962f3e0364752",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "73a922cb3040d54a999b0b92784b2f27c330992b",
+      "commit": "eb1b6090e7e3866ab098afa6162c9b72b16315a7",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "84c5f187cb82a24dc4905aa58972a109b53ede48",
       "author": {
         "name": "jeissonneira",
         "email": "12259586+jeissonneira@users.noreply.github.com",
@@ -622,15 +759,37 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P07",
+        "repository": "omacom/omarchy",
+        "previous_commit": "14f9a8fc232f55bc4798795a7b0962f3e0364752",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "73a922cb3040d54a999b0b92784b2f27c330992b",
+        "commit": "eb1b6090e7e3866ab098afa6162c9b72b16315a7",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "84c5f187cb82a24dc4905aa58972a109b53ede48",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "install/hardware/apple/fix-spi-keyboard.sh",
+          "manual/44-mac-support.md",
+          "migrations/1788318101.sh",
+          "test/shell.d/macbook81-spi-pio-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P07"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P08",
       "previous_commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
-      "commit": "68d5af69a2126af5856445ba9916772f7b0f9f33",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+      "commit": "59348a9e66b14a661cf81cc9166f37120dc7423e",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "fd4b495322f926a7491e59a286ca5fed734ea87f",
       "author": {
         "name": "Bradley Marks",
         "email": "bazzieb@gmail.com",
@@ -701,15 +860,41 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P08",
+        "repository": "omacom/omarchy",
+        "previous_commit": "68d5af69a2126af5856445ba9916772f7b0f9f33",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+        "commit": "59348a9e66b14a661cf81cc9166f37120dc7423e",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "fd4b495322f926a7491e59a286ca5fed734ea87f",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "bin/omarchy-hw-facetimehd",
+          "install/hardware/all.sh",
+          "install/hardware/apple/fix-facetimehd.sh",
+          "install/omarchy-other.packages",
+          "manual/44-mac-support.md",
+          "migrations/1789542390.sh",
+          "test/shell.d/camera-consolidation-test.sh",
+          "test/shell.d/facetimehd-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P08"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P08-packages",
       "previous_commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
-      "commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
-      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
-      "tree_sha": "1e67c884154c830dac79418e81aa028351b5a4ca",
+      "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
+      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
       "author": {
         "name": "xiota",
         "email": "aur@mentalfossa.com",
@@ -995,15 +1180,41 @@
           "identity_source": "https://aur.archlinux.org/facetimehd-firmware.git@7b9e6c71c6229a88ce1908e5d5692045a095a6da"
         }
       ],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P08-packages",
+        "repository": "omacom/omarchy-pkgs",
+        "previous_commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
+        "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+        "previous_tree": "1e67c884154c830dac79418e81aa028351b5a4ca",
+        "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
+        "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+        "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "pkgbuilds/facetimehd-data/.omarchy/package.json",
+          "pkgbuilds/facetimehd-data/PKGBUILD",
+          "pkgbuilds/facetimehd-dkms/.nvchecker.toml",
+          "pkgbuilds/facetimehd-dkms/.omarchy/package.json",
+          "pkgbuilds/facetimehd-dkms/PKGBUILD",
+          "pkgbuilds/facetimehd-firmware/.omarchy/package.json",
+          "pkgbuilds/facetimehd-firmware/LicenseRef-Apple.tar.xz",
+          "pkgbuilds/facetimehd-firmware/PKGBUILD"
+        ],
+        "audit_ref": "refs/reconciliation-before/P08-packages"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P09",
       "previous_commit": "83242e08651c458ae2e87a0f8d146ca459f74af5",
-      "commit": "55c22ce34ac42f91e95f78633465096d4aebd8c0",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "6343d43b395da10f887f755382af6d6c362a5f2d",
+      "commit": "37a4d46198db7dbd4f706d9592c73a2a9b7aad36",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "63e9fdafc85ceccd1a990a7fbb4a7c61c1008aed",
       "author": {
         "name": "Nicolas Nistal",
         "email": "nistal.nicolas@gmail.com",
@@ -1055,15 +1266,36 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P09",
+        "repository": "omacom/omarchy",
+        "previous_commit": "55c22ce34ac42f91e95f78633465096d4aebd8c0",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "6343d43b395da10f887f755382af6d6c362a5f2d",
+        "commit": "37a4d46198db7dbd4f706d9592c73a2a9b7aad36",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "63e9fdafc85ceccd1a990a7fbb4a7c61c1008aed",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "install/hardware/apple/fix-suspend-nvme.sh",
+          "migrations/1789274148.sh",
+          "test/shell.d/apple-suspend-nvme-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P09"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P10",
       "previous_commit": "c85a3e400a950e2867b0069aeb9a6eacdda2fa15",
-      "commit": "740945dc13a101597ba361f62ec4b6e5e2e4168c",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "aa0e2108412410f11a0077878769c42533b08d48",
+      "commit": "40d1a6a856ba95879f081ff042128698a499da42",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "e7ab77388c74a83cb03a33685e49a6b3a6b3dfb1",
       "author": {
         "name": "Justin Schroeder",
         "email": "justin@formkit.com",
@@ -1305,15 +1537,49 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P10",
+        "repository": "omacom/omarchy",
+        "previous_commit": "740945dc13a101597ba361f62ec4b6e5e2e4168c",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "aa0e2108412410f11a0077878769c42533b08d48",
+        "commit": "40d1a6a856ba95879f081ff042128698a499da42",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "e7ab77388c74a83cb03a33685e49a6b3a6b3dfb1",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "default/firmware/apple/brcmfmac43602-pcie.txt",
+          "default/systemd/system-sleep/rebind-brcmfmac",
+          "docs/file-layout.md",
+          "install/hardware/all.sh",
+          "install/hardware/apple/brcmfmac-43602.sh",
+          "install/hardware/apple/fix-bcm43602-nvram.sh",
+          "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+          "install/hardware/apple/fix-brcmfmac-suspend.sh",
+          "manual/44-mac-support.md",
+          "migrations/1787312531.sh",
+          "migrations/1789668939.sh",
+          "test/shell.d/apple-bcm43602-nvram-test.sh",
+          "test/shell.d/brcmfmac-5ghz-test.sh",
+          "test/shell.d/brcmfmac-suspend-test.sh",
+          "test/shell.d/broadcom-calibration-integration-test.sh",
+          "test/shell.d/unowned-system-paths-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P10"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P11",
       "previous_commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
-      "commit": "b19fe49bd33075c07aa577d1ac5efee2dcf0d3eb",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
+      "commit": "b006a68c0da31e06504f9f3b0025a13302c3fff5",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "5e194ca2f90601beab38d2dd6b75bf2779dbcdae",
       "author": {
         "name": "Shawn Yeager",
         "email": "shawn@shawnyeager.com",
@@ -1596,15 +1862,53 @@
           "identity_source": "omacom/omarchy#6921@316e1f0b97f4f8362473af69f76695cb75c7466d"
         }
       ],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P11",
+        "repository": "omacom/omarchy",
+        "previous_commit": "b19fe49bd33075c07aa577d1ac5efee2dcf0d3eb",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
+        "commit": "b006a68c0da31e06504f9f3b0025a13302c3fff5",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "5e194ca2f90601beab38d2dd6b75bf2779dbcdae",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "bin/omarchy-hw-apple-cs8409",
+          "bin/omarchy-hw-imac-cs4208",
+          "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+          "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+          "install/hardware/all.sh",
+          "install/hardware/apple/fix-cs4208-audio.sh",
+          "install/hardware/apple/fix-cs8409-audio.sh",
+          "install/hardware/apple/omarchy-cs4208-audio.service",
+          "install/omarchy-other.packages",
+          "install/user/all.sh",
+          "install/user/hardware/apple/fix-cs4208-audio.sh",
+          "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+          "manual/44-mac-support.md",
+          "manual/45-troubleshooting.md",
+          "migrations/1786889011.sh",
+          "migrations/1788673159.sh",
+          "migrations/1789869577.sh",
+          "test/shell.d/cs4208-audio-test.sh",
+          "test/shell.d/cs8409-audio-test.sh",
+          "test/shell.d/imac-cs4208-speakers-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P11"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P11-packages",
       "previous_commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
-      "commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
-      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
-      "tree_sha": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+      "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
+      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
       "author": {
         "name": "Shawn Yeager",
         "email": "shawn@shawnyeager.com",
@@ -1719,15 +2023,39 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P11-packages",
+        "repository": "omacom/omarchy-pkgs",
+        "previous_commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
+        "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+        "previous_tree": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+        "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
+        "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+        "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+          "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+          "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf",
+          "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh",
+          "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+          "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD"
+        ],
+        "audit_ref": "refs/reconciliation-before/P11-packages"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P12",
       "previous_commit": "208e69e960ec5793167e09f908396acff6ecd6f0",
-      "commit": "a96006c888331549383f12ad9255a79ec2005c64",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "8d0ea0341f561c202638f6ee76b256de8d5ee34d",
+      "commit": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "06edabeb18a527b9d03ab6102e007c70dfe561e5",
       "author": {
         "name": "Nicolas Nistal",
         "email": "nistal.nicolas@gmail.com",
@@ -1804,15 +2132,38 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P12",
+        "repository": "omacom/omarchy",
+        "previous_commit": "a96006c888331549383f12ad9255a79ec2005c64",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "8d0ea0341f561c202638f6ee76b256de8d5ee34d",
+        "commit": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "06edabeb18a527b9d03ab6102e007c70dfe561e5",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "shell/plugins/lock/LockView.qml",
+          "shell/plugins/lock/Service.qml",
+          "shell/plugins/polkit/PolkitAgent.qml",
+          "test/shell.d/lock-blank-fingerprint-test.sh",
+          "test/shell.d/lock-fingerprint-message-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P12"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P12-packages",
       "previous_commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
-      "commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
-      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
-      "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+      "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
+      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
       "author": {
         "name": "Andrew Boyd",
         "email": "andrew@formkit.com",
@@ -2331,15 +2682,50 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P12-packages",
+        "repository": "omacom/omarchy-pkgs",
+        "previous_commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
+        "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+        "previous_tree": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+        "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
+        "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+        "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "pkgbuilds/fprintd-t1bridge/.gitattributes",
+          "pkgbuilds/fprintd-t1bridge/.omarchy/package.json",
+          "pkgbuilds/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch",
+          "pkgbuilds/fprintd-t1bridge/0002-Fix-tests-for-current-GLib.patch",
+          "pkgbuilds/fprintd-t1bridge/PKGBUILD",
+          "pkgbuilds/libfprint-t1bridge/.gitattributes",
+          "pkgbuilds/libfprint-t1bridge/.omarchy/package.json",
+          "pkgbuilds/libfprint-t1bridge/0001-Add-T1Bridge-fingerprint-driver.patch",
+          "pkgbuilds/libfprint-t1bridge/0002-Use-relative-test-helper-path.patch",
+          "pkgbuilds/libfprint-t1bridge/PKGBUILD",
+          "pkgbuilds/libfprint-t1bridge/T1Bridge-MIT.txt",
+          "pkgbuilds/t1bridge-dkms/.omarchy/package.json",
+          "pkgbuilds/t1bridge-dkms/PKGBUILD",
+          "pkgbuilds/t1bridge-omarchy/.omarchy/package.json",
+          "pkgbuilds/t1bridge-omarchy/PKGBUILD",
+          "pkgbuilds/t1bridge/.omarchy/package.json",
+          "pkgbuilds/t1bridge/PKGBUILD"
+        ],
+        "audit_ref": "refs/reconciliation-before/P12-packages"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P13",
       "previous_commit": "f2be26a2195c35205baed9159facf0a312ebb2ae",
-      "commit": "f25357ff42341c0760095bb1cae90f0b558222e0",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "932100df6584207c8a0de68877e8cdb2d44776be",
+      "commit": "e909e30fa6d66b7558b0ff2a5d35a1ff4a9308e3",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "bf4088637f19722aec501b5815227e25bc5873a5",
       "author": {
         "name": "Nipun H Sud",
         "email": "nipunhsud@users.noreply.github.com",
@@ -2390,15 +2776,36 @@
       ],
       "omitted_commits": [],
       "unlinked_source_identities": [],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P13",
+        "repository": "omacom/omarchy",
+        "previous_commit": "f25357ff42341c0760095bb1cae90f0b558222e0",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "932100df6584207c8a0de68877e8cdb2d44776be",
+        "commit": "e909e30fa6d66b7558b0ff2a5d35a1ff4a9308e3",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "bf4088637f19722aec501b5815227e25bc5873a5",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "migrations/1789325478.sh",
+          "test/shell.d/intel-mac-kernel-policy-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh"
+        ],
+        "audit_ref": "refs/reconciliation-before/P13"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     },
     {
       "id": "P14",
       "previous_commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
-      "commit": "027ceda817926af794e1ff605d1ea9bf67535ee0",
-      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
-      "tree_sha": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
+      "commit": "213d7f6b4179960882e46b7a678bba466878d6c9",
+      "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+      "tree_sha": "ebc09c2f839079b943048cd6fe1c12f7fd0a9c5a",
       "author": {
         "name": "ganjeez",
         "email": "clubrantra@gmail.com",
@@ -2459,8 +2866,29 @@
           "identity_source": "omacom/omarchy#11904@38ffbdc94e7e5e54afc1e551c7f3c640af603821"
         }
       ],
-      "code_and_tests_unchanged": true,
-      "test_receipts_refer_to_previous_commit": true
+      "code_and_tests_unchanged": false,
+      "test_receipts_refer_to_previous_commit": false,
+      "upstream_reconciliation": {
+        "id": "P14",
+        "repository": "omacom/omarchy",
+        "previous_commit": "027ceda817926af794e1ff605d1ea9bf67535ee0",
+        "previous_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+        "previous_tree": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
+        "commit": "213d7f6b4179960882e46b7a678bba466878d6c9",
+        "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+        "tree_sha": "ebc09c2f839079b943048cd6fe1c12f7fd0a9c5a",
+        "candidate_delta_unchanged": true,
+        "contributed_files_unchanged": true,
+        "author_and_message_preserved": true,
+        "contributed_paths": [
+          "bin/omarchy-diagnose-suspend-wake"
+        ],
+        "audit_ref": "refs/reconciliation-before/P14"
+      },
+      "candidate_delta_unchanged": true,
+      "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
     }
-  ]
+  ],
+  "upstream_reconciled_at": "2026-09-20T20:19:08.673297+00:00",
+  "candidate_deltas_unchanged": true
 }

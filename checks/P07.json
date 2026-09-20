@@ -1,17 +1,25 @@
 {
   "id": "P07",
   "command": "./test/all",
-  "commit": "0df69f595201dda4666138a86387edb5df9fee62",
-  "tree_sha": "73a922cb3040d54a999b0b92784b2f27c330992b",
-  "package_input": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+  "commit": "eb1b6090e7e3866ab098afa6162c9b72b16315a7",
+  "tree_sha": "84c5f187cb82a24dc4905aa58972a109b53ede48",
+  "package_input": "30e862935e6593545546a6dc8363bc80c34987a1",
   "exit_code": 1,
   "timeout": false,
-  "elapsed_seconds": 282.59,
+  "elapsed_seconds": 255.26,
   "passed": false,
-  "assertions_passed": 3411,
+  "assertions_passed": 3400,
   "explicit_failures": [
     "not ok - the superseded migration must not install the PTL variant first",
-    "not ok - the root-authorized development checkout can publish Plymouth assets"
+    "not ok - the root-authorized development checkout can publish Plymouth assets",
+    "not ok - every preinstall is shipped in omarchy-base.packages"
+  ],
+  "failed_files": [
+    "test/shell.d/locate-test.sh",
+    "test/shell.d/network-qr-test.sh",
+    "test/shell.d/omarchy-kernel-migration-test.sh",
+    "test/shell.d/plymouth-set-test.sh",
+    "test/shell.d/preinstalls-test.sh"
   ],
   "skip_lines": [
     "ok - no Wayland compositor; skipping bar icon geometry test",
@@ -33,17 +41,10 @@
     "ok - automatic subordinate-id namespace unavailable; skipping root Windows VM boundary probe"
   ],
   "log": "P07.log",
-  "log_sha256": "e1e9e4ad3f3a7dacdecb99f0036203c71e94fe2e12411c3ee79d3ac785c0d7a8",
+  "log_sha256": "b52ffe8632eb1feb55d00d5e8b67367623d66bb166718be0a25a4ce4a622a99c",
   "isolation": "Disconnected bubblewrap; writable disposable copy of candidate; read-only source/packages/ISO/root; private home/tmp/run/sys/proc/dev; cleared environment; umask 022; no host compositor or service sockets.",
   "isolation_version": 2,
   "hardware_verified": false,
-  "failed_files": [
-    "test/shell.d/locate-test.sh",
-    "test/shell.d/network-qr-test.sh",
-    "test/shell.d/omarchy-kernel-migration-test.sh",
-    "test/shell.d/plymouth-set-test.sh"
-  ],
-  "original_log_sha256": "2ddd124018893e6cb725f8e5cdb904545516a304a552875f20087f1946c3c749",
-  "reused_for_commit": "14f9a8fc232f55bc4798795a7b0962f3e0364752",
-  "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
+  "original_log_sha256": "17e3d70ef2de76650f710e1a76067fb037828f1ddc347ce21aaea6bc7de3a429",
+  "tested_after_upstream_reconciliation": true
 }

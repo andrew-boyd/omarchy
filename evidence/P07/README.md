@@ -7,6 +7,7 @@ Carry all of #9735 unchanged for the exact MacBook8,1: PIO and s2idle parameters
 - A custom drop-in without the PIO substring is replaced, discarding other parameters. A comment-only substring can produce a completion marker without the active setting.
 - A file with PIO but without s2idle is accepted; an existing marker plus comment-only match suppresses repair. Four boundary observations reproduce these defects.
 - No live boot, encrypted-root input, suspend or rollback trial occurred. P06 retirement requires separate ownership review before combined deployment.
+- The full suite additionally failed preinstalls-test.sh (cliamp reported missing). Its relevant files are identical to upstream; 5/5 isolated repetitions pass on each tree. The cause remains unestablished, and the original failing receipt is retained for follow-up.
 
 ## Hardware acceptance checklist
 

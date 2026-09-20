@@ -1,0 +1,9 @@
+# Upstream refresh
+
+All 17 local candidates follow the refreshed Omarchy and package target commits recorded in `upstream-reconciliation.json`. Each contribution diff is byte-identical to its accepted pre-rebase diff. Original authors, dates, commit messages and co-author trailers are preserved. The changed upstream files are part of the new bases; no runtime repair was added to a candidate.
+
+The source inventory now covers 73 distinct PRs and 83 feature-table rows: 61 open, five closed and seven merged at the final check. New lock focus sources #12652 and #9181 remain separate alternatives; closed #12614 is retained as #12652's predecessor with an identical LockView production diff. #12667 is shared keypad follow-up context. The updated #7146 clamshell proposal remains a complete separate alternative. The broader #10141 model bundle is explicitly cross-referenced in the affected groups. See `source-refresh-review.json` for dispositions, mechanical layering probes and Jev's advisory assessment. `upstream-final-check.json` records the final source and target check; no additional changes were found.
+
+Legacy package #298 adds planner metadata only; accepted T1Bridge ownership is unchanged. #7671 gains attributed model-specific Wi-Fi discussion; #12435 has description cleanup with unchanged code. Package #544's ACPICA proposal is recorded in a separate intake queue and adds no feature or companion to this packet.
+
+Package CI now leaves unapproved builds pending and carries package artifacts inside a tar archive. Available package checks include the new artifact round-trip fixture. Full Omarchy checks were rerun on the refreshed candidate trees; the actual commits, failures and skips remain in each receipt. Old tested and pre-rebase commits remain in the portable bundles as audit refs. Hardware and remote CI remain unverified.

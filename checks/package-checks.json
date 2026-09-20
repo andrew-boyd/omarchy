@@ -1,41 +1,41 @@
 {
   "P08-packages": {
     "id": "P08-packages",
-    "commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
-    "tree_sha": "1e67c884154c830dac79418e81aa028351b5a4ca",
+    "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
+    "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
     "results": [
       {
         "command": "node --test tests/pr-workflow-approval.cjs",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.32,
+        "elapsed_seconds": 0.43,
         "log": "P08-packages-00.log",
-        "log_sha256": "3476a556fa964acd68f6d4bf4b79c875a3fd5134a82b8536d16940ebab2e16a9",
-        "original_log_sha256": "3476a556fa964acd68f6d4bf4b79c875a3fd5134a82b8536d16940ebab2e16a9"
+        "log_sha256": "14635576b4fa4f08c36620ce327ca3c458165313e4d96f9d199da262d500eba8",
+        "original_log_sha256": "14635576b4fa4f08c36620ce327ca3c458165313e4d96f9d199da262d500eba8"
       },
       {
         "command": "python tests/oma-service-removal.py",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.83,
+        "elapsed_seconds": 1.0,
         "log": "P08-packages-01.log",
-        "log_sha256": "a3dceede55f97b0db13b674036ef9c95246704e39316fc476bf73ec43ce5f2e4",
-        "original_log_sha256": "a3dceede55f97b0db13b674036ef9c95246704e39316fc476bf73ec43ce5f2e4"
+        "log_sha256": "8f8d05f9fa0dcee879396ef16801d560a70ed34b7e62817b816abe161e72a9cb",
+        "original_log_sha256": "8f8d05f9fa0dcee879396ef16801d560a70ed34b7e62817b816abe161e72a9cb"
       },
       {
         "command": "python tests/upstream-watch.py",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.14,
+        "elapsed_seconds": 1.53,
         "log": "P08-packages-02.log",
-        "log_sha256": "431fb2c7aa2baf991107e897e9d6b5081d61750dbd74970380cc58c21d545036",
-        "original_log_sha256": "431fb2c7aa2baf991107e897e9d6b5081d61750dbd74970380cc58c21d545036"
+        "log_sha256": "7400eff56b2fd6d3c671db4d3a48344edf9b855225dc057c87e6a7f5c78d8bdc",
+        "original_log_sha256": "7400eff56b2fd6d3c671db4d3a48344edf9b855225dc057c87e6a7f5c78d8bdc"
       },
       {
         "command": "./bin/sync-upstream self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 5.14,
+        "elapsed_seconds": 7.47,
         "log": "P08-packages-03.log",
         "log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b",
         "original_log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b"
@@ -44,7 +44,7 @@
         "command": "./bin/sync-rebuilds --self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.21,
+        "elapsed_seconds": 1.78,
         "log": "P08-packages-04.log",
         "log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a",
         "original_log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a"
@@ -53,7 +53,7 @@
         "command": "./bin/omarchy-pkgs self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.1,
+        "elapsed_seconds": 0.23,
         "log": "P08-packages-05.log",
         "log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f",
         "original_log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f"
@@ -62,7 +62,7 @@
         "command": "./bin/omarchy-release self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.2,
+        "elapsed_seconds": 0.41,
         "log": "P08-packages-06.log",
         "log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715",
         "original_log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715"
@@ -71,7 +71,7 @@
         "command": "./tests/partial-release.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.74,
+        "elapsed_seconds": 1.53,
         "log": "P08-packages-07.log",
         "log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7",
         "original_log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7"
@@ -80,7 +80,7 @@
         "command": "./tests/published-build-plan.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.99,
+        "elapsed_seconds": 3.14,
         "log": "P08-packages-08.log",
         "log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa",
         "original_log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa"
@@ -89,10 +89,19 @@
         "command": "./tests/controller.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.43,
+        "elapsed_seconds": 0.6,
         "log": "P08-packages-09.log",
         "log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995",
         "original_log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995"
+      },
+      {
+        "command": "./tests/artifact-helpers.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.14,
+        "log": "P08-packages-10.log",
+        "log_sha256": "56dc925cb0a49977acce5e0e0dbd5090376c99c009babd73b27aa29d6d974d05",
+        "original_log_sha256": "56dc925cb0a49977acce5e0e0dbd5090376c99c009babd73b27aa29d6d974d05"
       }
     ],
     "metadata_syntax": [
@@ -128,46 +137,45 @@
       "build-pr: maintainer-controlled remote CI; no PR has been created.",
       "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
     ],
-    "reused_for_commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
-    "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
+    "tested_after_upstream_reconciliation": true
   },
   "P11-packages": {
     "id": "P11-packages",
-    "commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
-    "tree_sha": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+    "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
+    "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
     "results": [
       {
         "command": "node --test tests/pr-workflow-approval.cjs",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.33,
+        "elapsed_seconds": 0.41,
         "log": "P11-packages-00.log",
-        "log_sha256": "5ba92278878d995cde695bc1c9ca2063a6caffca2716eb0cdf45b2f3900930bf",
-        "original_log_sha256": "5ba92278878d995cde695bc1c9ca2063a6caffca2716eb0cdf45b2f3900930bf"
+        "log_sha256": "87054af5a76ede67a5128ac88975c5944aa9e9e8c5db39017e9c0d98d9a026c1",
+        "original_log_sha256": "87054af5a76ede67a5128ac88975c5944aa9e9e8c5db39017e9c0d98d9a026c1"
       },
       {
         "command": "python tests/oma-service-removal.py",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.81,
+        "elapsed_seconds": 1.11,
         "log": "P11-packages-01.log",
-        "log_sha256": "21d978e5f716a414089392419ba392b5ec7e9313dc0f8d7ba159df6b1e0c36dd",
-        "original_log_sha256": "21d978e5f716a414089392419ba392b5ec7e9313dc0f8d7ba159df6b1e0c36dd"
+        "log_sha256": "43038e7a74cc969feddce92e1fa93f25fcc28a69363fbe1bb0338038dc695207",
+        "original_log_sha256": "43038e7a74cc969feddce92e1fa93f25fcc28a69363fbe1bb0338038dc695207"
       },
       {
         "command": "python tests/upstream-watch.py",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.11,
+        "elapsed_seconds": 1.44,
         "log": "P11-packages-02.log",
-        "log_sha256": "864e9200c49b3cb67bce452d10174ff75f45e4970a09f0488c5a2d265983d8e2",
-        "original_log_sha256": "864e9200c49b3cb67bce452d10174ff75f45e4970a09f0488c5a2d265983d8e2"
+        "log_sha256": "999119eaa820acb29679abe6080ea0e29c33647b06b328e61c1bda67c4b93ec0",
+        "original_log_sha256": "999119eaa820acb29679abe6080ea0e29c33647b06b328e61c1bda67c4b93ec0"
       },
       {
         "command": "./bin/sync-upstream self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 5.09,
+        "elapsed_seconds": 8.46,
         "log": "P11-packages-03.log",
         "log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b",
         "original_log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b"
@@ -176,7 +184,7 @@
         "command": "./bin/sync-rebuilds --self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.2,
+        "elapsed_seconds": 1.5,
         "log": "P11-packages-04.log",
         "log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a",
         "original_log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a"
@@ -185,7 +193,7 @@
         "command": "./bin/omarchy-pkgs self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.1,
+        "elapsed_seconds": 0.11,
         "log": "P11-packages-05.log",
         "log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f",
         "original_log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f"
@@ -194,7 +202,7 @@
         "command": "./bin/omarchy-release self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.12,
+        "elapsed_seconds": 0.14,
         "log": "P11-packages-06.log",
         "log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715",
         "original_log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715"
@@ -203,7 +211,7 @@
         "command": "./tests/partial-release.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.73,
+        "elapsed_seconds": 0.81,
         "log": "P11-packages-07.log",
         "log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7",
         "original_log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7"
@@ -212,7 +220,7 @@
         "command": "./tests/published-build-plan.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.99,
+        "elapsed_seconds": 2.19,
         "log": "P11-packages-08.log",
         "log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa",
         "original_log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa"
@@ -221,10 +229,19 @@
         "command": "./tests/controller.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.43,
+        "elapsed_seconds": 0.55,
         "log": "P11-packages-09.log",
         "log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995",
         "original_log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995"
+      },
+      {
+        "command": "./tests/artifact-helpers.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.11,
+        "log": "P11-packages-10.log",
+        "log_sha256": "56dc925cb0a49977acce5e0e0dbd5090376c99c009babd73b27aa29d6d974d05",
+        "original_log_sha256": "56dc925cb0a49977acce5e0e0dbd5090376c99c009babd73b27aa29d6d974d05"
       }
     ],
     "metadata_syntax": [
@@ -252,46 +269,45 @@
       "build-pr: maintainer-controlled remote CI; no PR has been created.",
       "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
     ],
-    "reused_for_commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
-    "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
+    "tested_after_upstream_reconciliation": true
   },
   "P12-packages": {
     "id": "P12-packages",
-    "commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
-    "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+    "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
+    "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
     "results": [
       {
         "command": "node --test tests/pr-workflow-approval.cjs",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.31,
+        "elapsed_seconds": 0.34,
         "log": "P12-packages-00.log",
-        "log_sha256": "4dc72c6f216710dc9ba1450decd0f7e6baa363010c63c7c90a2bc2d96df876b9",
-        "original_log_sha256": "4dc72c6f216710dc9ba1450decd0f7e6baa363010c63c7c90a2bc2d96df876b9"
+        "log_sha256": "13ebe41e7f9d082da2c7d30a8d48cf14222009bc9fd3bf5e284233849778bc74",
+        "original_log_sha256": "13ebe41e7f9d082da2c7d30a8d48cf14222009bc9fd3bf5e284233849778bc74"
       },
       {
         "command": "python tests/oma-service-removal.py",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.81,
+        "elapsed_seconds": 1.04,
         "log": "P12-packages-01.log",
-        "log_sha256": "7865bc2a69da20aa5574160e44ad8f6afe6f9246db6bcb88b3fae7e79420030b",
-        "original_log_sha256": "7865bc2a69da20aa5574160e44ad8f6afe6f9246db6bcb88b3fae7e79420030b"
+        "log_sha256": "7b5c5094a2855b7135093d42362d33f4390bfe7ab6f2cd6f296ed746125074fc",
+        "original_log_sha256": "7b5c5094a2855b7135093d42362d33f4390bfe7ab6f2cd6f296ed746125074fc"
       },
       {
         "command": "python tests/upstream-watch.py",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.23,
+        "elapsed_seconds": 1.51,
         "log": "P12-packages-02.log",
-        "log_sha256": "0c65fd8f598cefa3e52b0a862a63377e64388153fe7771cc02904a68dbd70719",
-        "original_log_sha256": "0c65fd8f598cefa3e52b0a862a63377e64388153fe7771cc02904a68dbd70719"
+        "log_sha256": "d94c35ab3f5d4900d0e1e2a780578647f43d678d03d32fd6f6156eef1a537f1b",
+        "original_log_sha256": "d94c35ab3f5d4900d0e1e2a780578647f43d678d03d32fd6f6156eef1a537f1b"
       },
       {
         "command": "./bin/sync-upstream self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 6.93,
+        "elapsed_seconds": 8.76,
         "log": "P12-packages-03.log",
         "log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b",
         "original_log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b"
@@ -300,7 +316,7 @@
         "command": "./bin/sync-rebuilds --self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.64,
+        "elapsed_seconds": 1.49,
         "log": "P12-packages-04.log",
         "log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a",
         "original_log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a"
@@ -318,7 +334,7 @@
         "command": "./bin/omarchy-release self-test",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.18,
+        "elapsed_seconds": 0.16,
         "log": "P12-packages-06.log",
         "log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715",
         "original_log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715"
@@ -327,7 +343,7 @@
         "command": "./tests/partial-release.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 1.11,
+        "elapsed_seconds": 0.92,
         "log": "P12-packages-07.log",
         "log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7",
         "original_log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7"
@@ -336,7 +352,7 @@
         "command": "./tests/published-build-plan.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 3.35,
+        "elapsed_seconds": 3.47,
         "log": "P12-packages-08.log",
         "log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa",
         "original_log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa"
@@ -345,10 +361,19 @@
         "command": "./tests/controller.sh",
         "exit_code": 0,
         "passed": true,
-        "elapsed_seconds": 0.71,
+        "elapsed_seconds": 0.61,
         "log": "P12-packages-09.log",
         "log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995",
         "original_log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995"
+      },
+      {
+        "command": "./tests/artifact-helpers.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.13,
+        "log": "P12-packages-10.log",
+        "log_sha256": "56dc925cb0a49977acce5e0e0dbd5090376c99c009babd73b27aa29d6d974d05",
+        "original_log_sha256": "56dc925cb0a49977acce5e0e0dbd5090376c99c009babd73b27aa29d6d974d05"
       }
     ],
     "metadata_syntax": [
@@ -400,7 +425,6 @@
       "build-pr: maintainer-controlled remote CI; no PR has been created.",
       "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
     ],
-    "reused_for_commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
-    "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
+    "tested_after_upstream_reconciliation": true
   }
 }
