@@ -1,0 +1,43 @@
+[
+  {
+    "name": "facetimehd-dkms",
+    "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+    "head_sha": "ca34f817216017b9d51e3bde6f7c5af281766a35",
+    "files": [
+      ".SRCINFO",
+      ".gitignore",
+      ".nvchecker.toml",
+      "PKGBUILD"
+    ]
+  },
+  {
+    "name": "facetimehd-dkms-git",
+    "url": "https://aur.archlinux.org/facetimehd-dkms-git.git",
+    "head_sha": "aef272ba128ee1f33281c1b6aca4cce33bde5407",
+    "files": [
+      ".SRCINFO",
+      ".gitignore",
+      "PKGBUILD"
+    ]
+  },
+  {
+    "name": "facetimehd-firmware",
+    "url": "https://aur.archlinux.org/facetimehd-firmware.git",
+    "head_sha": "3cf07f097e9666511118d61d13f04071f95e927a",
+    "files": [
+      ".SRCINFO",
+      ".gitignore",
+      "LicenseRef-Apple.tar.xz",
+      "PKGBUILD"
+    ]
+  },
+  {
+    "name": "facetimehd-data",
+    "url": "https://aur.archlinux.org/facetimehd-data.git",
+    "head_sha": "b8cba31544c4d56e69aaa2e49f71e3c153e7581d",
+    "files": [
+      ".SRCINFO",
+      "PKGBUILD"
+    ]
+  }
+]

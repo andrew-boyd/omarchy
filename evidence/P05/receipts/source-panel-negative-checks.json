@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": false,
+  "results": [
+    {
+      "test": "test/shell.d/monitor-panel-pipeline-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 1,
+      "output": "ok - panel protocol retains eight lines\nexpected: [\"eDP-2\",\"DP-1\"]\nactual:   [\"eDP-2\"]\nnot ok - real external monitor awaiting mode recovery remains available in the panel\n"
+    }
+  ]
+}

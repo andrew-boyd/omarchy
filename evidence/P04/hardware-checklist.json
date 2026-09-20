@@ -1,0 +1,7 @@
+[
+  "Record model, kernel, Hyprland version, physical DRM connectors and compositor monitor JSON; identify the Touch Bar separately from usable external screens.",
+  "Undocked: close the lid and verify the session locks even when a Touch Bar connector is connected. Reopen and record the existing wake behavior.",
+  "Docked: verify an active external monitor keeps the session usable. Repeat with that output disabled, disconnected and reconnected.",
+  "Check any available USB-C/DisplayLink outputs, mirrors, and rapid close/reopen events. Record actual connector names rather than assuming USB means Touch Bar.",
+  "Record existing logind and suspend-toggle behavior. This component changes the lock decision only; it does not introduce debounce or replace the sleep owner."
+]

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12210",
+  "repository": "omacom/omarchy",
+  "number": 12210,
+  "title": "Debounce lid-close suspend so a quick reopen does not sleep in the dark",
+  "author": "ijt",
+  "head_sha": "45a478ad6712b2a436f880f5b0c3dbc28a386648",
+  "state": "open",
+  "updated_at": "2026-09-17T01:02:17Z",
+  "body": "Fixes https://github.com/omacom/omarchy/issues/12193\n\n## Why\n\nlogind's default `HandleLidSwitch=suspend` and Hyprland's lid bind both fire on the same close. A 2-second close/open then commits to S3 with the lid already open. `user.slice` is frozen, so Hyprland never sees `switch:off` and the panel stays at the lid-closed backlight. On this machine that looked like a hang and needed a power-button hold.\n\n## What\n\n- Packaged logind drop-in: `HandleLidSwitch=ignore` (and ExternalPower). Docked stays ignore.\n- `omarchy-system-lid-close` still locks immediately, then starts `omarchy-system-lid-suspend`.\n- That helper waits 3s (override `OMARCHY_LID_SUSPEND_DELAY`), then `systemctl suspend` only if the lid is still shut, there is no external monitor, and suspend is not toggled off.\n- Lid open (`omarchy-system-lid-open`) cancels the pending job, runs `omarchy-system-wake`, and forces DPMS on. `omarchy-brightness-display on` can no-op when `dpmsStatus` is already true after S3 with backlight saved at 0.\n- systemd-sleep `post` hook wakes the session 1s after thaw, because the compositor missed the lid event while frozen.\n- Migration reloads logind once the drop-in is on disk.\n\n## Not in this PR\n\nThe 20s delay used locally on a MacBookPro14,2. That number is because Alpine Ridge S3 resume is ~7s on that hardware (see the sibling Alpine Ridge PR). The portable debounce is 3s.\n\n## Test plan\n\n- Undocked: close lid 2s, open. Session locks, does not suspend, panel comes back.\n- Undocked: close lid, leave closed. Suspends after ~3s.\n- Docked: lid close stays awake on the external display.\n- `omarchy toggle suspend` off: lid close locks, does not suspend.\n- `./test/cli` and the lid-* / monitor-recovery shell tests.\n\nProven on Omarchy 4.0.2-1, MacBookPro14,2, kernel 7.1.9-arch1-2.",
+  "original_source_changed": false
+}

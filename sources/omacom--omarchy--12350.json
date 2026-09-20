@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12350",
+  "repository": "omacom/omarchy",
+  "number": 12350,
+  "title": "Ignore the Apple SMC power/lid device in the keyboard layout widget",
+  "author": "notabene00",
+  "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+  "state": "open",
+  "updated_at": "2026-09-18T01:45:04Z",
+  "body": "On an Apple laptop Hyprland lists a third \"keyboard\" alongside the real one:\n\n```\napple-spi-keyboard            layout: us,ru  active_layout_index: 1  (Russian)\napple-smc-power/lid-events    layout: us,ru  active_layout_index: 0  (English)\nhl-virtual-keyboard-fcitx5    layout: us,ru  active_layout_index: 0\n```\n\n`apple-smc-power/lid-events` is the SMC power button / lid switch, the same kind of device `power-button` and `lid-switch` already are, but its name doesn't match `UNTYPED_KEYBOARDS`, so the widget counts it as a keyboard. It also announces `activelayout` *after* the real keyboard does:\n\n```\nactivelayout>>apple-spi-keyboard,English (Macintosh, Russian-ISO)\nactivelayout>>apple-smc-power/lid-events,Russian      <- last, so typedKeyboardName lands here\nactivelayout>>hl-virtual-keyboard-fcitx5,Russian\n```\n\nso `selectKeyboard` pins the label to the lid switch, and a click on the widget switches the lid switch.\n\nWhile every device sits on the same index that is invisible. It stops being invisible as soon as anything switches one device on its own \u2014 a layout-rewriting daemon, a per-device bind \u2014 because `switchxkblayout all next` then keeps the seat permanently one step out of phase. On my machine the bar showed exactly the opposite layout of the one I was typing in, and clicking it flipped the label without changing the keyboard.\n\nFix: list the SMC device with the ACPI buttons, and let `eventKeyboardName` reuse `isTypedKeyboard` instead of only skipping `hl-virtual-keyboard`, so a device nobody types on cannot become the one the widget follows.\n\nTested with `test/shell.d/keyboard-layout-test.sh` (two cases added) and on a MacBook Pro M1 running Hyprland.\n",
+  "original_source_changed": false
+}

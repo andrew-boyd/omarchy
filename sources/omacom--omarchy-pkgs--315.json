@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/315",
+  "repository": "omacom/omarchy-pkgs",
+  "number": 315,
+  "title": "Install the T1 ALS auto-brightness user unit",
+  "author": "shawnyeager",
+  "head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+  "state": "open",
+  "updated_at": "2026-09-05T15:32:02Z",
+  "body": "Pairs with [omacom/omarchy#10331](https://github.com/omacom/omarchy/pull/10331). That PR adds `omarchy-als-brightness.service`; this installs it in both `omarchy-settings` and `omarchy-settings-dev`.\n\nWithout this, first-run enable and the T1 migration have nothing to point at under `/usr/lib/systemd/user/`. The unit's own `ExecCondition` / IIO glob keep it inert off T1 hardware.\n\nRelated: omacom/omarchy#10331\nRelated: omacom/omarchy-pkgs#193\n",
+  "original_source_changed": false
+}

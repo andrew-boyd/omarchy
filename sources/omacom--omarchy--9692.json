@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9692",
+  "repository": "omacom/omarchy",
+  "number": 9692,
+  "title": "Use DKMS for Broadcom wl across kernel updates",
+  "author": "peterholko",
+  "head_sha": "7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+  "state": "open",
+  "updated_at": "2026-09-08T16:50:19Z",
+  "body": "Fixes #9386\n\n## Summary\n\n- replace the kernel-specific `broadcom-wl` package in the offline package set with `broadcom-wl-dkms`\n- install the DKMS variant for detected BCM4360 and BCM4331 hardware\n\n`fix-bcm43xx.sh` already installs `dkms` and `linux-headers`, so the module can rebuild when the kernel changes instead of remaining tied to one kernel package.\n\n## Testing\n\n- `bash -n install/hardware/fix-bcm43xx.sh`\n- verified both package-selection sites use `broadcom-wl-dkms`\n- `git diff --check`",
+  "original_source_changed": false
+}

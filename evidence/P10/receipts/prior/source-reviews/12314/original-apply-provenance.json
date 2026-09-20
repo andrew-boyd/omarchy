@@ -1,0 +1,52 @@
+{
+  "number": 12314,
+  "head_sha": "84e001d85936f8f15b5a65bd41f90e4f8ca29984",
+  "source_ancestor": "9c5482c58dbe4974de337450754885083c91eada",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "3ead2f5e9310fb34dd4373a0f2302b299a4f9c34769b75d569753d41c0aca8ea",
+  "files": [
+    {
+      "path": "default/systemd/system-sleep/rebind-brcmfmac",
+      "source_sha256": "0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1",
+      "identical_to_source": true,
+      "candidate_sha256": "0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1"
+    },
+    {
+      "path": "docs/file-layout.md",
+      "source_sha256": "b22480ed05d1904c552431490c28c84ed5afa3bb756e4536d8418139ec05910f",
+      "identical_to_source": true,
+      "candidate_sha256": "b22480ed05d1904c552431490c28c84ed5afa3bb756e4536d8418139ec05910f"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "076e6ea152c84d980d6a174ab5ace18d671000c096cdb038582f89392b892011",
+      "identical_to_source": true,
+      "candidate_sha256": "076e6ea152c84d980d6a174ab5ace18d671000c096cdb038582f89392b892011"
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "source_sha256": "3bf4b6bc0e73850b97e2298dd50123ade08984369186e3d347aca6aaab4c67ce",
+      "identical_to_source": true,
+      "candidate_sha256": "3bf4b6bc0e73850b97e2298dd50123ade08984369186e3d347aca6aaab4c67ce"
+    },
+    {
+      "path": "migrations/1789668939.sh",
+      "source_sha256": "31784502362914ea232d7fad536dc95cd607927b2c9786e3071c30acccee835e",
+      "identical_to_source": true,
+      "candidate_sha256": "31784502362914ea232d7fad536dc95cd607927b2c9786e3071c30acccee835e"
+    },
+    {
+      "path": "test/shell.d/brcmfmac-suspend-test.sh",
+      "source_sha256": "6084036dd2d290e1ae4a857d6ad19e2e3388d658a5aa86822656512bf614aba5",
+      "identical_to_source": true,
+      "candidate_sha256": "6084036dd2d290e1ae4a857d6ad19e2e3388d658a5aa86822656512bf614aba5"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "baf60f6030803a43d436e0f48facd3f8bcef791f"
+}

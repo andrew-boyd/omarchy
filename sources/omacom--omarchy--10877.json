@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10877",
+  "repository": "omacom/omarchy",
+  "number": 10877,
+  "title": "Target the actual NVMe controller in Apple suspend fix",
+  "author": "Drecullith",
+  "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+  "state": "open",
+  "updated_at": "2026-09-15T16:08:24Z",
+  "body": "## Summary\r\n\r\nFix the Apple NVMe suspend workaround so it targets the actual NVMe PCI controller instead of assuming it is always `0000:01:00.0`.\r\n\r\nOn MacBook models with discrete graphics, including MacBookPro13,3, PCI `01:00.0` can be the dGPU while the NVMe controller is at another address such as `02:00.0`.\r\n\r\nThe previous guard only checked whether `01:00.0` exposed `d3cold_allowed`. Since that attribute is available on other PCI devices too, the installer could successfully disable D3cold on the GPU while leaving the NVMe untouched.\r\n\r\nThis change:\r\n\r\n- resolves the installed NVMe controller through `/sys/class/nvme`;\r\n- validates the resolved device name as a PCI BDF before using it;\r\n- requires the resolved PCI device to expose `d3cold_allowed`;\r\n- writes the discovered NVMe path into `omarchy-nvme-suspend-fix.service`;\r\n- reloads systemd after updating the unit;\r\n- detects the previous Omarchy unit before undoing its legacy `01:00.0` setting;\r\n- restores D3cold on that legacy target only when the actual NVMe is elsewhere and the existing Omarchy service proves it contained the old hard-coded path.\r\n\r\nFixes #10826.\r\n\r\n## Tests\r\n\r\nAdded `test/shell.d/apple-nvme-suspend-test.sh` covering:\r\n\r\n- an NVMe controller at `0000:02:00.0` is discovered correctly;\r\n- non-PCI controller paths are rejected;\r\n- a controller without `d3cold_allowed` is rejected;\r\n- the generated systemd unit uses the discovered NVMe device;\r\n- legacy D3cold restoration is gated on both a different actual NVMe address and the old Omarchy unit.\r\n\r\nThe focused regression tests pass locally.\r\n\r\nAlso verified:\r\n\r\n- `bash -n install/hardware/apple/fix-suspend-nvme.sh`\r\n- `bash -n test/shell.d/apple-nvme-suspend-test.sh`\r\n- the generated systemd unit passes `systemd-analyze verify`\r\n\r\nNo physical MacBook hardware test was available in this environment.",
+  "original_source_changed": false
+}

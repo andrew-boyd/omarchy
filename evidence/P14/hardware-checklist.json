@@ -1,0 +1,7 @@
+[
+  "Read the full unchanged script and findings before considering an active diagnostic trial. `test`/`diagnose` suspend hardware; `restore` writes wake settings.",
+  "Record exact model/kernel/sleep mode, ACPI/USB wake state, RTC alarm, existing tool state and udev rules on a recoverable attended machine.",
+  "Validate interruption and restoration failures in a disposable fixture before live diagnose. The source records candidates rather than confirmed successful writes, lacks a terminating signal trap and can clear state after failed writes.",
+  "Assess multiple identical USB devices and shared-controller effects before accepting a generated vendor/product rule.",
+  "Keep independent console/recovery access and a captured restoration plan; no active source command was run here."
+]

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12076",
+  "repository": "omacom/omarchy",
+  "number": 12076,
+  "title": "Detect BCM43xx, T2, Vulkan, and NVIDIA via sysfs helpers",
+  "author": "Chessing234",
+  "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+  "state": "open",
+  "updated_at": "2026-09-16T08:24:25Z",
+  "body": "## Summary\n- Fold the four sysfs hardware-detect PRs into one review: BCM43xx (`omarchy-hw-bcm43xx`), T2 (`omarchy-hw-t2`), Vulkan ICD picks from display-class vendors, and NVIDIA install via `omarchy-hw-nvidia` instead of `lspci`.\n- Same goal across the board: avoid full `lspci` dumps that wake suspended GPUs or SIGPIPE under pipefail.\n\n## Test plan\n- [ ] `test/shell.d/` coverage for bcm43xx, t2, vulkan, and nvidia-hw-detect\n- [ ] BCM4360/BCM4331 still gets broadcom-wl-dkms; brcmfmac paths unchanged\n- [ ] T2 Mac still gets linux-t2 / arch-mact2\n- [ ] Vulkan ICD selection still covers Intel, hybrid AMD+NVIDIA, and non-display PCI functions\n- [ ] NVIDIA install no longer greps lspci for the GPU",
+  "original_source_changed": false
+}

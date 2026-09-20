@@ -1,0 +1,45 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "8d0ea0341f561c202638f6ee76b256de8d5ee34d",
+  "patch_sha256": "8833274aed255ca804b2e8e66341c7be0dbc5f520e6d4fa66f2febf48100979b",
+  "file_provenance": [
+    {
+      "path": "shell/plugins/lock/LockView.qml",
+      "sha256": "757c6776bb9e2d18a79653adcff8c80a440c9b8dbe7ccd67a300da9142ad1812",
+      "identical_to_sources": [
+        11952
+      ],
+      "integration": "Source-identical."
+    },
+    {
+      "path": "shell/plugins/lock/Service.qml",
+      "sha256": "7407af8722984e212cf32155ce79adb7e7dc98f9b49a116df2d7291d65f6a31a",
+      "identical_to_sources": [],
+      "integration": "Automatic three-way combination of both existing Service.qml diffs."
+    },
+    {
+      "path": "shell/plugins/polkit/PolkitAgent.qml",
+      "sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+      "identical_to_sources": [
+        11952
+      ],
+      "integration": "Source-identical."
+    },
+    {
+      "path": "test/shell.d/lock-blank-fingerprint-test.sh",
+      "sha256": "d204e0b7243770d0e83f979d95bdcf7532307a065f49365bd246d8fc2feb4318",
+      "identical_to_sources": [
+        11273
+      ],
+      "integration": "Source-identical."
+    },
+    {
+      "path": "test/shell.d/lock-fingerprint-message-test.sh",
+      "sha256": "0442a3fec27279ca0a666d0918ea86b0f6503865f1f1f5d873ba51dd2faf968a",
+      "identical_to_sources": [
+        11952
+      ],
+      "integration": "Source-identical."
+    }
+  ]
+}

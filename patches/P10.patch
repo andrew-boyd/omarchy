@@ -1,0 +1,1681 @@
+diff --git a/default/firmware/apple/brcmfmac43602-pcie.txt b/default/firmware/apple/brcmfmac43602-pcie.txt
+new file mode 100644
+index 00000000..48a7743c
+--- /dev/null
++++ b/default/firmware/apple/brcmfmac43602-pcie.txt
+@@ -0,0 +1,273 @@
++# Community BCM43602 board calibration from kernel.org bugzilla attachment
++# 290569 (https://bugzilla.kernel.org/attachment.cgi?id=290569). Not provided
++# or licensed by Broadcom or Apple. linux-firmware ships only the .bin for this
++# part; without an NVRAM, brcmfmac advertises 2.4 GHz only.
++#
++# ccode=00 / regrev=245 defers channel legality to the host regulatory domain.
++# Omarchy already persists that from the timezone via set-wireless-regdom.sh.
++# The values below are otherwise this dump's calibration data; do not edit them.
++#
++# Lines starting with # are comments; the brcmfmac NVRAM parser ignores them.
++# macaddr= is a firmware key. The 00:90:4c value is Broadcom's placeholder,
++# not a board identity. The install leaf and migration substitute the 43ba
++# wiphy's permanent address when it is not a Broadcom placeholder, otherwise
++# a machine-id-derived locally-administered address. The key is never dropped
++# (dropping it makes the dongle time out on cur_etheraddr and crash). The
++# donor value is never persisted.
++
++sromrev=11
++subvid=0x14e4
++boardtype=0x61b
++boardrev=0x1421
++vendid=0x14e4
++devid=0x43ba
++
++macaddr=00:90:4c:0d:f4:3e
++
++ccode=00
++regrev=245
++
++boardflags=0x10401001
++boardflags2=0x00000002
++boardflags3=0xC0000303
++boardnum=62526
++
++swctrlmap_2g=0x08080808,0x04010401,0x08080808,0x00000000,0x000000ff
++swctrlmapext_2g=0x00000000,0x00000000,0x00000000,0x000000,0x003
++
++swctrlmap_5g=0x08080808,0x04010401,0x08080808,0x00000000,0x000000ff
++swctrlmapext_5g=0x00000000,0x00000000,0x00000000,0x000000,0x003
++
++aa2g=7
++aa5g=7
++agbg0=133
++agbg1=133
++agbg2=133
++aga0=71
++aga1=71
++aga2=71
++txchain=7
++rxchain=7
++antswitch=0
++tssiposslope2g=1
++epagain2g=0
++pdgain2g=28
++tworangetssi2g=0
++papdcap2g=0
++femctrl=2
++tssiposslope5g=1
++epagain5g=0
++pdgain5g=28
++tworangetssi5g=0
++papdcap5g=0
++gainctrlsph=0
++tempthresh=120
++tempoffset=255
++rawtempsense=0x1ff
++measpower=0x7f
++tempsense_slope=0xff
++tempcorrx=0x3f
++tempsense_option=0x3
++xtalfreq=40000
++phycal_tempdelta=40
++temps_period=1
++temps_hysteresis=5
++measpower1=0x7f
++measpower2=0x7f
++pdoffsetcck=1057
++pdoffset20in40m5gb0=0
++pdoffset20in40m5gb1=0
++pdoffset20in40m5gb2=0
++pdoffset20in40m5gb3=0
++pdoffset20in40m5gb4=0
++pdoffset40in80m5gb0=0
++pdoffset40in80m5gb1=0
++pdoffset40in80m5gb2=0
++pdoffset40in80m5gb3=0
++pdoffset40in80m5gb4=0
++pdoffset20in80m5gb0=0
++pdoffset20in80m5gb1=0
++pdoffset20in80m5gb2=0
++pdoffset20in80m5gb3=0
++pdoffset20in80m5gb4=0
++subband5gver=0x5
++cckbw202gpo=0
++cckbw20ul2gpo=0
++mcsbw202gpo=2536714240
++mcsbw402gpo=2536714240
++dot11agofdmhrbw202gpo=13056
++ofdmlrbw202gpo=0
++mcsbw205glpo=1966288896
++mcsbw405glpo=2252619776
++mcsbw805glpo=2252619776
++mcsbw205gmpo=1966288896
++mcsbw405gmpo=2252619776
++mcsbw805gmpo=2252619776
++mcsbw205ghpo=1966288896
++mcsbw405ghpo=2252619776
++mcsbw805ghpo=2252619776
++mcsbw205gx1po=1966288896
++mcsbw405gx1po=2252619776
++mcsbw805gx1po=2252619776
++mcsbw205gx2po=1966288896
++mcsbw405gx2po=2252619776
++mcsbw805gx2po=2252619776
++mcslr5glpo=0
++mcslr5gmpo=0
++mcslr5ghpo=0
++mcslr5gx1po=0
++mcslr5gx2po=0
++sb20in40hrpo=0
++sb20in80and160hr5glpo=0
++sb40and80hr5glpo=0
++sb20in80and160hr5gmpo=0
++sb40and80hr5gmpo=0
++sb20in80and160hr5ghpo=0
++sb40and80hr5ghpo=0
++sb20in40lrpo=0
++sb20in80and160lr5glpo=0
++sb40and80lr5glpo=0
++sb20in80and160lr5gmpo=0
++sb40and80lr5gmpo=0
++sb20in80and160lr5ghpo=0
++sb40and80lr5ghpo=0
++sb20in80and160hr5gx1po=0
++sb20in80and160lr5gx1po=0
++sb40and80hr5gx1po=0
++sb20in80and160hr5gx2po=0
++sb20in80and160lr5gx2po=0
++sb40and80hr5gx2po=0
++dot11agduphrpo=0
++dot11agduplrpo=52416
++pcieingress_war=15
++sar2g=18
++sar5g=15
++noiselvl2ga0=31
++noiselvl2ga1=31
++noiselvl2ga2=31
++noiselvl5ga0=18,18,18,20
++noiselvl5ga1=1,1,1,17
++noiselvl5ga2=11,11,11,11
++rxgainerr2ga0=63
++rxgainerr2ga1=31
++rxgainerr2ga2=31
++rxgainerr5ga0=50,50,50,52
++rxgainerr5ga1=16,16,16,24
++rxgainerr5ga2=5,5,5,5
++rpcal2g=65535
++rpcal5gb0=65535
++rpcal5gb1=65535
++rpcal5gb2=65535
++rpcal5gb3=65535
++rxgains5gmelnagaina0=3
++rxgains5gmelnagaina1=3
++rxgains5gmelnagaina2=3
++rxgains5gmtrisoa0=9
++rxgains5gmtrisoa1=9
++rxgains5gmtrisoa2=9
++rxgains5gmtrelnabypa0=0
++rxgains5gmtrelnabypa1=0
++rxgains5gmtrelnabypa2=0
++rxgains5ghelnagaina0=2
++rxgains5ghelnagaina1=2
++rxgains5ghelnagaina2=2
++rxgains5ghtrisoa0=8
++rxgains5ghtrisoa1=8
++rxgains5ghtrisoa2=8
++rxgains5ghtrelnabypa0=0
++rxgains5ghtrelnabypa1=0
++rxgains5ghtrelnabypa2=0
++gain_cal_temp=39
++rssi_delta_2gb0=8,16,8,16,253,18,253,18,254,17,254,17
++rssi_delta_2gb1=255,255,255,255,255,255,255,255,255,255,255,255
++rssi_delta_2gb2=255,255,255,255,255,255,255,255,255,255,255,255
++rssi_delta_2gb3=255,255,255,255,255,255,255,255,255,255,255,255
++rssi_delta_2gb4=255,255,255,255,255,255,255,255,255,255,255,255
++rssi_cal_freq_grp_2g=0,0,128,0,0,0,0
++rud_agc_enable=0
++temp_comp_tr_loss=1
++rssi_qdB_en=0
++rssi_delta_5gl=8,6,8,6,8,6,5,6,5,6,5,6,9,8,9,8,9,8
++rssi_delta_5gml=250,237,250,237,250,237,248,236,248,236,248,236,249,237,249,237,249,237
++rssi_delta_5gmu=250,237,250,237,250,237,248,234,248,234,248,234,249,237,249,237,249,237
++rssi_delta_5gh=250,235,250,235,250,235,247,233,247,233,247,233,249,237,249,237,249,237
++rssicorrnorm_c0=251,255
++rssicorrnorm_c1=251,255
++rssicorrnorm_c2=251,255
++trloss_adj_temp_thresh=10
++trloss_adj_time_dur=30
++rstr_rxgaintempcoeff5gl=50,50,50
++rstr_rxgaintempcoeff5gl_elnaoff=44,44,44
++rstr_rxgaintempcoeff5gml=50,50,50
++rstr_rxgaintempcoeff5gml_elnaoff=44,44,44
++rstr_rxgaintempcoeff5gmu=50,50,50
++rstr_rxgaintempcoeff5gmu_elnaoff=44,44,44
++rstr_rxgaintempcoeff5gh=52,52,52
++rstr_rxgaintempcoeff5gh_elnaoff=46,46,46
++rstr_rxgaintempcoeff2g_sub=75,75,75,75,75,75,75,75,75,75,75,75,75,75,75
++rstr_rxgaintempcoeff2g_sub_elnaoff=66,66,66,66,66,66,66,66,66,66,66,66,66,66,66
++length_txcal=65535
++version_txcal=65535
++devicetype_txcal=65535
++caltype_txcal=65535
++tempsense_txcal=35
++ncores_txcal=255
++reserved1_txcal=255
++reserved2_txcal=255
++20mhz_tbl_len_txcal=65535
++nsteps_txcal=22
++nchannels_txcal=10
++chan_id_txcal_ch0=7
++chan_id_txcal_ch1=36
++chan_id_txcal_ch2=52
++chan_id_txcal_ch3=64
++chan_id_txcal_ch4=100
++chan_id_txcal_ch5=120
++chan_id_txcal_ch6=140
++chan_id_txcal_ch7=149
++chan_id_txcal_ch8=157
++chan_id_txcal_ch9=165
++ptssi_txcal_ch0=0
++ptssi_txcal_ch1=0
++ptssi_txcal_ch2=0
++ptssi_txcal_ch3=0
++ptssi_txcal_ch4=0
++ptssi_txcal_ch5=0
++ptssi_txcal_ch6=0
++ptssi_txcal_ch7=0
++ptssi_txcal_ch8=0
++ptssi_txcal_ch9=0
++gain_index_c0_ch0=54
++gain_index_c0_ch1=57
++gain_index_c0_ch2=58
++gain_index_c0_ch3=59
++gain_index_c0_ch4=60
++gain_index_c0_ch5=59
++gain_index_c0_ch6=61
++gain_index_c0_ch7=60
++gain_index_c0_ch8=61
++gain_index_c0_ch9=62
++gain_index_c1_ch0=54
++gain_index_c1_ch1=58
++gain_index_c1_ch2=59
++gain_index_c1_ch3=60
++gain_index_c1_ch4=61
++gain_index_c1_ch5=61
++gain_index_c1_ch6=62
++gain_index_c1_ch7=62
++gain_index_c1_ch8=62
++gain_index_c1_ch9=62
++gain_index_c2_ch0=57
++gain_index_c2_ch1=57
++gain_index_c2_ch2=59
++gain_index_c2_ch3=59
++gain_index_c2_ch4=61
++gain_index_c2_ch5=60
++gain_index_c2_ch6=61
++gain_index_c2_ch7=61
++gain_index_c2_ch8=61
++gain_index_c2_ch9=61
++tssi_chan0_c0=248,244,241,237,232,226,220,211,203,193,183,172,162,150,138,128,116,105,94,83,73,61
++tssi_chan0_c1=247,245,241,237,232,226,218,210,201,191,181,168,158,146,134,122,111,98,87,75,64,52
++tssi_chan0_c2=248,245,242,238,233,227,221,213,204,194,185,173,162,151,140,129,118,107,97,87,77,67
++tssi_chan1_c0=234,228,223,218,212,205,198,191,183,176,168,159,150,141,131,121,110,98,87,75,64,53
+diff --git a/default/systemd/system-sleep/rebind-brcmfmac b/default/systemd/system-sleep/rebind-brcmfmac
+new file mode 100755
+index 00000000..f61cacb1
+--- /dev/null
++++ b/default/systemd/system-sleep/rebind-brcmfmac
+@@ -0,0 +1,30 @@
++#!/bin/bash
++
++# Rebind the Broadcom Wi-Fi device around system sleep. The brcmfmac firmware
++# on these parts does not reliably survive a long suspend: after wake it stops
++# answering msgbuf commands (the kernel logs "Timeout on response for query
++# command" for every request), the interface never recovers, and only a reboot
++# brings Wi-Fi back. Unbinding before sleep and rebinding after wake forces the
++# firmware to reload cleanly, so NetworkManager sees a fresh interface and
++# reconnects on its own.
++
++driver=/sys/bus/pci/drivers/brcmfmac
++state_file=${OMARCHY_BRCMFMAC_SLEEP_STATE:-/run/omarchy-brcmfmac-sleep}
++
++case "$1" in
++  pre)
++    : > "$state_file"
++    for bound in "$driver"/0000:*; do
++      [[ -L $bound ]] || continue
++      device=$(basename "$bound")
++      echo "$device" > "$driver/unbind" 2>/dev/null && echo "$device" >> "$state_file"
++    done
++    ;;
++  post)
++    [[ -f $state_file ]] || exit 0
++    while read -r device; do
++      echo "$device" > "$driver/bind" 2>/dev/null || true
++    done < "$state_file"
++    rm -f "$state_file"
++    ;;
++esac
+diff --git a/docs/file-layout.md b/docs/file-layout.md
+index f261085f..0a4df3fa 100644
+--- a/docs/file-layout.md
++++ b/docs/file-layout.md
+@@ -139,7 +139,7 @@ logo.{txt,svg}, icon.{txt,png}  ──► omarchy-settings    /usr/share/omarchy
+                                                         /etc/skel/.config/omarchy/branding/{about,screensaver}.txt
+ ```
+ 
+-The hardware-conditional `force-igpu` and `keyboard-backlight` sources also live under `default/systemd/system-sleep/`, but their setup commands publish root-owned copies only on machines that need them; they are not installed by `omarchy-settings`.
++The hardware-conditional `force-igpu`, `keyboard-backlight`, and `rebind-brcmfmac` sources also live under `default/systemd/system-sleep/`, but their setup commands publish root-owned copies only on machines that need them; they are not installed by `omarchy-settings`.
+ 
+ ### Why `etc-overrides/` exists
+ 
+diff --git a/install/hardware/all.sh b/install/hardware/all.sh
+index 12add110..82c26dd5 100644
+--- a/install/hardware/all.sh
++++ b/install/hardware/all.sh
+@@ -35,6 +35,9 @@ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-bcm43602-nvram.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-5ghz.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+ 
+diff --git a/install/hardware/apple/brcmfmac-43602.sh b/install/hardware/apple/brcmfmac-43602.sh
+new file mode 100644
+index 00000000..4e731afe
+--- /dev/null
++++ b/install/hardware/apple/brcmfmac-43602.sh
+@@ -0,0 +1,196 @@
++# Shared BCM43602 5 GHz NVRAM helpers for the install leaf and the migration.
++#
++# linux-firmware-broadcom ships the BCM43602 chip firmware but not a board
++# calibration file. Without one, brcmfmac brings the card up with placeholder
++# 5 GHz values (aa5g=1, no per-channel tx-power tables) and only 2.4 GHz
++# networks are visible.
++#
++# The NVRAM is a community dump (kernel.org bugzilla attachment 290569) with
++# ccode=00 / regrev=245, which defers channel legality to the host. Omarchy
++# already persists that from the timezone via set-wireless-regdom.sh. It is
++# calibration for one board, not every Apple BCM43602: this only runs on the
++# 2017 Touch Bar MacBook Pros (MacBookPro14,2 / 14,3) where the dump has been
++# seen to work. MacBookPro13,3 is the same PCI ID and is excluded — a report
++# of this dump on that model described unusable range.
++#
++# Destinations live under /usr/lib/firmware/updates so they override, and do
++# not collide with, linux-firmware-broadcom. A file already at either the
++# override path or the packaged path when this runs wins, user-placed or
++# package-shipped. Once this copy is installed the override path is searched
++# first, so a board file linux-firmware ships later does not replace it.
++
++brcmfmac43602_as_root() {
++  if (( EUID == 0 )); then
++    "$@"
++  else
++    sudo "$@"
++  fi
++}
++
++brcmfmac43602_fwdir() {
++  printf '%s\n' "${OMARCHY_BRCMFMAC_FWDIR:-/usr/lib/firmware/updates/brcm}"
++}
++
++brcmfmac43602_packaged_fwdir() {
++  printf '%s\n' "${OMARCHY_BRCMFMAC_PACKAGED_FWDIR:-/usr/lib/firmware/brcm}"
++}
++
++brcmfmac43602_nvram_src() {
++  printf '%s\n' "${OMARCHY_BRCMFMAC43602_NVRAM:-${OMARCHY_PATH:-/usr/share/omarchy}/default/firmware/apple/brcmfmac43602-pcie.txt}"
++}
++
++brcmfmac43602_dmi_vendor() {
++  cat "${OMARCHY_BRCMFMAC_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}" 2>/dev/null || true
++}
++
++brcmfmac43602_dmi_product() {
++  cat "${OMARCHY_BRCMFMAC_DMI_PRODUCT:-/sys/class/dmi/id/product_name}" 2>/dev/null || true
++}
++
++brcmfmac43602_pci_devices() {
++  printf '%s\n' "${OMARCHY_BRCMFMAC_PCI_DEVICES:-/sys/bus/pci/devices}"
++}
++
++# Dual-band BCM43602 (14e4:43ba) on the 2017 Touch Bar MacBook Pros. The 2 GHz
++# only (43bb) and 5 GHz-only (43bc) variants are left alone, as are T2-era
++# chips that already get board files from apple-bcm-firmware.
++brcmfmac43602_needed() {
++  local sys_vendor product
++  sys_vendor=$(brcmfmac43602_dmi_vendor)
++  product=$(brcmfmac43602_dmi_product)
++  [[ $sys_vendor == Apple* ]] || return 1
++  [[ $product =~ ^MacBookPro14,[23]$ ]] || return 1
++  lspci -nn | grep "14e4:43ba" >/dev/null
++}
++
++brcmfmac43602_dmi_name() {
++  local vendor product
++  vendor=$(brcmfmac43602_dmi_vendor)
++  product=$(brcmfmac43602_dmi_product)
++  [[ -n $vendor && -n $product ]] || return 0
++  printf '%s\n' "brcmfmac43602-pcie.${vendor}-${product}.txt"
++}
++
++# Arch compresses everything under /usr/lib/firmware, so a packaged board file
++# arrives as brcmfmac43602-pcie.<dmi>.txt.zst, not under the name the driver
++# asks for. Checking only the plain name would miss it and shadow it anyway.
++brcmfmac43602_installed() {
++  local name dir suffix
++  name=$(brcmfmac43602_dmi_name)
++  for dir in "$(brcmfmac43602_fwdir)" "$(brcmfmac43602_packaged_fwdir)"; do
++    for suffix in "" .zst .xz; do
++      [[ -e $dir/brcmfmac43602-pcie.txt$suffix ]] && return 0
++      [[ -n $name && -e "$dir/$name$suffix" ]] && return 0
++    done
++  done
++  return 1
++}
++
++# The NIC bound to 14e4:43ba, not the first wireless interface in glob order
++# (a USB adapter at install time would otherwise donate its address). The
++# wiphy's macaddress is the permanent address; net/*/address is whatever is
++# current, which NetworkManager randomises while scanning. 00:90:4c is the
++# Broadcom OUI, not a board identity, so it is not substituted in — install
++# then writes a per-machine locally-administered address instead of the dump
++# donor. The macaddr= key still has to exist in the file: without it, BCM43602
++# firmware times out on cur_etheraddr and crashes the dongle (MacBookPro14,3).
++brcmfmac43602_wifi_mac() {
++  local bdf pci_devices candidate mac
++  pci_devices=$(brcmfmac43602_pci_devices)
++  bdf=$(lspci -Dnn | awk '/14e4:43ba/ { if (!found) { print $1; found=1 } }')
++  [[ -n $bdf ]] || return 1
++  for candidate in "$pci_devices/$bdf"/ieee80211/phy*/macaddress "$pci_devices/$bdf"/net/*/address; do
++    mac=$(cat "$candidate" 2>/dev/null || true)
++    [[ $mac =~ ^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$ ]] || continue
++    if [[ ${mac,,} == 00:90:4c:* ]]; then
++      return 1
++    fi
++    printf '%s\n' "$mac"
++    return 0
++  done
++  return 1
++}
++
++brcmfmac43602_machine_id() {
++  cat "${OMARCHY_BRCMFMAC_MACHINE_ID:-/etc/machine-id}" 2>/dev/null || true
++}
++
++# Locally-administered unicast address unique to this machine. Used when the
++# 43ba wiphy has no real permanent address so macaddr= stays present without
++# persisting the dump's shared 00:90:4c:0d:f4:3e. Salt is this helper's, not
++# #10141's mbp133-wifi — do not copy that PR's 13,3-only restriction.
++brcmfmac43602_stable_mac() {
++  local id seed
++  id=$(brcmfmac43602_machine_id)
++  [[ -n $id ]] || return 1
++  seed=$(printf '%s' "$id:bcm43602-wifi" | sha256sum | cut -c1-10)
++  [[ ${#seed} == 10 ]] || return 1
++  printf '02:%s:%s:%s:%s:%s\n' \
++    "${seed:0:2}" "${seed:2:2}" "${seed:4:2}" "${seed:6:2}" "${seed:8:2}"
++}
++
++# Reloading brcmfmac here would drop a live Wi-Fi connection, including the
++# one carrying an update. Callers must not wrap this in `if`; bash would then
++# disable errexit for the body and a failed install would look like success.
++#
++# Both names are staged under temporary names and renamed into place together.
++# A write that fails part-way (ENOSPC truncates its destination) must not leave
++# a partial file under the name the driver loads, where brcmfmac43602_installed
++# would keep it forever and the migration would never ask for the reboot.
++brcmfmac43602_install() {
++  local src fwdir mac work name target
++  local -a targets
++
++  src=$(brcmfmac43602_nvram_src)
++  [[ -f $src ]] || return 1
++
++  fwdir=$(brcmfmac43602_fwdir)
++  targets=("$fwdir/brcmfmac43602-pcie.txt")
++  name=$(brcmfmac43602_dmi_name)
++  if [[ -n $name ]]; then
++    targets+=("$fwdir/$name")
++  fi
++
++  work=$(mktemp) || return 1
++  # Copy first so macaddr= always survives. Substitute the 43ba wiphy's
++  # permanent address when it is not a Broadcom placeholder; otherwise a
++  # machine-id-derived locally-administered address. Never drop the key
++  # (dongle crash) and never persist the dump's 00:90:4c:0d:f4:3e.
++  if ! cat "$src" >"$work"; then
++    rm -f "$work"
++    return 1
++  fi
++  if mac=$(brcmfmac43602_wifi_mac); then
++    if ! sed -i "s/^macaddr=.*/macaddr=$mac/" "$work"; then
++      rm -f "$work"
++      return 1
++    fi
++  elif mac=$(brcmfmac43602_stable_mac); then
++    if ! sed -i "s/^macaddr=.*/macaddr=$mac/" "$work"; then
++      rm -f "$work"
++      return 1
++    fi
++  else
++    rm -f "$work"
++    return 1
++  fi
++
++  if ! brcmfmac43602_as_root mkdir -p "$fwdir"; then
++    rm -f "$work"
++    return 1
++  fi
++  for target in "${targets[@]}"; do
++    if ! brcmfmac43602_as_root install -m 644 "$work" "$target.tmp"; then
++      brcmfmac43602_as_root rm -f "${targets[@]/%/.tmp}"
++      rm -f "$work"
++      return 1
++    fi
++  done
++  rm -f "$work"
++  for target in "${targets[@]}"; do
++    if ! brcmfmac43602_as_root mv -f "$target.tmp" "$target"; then
++      brcmfmac43602_as_root rm -f "${targets[@]}" "${targets[@]/%/.tmp}"
++      return 1
++    fi
++  done
++}
+diff --git a/install/hardware/apple/fix-bcm43602-nvram.sh b/install/hardware/apple/fix-bcm43602-nvram.sh
+new file mode 100644
+index 00000000..8887719e
+--- /dev/null
++++ b/install/hardware/apple/fix-bcm43602-nvram.sh
+@@ -0,0 +1,51 @@
++# The MacBookPro13,3 BCM43602 can load the stock binary firmware without its
++# board NVRAM, but then miss 5 GHz networks and fail WPA handshakes on 2.4 GHz.
++# Installing this board configuration restored 5 GHz on that model with
++# 7.35.177.61 firmware. Keep the match narrow: a shared chip ID does not imply
++# the same RF wiring/calibration on other Macs or non-Apple boards.
++# Source: https://gist.github.com/MikeRatcliffe/9614c16a8ea09731a9d5e91685bd8c80
++# Fetch a pinned, verified revision rather than redistributing the board data.
++(
++  sys_vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)
++  product_name=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)
++  if [[ $sys_vendor != Apple* || $product_name != "MacBookPro13,3" ]]; then
++    return 0
++  fi
++
++  for device in /sys/bus/pci/devices/*; do
++    [[ -d $device ]] || continue
++    if [[ $(cat "$device/vendor") == "0x14e4" && $(cat "$device/device") == "0x43ba" &&
++      $(cat "$device/subsystem_vendor") == "0x106b" && $(cat "$device/subsystem_device") == "0x015a" ]]; then
++      firmware_dir=/usr/lib/firmware/brcm
++      target="$firmware_dir/brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3.txt"
++      # Respect administrator and package-provided NVRAM, including compressed
++      # files and symlinks. Reapplying hardware setup must preserve the MAC.
++      for existing in "$target" "$target.zst" "$target.xz" \
++        "$firmware_dir/brcmfmac43602-pcie.txt"{,.zst,.xz}; do
++        if [[ -e $existing || -L $existing ]]; then
++          return 0
++        fi
++      done
++
++      scratch=$(mktemp -d)
++      trap 'rm -rf "$scratch"' EXIT
++      curl --fail --silent --show-error --location --retry 2 --connect-timeout 10 --max-time 60 \
++        https://gist.githubusercontent.com/MikeRatcliffe/9614c16a8ea09731a9d5e91685bd8c80/raw/bd7af7c6f01df3ccee1471d36cb8df15d618a6aa/brcmfmac43602-pcie.txt \
++        -o "$scratch/nvram"
++      echo "b109f3e6663b0e888c2559e36f7e0109f2a3a6b9765786d11f849f16d4b32d06  $scratch/nvram" | sha256sum --check --status
++
++      # The stock firmware can report a shared Broadcom placeholder address.
++      # Use a per-install locally administered unicast MAC in that case, or
++      # when setup runs without a bound network interface.
++      macaddr=$(cat "$device"/net/*/address 2>/dev/null || true)
++      if [[ ! $macaddr =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ || $macaddr == "00:90:4c:0d:f4:3e" ]]; then
++        macaddr="02$(od -An -N5 -tx1 /dev/urandom | tr -d '\n' | tr ' ' ':')"
++      fi
++      sed "s/^macaddr=.*/macaddr=$macaddr/" "$scratch/nvram" > "$scratch/board.txt"
++      install -Dm644 "$scratch/board.txt" "$target"
++      echo "Installed MacBookPro13,3 BCM43602 board NVRAM; applies on the next boot"
++      # Do not reload the driver: installation may be using this Wi-Fi link.
++      break
++    fi
++  done
++)
+diff --git a/install/hardware/apple/fix-brcmfmac-5ghz.sh b/install/hardware/apple/fix-brcmfmac-5ghz.sh
+new file mode 100644
+index 00000000..e98f274e
+--- /dev/null
++++ b/install/hardware/apple/fix-brcmfmac-5ghz.sh
+@@ -0,0 +1,17 @@
++# 2017 Touch Bar MacBook Pros (MacBookPro14,2 / 14,3) with BCM43602 only see
++# 2.4 GHz out of the box: linux-firmware-broadcom has no board NVRAM, so
++# brcmfmac loads placeholder 5 GHz calibration. Install a calibrated copy
++# under /usr/lib/firmware/updates so the card advertises the 5 GHz band.
++#
++# See install/hardware/apple/brcmfmac-43602.sh for the NVRAM provenance, the
++# model gate, and why this does not also hard-code a cfg80211 country.
++
++: "${OMARCHY_PATH:=/usr/share/omarchy}"
++: "${OMARCHY_INSTALL:=$OMARCHY_PATH/install}"
++# shellcheck source=brcmfmac-43602.sh
++source "$OMARCHY_INSTALL/hardware/apple/brcmfmac-43602.sh"
++
++if brcmfmac43602_needed && ! brcmfmac43602_installed; then
++  brcmfmac43602_install
++  echo "Installed BCM43602 5 GHz NVRAM"
++fi
+diff --git a/install/hardware/apple/fix-brcmfmac-suspend.sh b/install/hardware/apple/fix-brcmfmac-suspend.sh
+new file mode 100644
+index 00000000..827f66e6
+--- /dev/null
++++ b/install/hardware/apple/fix-brcmfmac-suspend.sh
+@@ -0,0 +1,19 @@
++# Apple Macs with Broadcom Wi-Fi driven by brcmfmac lose Wi-Fi after a long
++# suspend: the firmware stops answering commands on wake and the interface
++# never recovers without a reboot. A system-sleep hook that rebinds the device
++# across sleep reloads the firmware cleanly.
++#
++# The hardware gate mirrors fix-brcmfmac-supplicant.sh: T2 Macs are detected by
++# the T2 PCI ID, older Macs by the brcmfmac PCI IDs from brcm_hw_ids.h. Only
++# machines whose Wi-Fi brcmfmac actually drives get the hook.
++sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
++
++if lspci -nn | grep "106b:180[12]" >/dev/null ||
++  { [[ $sys_vendor == Apple* ]] &&
++    lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
++  echo "Detected a Mac with Broadcom Wi-Fi; rebinding brcmfmac across suspend"
++
++  sudo install -Dm 0755 -o root -g root \
++    "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" \
++    /usr/lib/systemd/system-sleep/rebind-brcmfmac
++fi
+diff --git a/manual/44-mac-support.md b/manual/44-mac-support.md
+index e86fdd06..4e285002 100644
+--- a/manual/44-mac-support.md
++++ b/manual/44-mac-support.md
+@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB
+ 3. Select the orange EFI Boot device
+ 4. Proceed with the [install as normal](02-getting-started.md)
+ 
+-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.
++The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware (including 5 GHz board calibration on 2017 Touch Bar MacBook Pros), the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.
+ 
+ ### Known Limitations
+ 
+diff --git a/migrations/1787312531.sh b/migrations/1787312531.sh
+new file mode 100644
+index 00000000..abe34291
+--- /dev/null
++++ b/migrations/1787312531.sh
+@@ -0,0 +1,17 @@
++echo "Unlock 5 GHz Wi-Fi on 2017 Touch Bar MacBook Pros"
++
++# Existing installs never ran the install leaf, so they still only see 2.4 GHz.
++# See install/hardware/apple/brcmfmac-43602.sh for the failure this repairs
++# and for why the gate is limited to MacBookPro14,2 / 14,3.
++: "${OMARCHY_PATH:=/usr/share/omarchy}"
++: "${OMARCHY_INSTALL:=$OMARCHY_PATH/install}"
++# shellcheck source=../install/hardware/apple/brcmfmac-43602.sh
++source "$OMARCHY_INSTALL/hardware/apple/brcmfmac-43602.sh"
++
++if brcmfmac43602_needed && ! brcmfmac43602_installed; then
++  brcmfmac43602_install
++
++  # The driver only rereads NVRAM when brcmfmac next loads. Reloading it here
++  # would drop a Wi-Fi connection that works on the network carrying this update.
++  omarchy-state set reboot-required
++fi
+diff --git a/migrations/1789668939.sh b/migrations/1789668939.sh
+new file mode 100644
+index 00000000..b043460b
+--- /dev/null
++++ b/migrations/1789668939.sh
+@@ -0,0 +1,29 @@
++echo "Rebind Broadcom Wi-Fi across suspend on Macs with brcmfmac"
++
++# The install-time hook only reaches machines set up after it shipped, so an
++# existing install on one still loses Wi-Fi after a long suspend. See
++# install/hardware/apple/fix-brcmfmac-suspend.sh for the failure it fixes and
++# for where this list of brcmfmac PCI IDs comes from.
++dmi_vendor="${OMARCHY_BRCMFMAC_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
++hook="${OMARCHY_BRCMFMAC_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/rebind-brcmfmac}"
++
++sys_vendor="$(cat "$dmi_vendor" 2>/dev/null || true)"
++
++if ! lspci -nn | grep "106b:180[12]" >/dev/null &&
++  ! { [[ $sys_vendor == Apple* ]] &&
++    lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
++  exit 0
++fi
++
++# Idempotent: a hook identical to the source is already the fix.
++if [[ -f $hook ]] && /usr/bin/cmp -s "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" "$hook"; then
++  exit 0
++fi
++
++sudo /usr/bin/mkdir -p "$(dirname "$hook")"
++sudo /usr/bin/install -m 0755 -o root -g root \
++  "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" \
++  "$hook"
++
++# No reboot needed: systemd-sleep picks up every executable in system-sleep
++# the next time the machine suspends.
+diff --git a/test/shell.d/apple-bcm43602-nvram-test.sh b/test/shell.d/apple-bcm43602-nvram-test.sh
+new file mode 100755
+index 00000000..30882b0d
+--- /dev/null
++++ b/test/shell.d/apple-bcm43602-nvram-test.sh
+@@ -0,0 +1,99 @@
++#!/bin/bash
++
++set -euo pipefail
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++require_command python3
++
++python3 - "$ROOT" <<'PYTEST'
++import hashlib
++import os
++from pathlib import Path
++import re
++import subprocess
++import sys
++import tempfile
++
++root = Path(sys.argv[1])
++source = (root / "install/hardware/apple/fix-bcm43602-nvram.sh").read_text()
++fixture = b"sromrev=11\nmacaddr=xx:xx:xx:xx:xx:xx\naa2g=7\naa5g=7\n"
++
++with tempfile.TemporaryDirectory() as tmp:
++    base = Path(tmp)
++    def run_case(name, *, vendor="Apple Inc.", model="MacBookPro13,3", chip="0x43ba",
++                 subsystem="0x015a", mac="00:90:4c:0d:f4:3e", existing=None,
++                 corrupt=False, download_fail=False):
++        case = base / name
++        dmi = case / "sys/class/dmi/id"
++        pci = case / "sys/bus/pci/devices/0000:03:00.0"
++        firmware = case / "firmware"
++        stub = case / "bin"
++        for path in (dmi, pci, firmware, stub):
++            path.mkdir(parents=True)
++        (dmi / "sys_vendor").write_text(vendor)
++        (dmi / "product_name").write_text(model)
++        for key, value in dict(vendor="0x14e4", device=chip,
++                               subsystem_vendor="0x106b", subsystem_device=subsystem).items():
++            (pci / key).write_text(value)
++        if mac is not None:
++            (pci / "net/wlan0").mkdir(parents=True)
++            (pci / "net/wlan0/address").write_text(mac)
++        target = firmware / "brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3.txt"
++        if existing:
++            (firmware / existing).write_text("keep custom configuration")
++        payload = case / "payload"
++        payload.write_bytes(b"corrupt" if corrupt else fixture)
++        curl = stub / "curl"
++        curl.write_text("#!/bin/bash\necho download >> '" + str(case / "calls") + "'\n" +
++                        ("exit 22\n" if download_fail else
++                         "while [[ $1 != -o ]]; do shift; done\ncp '" + str(payload) + "' \"$2\"\n"))
++        curl.chmod(0o755)
++        script = case / "leaf.sh"
++        script.write_text(source.replace("/sys/", str(case / "sys") + "/")
++                          .replace("/usr/lib/firmware/brcm", str(firmware))
++                          .replace("b109f3e6663b0e888c2559e36f7e0109f2a3a6b9765786d11f849f16d4b32d06",
++                                   hashlib.sha256(fixture).hexdigest()))
++        env = dict(os.environ, PATH=str(stub) + os.pathsep + os.environ["PATH"])
++        def invoke():
++            return subprocess.run(["bash", "-e", "-c", 'source "$1"', "bash", str(script)],
++                                  env=env, capture_output=True, text=True)
++        result = invoke()
++        return case, target, result, invoke
++
++    for name, kwargs in [("non-apple", dict(vendor="Dell Inc.")),
++                         ("other-model", dict(model="MacBookPro14,3")),
++                         ("other-chip", dict(chip="0x43a0")),
++                         ("other-board", dict(subsystem="0x9999"))]:
++        case, target, result, _ = run_case(name, **kwargs)
++        assert result.returncode == 0 and not target.exists() and not (case / "calls").exists(), name
++        print("ok - skips " + name)
++
++    for suffix in (".txt", ".txt.zst", ".txt.xz"):
++        for prefix in ("brcmfmac43602-pcie", "brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3"):
++            filename = prefix + suffix
++            case, target, result, _ = run_case("existing-" + filename, existing=filename)
++            assert result.returncode == 0 and not (case / "calls").exists()
++            assert (target.parent / filename).read_text() == "keep custom configuration"
++    print("ok - preserves generic and model-specific NVRAM, including compressed files")
++
++    case, target, result, invoke = run_case("install")
++    assert result.returncode == 0, result.stderr
++    installed = target.read_text()
++    mac = re.search(r"^macaddr=(.*)$", installed, re.M)[1]
++    assert re.fullmatch(r"02(:[0-9a-f]{2}){5}", mac), mac
++    assert installed == fixture.decode().replace("xx:xx:xx:xx:xx:xx", mac)
++    assert target.stat().st_mode & 0o777 == 0o644
++    assert invoke().returncode == 0 and target.read_text() == installed
++    assert (case / "calls").read_text().count("download") == 1
++    print("ok - installs verified NVRAM with a unique local MAC and preserves it on rerun")
++
++    _, target, result, _ = run_case("real-mac", mac="78:12:34:56:78:90")
++    assert result.returncode == 0 and "macaddr=78:12:34:56:78:90" in target.read_text()
++    print("ok - preserves the interface address when it is not the Broadcom placeholder")
++    _, target, result, _ = run_case("no-interface", mac=None)
++    assert result.returncode == 0 and "macaddr=02:" in target.read_text()
++    print("ok - handles installation without a bound network interface")
++    for name, kwargs in [("bad-digest", dict(corrupt=True)), ("download-failure", dict(download_fail=True))]:
++        _, target, result, _ = run_case(name, **kwargs)
++        assert result.returncode != 0 and not target.exists(), name
++        print("ok - refuses installation on " + name)
++PYTEST
+diff --git a/test/shell.d/brcmfmac-5ghz-test.sh b/test/shell.d/brcmfmac-5ghz-test.sh
+new file mode 100755
+index 00000000..17fc41ca
+--- /dev/null
++++ b/test/shell.d/brcmfmac-5ghz-test.sh
+@@ -0,0 +1,545 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++leaf="$ROOT/install/hardware/apple/fix-brcmfmac-5ghz.sh"
++nvram="$ROOT/default/firmware/apple/brcmfmac43602-pcie.txt"
++all="$ROOT/install/hardware/all.sh"
++migration="$ROOT/migrations/1787312531.sh"
++manual="$ROOT/manual/44-mac-support.md"
++
++grep -q 'apple/fix-brcmfmac-5ghz.sh' "$all" ||
++  fail "the BCM43602 5 GHz NVRAM runs during hardware setup"
++grep -q 'apple/fix-brcmfmac-supplicant.sh' "$all" ||
++  fail "the 5 GHz leaf does not replace the WPA handshake quirk"
++pass "the BCM43602 5 GHz NVRAM runs during setup"
++
++[[ -f $nvram ]] || fail "the calibrated NVRAM is in the tree"
++grep -qx 'aa5g=7' "$nvram" || fail "NVRAM enables the 5 GHz antenna chain"
++grep -qx 'txchain=7' "$nvram" || fail "NVRAM enables the full TX chain"
++grep -qx 'rxchain=7' "$nvram" || fail "NVRAM enables the full RX chain"
++grep -qx 'ccode=00' "$nvram" || fail "NVRAM defers channel legality to the host"
++grep -qx 'regrev=245' "$nvram" || fail "NVRAM uses the host-deferral revision"
++grep -q '290569' "$nvram" || fail "NVRAM documents its bugzilla attachment"
++grep -qF 'https://bugzilla.kernel.org/attachment.cgi?id=290569' "$nvram" ||
++  fail "NVRAM names the exact attachment it was vendored from"
++! grep -q '^aa5g=1$' "$nvram" || fail "NVRAM is not the placeholder board file"
++pass "the vendored NVRAM has full 5 GHz calibration and provenance"
++
++grep -Fq '5 GHz board calibration on 2017 Touch Bar MacBook Pros' "$manual" ||
++  fail "Mac support chapter mentions 5 GHz calibration"
++pass "Mac support chapter mentions 5 GHz calibration"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++stub_bin="$test_tmp/bin"
++calls="$test_tmp/calls.log"
++fwdir="$test_tmp/firmware/updates/brcm"
++packaged="$test_tmp/firmware/brcm"
++pci_devices="$test_tmp/sys-pci"
++machine_id_file="$test_tmp/machine-id"
++mkdir -p "$stub_bin" "$test_tmp/dmi"
++printf '%s\n' '0123456789abcdef0123456789abcdef' >"$machine_id_file"
++
++cat >"$stub_bin/lspci" <<'SH'
++#!/bin/bash
++
++# Real lspci prints the domain in the BDF only when -D is passed, and /sys uses
++# the domain form, so a consumer that parses plain lspci -nn finds no MAC.
++domain=0
++for arg in "$@"; do
++  if [[ $arg == -*D* ]]; then
++    domain=1
++  fi
++done
++
++if (( domain == 1 )); then
++  wifi_bdf=0000:03:00.0
++  filler_bdf=0000:02:00.0
++else
++  wifi_bdf=03:00.0
++  filler_bdf=02:00.0
++fi
++
++# Chatty like real lspci: keep writing well past the pipe buffer after the
++# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail
++# would read that as "no such hardware" (#6608).
++if [[ -n ${WIFI_ID:-} ]]; then
++  echo "$wifi_bdf Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]"
++fi
++for _ in {1..4096}; do
++  echo "$filler_bdf Host bridge [0600]: Filler Device [ffff:0000]"
++done
++SH
++
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++"$@"
++SH
++
++cat >"$stub_bin/omarchy-state" <<'SH'
++#!/bin/bash
++
++printf 'omarchy-state' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++
++chmod +x "$stub_bin"/*
++
++generic() {
++  printf '%s\n' "$fwdir/brcmfmac43602-pcie.txt"
++}
++
++dmi_file() {
++  local vendor=$1 product=$2
++  printf '%s\n' "$fwdir/brcmfmac43602-pcie.${vendor}-${product}.txt"
++}
++
++provide_mac() {
++  mkdir -p "$pci_devices/0000:03:00.0/net/wlp3s0"
++  printf 'aa:bb:cc:dd:ee:ff\n' >"$pci_devices/0000:03:00.0/net/wlp3s0/address"
++}
++
++# The wiphy's permanent address, as opposed to the netdev's current one.
++provide_perm_mac() {
++  local mac=$1
++  mkdir -p "$pci_devices/0000:03:00.0/ieee80211/phy0"
++  printf '%s\n' "$mac" >"$pci_devices/0000:03:00.0/ieee80211/phy0/macaddress"
++}
++
++# Same derivation as brcmfmac43602_stable_mac, from this test's machine-id file.
++expected_stable_macaddr() {
++  local seed
++  seed=$(printf '%s' "$(cat "$machine_id_file" 2>/dev/null || true):bcm43602-wifi" | sha256sum | cut -c1-10)
++  printf 'macaddr=02:%s:%s:%s:%s:%s\n' \
++    "${seed:0:2}" "${seed:2:2}" "${seed:4:2}" "${seed:6:2}" "${seed:8:2}"
++}
++
++# Production run_logged uses bash -eE with no pipefail.
++invoke_leaf() {
++  local wifi_id="${1:-}"
++  WIFI_ID="$wifi_id" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_INSTALL="$ROOT/install" \
++    OMARCHY_BRCMFMAC_FWDIR="$fwdir" \
++    OMARCHY_BRCMFMAC_PACKAGED_FWDIR="$packaged" \
++    OMARCHY_BRCMFMAC_DMI_VENDOR="$test_tmp/dmi/sys_vendor" \
++    OMARCHY_BRCMFMAC_DMI_PRODUCT="$test_tmp/dmi/product_name" \
++    OMARCHY_BRCMFMAC_PCI_DEVICES="$pci_devices" \
++    OMARCHY_BRCMFMAC_MACHINE_ID="$machine_id_file" \
++    bash -eE -c 'source "$1"' bash "$leaf" </dev/null
++}
++
++run_leaf() {
++  local vendor=$1 product=$2 wifi_id="${3:-}"
++  rm -rf "$fwdir" "$packaged" "$pci_devices"
++  mkdir -p "$fwdir" "$packaged"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  printf '%s' "$product" >"$test_tmp/dmi/product_name"
++  invoke_leaf "$wifi_id"
++}
++
++run_migration() {
++  local vendor=$1 product=$2 wifi_id="${3:-}"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  printf '%s' "$product" >"$test_tmp/dmi/product_name"
++  : >"$calls"
++
++  WIFI_ID="$wifi_id" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_INSTALL="$ROOT/install" \
++    OMARCHY_BRCMFMAC_FWDIR="$fwdir" \
++    OMARCHY_BRCMFMAC_PACKAGED_FWDIR="$packaged" \
++    OMARCHY_BRCMFMAC43602_NVRAM="$nvram" \
++    OMARCHY_BRCMFMAC_DMI_VENDOR="$test_tmp/dmi/sys_vendor" \
++    OMARCHY_BRCMFMAC_DMI_PRODUCT="$test_tmp/dmi/product_name" \
++    OMARCHY_BRCMFMAC_PCI_DEVICES="$pci_devices" \
++    OMARCHY_BRCMFMAC_MACHINE_ID="$machine_id_file" \
++    bash -euo pipefail "$migration" >/dev/null
++}
++
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++[[ -f "$(generic)" ]] || fail "a MacBookPro14,3 gets the generic NVRAM"
++[[ -f "$(dmi_file "Apple Inc." "MacBookPro14,3")" ]] ||
++  fail "a MacBookPro14,3 gets the DMI-specific NVRAM"
++grep -qx 'aa5g=7' "$(generic)" || fail "installed NVRAM enables 5 GHz"
++expected=macaddr=aa:bb:cc:dd:ee:ff
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "the installed NVRAM carries the NIC's live MAC" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(dmi_file "Apple Inc." "MacBookPro14,3")" ||
++  fail "the DMI-specific NVRAM gets the live MAC"
++pass "a MacBookPro14,3 with BCM43602 gets both NVRAM names and the live MAC"
++
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,2" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++[[ -f "$(dmi_file "Apple Inc." "MacBookPro14,2")" ]] ||
++  fail "MacBookPro14,2 gets its DMI-specific NVRAM"
++pass "MacBookPro14,2 gets its DMI-specific NVRAM"
++
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Computer, Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++[[ -f "$(dmi_file "Apple Computer, Inc." "MacBookPro14,3")" ]] ||
++  fail "the older Apple vendor string is recognized"
++pass "the older Apple vendor string is recognized"
++
++# NetworkManager randomises the netdev address while scanning; the wiphy's
++# permanent address is the one to persist.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_perm_mac 11:22:33:44:55:66
++mkdir -p "$pci_devices/0000:03:00.0/net/wlp3s0"
++printf 'f2:11:22:33:44:55\n' >"$pci_devices/0000:03:00.0/net/wlp3s0/address"
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++expected=macaddr=11:22:33:44:55:66
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "the permanent address wins over a randomised netdev address" "$(grep '^macaddr' "$(generic)")"
++pass "the permanent address wins over a randomised netdev address"
++
++# A card whose wiphy only shows Broadcom's 00:90:4c placeholder: keep macaddr=
++# but do not persist the dump donor or the wiphy's placeholder.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_perm_mac 00:90:4c:0d:f4:3e
++mkdir -p "$pci_devices/0000:03:00.0/net/wlp3s0"
++printf '00:90:4C:0D:F4:3E\n' >"$pci_devices/0000:03:00.0/net/wlp3s0/address"
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++[[ -f "$(generic)" ]] || fail "a card on the placeholder address still gets the NVRAM"
++expected=$(expected_stable_macaddr)
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++grep -q '^macaddr=' "$(generic)" || fail "placeholder wiphy keeps the macaddr= key" "$(cat "$(generic)")"
++! grep -Fqx 'macaddr=00:90:4c:0d:f4:3e' "$(generic)" ||
++  fail "placeholder wiphy must not persist the dump donor" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "placeholder wiphy gets this machine's stable MAC" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(dmi_file "Apple Inc." "MacBookPro14,3")" ||
++  fail "placeholder wiphy DMI file gets this machine's stable MAC" "$(grep '^macaddr' "$(dmi_file "Apple Inc." "MacBookPro14,3")")"
++pass "placeholder wiphy keeps macaddr= as a per-machine address"
++
++# No MAC discoverable: still install, with a per-machine macaddr= rather than the donor.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++[[ -f "$(generic)" ]] || fail "a Mac with no discoverable MAC still gets the NVRAM"
++expected=$(expected_stable_macaddr)
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++grep -q '^macaddr=' "$(generic)" || fail "macaddr= is present when no MAC is discoverable" "$(cat "$(generic)")"
++! grep -Fqx 'macaddr=00:90:4c:0d:f4:3e' "$(generic)" ||
++  fail "the dump donor is never persisted when no MAC is discoverable" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "no discoverable MAC uses this machine's stable MAC" "$(grep '^macaddr' "$(generic)")"
++pass "macaddr= is a per-machine address when no MAC is discoverable"
++
++# A distinct Broadcom placeholder, including the kernel's 00:90:4c:c5:12:38
++# default, must not be persisted and must not fall through to the dump donor.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_perm_mac 00:90:4c:aa:bb:cc
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++invoke_leaf 43ba >/dev/null
++expected=$(expected_stable_macaddr)
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++! grep -Fqx 'macaddr=00:90:4c:aa:bb:cc' "$(generic)" ||
++  fail "a distinct Broadcom placeholder is not persisted" "$(grep '^macaddr' "$(generic)")"
++! grep -Fqx 'macaddr=00:90:4c:0d:f4:3e' "$(generic)" ||
++  fail "rejecting 00:90:4c:* must not persist the dump donor" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "a distinct Broadcom placeholder falls through to the stable MAC" "$(grep '^macaddr' "$(generic)")"
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_perm_mac 00:90:4c:c5:12:38
++invoke_leaf 43ba >/dev/null
++! grep -Fqx 'macaddr=00:90:4c:c5:12:38' "$(generic)" ||
++  fail "the kernel default placeholder is not persisted" "$(grep '^macaddr' "$(generic)")"
++! grep -Fqx 'macaddr=00:90:4c:0d:f4:3e' "$(generic)" ||
++  fail "the kernel default placeholder must not persist the dump donor" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "the kernel default placeholder falls through to the stable MAC" "$(grep '^macaddr' "$(generic)")"
++pass "Broadcom 00:90:4c placeholders fall through to a per-machine MAC"
++
++# Two machines with no interface up must not share a station address.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++printf '%s\n' 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' >"$machine_id_file"
++invoke_leaf 43ba >/dev/null
++mac_one=$(grep '^macaddr=' "$(generic)")
++[[ -n $mac_one ]] || fail "first machine-id produced a macaddr="
++! grep -Fqx 'macaddr=00:90:4c:0d:f4:3e' "$(generic)" ||
++  fail "first machine-id must not persist the dump donor" "$mac_one"
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++printf '%s\n' 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' >"$machine_id_file"
++invoke_leaf 43ba >/dev/null
++mac_two=$(grep '^macaddr=' "$(generic)")
++[[ -n $mac_two ]] || fail "second machine-id produced a macaddr="
++[[ $mac_one != $mac_two ]] || fail "two machine-ids must not share a macaddr" "$mac_one"
++printf '%s\n' '0123456789abcdef0123456789abcdef' >"$machine_id_file"
++pass "two machine-ids produce two different macaddr= values"
++
++# Empty or missing machine-id and no live MAC: fail closed, persist nothing.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++: >"$machine_id_file"
++if invoke_leaf 43ba >/dev/null 2>&1; then
++  fail "empty machine-id without a live MAC must not look like success"
++fi
++[[ -z $(ls -A "$fwdir") ]] || fail "empty machine-id leaves nothing behind" "$(ls -A "$fwdir")"
++rm -f "$machine_id_file"
++if invoke_leaf 43ba >/dev/null 2>&1; then
++  fail "missing machine-id without a live MAC must not look like success"
++fi
++[[ -z $(ls -A "$fwdir") ]] || fail "missing machine-id leaves nothing behind" "$(ls -A "$fwdir")"
++printf '%s\n' '0123456789abcdef0123456789abcdef' >"$machine_id_file"
++pass "empty machine-id without a live MAC fails and persists nothing"
++
++run_leaf "Apple Inc." "MacBookPro14,3" 43a0 >/dev/null
++[[ ! -f "$(generic)" ]] || fail "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
++pass "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
++
++run_leaf "Apple Inc." "MacBookPro15,1" 4488 >/dev/null
++[[ ! -f "$(generic)" ]] || fail "a T2-era chip is left to apple-bcm-firmware"
++pass "a T2-era chip is left to apple-bcm-firmware"
++
++run_leaf "Apple Inc." "MacBookPro14,3" 43bb >/dev/null
++[[ ! -f "$(generic)" ]] || fail "the 2 GHz-only BCM43602 variant is left alone"
++pass "the 2 GHz-only BCM43602 variant is left alone"
++
++# Same PCI ID, different board; this dump has a report of unusable range there.
++run_leaf "Apple Inc." "MacBookPro13,3" 43ba >/dev/null
++[[ ! -f "$(generic)" ]] || fail "MacBookPro13,3 is outside the model gate"
++pass "MacBookPro13,3 is outside the model gate"
++
++run_leaf "Apple Inc." "MacBookPro11,4" 43ba >/dev/null
++[[ ! -f "$(generic)" ]] || fail "a 2015 BCM43602 Mac is outside the model gate"
++pass "a 2015 BCM43602 Mac is outside the model gate"
++
++run_leaf "LENOVO" "ThinkPad" 43ba >/dev/null
++[[ ! -f "$(generic)" ]] || fail "non-Apple hardware is left alone"
++pass "non-Apple hardware is left alone"
++
++run_leaf "Apple Inc." "MacBookPro14,3" >/dev/null
++[[ ! -f "$(generic)" ]] || fail "a Mac with no wireless device is left alone"
++pass "a Mac with no wireless device is left alone"
++
++# An existing file wins, user-placed or package-shipped. invoke_leaf, not
++# run_leaf: run_leaf wipes fwdir first, which made the previous clobber
++# assertion vacuous.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++printf 'user-owned\n' >"$(generic)"
++invoke_leaf 43ba >/dev/null
++grep -qx 'user-owned' "$(generic)" ||
++  fail "an existing NVRAM is never clobbered" "$(cat "$(generic)")"
++pass "an existing NVRAM is never clobbered"
++
++# A packaged linux-firmware board file also outranks this copy.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++printf 'package-shipped\n' >"$packaged/brcmfmac43602-pcie.txt"
++invoke_leaf 43ba >/dev/null
++[[ ! -e "$(generic)" ]] || fail "a packaged NVRAM prevents writing the override"
++pass "a packaged NVRAM prevents writing the override"
++
++# Arch ships every firmware file zstd-compressed, so this is the name a real
++# linux-firmware board file would arrive under.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++printf 'package-shipped\n' >"$packaged/brcmfmac43602-pcie.Apple Inc.-MacBookPro14,3.txt.zst"
++invoke_leaf 43ba >/dev/null
++[[ ! -e "$(generic)" ]] || fail "a compressed packaged NVRAM prevents writing the override"
++pass "a compressed packaged NVRAM prevents writing the override"
++
++# A failed install must not look like success. Stub install(1) to truncate its
++# destination and then fail, the shape ENOSPC takes, after the gate has
++# matched, so the leaf's set -e surfaces the error and nothing partial is left
++# under a name the driver loads or the skip guard honours.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++cat >"$stub_bin/install" <<'SH'
++#!/bin/bash
++: >"${@: -1}"
++exit 1
++SH
++chmod +x "$stub_bin/install"
++if invoke_leaf 43ba >/dev/null 2>&1; then
++  fail "a failed install does not look like success"
++fi
++rm -f "$stub_bin/install"
++[[ ! -e "$(generic)" ]] || fail "a failed install leaves no dest file"
++[[ -z $(ls -A "$fwdir") ]] || fail "a failed install leaves nothing behind" "$(ls -A "$fwdir")"
++pass "a failed install does not look like success"
++
++# The generic and DMI-specific names land together or not at all: one file on
++# disk would satisfy the skip guard while the migration's reboot prompt is lost.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++cat >"$stub_bin/install" <<SH
++#!/bin/bash
++if [[ -e "$test_tmp/install-once" ]]; then
++  exit 1
++fi
++touch "$test_tmp/install-once"
++exec /usr/bin/install "\$@"
++SH
++chmod +x "$stub_bin/install"
++if invoke_leaf 43ba >/dev/null 2>&1; then
++  fail "a half-written NVRAM pair does not look like success"
++fi
++rm -f "$stub_bin/install" "$test_tmp/install-once"
++[[ -z $(ls -A "$fwdir") ]] || fail "a half-written NVRAM pair is rolled back" "$(ls -A "$fwdir")"
++pass "a half-written NVRAM pair is rolled back"
++
++# Staging rollback is covered above. The dest `mv` path is separate: the first
++# rename can succeed and the second fail. Rollback must still remove both names
++# (and leftover .tmp files) so the skip guard cannot treat a half-installed
++# pair as done.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++printf '%s' "Apple Inc." >"$test_tmp/dmi/sys_vendor"
++printf '%s' "MacBookPro14,3" >"$test_tmp/dmi/product_name"
++cat >"$stub_bin/mv" <<SH
++#!/bin/bash
++dest=\${@: -1}
++if [[ \$dest == "$fwdir/"* && \$dest != *.tmp ]]; then
++  if [[ -e "$test_tmp/mv-once" ]]; then
++    exit 1
++  fi
++  touch "$test_tmp/mv-once"
++fi
++exec /usr/bin/mv "\$@"
++SH
++chmod +x "$stub_bin/mv"
++if invoke_leaf 43ba >/dev/null 2>&1; then
++  fail "a failed dest rename does not look like success"
++fi
++rm -f "$stub_bin/mv" "$test_tmp/mv-once"
++[[ -z $(ls -A "$fwdir") ]] || fail "a failed dest rename leaves nothing behind" "$(ls -A "$fwdir")"
++pass "a failed dest rename is rolled back"
++
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++run_migration "Apple Inc." "MacBookPro14,3" 43ba
++[[ -f "$(generic)" ]] || fail "the migration installs NVRAM on an existing Mac"
++expected=macaddr=aa:bb:cc:dd:ee:ff
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "the migration substitutes the live MAC" "$(grep '^macaddr' "$(generic)")"
++grep -Fq $'omarchy-state\tset\treboot-required' "$calls" ||
++  fail "the migration asks for the reboot that applies it" "$(cat "$calls")"
++pass "the migration installs NVRAM and asks for a reboot"
++
++run_migration "Apple Inc." "MacBookPro14,3" 43ba
++[[ ! -s $calls ]] || fail "the migration is idempotent" "$(cat "$calls")"
++pass "the migration is idempotent"
++
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++run_migration "Apple Inc." "MacBookPro14,3" 43ba
++[[ -f "$(generic)" ]] || fail "the migration installs NVRAM without a discoverable MAC"
++expected=$(expected_stable_macaddr)
++[[ -n $expected ]] || fail "expected macaddr is non-empty"
++grep -q '^macaddr=' "$(generic)" || fail "the migration keeps the macaddr= key" "$(cat "$(generic)")"
++! grep -Fqx 'macaddr=00:90:4c:0d:f4:3e' "$(generic)" ||
++  fail "the migration must not persist the dump donor" "$(grep '^macaddr' "$(generic)")"
++grep -Fqx "$expected" "$(generic)" ||
++  fail "the migration uses this machine's stable MAC when none is discoverable" "$(grep '^macaddr' "$(generic)")"
++grep -Fq $'omarchy-state\tset\treboot-required' "$calls" ||
++  fail "the migration still asks for a reboot without a MAC" "$(cat "$calls")"
++pass "the migration uses a per-machine MAC when none is discoverable"
++
++rm -rf "$fwdir" "$packaged"
++mkdir -p "$fwdir" "$packaged"
++printf 'already-there\n' >"$(generic)"
++run_migration "Apple Inc." "MacBookPro14,3" 43ba
++grep -qx 'already-there' "$(generic)" ||
++  fail "the migration never overwrites an existing NVRAM" "$(cat "$(generic)")"
++[[ ! -s $calls ]] || fail "the migration escalates nothing when the file already exists" "$(cat "$calls")"
++pass "the migration never overwrites an existing NVRAM"
++
++rm -rf "$fwdir" "$packaged"
++run_migration "Apple Inc." "MacBookPro13,3" 43ba
++[[ ! -e "$(generic)" ]] || fail "the migration skips MacBookPro13,3"
++[[ ! -s $calls ]] || fail "the migration escalates nothing on excluded models" "$(cat "$calls")"
++pass "the migration skips MacBookPro13,3"
++
++rm -rf "$fwdir"
++run_migration "LENOVO" "ThinkPad" 43ba
++[[ ! -e "$(generic)" ]] || fail "the migration skips non-Apple hardware"
++[[ ! -s $calls ]] || fail "the migration escalates nothing on unaffected machines" "$(cat "$calls")"
++pass "the migration skips non-Apple hardware"
++
++# A failed migration install must not mark the migration done via reboot-required,
++# and the rerun omarchy-migrate then makes must do the work it skipped.
++rm -rf "$fwdir" "$packaged" "$pci_devices"
++mkdir -p "$fwdir" "$packaged"
++provide_mac
++cat >"$stub_bin/install" <<'SH'
++#!/bin/bash
++: >"${@: -1}"
++exit 1
++SH
++chmod +x "$stub_bin/install"
++if run_migration "Apple Inc." "MacBookPro14,3" 43ba; then
++  fail "a failed migration install does not look like success"
++fi
++rm -f "$stub_bin/install"
++grep -q 'omarchy-state' "$calls" &&
++  fail "a failed migration does not ask for a reboot" "$(cat "$calls")"
++pass "a failed migration install does not look like success"
++
++run_migration "Apple Inc." "MacBookPro14,3" 43ba
++grep -qx 'aa5g=7' "$(generic)" ||
++  fail "the rerun after a failed migration installs the NVRAM" "$(ls -A "$fwdir")"
++grep -Fq $'omarchy-state\tset\treboot-required' "$calls" ||
++  fail "the rerun after a failed migration asks for the reboot" "$(cat "$calls")"
++pass "the rerun after a failed migration installs and asks for the reboot"
+diff --git a/test/shell.d/brcmfmac-suspend-test.sh b/test/shell.d/brcmfmac-suspend-test.sh
+new file mode 100755
+index 00000000..65584723
+--- /dev/null
++++ b/test/shell.d/brcmfmac-suspend-test.sh
+@@ -0,0 +1,170 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++leaf="$ROOT/install/hardware/apple/fix-brcmfmac-suspend.sh"
++source_hook="$ROOT/default/systemd/system-sleep/rebind-brcmfmac"
++all="$ROOT/install/hardware/all.sh"
++migration="$ROOT/migrations/1789668939.sh"
++
++grep -q 'apple/fix-brcmfmac-suspend.sh' "$all" ||
++  fail "the brcmfmac suspend fix runs during hardware setup"
++pass "the brcmfmac suspend fix runs during hardware setup"
++
++# systemd-sleep runs every executable in system-sleep and silently skips
++# anything without the bit.
++[[ -x $source_hook ]] ||
++  fail "the hook source is executable"
++pass "the hook source is executable"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++stub_bin="$test_tmp/bin"
++calls="$test_tmp/calls.log"
++hook="$test_tmp/usr/lib/systemd/system-sleep/rebind-brcmfmac"
++mkdir -p "$stub_bin" "$test_tmp/dmi" "$test_tmp/usr/lib/systemd/system-sleep"
++
++cat >"$stub_bin/lspci" <<'SH'
++#!/bin/bash
++
++if (( ${T2_HARDWARE:-0} == 1 )); then
++  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'
++fi
++if [[ -n ${WIFI_ID:-} ]]; then
++  echo "03:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]"
++fi
++for _ in {1..4096}; do
++  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'
++done
++SH
++
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++
++# install -o root -g root fails as the test user; ownership is already right
++# in the sandbox, so drop those flags before executing.
++args=()
++skip=0
++for arg in "$@"; do
++  if (( skip )); then
++    skip=0
++    continue
++  fi
++  case "$arg" in
++    -o|-g) skip=1 ;;
++    *) args+=("$arg") ;;
++  esac
++done
++"${args[@]}"
++SH
++
++chmod +x "$stub_bin"/*
++
++run_leaf() {
++  local vendor="$1" wifi_id="${2:-}" t2="${3:-0}"
++  rm -rf "$test_tmp/usr/lib/systemd/system-sleep"
++  mkdir -p "$test_tmp/usr/lib/systemd/system-sleep"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++
++  local script="$test_tmp/leaf.sh"
++  sed -e "s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g" \
++      -e "s|/usr/lib/systemd/system-sleep|$test_tmp/usr/lib/systemd/system-sleep|g" \
++      -e "s|\$OMARCHY_PATH|$ROOT|g" \
++      "$leaf" >"$script"
++
++  WIFI_ID="$wifi_id" T2_HARDWARE="$t2" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    bash -eE -o pipefail -c 'source "$1"' bash "$script" </dev/null
++}
++
++run_leaf "Apple Inc." 43a3 0 >/dev/null
++[[ -x $hook ]] ||
++  fail "a Mac with a BCM4350 gets the sleep hook" "$(ls -R "$test_tmp/usr" 2>&1)"
++cmp -s "$source_hook" "$hook" ||
++  fail "the installed hook matches the source"
++pass "a Mac with a BCM4350 gets the sleep hook"
++
++run_leaf "Apple Inc." 4488 1 >/dev/null
++[[ -x $hook ]] ||
++  fail "a T2 Mac gets the sleep hook"
++pass "a T2 Mac gets the sleep hook"
++
++run_leaf "Apple Inc." 43a0 0 >/dev/null
++[[ ! -e $hook ]] || fail "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
++pass "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
++
++run_leaf "LENOVO" 43a3 0 >/dev/null
++[[ ! -e $hook ]] || fail "non-Apple hardware is left alone"
++pass "non-Apple hardware is left alone"
++
++run_migration() {
++  local vendor="$1" wifi_id="${2:-}" t2="${3:-0}"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  : >"$calls"
++
++  WIFI_ID="$wifi_id" T2_HARDWARE="$t2" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_BRCMFMAC_DMI_VENDOR="$test_tmp/dmi/sys_vendor" \
++    OMARCHY_BRCMFMAC_SLEEP_HOOK="$hook" \
++    bash -euo pipefail "$migration" >/dev/null
++}
++
++rm -f "$hook"
++run_migration "Apple Inc." 43a3 0
++[[ -x $hook ]] ||
++  fail "the migration installs the hook on a Mac that predates it"
++pass "the migration installs the hook on a Mac that predates it"
++
++run_migration "Apple Inc." 43a3 0
++[[ ! -s $calls ]] || fail "a repaired install is left untouched" "$(cat "$calls")"
++pass "the migration is idempotent"
++
++printf '# local tweak\n' >> "$hook"
++run_migration "Apple Inc." 43a3 0
++cmp -s "$source_hook" "$hook" ||
++  fail "the migration refreshes a modified hook"
++pass "the migration refreshes a modified hook"
++
++rm -f "$hook"
++run_migration "LENOVO" 43a3 0
++[[ ! -e $hook ]] || fail "the migration skips non-Apple hardware"
++pass "the migration skips non-Apple hardware"
++
++# The hook itself: run it against a stub sysfs where unbind and bind are real
++# files, so the writes land and can be checked. /run is writable in tests.
++driver="$test_tmp/sys/bus/pci/drivers/brcmfmac"
++mkdir -p "$driver"
++ln -s "/sys/devices/pci0000:00/0000:02:00.0" "$driver/0000:02:00.0"
++touch "$driver/unbind" "$driver/bind"
++
++hook_script="$test_tmp/rebind-brcmfmac"
++sed "s|/sys/bus/pci/drivers/brcmfmac|$driver|g" "$source_hook" > "$hook_script"
++chmod +x "$hook_script"
++state_file="$test_tmp/state"
++export OMARCHY_BRCMFMAC_SLEEP_STATE="$state_file"
++
++"$hook_script" pre
++grep -qx '0000:02:00.0' "$driver/unbind" ||
++  fail "pre-sleep unbinds the bound device" "$(cat "$driver/unbind")"
++[[ -f $state_file ]] || fail "pre-sleep records the unbound device"
++pass "pre-sleep unbinds the bound device"
++
++"$hook_script" post
++grep -qx '0000:02:00.0' "$driver/bind" ||
++  fail "post-sleep rebinds the same device" "$(cat "$driver/bind")"
++[[ ! -f $state_file ]] ||
++  fail "post-sleep clears the state file"
++pass "post-sleep rebinds the same device and clears state"
++
++# A post with no matching pre is a no-op, the case after a fresh boot.
++rm -f "$state_file"
++: > "$driver/bind"
++"$hook_script" post
++[[ ! -s $driver/bind ]] || fail "post without pre writes nothing"
++pass "post without pre is a no-op"
+diff --git a/test/shell.d/broadcom-calibration-integration-test.sh b/test/shell.d/broadcom-calibration-integration-test.sh
+new file mode 100755
+index 00000000..92bf1615
+--- /dev/null
++++ b/test/shell.d/broadcom-calibration-integration-test.sh
+@@ -0,0 +1,108 @@
++#!/bin/bash
++# Exercise both existing leaves in one fixture; no radio or regulatory claims.
++set -euo pipefail
++source "$(dirname "$0")/base-test.sh"
++python3 - "$ROOT" <<'PY'
++import hashlib
++import os
++from pathlib import Path
++import re
++import subprocess
++import sys
++import tempfile
++
++root = Path(sys.argv[1])
++leaf13 = (root / 'install/hardware/apple/fix-bcm43602-nvram.sh').read_text()
++leaf14 = root / 'install/hardware/apple/fix-brcmfmac-5ghz.sh'
++fixture = b'sromrev=11\nmacaddr=xx:xx:xx:xx:xx:xx\naa2g=7\naa5g=7\n'
++real_digest = 'b109f3e6663b0e888c2559e36f7e0109f2a3a6b9765786d11f849f16d4b32d06'
++assert real_digest in leaf13
++all_sh = (root / 'install/hardware/all.sh').read_text()
++for path in ['apple/fix-bcm43602-nvram.sh', 'apple/fix-brcmfmac-5ghz.sh', 'apple/fix-brcmfmac-supplicant.sh']:
++    assert all_sh.count('run_logged "$OMARCHY_INSTALL/hardware/' + path + '"') == 1
++print('ok - combined wiring invokes each selected leaf and the existing supplicant quirk once')
++
++with tempfile.TemporaryDirectory() as td:
++    base = Path(td)
++    def case(name, model, *, vendor='Apple Inc.', chip='43ba', board='015a', existing=False, fail=False):
++        work = base / name
++        sysroot = work / 'sys'
++        dmi = sysroot / 'class/dmi/id'
++        pci = sysroot / 'bus/pci/devices/0000:03:00.0'
++        package = work / 'firmware/brcm'
++        override = work / 'firmware/updates/brcm'
++        stub = work / 'bin'
++        for p in (dmi, pci / 'net/wlan0', package, override, stub):
++            p.mkdir(parents=True)
++        (dmi / 'sys_vendor').write_text(vendor)
++        (dmi / 'product_name').write_text(model)
++        for key, value in {'vendor':'0x14e4','device':'0x'+chip,'subsystem_vendor':'0x106b','subsystem_device':'0x'+board}.items():
++            (pci / key).write_text(value)
++        (pci / 'net/wlan0/address').write_text('78:12:34:56:78:90')
++        machine_id = work / 'machine-id'
++        machine_id.write_text('0123456789abcdef0123456789abcdef\n')
++        payload = work / 'payload'
++        payload.write_bytes(fixture)
++        log = work / 'calls'
++        scripts = {
++            'curl': 'echo curl >> "$TEST_CALLS"\n' + ('exit 22\n' if fail else 'while [[ $1 != -o ]]; do shift; done\ncp "$TEST_PAYLOAD" "$2"\n'),
++            'lspci': 'echo "0000:03:00.0 Network controller [0280]: Broadcom [14e4:$TEST_CHIP]"\n',
++            'sudo': '"$@"\n',
++            'modprobe': 'echo unexpected-modprobe >> "$TEST_CALLS"; exit 99\n',
++            'nmcli': 'echo unexpected-nmcli >> "$TEST_CALLS"; exit 99\n',
++        }
++        for name_, body in scripts.items():
++            p = stub / name_
++            p.write_text('#!/bin/bash\n'+body)
++            p.chmod(0o755)
++        if existing:
++            (package / 'brcmfmac43602-pcie.txt.zst').write_text('administrator-owned\n')
++        staged13 = work / 'leaf13.sh'
++        staged13.write_text(leaf13.replace('/sys/',str(sysroot)+'/').replace('/usr/lib/firmware/brcm',str(package)).replace(real_digest,hashlib.sha256(fixture).hexdigest()))
++        env = dict(os.environ, PATH=str(stub)+':'+os.environ['PATH'], OMARCHY_PATH=str(root), OMARCHY_INSTALL=str(root/'install'),
++                   OMARCHY_BRCMFMAC_DMI_VENDOR=str(dmi/'sys_vendor'), OMARCHY_BRCMFMAC_DMI_PRODUCT=str(dmi/'product_name'),
++                   OMARCHY_BRCMFMAC_PCI_DEVICES=str(sysroot/'bus/pci/devices'), OMARCHY_BRCMFMAC_FWDIR=str(override),
++                   OMARCHY_BRCMFMAC_PACKAGED_FWDIR=str(package), OMARCHY_BRCMFMAC_MACHINE_ID=str(machine_id),
++                   TEST_CHIP=chip, TEST_PAYLOAD=str(payload), TEST_CALLS=str(log))
++        def invoke():
++            # Matches run_logged's separate bash -eE invocation per leaf.
++            return [subprocess.run(['bash','-eE','-c','source "$1"','bash',str(leaf)],env=env,text=True,capture_output=True) for leaf in (staged13,leaf14)]
++        results = invoke()
++        assert all(r.returncode == 0 for r in results) != fail, [r.stderr for r in results]
++        files = sorted(str(p.relative_to(work/'firmware')) for p in (work/'firmware').rglob('*') if p.is_file())
++        assert 'unexpected-' not in (log.read_text() if log.exists() else '')
++        return work,files,invoke
++
++    work, files, invoke = case('13-3','MacBookPro13,3')
++    assert files == ['brcm/brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3.txt'], files
++    installed = work/'firmware'/files[0]
++    assert installed.read_bytes() == fixture.replace(b'xx:xx:xx:xx:xx:xx',b'78:12:34:56:78:90')
++    previous = installed.read_bytes()
++    assert all(r.returncode == 0 for r in invoke()) and installed.read_bytes() == previous
++    assert (work/'calls').read_text() == 'curl\n'
++    print('ok - 13,3 selects only its board-specific download and preserves it on rerun')
++
++    for model in ('MacBookPro14,2','MacBookPro14,3'):
++        work, files, invoke = case(model,model,board='0173')
++        assert len(files) == 2 and all(p.startswith('updates/brcm/') for p in files),files
++        expected=(root/'default/firmware/apple/brcmfmac43602-pcie.txt').read_text()
++        expected=re.sub(r'^macaddr=.*$', 'macaddr=78:12:34:56:78:90', expected, flags=re.M)
++        assert all((work/'firmware'/f).read_text()==expected for f in files)
++        assert not (work/'calls').exists()
++        print('ok - '+model+' selects only the existing 14,x calibration without downloading the 13,3 file')
++
++    for name,model,kwargs in [('wrong-board','MacBookPro13,3',{'board':'0173'}),('other-model','MacBookPro11,5',{}),
++                              ('non-apple','MacBookPro14,3',{'vendor':'Dell Inc.'}),('wl-device','MacBookPro14,3',{'chip':'43a0'})]:
++        _,files,_=case(name,model,**kwargs)
++        assert not files,files
++    print('ok - combined leaves preserve their model, board, vendor and chip exclusions')
++    for model in ('MacBookPro13,3','MacBookPro14,3'):
++        work,files,_=case('existing-'+model,model,existing=True)
++        assert files == ['brcm/brcmfmac43602-pcie.txt.zst']
++        assert (work/'firmware'/files[0]).read_text() == 'administrator-owned\n'
++        assert not (work/'calls').exists()
++    print('ok - both leaves preserve an existing compressed generic board file')
++    _,files,_=case('failed-download','MacBookPro13,3',fail=True)
++    assert not files
++    print('ok - a failed 13,3 download cannot fall through to the other model calibration')
++PY
+diff --git a/test/shell.d/unowned-system-paths-test.sh b/test/shell.d/unowned-system-paths-test.sh
+index efe940b4..bdb7c35e 100755
+--- a/test/shell.d/unowned-system-paths-test.sh
++++ b/test/shell.d/unowned-system-paths-test.sh
+@@ -30,6 +30,10 @@ allowed = {
+   # Hardware-conditional sleep hooks, installed only on the machines that need
+   # them so the hook does not exist where it does not apply.
+   "/usr/lib/systemd/system-sleep",
++  # Hardware-conditional BCM43602 board NVRAM. linux-firmware-broadcom ships the
++  # chip firmware but not this calibration file; /usr/lib/firmware/updates/brcm
++  # is the kernel override path so a later packaged txt cannot conflict.
++  "/usr/lib/firmware/updates/brcm",
+   # Written through a variable, so the scan below cannot see them at the point
+   # they are written. These drop configuration into another project's tree
+   # rather than Omarchy's and are not candidates for omarchy-settings.

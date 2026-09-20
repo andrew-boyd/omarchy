@@ -1,0 +1,20 @@
+{
+  "tests": [
+    "test/shell.d/t1-touchbar-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hw-apple-t1": "99611ff558338c58af7560ce6f5f79b498bc834306b49ee995f0226c669e5888",
+    "bin/omarchy-hw-apple-t1-bind": "e22c583216a1b2ea31a1c1455b7ce6779ebcf13940ec71c16ea493b06ba43ccb",
+    "bin/omarchy-setup-apple-touchbar": "325ed915c60327ce66a2767fce4f419eda507a3d3d663596689a3ac11d5f0299",
+    "default/omarchy/omarchy-menu.jsonc": "ee51a54245fb46a471844f1f4d33708287ef945ab89d31b4ecbf0c98f6c6f78a",
+    "default/udev/apple-t1-touchbar.rules": "5f98d617999bfeda22d95d3d24cdb6b9871ed9491eb28f6c093cb9c0ad198477",
+    "install/hardware/all.sh": "5bb4869418cbc0d0cdaceb25398c52672b39c21d94f52cfe4d96e575a51461c0",
+    "install/hardware/apple/copy-t1-firmware.command": "ae92aa22c0f2d597e146c5d4c106f727111b4e91db993bda869285f8a503a68b",
+    "install/hardware/apple/fix-t1-touchbar.sh": "aa98d4e0b51e7e664d79ae2fef570c7d8f95eb19f1d3049bf1263d5b2f14f19f",
+    "install/hardware/apple/t1-touchbar.sh": "8c16eb0fb6d3f2fc7f57fba549883a9ebe1316d448fcd63bf91ebbb283a60c24",
+    "manual/44-mac-support.md": "cc83f70f42c0d1f96c1bfb1ecba2d39f3e80ae464644bb85cce0e5ff3c98a1f3",
+    "migrations/1786820569.sh": "d46422176652f2df64dc62e35838afe5e8860ddfc824b2d0a3be34f4bac56d8d",
+    "test/shell.d/t1-touchbar-test.sh": "12b89647213b38c74f26b5d05fbf8694b0a6096f6ffc4f9431768ad2fcf18b06",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "tests": [
+    "test/shell.d/cs8409-audio-test.sh",
+    "test/shell.d/cs4208-audio-test.sh",
+    "test/shell.d/imac-cs4208-speakers-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hw-apple-cs8409": "f854c6ca8460d899ecb11316efab167ba6cc1c535c944c796e6276c3fe2c7839",
+    "bin/omarchy-hw-imac-cs4208": "26e6ec0bbd7dcc294f4a69ffd3c633b7c09d0a772025c50b7f5633fc409008d5",
+    "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+    "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf": "594cc5b9376c851923573cf5916a5e710f537f5b3474aec78c926635e612bd7a",
+    "install/hardware/all.sh": "5ac34f5589dd6a1361e2cbfd5770c92af87b09c17c03fefb9a06b49fa9232ba5",
+    "install/hardware/apple/fix-cs4208-audio.sh": "1de8949038dbec5782c3ecd18deecc2f420892978c6857c16cdcbae0c0e26d62",
+    "install/hardware/apple/fix-cs8409-audio.sh": "de1c0716ff6efa826cba3b7ddaf9498d815ae8ad33be3d052a1c1802ca431218",
+    "install/hardware/apple/omarchy-cs4208-audio.service": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+    "install/omarchy-other.packages": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc",
+    "install/user/all.sh": "46e026042bdafdb1823b5c824fa8132756638039e40fc3cb52df128f7d30fb0d",
+    "install/user/hardware/apple/fix-cs4208-audio.sh": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4",
+    "install/user/hardware/apple/fix-imac-cs4208-speakers.sh": "c933380bea548b19f3760c0a84cedfb1198da7dfcb293865bcf246c5891132e3",
+    "manual/44-mac-support.md": "ad3e31125ab61623b16e942cadf7b66b681550ab59ccae0b197a99c2b51bda3d",
+    "manual/45-troubleshooting.md": "c4696512f9c7fcd8ca95fafc26d38c35d1e8758182588db29c5e182098440f1b",
+    "migrations/1786889011.sh": "881c662c1eaee6f44ccf1a6acea6b185c3fa8bb61e6715fc00933f645d4c0231",
+    "migrations/1788673159.sh": "fea683a5bec3374120c4c3207a9ddc15de30f2c15b819bb31216c5b7e82a975e",
+    "migrations/1789869577.sh": "7f8b53ff488bc390f813a791440c57a4e01d9ccf59662cca392f37d0395397fa",
+    "test/shell.d/cs4208-audio-test.sh": "a7964169e7df3ca1183c124559c11188f0aabe220f30a938fdbe4d3e001b1d5c",
+    "test/shell.d/cs8409-audio-test.sh": "06c734b087d888552741fe2ceea755c239f7d9b8660bbb5895e301afe9fa2c4a",
+    "test/shell.d/imac-cs4208-speakers-test.sh": "68bf75a334d006bd5961f1895bfbe592abf8dc2dd2685ec0e9b88a04a9d96f57",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

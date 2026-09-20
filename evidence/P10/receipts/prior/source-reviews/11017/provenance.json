@@ -1,0 +1,38 @@
+{
+  "number": 11017,
+  "head_sha": "a49800201b8d99aa55062338d29cceada694acc2",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "original_apply_passed": true,
+  "hardware_verified": false,
+  "rebase_notes": [],
+  "tree": "ef14adcf639e2badd1749d8e6b7ad7ea1dc25ac3",
+  "patch_sha256": "de05f9c178a397b18dcaa186ab058e0b0a03c9d3f8e96cd8108e1840b3885714",
+  "files": [
+    {
+      "path": "install/hardware/all.sh",
+      "identical_to_source": false,
+      "source_sha256": "38c77452ee278c56f1c5fab61afa65d54b08b19dcba192e89f857b1c02a2e4a0",
+      "target_sha256": "7a95738d4c4ebfa57439e41a6241dc263515891f155a4836659110c0c6cc8f3f"
+    },
+    {
+      "path": "install/hardware/apple/fix-bcm43602-nvram.sh",
+      "identical_to_source": true,
+      "source_sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+      "target_sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c"
+    },
+    {
+      "path": "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "identical_to_source": true,
+      "source_sha256": "af93217ff1279d37b211bcce5e89dfbb837587bf40175744cbe43d2e144c69a6",
+      "target_sha256": "af93217ff1279d37b211bcce5e89dfbb837587bf40175744cbe43d2e144c69a6"
+    }
+  ],
+  "all_sh_retains_target_exactly": true,
+  "whitespace": {
+    "passed": true,
+    "output": ""
+  },
+  "source_checks_passed": true,
+  "source_assertions": 10,
+  "target_tree": "ef14adcf639e2badd1749d8e6b7ad7ea1dc25ac3"
+}

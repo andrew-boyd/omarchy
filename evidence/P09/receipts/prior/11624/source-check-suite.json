@@ -1,0 +1,11 @@
+{
+  "tests": [
+    "test/shell.d/apple-suspend-nvme-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/apple/fix-suspend-nvme.sh": "d0ddd0249228c0b19d1716c1610e6828169b32410a7a2c64d78663063715ec50",
+    "migrations/1789274148.sh": "1ef0f307289f91114dca2a891e745319a2b79edab0502b2a1092992e52495c01",
+    "test/shell.d/apple-suspend-nvme-test.sh": "d9928146904cb72c1a44c1c459d0ea63c5047ca150a53df269a3f9b7d420bdbc",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

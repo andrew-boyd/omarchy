@@ -1,0 +1,16 @@
+ok - Plymouth refresh allowlist covers every packaged asset
+ok - SDDM refresh allowlist covers every packaged asset
+ok - a themed logo cannot republish a file it merely points at
+ok - the logo descriptor can only be opened by an unprivileged caller
+ok - a theme name cannot carry a command into the unlock screen
+ok - the unlock picker still applies a theme and still resets on default
+ok - a fresh installation receives complete mode-0644 Plymouth and SDDM theme files across restrictive umasks
+ok - theme set repairs migrated destinations without following existing symlinks
+ok - White theme keeps a white SDDM background instead of becoming black-on-black
+ok - an unreadable source swap before open fails without publication
+ok - the caller refuses an opened descriptor that is not a regular file
+ok - caller-owned content cannot enter the root-owned boot-image stage
+ok - root rejects packaged assets that a desktop process could rewrite
+ok - root never follows a packaged asset symlink
+omarchy-plymouth-set: refusing to publish: destination /tmp/tmp.4dcdiOjhaJ/run.ljNCtF1a/root/usr/share/plymouth/themes/omarchy/bullet.png failed validation
+not ok - the root-authorized development checkout can publish Plymouth assets

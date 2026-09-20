@@ -1,0 +1,7 @@
+[
+  "Record model, DMI vendor, kernels/header packages, boot entries, DKMS modules and migration completion markers before testing.",
+  "On an affected late-upgrade test system, check the source Apple exemption preserves existing kernel packages and BOOT_ORDER; retain a recovery boot path.",
+  "Treat already-completed upgrades separately: this patch does not reinstall an older kernel, restore boot order or rerun completed user migrations.",
+  "Record boot, graphics, audio, networking and resume outcomes for the exact kernel/driver versions. Compare kernels only on hardware with a recovery path; provide reproducible logs for any regression.",
+  "Fresh installs retain current ISO defaults. A proposal to change those defaults or reverse completed upgrades is a separate policy decision, absent from this patch."
+]

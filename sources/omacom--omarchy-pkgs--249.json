@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+  "repository": "omacom/omarchy-pkgs",
+  "number": 249,
+  "title": "Add snd-hda-macbookpro-dkms for pre-T2 MacBook and iMac speakers",
+  "author": "j7j7",
+  "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+  "state": "open",
+  "updated_at": "2026-09-18T19:18:24Z",
+  "body": "## Summary\n- Adds `snd-hda-macbookpro-dkms` for the Cirrus CS8409 Apple speaker path ([davidjo/snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro)).\n- Includes @shawnyeager's packaging from #155 (full tree, `wget`/`patch` deps, correct `PACKAGE_NAME` install path) and widens `pkgdesc` / comments for **2017\u20132019 iMacs** as well as 2016\u20132017 MacBook Pros.\n- Pairs with the omarchy install hook PR that detects `MacBookPro13,x` / `14,x` and `iMac18,x` / `iMac19,x`.\n\nPins commit `6c324f6` (verified on MacBookPro14,3 / linux 7.1.8). Same Apple CS8409 path applies to iMacs such as iMac18,3 (subsystem `0x106b1000`).\n\n`source: local` so an AUR sync does not replace it. Provides/conflicts with `snd-hda-macbookpro-dkms-git`.\n\n## Test plan\n- [ ] Package builds in omarchy-pkgs pipeline\n- [ ] On a CS8409 Mac: `omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms` \u2192 DKMS install succeeds \u2192 reboot \u2192 speakers work\n\nCan close #155 in favor of this once reviewed.\n\nMade with [Cursor](https://cursor.com)",
+  "original_source_changed": false
+}

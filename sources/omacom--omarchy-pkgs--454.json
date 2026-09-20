@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/454",
+  "repository": "omacom/omarchy-pkgs",
+  "number": 454,
+  "title": "Remove kernel header dependencies from DKMS packages",
+  "author": "ryanrhughes",
+  "head_sha": "dee4caf7bcc3fdea467d277814c1aba31edd598b",
+  "state": "merged",
+  "updated_at": "2026-09-15T05:32:21Z",
+  "body": "The base install supplies matching kernel headers before DKMS packages are installed. Remove the concrete linux-headers dependency from intel-ipu7-camera and macbook8-spi-pxa2xx-nodma-dkms so these consumers rely on that guarantee and cannot pull in stock headers on Omarchy systems.\n\nBump package releases to intel-ipu7-camera 1.0.6-2 and macbook8-spi-pxa2xx-nodma-dkms 1.0-2. Driver sources are unchanged.\n\nValidation: makepkg --printsrcinfo confirms the IPU7 dependency removal. The MacBook SPI package was rebuilt with makepkg --force --nodeps, and its .PKGINFO lists dkms with no kernel-header dependency. CI passes (build-isolation and self-tests). IPU7 was not rebuilt locally.\n\nBase-install guarantee: omacom/omarchy-iso#184. Existing-system repair and consumer cleanup: omacom/omarchy#11900 and omacom/omarchy#11901. Publish the runtime repair and these packages before building the next release ISO.\n",
+  "original_source_changed": false
+}

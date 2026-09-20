@@ -1,0 +1,111 @@
+diff --git a/bin/omarchy-hw-t2 b/bin/omarchy-hw-t2
+new file mode 100755
+index 00000000000..50034968204
+--- /dev/null
++++ b/bin/omarchy-hw-t2
+@@ -0,0 +1,22 @@
++#!/bin/bash
++
++# omarchy:summary=Detect whether the computer has an Apple T2 security chip.
++# omarchy:hidden=true
++
++# Vendor 106b (Apple), devices 1801/1802. Read cached sysfs IDs rather than
++# lspci, which reads PCI config space. The chatty lspci | grep -q form also
++# SIGPIPE'd on a long device list and looked like "no T2" under pipefail.
++
++pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
++
++shopt -s nullglob
++
++for device in "$pci_devices_path"/*; do
++  [[ -r $device/vendor && -r $device/device ]] || continue
++  [[ $(<"$device/vendor") == "0x106b" ]] || continue
++  case $(<"$device/device") in
++    0x1801 | 0x1802) exit 0 ;;
++  esac
++done
++
++exit 1
+diff --git a/install/hardware/apple/fix-t2.sh b/install/hardware/apple/fix-t2.sh
+index 948828d4d41..fb7be59b0df 100644
+--- a/install/hardware/apple/fix-t2.sh
++++ b/install/hardware/apple/fix-t2.sh
+@@ -1,6 +1,5 @@
+-# Detect T2 MacBook models using PCI IDs
+-# Vendor: 106b (Apple), Device IDs: 1801 or 1802 (T2 Security Chip)
+-if lspci -nn | grep "106b:180[12]" >/dev/null; then
++# Detect T2 MacBook models using the T2 PCI IDs (Apple 106b:1801/1802).
++if omarchy-hw-t2; then
+   echo "Detected MacBook with T2 chip. Installing support items..."
+ 
+   omarchy-pkg-add \
+diff --git a/install/hardware/pacman.sh b/install/hardware/pacman.sh
+index 7533d3f378c..0812dea758a 100644
+--- a/install/hardware/pacman.sh
++++ b/install/hardware/pacman.sh
+@@ -1,6 +1,6 @@
+ # Hardware-specific pacman repository extensions that must survive the final
+ # pacman.conf restore.
+-if lspci -nn | grep "106b:180[12]" >/dev/null; then
++if omarchy-hw-t2; then
+   if ! grep -q '^\[arch-mact2\]' /etc/pacman.conf; then
+     cat >> /etc/pacman.conf <<'EOF'
+ 
+diff --git a/test/shell.d/hw-t2-test.sh b/test/shell.d/hw-t2-test.sh
+new file mode 100644
+index 00000000000..232ae9143ce
+--- /dev/null
++++ b/test/shell.d/hw-t2-test.sh
+@@ -0,0 +1,52 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp=$(mktemp -d)
++trap 'rm -rf "$tmp"' EXIT
++
++write_pci() {
++  rm -rf "$tmp/devices"
++  mkdir -p "$tmp/devices"
++  local index=0 spec slot
++  for spec in "$@"; do
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$tmp/devices/$slot"
++    printf '%s\n' "${spec%%:*}" >"$tmp/devices/$slot/vendor"
++    printf '%s\n' "$(cut -d: -f2 <<<"$spec")" >"$tmp/devices/$slot/device"
++    printf '%s\n' "${spec##*:}" >"$tmp/devices/$slot/class"
++    index=$((index + 1))
++  done
++}
++
++hw_t2() {
++  OMARCHY_PCI_DEVICES_PATH="$tmp/devices" "$ROOT/bin/omarchy-hw-t2"
++}
++
++write_pci 0x106b:0x1801:0x068000
++hw_t2 || fail "T2 chip 1801 is detected"
++pass "Apple T2 device 1801 is detected from sysfs"
++
++write_pci 0x106b:0x1802:0x068000
++hw_t2 || fail "T2 chip 1802 is detected"
++pass "Apple T2 device 1802 is detected from sysfs"
++
++write_pci 0x106b:0x1803:0x068000
++hw_t2 && fail "a different Apple PCI id is not a T2 chip"
++pass "other Apple PCI functions are not treated as T2"
++
++write_pci
++hw_t2 && fail "empty PCI space is not T2"
++pass "a machine with no PCI devices is not T2"
++
++grep -Fq 'omarchy-hw-t2' "$ROOT/install/hardware/apple/fix-t2.sh" ||
++  fail "T2 package install uses omarchy-hw-t2"
++grep -Fq 'omarchy-hw-t2' "$ROOT/install/hardware/pacman.sh" ||
++  fail "the arch-mact2 repo drop-in uses omarchy-hw-t2"
++! grep -q 'lspci' "$ROOT/install/hardware/apple/fix-t2.sh" ||
++  fail "T2 package install no longer greps lspci"
++! grep -q 'lspci' "$ROOT/install/hardware/pacman.sh" ||
++  fail "the arch-mact2 repo drop-in no longer greps lspci"
++pass "T2 install paths share one sysfs helper"

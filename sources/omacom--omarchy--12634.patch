@@ -1,0 +1,17 @@
+diff --git a/bin/omarchy-system-wake b/bin/omarchy-system-wake
+index f558007f701..c163729fb2d 100755
+--- a/bin/omarchy-system-wake
++++ b/bin/omarchy-system-wake
+@@ -5,6 +5,10 @@
+ # omarchy:name=wake
+ # omarchy:examples=omarchy system wake
+ 
++# Restore display brightness immediately in foreground to light up panels fast
+ omarchy-brightness-display on
+-omarchy-brightness-keyboard restore
+-omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true
++
++# Keyboard brightness restoration and clamshell monitor detection are secondary
++# and can run asynchronously so they don't delay session responsiveness.
++omarchy-brightness-keyboard restore >/dev/null 2>&1 &
++omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true &

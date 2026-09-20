@@ -1,0 +1,6 @@
+[
+  "Record model, kernel, Hyprland/Quickshell versions, input device names and configured layouts.",
+  "On a multi-layout session, check the displayed label while switching through every layout using the widget and keyboard shortcut.",
+  "Check internal and external typing keyboards, reconnection and unknown device names; then check available SMC/headset event devices do not take over label selection.",
+  "Report expected and observed labels with device/event logs. Shared layout synchronization remains unchanged; exclusion from label selection does not mean exclusion from switch recipients."
+]

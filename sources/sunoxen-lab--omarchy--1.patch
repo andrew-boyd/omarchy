@@ -1,0 +1,455 @@
+diff --git a/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf b/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf
+new file mode 100644
+index 00000000000..2da764623a0
+--- /dev/null
++++ b/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf
+@@ -0,0 +1,17 @@
++# The 12-inch MacBook's CS4208 speaker path has no usable hardware volume.
++# Keep its hardware mixer at full scale and apply volume in software instead.
++
++monitor.alsa.rules = [
++  {
++    matches = [
++      {
++        device.name = "alsa_card.pci-0000_00_1f.3"
++      }
++    ]
++    actions = {
++      update-props = {
++        api.alsa.soft-mixer = true
++      }
++    }
++  }
++]
+diff --git a/install/hardware/apple/60-cs4208-s2idle.conf b/install/hardware/apple/60-cs4208-s2idle.conf
+new file mode 100644
+index 00000000000..12b6faabcdb
+--- /dev/null
++++ b/install/hardware/apple/60-cs4208-s2idle.conf
+@@ -0,0 +1,3 @@
++[Sleep]
++SuspendState=mem
++MemorySleepMode=s2idle
+diff --git a/install/hardware/apple/fix-cs4208-audio.sh b/install/hardware/apple/fix-cs4208-audio.sh
+index 677ee94e9aa..49dadcf8cd3 100644
+--- a/install/hardware/apple/fix-cs4208-audio.sh
++++ b/install/hardware/apple/fix-cs4208-audio.sh
+@@ -11,4 +11,16 @@ if [[ $product_name == "MacBook9,1" || $product_name == "MacBook10,1" ]]; then
+   echo "Detected 12-inch MacBook with CS4208 audio"
+ 
+   omarchy-pkg-add macbook12-audio-driver-dkms
++
++  sleep_config_dir="${OMARCHY_SLEEP_CONFIG_DIR:-/etc/systemd/sleep.conf.d}"
++  install -Dm644 \
++    "$OMARCHY_INSTALL/hardware/apple/60-cs4208-s2idle.conf" \
++    "$sleep_config_dir/60-cs4208-s2idle.conf"
++
++  systemd_dir="${OMARCHY_SYSTEMD_DIR:-/etc/systemd/system}"
++  install -Dm644 \
++    "$OMARCHY_INSTALL/hardware/apple/omarchy-cs4208-audio.service" \
++    "$systemd_dir/omarchy-cs4208-audio.service"
++  systemctl daemon-reload
++  systemctl enable omarchy-cs4208-audio.service
+ fi
+diff --git a/install/hardware/apple/omarchy-cs4208-audio.service b/install/hardware/apple/omarchy-cs4208-audio.service
+new file mode 100644
+index 00000000000..5fe9ec9d28b
+--- /dev/null
++++ b/install/hardware/apple/omarchy-cs4208-audio.service
+@@ -0,0 +1,13 @@
++[Unit]
++Description=Set the CS4208 speaker hardware mixer for software volume
++After=dev-snd-controlC0.device
++
++[Service]
++Type=oneshot
++ExecStart=/usr/bin/amixer -c0 sset Master 100%% unmute
++ExecStart=/usr/bin/amixer -c0 sset Capture 100%% unmute cap
++ExecStart=/usr/bin/amixer -c0 sset "Internal Mic Boost" 1
++ExecStart=/usr/bin/alsactl store 0
++
++[Install]
++WantedBy=dev-snd-controlC0.device
+diff --git a/install/user/all.sh b/install/user/all.sh
+index 39d98ea57f4..876558d7ab5 100644
+--- a/install/user/all.sh
++++ b/install/user/all.sh
+@@ -6,6 +6,7 @@ run_logged "$OMARCHY_INSTALL/user/mise-work.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/user/hardware/asus/fix-audio-mixer.sh"
+ run_logged "$OMARCHY_INSTALL/user/hardware/asus/fix-mic.sh"
++run_logged "$OMARCHY_INSTALL/user/hardware/apple/fix-cs4208-audio.sh"
+ run_logged "$OMARCHY_INSTALL/user/hardware/framework/fix-f13-amd-audio-input.sh"
+ run_logged "$OMARCHY_INSTALL/user/hardware/dell/xps13-text-scaling.sh"
+ run_logged "$OMARCHY_INSTALL/user/hardware/fix-nouveau-cursor.sh"
+diff --git a/install/user/hardware/apple/fix-cs4208-audio.sh b/install/user/hardware/apple/fix-cs4208-audio.sh
+new file mode 100644
+index 00000000000..979920d152c
+--- /dev/null
++++ b/install/user/hardware/apple/fix-cs4208-audio.sh
+@@ -0,0 +1,12 @@
++# Use software volume for the CS4208 speaker path on 12-inch MacBooks.
++
++product_name="${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}"
++if [[ $product_name == "MacBook9,1" || $product_name == "MacBook10,1" ]]; then
++  config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
++  state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
++
++  install -Dm644 \
++    "$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf" \
++    "$config_home/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++  rm -rf "$state_home/wireplumber/default-routes"
++fi
+diff --git a/manual/44-mac-support.md b/manual/44-mac-support.md
+index da08f53ffed..5e67893863e 100644
+--- a/manual/44-mac-support.md
++++ b/manual/44-mac-support.md
+@@ -37,6 +37,10 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB
+ 
+ The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, an NVMe suspend fix for those same models, and the CS4208 speaker driver on the 12-inch MacBook (2016 and 2017).
+ 
++On those 12-inch MacBooks, Omarchy also enables software volume for the internal speakers and keeps the codec's hardware mixer at full scale, since that speaker path has no usable hardware volume control. The capture side is pinned the same way: reinitializing the codec resets every mixer control to muted, and with software volume in charge a muted hardware capture control silently kills the internal microphone.
++
++The CS4208 speaker amplifier does not recover after deep S3 suspend, even when the codec is fully reinitialized. Omarchy therefore uses suspend-to-idle on these two models so audio keeps working after resume. This consumes more battery while suspended than deep S3.
++
+ ### Known Limitations
+ 
+ Members of the community are constantly working on solutions to these challenges so if these are problematic for you, join #omarchy-on-other in our [Discord](https://discord.gg/tXFUdasqhY) and see if there's any up-to-date methods for resolving these.
+diff --git a/migrations/1786719479.sh b/migrations/1786719479.sh
+index 23c3ffeb3ba..eb7cdddc881 100644
+--- a/migrations/1786719479.sh
++++ b/migrations/1786719479.sh
+@@ -1,23 +1,67 @@
+ echo "Install the CS4208 speaker driver on 12-inch MacBooks"
+ 
+-# Fresh installs get this from install/hardware/apple/fix-cs4208-audio.sh.
+-# Existing MacBook9,1 / MacBook10,1 installs still have silent speakers:
++# Fresh installs get the module and system service from the hardware setup, and
++# the per-user WirePlumber rule from user setup. Existing users need all three:
+ # mainline detects the codec and PipeWire plays, but the speaker amp is never
+-# enabled. Skip machines that already have the packaged module or the same
+-# DKMS driver installed by hand.
++# enabled and the speaker path has no usable hardware volume control.
+ 
+ product_name="${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}"
+ if [[ $product_name != "MacBook9,1" && $product_name != "MacBook10,1" ]]; then
+   exit 0
+ fi
+ 
+-if omarchy-pkg-present macbook12-audio-driver-dkms; then
+-  exit 0
++config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
++state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
++systemd_dir="${OMARCHY_SYSTEMD_DIR:-/etc/systemd/system}"
++sleep_config_dir="${OMARCHY_SLEEP_CONFIG_DIR:-/etc/systemd/sleep.conf.d}"
++reboot_required=0
++
++config_source="$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++config_target="$config_home/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++if ! cmp -s "$config_source" "$config_target"; then
++  install -Dm644 "$config_source" "$config_target"
++  rm -rf "$state_home/wireplumber/default-routes"
++  reboot_required=1
+ fi
+ 
+-if dkms status 2>/dev/null | grep -q '^macbook12-audio-driver/'; then
+-  exit 0
++service_source="$OMARCHY_PATH/install/hardware/apple/omarchy-cs4208-audio.service"
++service_target="$systemd_dir/omarchy-cs4208-audio.service"
++if ! cmp -s "$service_source" "$service_target"; then
++  sudo install -Dm644 "$service_source" "$service_target"
++  sudo systemctl daemon-reload
++  reboot_required=1
++fi
++if ! systemctl is-enabled --quiet omarchy-cs4208-audio.service; then
++  sudo systemctl enable omarchy-cs4208-audio.service
++  reboot_required=1
++fi
++
++sleep_config_source="$OMARCHY_PATH/install/hardware/apple/60-cs4208-s2idle.conf"
++sleep_config_target="$sleep_config_dir/60-cs4208-s2idle.conf"
++if ! cmp -s "$sleep_config_source" "$sleep_config_target"; then
++  sudo install -Dm644 "$sleep_config_source" "$sleep_config_target"
+ fi
+ 
+-omarchy-pkg-add macbook12-audio-driver-dkms
+-omarchy-state set reboot-required
++driver_installed=0
++for module_name in macbook12-audio-driver macbook12-audio; do
++  if dkms status -m "$module_name" -k "$(uname -r)" 2>/dev/null | grep -q ': installed'; then
++    driver_installed=1
++    break
++  fi
++done
++
++if omarchy-pkg-missing macbook12-audio-driver-dkms; then
++  if (( driver_installed == 0 )); then
++    omarchy-pkg-add macbook12-audio-driver-dkms
++    reboot_required=1
++  fi
++elif (( driver_installed == 0 )); then
++  sudo dkms autoinstall -k "$(uname -r)"
++  reboot_required=1
++fi
++
++# Rebooting loads the replacement codec module, applies the hardware mixer at a
++# quiet point before login, and starts WirePlumber with the software-volume rule.
++if (( reboot_required )); then
++  omarchy-state set reboot-required
++fi
+diff --git a/test/shell.d/cs4208-audio-test.sh b/test/shell.d/cs4208-audio-test.sh
+index 430b55272e4..f068d6429cb 100644
+--- a/test/shell.d/cs4208-audio-test.sh
++++ b/test/shell.d/cs4208-audio-test.sh
+@@ -5,17 +5,35 @@ set -euo pipefail
+ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
+ 
+ leaf="$ROOT/install/hardware/apple/fix-cs4208-audio.sh"
++user_leaf="$ROOT/install/user/hardware/apple/fix-cs4208-audio.sh"
+ all="$ROOT/install/hardware/all.sh"
++user_all="$ROOT/install/user/all.sh"
+ other_packages="$ROOT/install/omarchy-other.packages"
+ migration="$ROOT/migrations/1786719479.sh"
++soft_mixer="$ROOT/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++mixer_service="$ROOT/install/hardware/apple/omarchy-cs4208-audio.service"
++sleep_config="$ROOT/install/hardware/apple/60-cs4208-s2idle.conf"
+ 
+ grep -q 'apple/fix-cs4208-audio.sh' "$all" ||
+   fail "the CS4208 audio fix runs during hardware setup"
++grep -q 'apple/fix-cs4208-audio.sh' "$user_all" ||
++  fail "the CS4208 software mixer runs during user setup"
+ grep -qx 'macbook12-audio-driver-dkms' "$other_packages" ||
+   fail "the ISO caches the CS4208 speaker driver"
+-grep -Fq 'MacBook9,1' "$leaf" && grep -Fq 'MacBook10,1' "$leaf" ||
+-  fail "the CS4208 leaf matches the 12-inch MacBooks"
+-pass "the CS4208 audio fix is wired into setup"
++if ! grep -Fq 'MacBook9,1' "$leaf" || ! grep -Fq 'MacBook10,1' "$leaf"; then
++  fail "the CS4208 leaf matches both 12-inch MacBooks"
++fi
++grep -Fq 'api.alsa.soft-mixer = true' "$soft_mixer" ||
++  fail "the CS4208 speaker path uses software volume"
++grep -Fq 'amixer -c0 sset Master 100%% unmute' "$mixer_service" ||
++  fail "the boot service pins the CS4208 hardware mixer at full scale"
++grep -Fq 'alsactl store 0' "$mixer_service" ||
++  fail "the boot service persists the CS4208 hardware mixer"
++if ! grep -Fxq 'SuspendState=mem' "$sleep_config" ||
++  ! grep -Fxq 'MemorySleepMode=s2idle' "$sleep_config"; then
++  fail "the CS4208 suspend override selects s2idle"
++fi
++pass "the complete CS4208 audio fix is wired into setup"
+ 
+ test_tmp=$(mktemp -d)
+ trap 'rm -rf "$test_tmp"' EXIT
+@@ -32,10 +50,10 @@ printf '\t%s' "$@" >>"$TEST_LOG"
+ printf '\n' >>"$TEST_LOG"
+ SH
+ 
+-cat >"$stub_bin/omarchy-pkg-present" <<'SH'
++cat >"$stub_bin/omarchy-pkg-missing" <<'SH'
+ #!/bin/bash
+ 
+-(( ${CS4208_PKG_PRESENT:-0} == 1 ))
++(( ${CS4208_PKG_PRESENT:-0} == 0 ))
+ SH
+ 
+ cat >"$stub_bin/omarchy-state" <<'SH'
+@@ -49,70 +67,172 @@ SH
+ cat >"$stub_bin/dkms" <<'SH'
+ #!/bin/bash
+ 
+-if (( ${CS4208_DKMS_INSTALLED:-0} == 1 )); then
+-  # The name upstream's dkms.conf registers, which is what dkms status prints.
+-  echo 'macbook12-audio-driver/0.1, 7.1.8-arch1-3, x86_64: installed (Original modules exist)'
++if [[ ${1:-} == "status" ]]; then
++  if (( ${CS4208_DKMS_INSTALLED:-0} == 1 )); then
++    echo 'macbook12-audio-driver/0.1, 7.1.8-arch1-3, x86_64: installed (Original modules exist)'
++  else
++    echo 'macbook12-spi-driver/0+git.315: added'
++  fi
+   exit 0
+ fi
+-echo 'macbook12-spi-driver/0+git.315: added'
++
++printf 'dkms' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++
++cat >"$stub_bin/systemctl" <<'SH'
++#!/bin/bash
++
++if [[ ${1:-} == "is-enabled" ]]; then
++  (( ${CS4208_SERVICE_ENABLED:-0} == 1 ))
++  exit
++fi
++
++printf 'systemctl' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++"$@"
+ SH
+ 
+ chmod +x "$stub_bin"/*
+ 
+ run_leaf() {
+   local model="$1"
++  local systemd_dir="$test_tmp/leaf-systemd-$model"
++  local sleep_config_dir="$test_tmp/leaf-sleep-$model"
+   : >"$calls"
+   PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    OMARCHY_INSTALL="$ROOT/install" \
+     OMARCHY_MACBOOK12_AUDIO_MODEL="$model" \
++    OMARCHY_SYSTEMD_DIR="$systemd_dir" \
++    OMARCHY_SLEEP_CONFIG_DIR="$sleep_config_dir" \
+     bash -eE -o pipefail -c 'source "$1"' bash "$leaf"
+ }
+ 
+ run_leaf "MacBook10,1" >/dev/null
+ grep -Fq $'omarchy-pkg-add\tmacbook12-audio-driver-dkms' "$calls" ||
+   fail "a 2017 12-inch MacBook gets the CS4208 driver" "$(cat "$calls")"
+-pass "a 2017 12-inch MacBook gets the CS4208 driver"
++grep -Fq $'systemctl\tenable\tomarchy-cs4208-audio.service' "$calls" ||
++  fail "a 2017 12-inch MacBook enables the hardware mixer service" "$(cat "$calls")"
++[[ -f $test_tmp/leaf-systemd-MacBook10,1/omarchy-cs4208-audio.service ]] ||
++  fail "hardware setup installs the CS4208 mixer service"
++[[ -f $test_tmp/leaf-sleep-MacBook10,1/60-cs4208-s2idle.conf ]] ||
++  fail "hardware setup selects s2idle for reliable speaker resume"
++pass "a 2017 12-inch MacBook gets the complete system audio setup"
+ 
+ run_leaf "MacBook9,1" >/dev/null
+ grep -Fq $'omarchy-pkg-add\tmacbook12-audio-driver-dkms' "$calls" ||
+   fail "a 2016 12-inch MacBook gets the CS4208 driver" "$(cat "$calls")"
+ pass "a 2016 12-inch MacBook gets the CS4208 driver"
+ 
+-run_leaf "MacBook8,1" >/dev/null
+-[[ ! -s $calls ]] || fail "the 2015 12-inch MacBook is left alone" "$(cat "$calls")"
+-pass "the 2015 12-inch MacBook is left alone"
++for model in "MacBook8,1" "MacBookPro14,1" "XPS 13 9310"; do
++  run_leaf "$model" >/dev/null
++  [[ ! -s $calls ]] || fail "$model is left alone" "$(cat "$calls")"
++  [[ ! -e $test_tmp/leaf-sleep-$model ]] ||
++    fail "$model does not get the CS4208 suspend override"
++done
++pass "unsupported and non-Apple hardware is left alone"
++
++run_user_leaf() {
++  local model="$1"
++  local home="$test_tmp/user-$model"
++  mkdir -p "$home/.local/state/wireplumber/default-routes"
++  touch "$home/.local/state/wireplumber/default-routes/old-route"
++
++  HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_STATE_HOME="$home/.local/state" \
++    OMARCHY_PATH="$ROOT" OMARCHY_MACBOOK12_AUDIO_MODEL="$model" \
++    bash -eE -o pipefail -c 'source "$1"' bash "$user_leaf"
++}
+ 
+-run_leaf "MacBookPro14,1" >/dev/null
+-[[ ! -s $calls ]] || fail "a MacBook Pro is left alone" "$(cat "$calls")"
+-pass "a MacBook Pro is left alone"
++run_user_leaf "MacBook10,1"
++user_config="$test_tmp/user-MacBook10,1/.config/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++[[ -f $user_config ]] || fail "user setup installs the CS4208 software mixer"
++[[ ! -e $test_tmp/user-MacBook10,1/.local/state/wireplumber/default-routes ]] ||
++  fail "user setup clears stale WirePlumber routes"
++pass "user setup installs the CS4208 software mixer"
+ 
+-run_leaf "XPS 13 9310" >/dev/null
+-[[ ! -s $calls ]] || fail "non-Apple hardware is left alone" "$(cat "$calls")"
+-pass "non-Apple hardware is left alone"
++run_user_leaf "MacBookPro14,1"
++[[ ! -e $test_tmp/user-MacBookPro14,1/.config/wireplumber ]] ||
++  fail "user setup leaves unsupported MacBooks alone"
++pass "user setup leaves unsupported MacBooks alone"
+ 
+ run_migration() {
++  local name="$1"
++  local model="$2"
++  local package_present="${3:-0}"
++  local driver_installed="${4:-0}"
++  local service_enabled="${5:-0}"
++  local run_dir="$test_tmp/migration-$name"
++
++  mkdir -p "$run_dir/home" "$run_dir/systemd" "$run_dir/sleep"
+   : >"$calls"
+-  PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
+-    OMARCHY_MACBOOK12_AUDIO_MODEL="$1" \
+-    CS4208_PKG_PRESENT="${2:-0}" \
+-    CS4208_DKMS_INSTALLED="${3:-0}" \
++  PATH="$stub_bin:$PATH" TEST_LOG="$calls" HOME="$run_dir/home" \
++    XDG_CONFIG_HOME="$run_dir/home/.config" \
++    XDG_STATE_HOME="$run_dir/home/.local/state" \
++    OMARCHY_PATH="$ROOT" OMARCHY_SYSTEMD_DIR="$run_dir/systemd" \
++    OMARCHY_SLEEP_CONFIG_DIR="$run_dir/sleep" \
++    OMARCHY_MACBOOK12_AUDIO_MODEL="$model" \
++    CS4208_PKG_PRESENT="$package_present" \
++    CS4208_DKMS_INSTALLED="$driver_installed" \
++    CS4208_SERVICE_ENABLED="$service_enabled" \
+     bash -euo pipefail "$migration" >/dev/null
++
++  last_migration_dir="$run_dir"
+ }
+ 
+-run_migration "MacBook10,1" 0 0
++run_migration "macbook10" "MacBook10,1" 0 0 0
+ grep -Fq $'omarchy-pkg-add\tmacbook12-audio-driver-dkms' "$calls" ||
+   fail "the migration installs the CS4208 driver" "$(cat "$calls")"
+ grep -Fq $'omarchy-state\tset\treboot-required' "$calls" ||
+   fail "the migration asks for the reboot that loads the module" "$(cat "$calls")"
+-pass "the migration installs the CS4208 driver"
++[[ -f $last_migration_dir/home/.config/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf ]] ||
++  fail "the migration installs the user software mixer"
++[[ -f $last_migration_dir/systemd/omarchy-cs4208-audio.service ]] ||
++  fail "the migration installs the hardware mixer service"
++[[ -f $last_migration_dir/sleep/60-cs4208-s2idle.conf ]] ||
++  fail "the migration selects s2idle for reliable speaker resume"
++pass "the migration installs the complete CS4208 audio setup"
++
++run_migration "macbook9" "MacBook9,1" 0 0 0
++grep -Fq $'omarchy-pkg-add\tmacbook12-audio-driver-dkms' "$calls" ||
++  fail "the migration supports the 2016 12-inch MacBook" "$(cat "$calls")"
++pass "the migration supports the 2016 12-inch MacBook"
+ 
+-run_migration "MacBook10,1" 1 0
+-[[ ! -s $calls ]] || fail "the migration skips a machine that already has the package" "$(cat "$calls")"
+-pass "the migration skips a machine that already has the package"
++run_migration "manual-driver" "MacBook10,1" 0 1 0
++! grep -Fq $'omarchy-pkg-add\tmacbook12-audio-driver-dkms' "$calls" ||
++  fail "the migration preserves a hand-installed DKMS driver" "$(cat "$calls")"
++pass "the migration preserves a hand-installed DKMS driver"
+ 
+-run_migration "MacBook10,1" 0 1
+-[[ ! -s $calls ]] || fail "the migration skips a hand-installed DKMS driver" "$(cat "$calls")"
+-pass "the migration skips a hand-installed DKMS driver"
++run_migration "repair-dkms" "MacBook10,1" 1 0 0
++grep -Fq $'dkms\tautoinstall\t-k' "$calls" ||
++  fail "the migration repairs a package missing its current-kernel module" "$(cat "$calls")"
++pass "the migration repairs a missing current-kernel DKMS build"
+ 
+-run_migration "MacBookPro14,1" 0 0
++run_migration "unrelated" "MacBookPro14,1" 0 0 0
+ [[ ! -s $calls ]] || fail "the migration skips unrelated hardware" "$(cat "$calls")"
+ pass "the migration skips unrelated hardware"
++
++# A second run with every target already current performs no package, system or
++# reboot work. Per-user migration markers normally prevent this, but the script
++# remains safe when run directly.
++run_migration "idempotent" "MacBook10,1" 1 1 1
++: >"$calls"
++PATH="$stub_bin:$PATH" TEST_LOG="$calls" HOME="$last_migration_dir/home" \
++  XDG_CONFIG_HOME="$last_migration_dir/home/.config" \
++  XDG_STATE_HOME="$last_migration_dir/home/.local/state" \
++  OMARCHY_PATH="$ROOT" OMARCHY_SYSTEMD_DIR="$last_migration_dir/systemd" \
++  OMARCHY_SLEEP_CONFIG_DIR="$last_migration_dir/sleep" \
++  OMARCHY_MACBOOK12_AUDIO_MODEL="MacBook10,1" \
++  CS4208_PKG_PRESENT=1 CS4208_DKMS_INSTALLED=1 CS4208_SERVICE_ENABLED=1 \
++  bash -euo pipefail "$migration" >/dev/null
++[[ ! -s $calls ]] || fail "the migration is idempotent" "$(cat "$calls")"
++pass "the migration is idempotent"

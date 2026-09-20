@@ -1,0 +1,148 @@
+{
+  "passed": true,
+  "proposals_verified": 17,
+  "unique_source_prs": 67,
+  "original_source_refs_covered": 52,
+  "entries": [
+    {
+      "id": "P01",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 2,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P02",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 9,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P03",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 5,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P04",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 8,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P05",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 2,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P06",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 3,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P07",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 1,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P08",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 2,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P08-packages",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 2,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P09",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 2,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P10",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 6,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P11",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 12,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P11-packages",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 12,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P12",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 14,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P12-packages",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 14,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P13",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 2,
+      "body_and_links": true,
+      "checks_disclosed": true
+    },
+    {
+      "id": "P14",
+      "branch_parent_tree_patch": true,
+      "test_input_unchanged": true,
+      "source_rows_complete": 1,
+      "body_and_links": true,
+      "checks_disclosed": true
+    }
+  ],
+  "hardware_verified": false,
+  "full_suite_passed": false,
+  "remote_writes": 0,
+  "qualification": "Local draft-content, source coverage, exact trees, test receipts and artifacts; failing/skipped checks remain disclosed."
+}

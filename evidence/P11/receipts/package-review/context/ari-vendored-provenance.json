@@ -1,0 +1,11 @@
+{
+  "packaging_sha": "1bb3336fcf045097d348b43a18c167c664354be1",
+  "driver_sha": "6c324f6c9262faa853fdd74d798c5686937a9d0f",
+  "vendored_archive_sha256": "fc1ae9009071128c2e9319a45677797b610ec3821f7baa2d221e96b98fae7222",
+  "vendored_files": 39,
+  "changed_or_extra_files": [],
+  "missing_driver_files": [
+    ".gitignore"
+  ],
+  "hardware_verified": false
+}

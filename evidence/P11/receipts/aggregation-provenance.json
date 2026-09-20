@@ -1,0 +1,258 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
+  "patch_sha256": "685234b2d70b8f907594095e4a7bbe9ef664fee71f724149dfbb5cd8abd69c83",
+  "selected_original_sources": [
+    9516,
+    6921,
+    10458
+  ],
+  "files": [
+    {
+      "path": "bin/omarchy-hw-apple-cs8409",
+      "sha256": "f854c6ca8460d899ecb11316efab167ba6cc1c535c944c796e6276c3fe2c7839",
+      "identical_to_reconciled_sources": [
+        "omarchy-9516"
+      ],
+      "combination": null
+    },
+    {
+      "path": "bin/omarchy-hw-imac-cs4208",
+      "sha256": "26e6ec0bbd7dcc294f4a69ffd3c633b7c09d0a772025c50b7f5633fc409008d5",
+      "identical_to_reconciled_sources": [
+        "omarchy-10458"
+      ],
+      "combination": null
+    },
+    {
+      "path": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+      "sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+      "sha256": "594cc5b9376c851923573cf5916a5e710f537f5b3474aec78c926635e612bd7a",
+      "identical_to_reconciled_sources": [
+        "omarchy-10458"
+      ],
+      "combination": null
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "sha256": "5ac34f5589dd6a1361e2cbfd5770c92af87b09c17c03fefb9a06b49fa9232ba5",
+      "identical_to_reconciled_sources": [],
+      "combination": "Union of source installer calls / existing documentation phrases."
+    },
+    {
+      "path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "sha256": "1de8949038dbec5782c3ecd18deecc2f420892978c6857c16cdcbae0c0e26d62",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "install/hardware/apple/fix-cs8409-audio.sh",
+      "sha256": "de1c0716ff6efa826cba3b7ddaf9498d815ae8ad33be3d052a1c1802ca431218",
+      "identical_to_reconciled_sources": [
+        "omarchy-9516"
+      ],
+      "combination": null
+    },
+    {
+      "path": "install/hardware/apple/omarchy-cs4208-audio.service",
+      "sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "install/omarchy-other.packages",
+      "sha256": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "install/user/all.sh",
+      "sha256": "46e026042bdafdb1823b5c824fa8132756638039e40fc3cb52df128f7d30fb0d",
+      "identical_to_reconciled_sources": [],
+      "combination": "Union of source installer calls / existing documentation phrases."
+    },
+    {
+      "path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+      "sha256": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+      "sha256": "c933380bea548b19f3760c0a84cedfb1198da7dfcb293865bcf246c5891132e3",
+      "identical_to_reconciled_sources": [
+        "omarchy-10458"
+      ],
+      "combination": null
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "sha256": "ad3e31125ab61623b16e942cadf7b66b681550ab59ccae0b197a99c2b51bda3d",
+      "identical_to_reconciled_sources": [],
+      "combination": "Union of source installer calls / existing documentation phrases."
+    },
+    {
+      "path": "manual/45-troubleshooting.md",
+      "sha256": "c4696512f9c7fcd8ca95fafc26d38c35d1e8758182588db29c5e182098440f1b",
+      "identical_to_reconciled_sources": [
+        "omarchy-10458"
+      ],
+      "combination": null
+    },
+    {
+      "path": "migrations/1786889011.sh",
+      "sha256": "881c662c1eaee6f44ccf1a6acea6b185c3fa8bb61e6715fc00933f645d4c0231",
+      "identical_to_reconciled_sources": [
+        "omarchy-9516"
+      ],
+      "combination": null
+    },
+    {
+      "path": "migrations/1788673159.sh",
+      "sha256": "fea683a5bec3374120c4c3207a9ddc15de30f2c15b819bb31216c5b7e82a975e",
+      "identical_to_reconciled_sources": [
+        "omarchy-10458"
+      ],
+      "combination": null
+    },
+    {
+      "path": "migrations/1789869577.sh",
+      "sha256": "7f8b53ff488bc390f813a791440c57a4e01d9ccf59662cca392f37d0395397fa",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "sha256": "a7964169e7df3ca1183c124559c11188f0aabe220f30a938fdbe4d3e001b1d5c",
+      "identical_to_reconciled_sources": [
+        "selected-macbook"
+      ],
+      "combination": null
+    },
+    {
+      "path": "test/shell.d/cs8409-audio-test.sh",
+      "sha256": "06c734b087d888552741fe2ceea755c239f7d9b8660bbb5895e301afe9fa2c4a",
+      "identical_to_reconciled_sources": [
+        "omarchy-9516"
+      ],
+      "combination": null
+    },
+    {
+      "path": "test/shell.d/imac-cs4208-speakers-test.sh",
+      "sha256": "68bf75a334d006bd5961f1895bfbe592abf8dc2dd2685ec0e9b88a04a9d96f57",
+      "identical_to_reconciled_sources": [
+        "omarchy-10458"
+      ],
+      "combination": null
+    }
+  ],
+  "software_assertions": 53,
+  "hardware_verified": false,
+  "status": "aggregate_candidate_checks_passed",
+  "macbook_selection": {
+    "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+    "target_tree": "72350b0c9f6fa74b16cb2474a177827d2a0a728f",
+    "reconciled_patch_sha256": "203ee90646a1de88db7274c8868d1ec87bc1d78258ea167fc068e271431bd0b7",
+    "source": "https://github.com/sunoxen-lab/omarchy/pull/1",
+    "source_head": "579cef09d0de94caf0d2ead147344483aed3f161",
+    "removed_exact_source_blocks": {
+      "install/hardware/apple/fix-cs4208-audio.sh": [
+        "  sleep_config_dir=\"${OMARCHY_SLEEP_CONFIG_DIR:-/etc/systemd/sleep.conf.d}\"\n  install -Dm644 \\\n    \"$OMARCHY_INSTALL/hardware/apple/60-cs4208-s2idle.conf\" \\\n    \"$sleep_config_dir/60-cs4208-s2idle.conf\"\n\n"
+      ],
+      "migrations/1789869577.sh": [
+        "sleep_config_dir=\"${OMARCHY_SLEEP_CONFIG_DIR:-/etc/systemd/sleep.conf.d}\"\n",
+        "sleep_config_source=\"$OMARCHY_PATH/install/hardware/apple/60-cs4208-s2idle.conf\"\nsleep_config_target=\"$sleep_config_dir/60-cs4208-s2idle.conf\"\nif ! cmp -s \"$sleep_config_source\" \"$sleep_config_target\"; then\n  sudo install -Dm644 \"$sleep_config_source\" \"$sleep_config_target\"\nfi\n\n"
+      ],
+      "manual/44-mac-support.md": [
+        "The CS4208 speaker amplifier does not recover after deep S3 suspend, even when the codec is fully reinitialized. Omarchy therefore uses suspend-to-idle on these two models so audio keeps working after resume. This consumes more battery while suspended than deep S3.\n\n"
+      ],
+      "test/shell.d/cs4208-audio-test.sh": [
+        "if ! grep -Fxq 'SuspendState=mem' \"$sleep_config\" ||\n  ! grep -Fxq 'MemorySleepMode=s2idle' \"$sleep_config\"; then\n  fail \"the CS4208 suspend override selects s2idle\"\nfi\n"
+      ]
+    },
+    "excluded_file": "install/hardware/apple/60-cs4208-s2idle.conf",
+    "test_replacements": [
+      {
+        "path": "test/shell.d/cs4208-audio-test.sh",
+        "before": "[[ -f $test_tmp/leaf-sleep-MacBook10,1/60-cs4208-s2idle.conf ]] ||\n  fail \"hardware setup selects s2idle for reliable speaker resume\"",
+        "after": "[[ ! -e $test_tmp/leaf-sleep-MacBook10,1/60-cs4208-s2idle.conf ]] ||\n  fail \"audio aggregation leaves hardware sleep policy untouched\""
+      },
+      {
+        "path": "test/shell.d/cs4208-audio-test.sh",
+        "before": "[[ -f $last_migration_dir/sleep/60-cs4208-s2idle.conf ]] ||\n  fail \"the migration selects s2idle for reliable speaker resume\"",
+        "after": "[[ ! -e $last_migration_dir/sleep/60-cs4208-s2idle.conf ]] ||\n  fail \"audio aggregation leaves migration sleep policy untouched\""
+      }
+    ],
+    "files": [
+      {
+        "path": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+        "source_identical": true,
+        "sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f"
+      },
+      {
+        "path": "install/hardware/all.sh",
+        "source_identical": true,
+        "sha256": "5abe1d99dc25bbd2cc0a629282da2c0be38ded8d6a3b939a7d8c63a1ca52ddec"
+      },
+      {
+        "path": "install/hardware/apple/fix-cs4208-audio.sh",
+        "source_identical": false,
+        "sha256": "1de8949038dbec5782c3ecd18deecc2f420892978c6857c16cdcbae0c0e26d62"
+      },
+      {
+        "path": "install/hardware/apple/omarchy-cs4208-audio.service",
+        "source_identical": true,
+        "sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898"
+      },
+      {
+        "path": "install/omarchy-other.packages",
+        "source_identical": true,
+        "sha256": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc"
+      },
+      {
+        "path": "install/user/all.sh",
+        "source_identical": true,
+        "sha256": "f0bdc0638f09c3f87ad3ade6464da97fddba411d1df1c8cc274327409318961c"
+      },
+      {
+        "path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+        "source_identical": true,
+        "sha256": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4"
+      },
+      {
+        "path": "manual/44-mac-support.md",
+        "source_identical": false,
+        "sha256": "f2943a333efb31ae3440459fa6e5992750810a59e7a0f05a323c7330a78958a2"
+      },
+      {
+        "path": "migrations/1789869577.sh",
+        "source_identical": false,
+        "sha256": "7f8b53ff488bc390f813a791440c57a4e01d9ccf59662cca392f37d0395397fa"
+      },
+      {
+        "path": "test/shell.d/cs4208-audio-test.sh",
+        "source_identical": false,
+        "sha256": "a7964169e7df3ca1183c124559c11188f0aabe220f30a938fdbe4d3e001b1d5c"
+      }
+    ],
+    "qualification": "Select existing mixer, service and current-kernel upgrade implementation. Exclude s2idle policy and its claim; neither freeze nor EFI policy is added. All original audio assertions remain; two sleep assertions now check exclusion. The full original suite is preserved separately."
+  },
+  "qualification": "CS8409/iMac original suites and scoped MacBook audio suite. Existing mixer and upgrade contribution selected; competing sleep and EFI policies excluded and retained separately. Hardware unverified."
+}

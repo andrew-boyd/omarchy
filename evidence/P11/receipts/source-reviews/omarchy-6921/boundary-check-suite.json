@@ -1,0 +1,17 @@
+{
+  "tests": [
+    "test/shell.d/audio-source-boundaries-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/all.sh": "5abe1d99dc25bbd2cc0a629282da2c0be38ded8d6a3b939a7d8c63a1ca52ddec",
+    "install/hardware/apple/fix-cs4208-audio.sh": "b9a9eada4f6b0525c8985763a0e30bfd060a489e3614808fec06e9253c61fe84",
+    "install/omarchy-other.packages": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc",
+    "manual/44-mac-support.md": "f3d0b7b80ad6f11d18a150dd4f700c36a21c6f4d2024a332ee4645bea7144bbe",
+    "migrations/1789869577.sh": "5b804e1076253ecf21ad0283bf0dfbe5982cd02ee4dbbfea79c7342c2ed95b2e",
+    "test/shell.d/cs4208-audio-test.sh": "f453ca6a4997cc46ef21c78882602d0c1d7fd448842725ab096e04b50805d5a1",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "migrations/1786719479.sh": "559dfa33c135960ce996ca87a0f4d77633a9d72acd16c408ffdf08f18cc4e990",
+    "test/shell.d/audio-source-boundaries-test.sh": "8daa84c6d154b3d28ca9b24eb2e5a12df3ffcaf224965baf21692d32d228697c"
+  },
+  "fixture_adjustment": "Only the source migration ID reference is relocated; assertion logic is unchanged."
+}

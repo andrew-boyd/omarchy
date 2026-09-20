@@ -1,0 +1,5 @@
+{
+  "package": "t1bridge",
+  "exit_code": 0,
+  "scope": "Real offline makepkg --nodeps under a read-only namespace; only private output and temporary build directories writable. No installation or module loading."
+}

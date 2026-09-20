@@ -1,0 +1,60 @@
+{
+  "number": 12435,
+  "source_url": "https://github.com/omacom/omarchy/pull/12435",
+  "author": "jonathan-downs",
+  "source_head": "e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+  "source_ancestor": "d174d4aa279ea7393d4fad4a80fed147866106b9",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "f9bd09adbf6ea7b6457b99717f075d7aab1f75d15f6adef939e6445ba0a2fafd",
+  "applied": true,
+  "apply_output": "",
+  "selected": false,
+  "hardware_verified": false,
+  "tree_sha": "7e57474f0e6973710860004f1fea132c8d65d598",
+  "files": [
+    {
+      "path": "bin/omarchy-system-resume-monitor",
+      "source_sha256": "101ecabdac871fae4ef48f3402d7a057a846db190a0ccb4e3404cdfa7346d9ed",
+      "target_sha256": "101ecabdac871fae4ef48f3402d7a057a846db190a0ccb4e3404cdfa7346d9ed",
+      "identical_to_source": true
+    },
+    {
+      "path": "default/systemd/user/omarchy-resume-focus-monitor.service",
+      "source_sha256": "b05440403f321a2d1c3944b9dc5fe96179afd019085a73f04db0970c990fde6d",
+      "target_sha256": "b05440403f321a2d1c3944b9dc5fe96179afd019085a73f04db0970c990fde6d",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/user/first-run/enable-user-units.sh",
+      "source_sha256": "72db14a5bf31f355048ea4df914747ca126853e696f2d935cc5935dd0f9587aa",
+      "target_sha256": "72db14a5bf31f355048ea4df914747ca126853e696f2d935cc5935dd0f9587aa",
+      "identical_to_source": true
+    },
+    {
+      "path": "shell/plugins/lock/LockView.qml",
+      "source_sha256": "6a9aeeb1812c35057ba96c1c9f45b16f2cbafc1307c4861bd95a5ecb6640b7bc",
+      "target_sha256": "6a9aeeb1812c35057ba96c1c9f45b16f2cbafc1307c4861bd95a5ecb6640b7bc",
+      "identical_to_source": true
+    },
+    {
+      "path": "shell/plugins/lock/Service.qml",
+      "source_sha256": "845e4c74604ba3b466b1c8786990d791013a3c54f24eef1dafbd6cb6ea1303aa",
+      "target_sha256": "845e4c74604ba3b466b1c8786990d791013a3c54f24eef1dafbd6cb6ea1303aa",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/resume-monitor-test.sh",
+      "source_sha256": "80de3aad4293ce02c4c107b10fb972586d6de8803e35b149008e5e9717cf800e",
+      "target_sha256": "80de3aad4293ce02c4c107b10fb972586d6de8803e35b149008e5e9717cf800e",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/systemd-test.sh",
+      "source_sha256": "890695c430398cafc2a0b50eaa0e01cbadf51a60f1136adfbe246182e8188c05",
+      "target_sha256": "890695c430398cafc2a0b50eaa0e01cbadf51a60f1136adfbe246182e8188c05",
+      "identical_to_source": true
+    }
+  ],
+  "checks_passed": true,
+  "assertions": 20
+}

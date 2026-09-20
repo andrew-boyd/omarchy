@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12249",
+  "repository": "omacom/omarchy",
+  "number": 12249,
+  "title": "Install DKMS headers for the kernel that actually boots",
+  "author": "Chessing234",
+  "head_sha": "e1a95dfc6e4ec36aee1b428021d56c50eb5b30d5",
+  "state": "open",
+  "updated_at": "2026-09-17T10:10:13Z",
+  "body": "## Summary\n- Fold #10797 (headers helper across NVIDIA/Broadcom/YT6801/Tuxedo/xpadneo). Tip no longer ships the Panther Lake kernel swap path from #10798, so that ordering change is left out.",
+  "original_source_changed": false
+}

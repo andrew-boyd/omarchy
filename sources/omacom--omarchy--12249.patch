@@ -1,0 +1,153 @@
+diff --git a/bin/omarchy-install-gaming-xbox-controllers b/bin/omarchy-install-gaming-xbox-controllers
+index f2cda4e7c6c..24634dd20ae 100755
+--- a/bin/omarchy-install-gaming-xbox-controllers
++++ b/bin/omarchy-install-gaming-xbox-controllers
+@@ -10,7 +10,7 @@ set -e
+ echo "Installing Xbox controller Bluetooth support..."
+ 
+ # Install xpadneo to ensure controllers work out of the box
+-omarchy-pkg-add xpadneo-dkms
++omarchy-pkg-add "$(omarchy-pkg-linux-headers)" xpadneo-dkms
+ 
+ # Prevent xpad/xpadneo driver conflict
+ echo blacklist xpad | sudo tee /etc/modprobe.d/blacklist-xpad.conf >/dev/null
+diff --git a/bin/omarchy-pkg-linux-headers b/bin/omarchy-pkg-linux-headers
+new file mode 100755
+index 00000000000..08344c884fb
+--- /dev/null
++++ b/bin/omarchy-pkg-linux-headers
+@@ -0,0 +1,16 @@
++#!/bin/bash
++
++# omarchy:summary=Print the kernel-headers package matching the installed kernel flavor
++# omarchy:hidden=true
++
++# Flavor kernels first: `pacman -Qqs '^linux…' | head -1` returns stock linux
++# whenever it is still installed, so NVIDIA / Broadcom / Tuxedo / Motorcomm
++# DKMS builds against the kernel we just replaced.
++for flavor in linux-ptl linux-t2 linux-zen linux-lts linux-hardened linux; do
++  if pacman -Qq "$flavor" &>/dev/null; then
++    printf '%s-headers\n' "$flavor"
++    exit 0
++  fi
++done
++
++printf 'linux-headers\n'
+diff --git a/install/hardware/fix-bcm43xx.sh b/install/hardware/fix-bcm43xx.sh
+index 0f9cf474a5b..d5cf154bc20 100644
+--- a/install/hardware/fix-bcm43xx.sh
++++ b/install/hardware/fix-bcm43xx.sh
+@@ -6,5 +6,5 @@ pci_info=$(lspci -nn)
+ 
+ if (echo "$pci_info" | grep -q "14e4:43a0" || echo "$pci_info" | grep -q "14e4:4331"); then
+   echo "BCM4360 / BCM4331 detected"
+-  omarchy-pkg-add broadcom-wl-dkms
++  omarchy-pkg-add broadcom-wl-dkms "$(omarchy-pkg-linux-headers)"
+ fi
+diff --git a/install/hardware/fix-tuxedo-backlight.sh b/install/hardware/fix-tuxedo-backlight.sh
+index 7fb408e0d54..0dc32cb655a 100644
+--- a/install/hardware/fix-tuxedo-backlight.sh
++++ b/install/hardware/fix-tuxedo-backlight.sh
+@@ -1,7 +1,7 @@
+ # Install Tuxedo drivers for keyboard backlighting on Tuxedo laptops and
+ # compatible devices like the Slimbook Executive (Clevo/Tuxedo chassis).
+ if cat /sys/class/dmi/id/sys_vendor 2>/dev/null | grep -qi "TUXEDO\|Slimbook"; then
+-  omarchy-pkg-add tuxedo-drivers-nocompatcheck-dkms
++  omarchy-pkg-add "$(omarchy-pkg-linux-headers)" tuxedo-drivers-nocompatcheck-dkms
+ 
+   # Blacklist the legacy clevo_xsm_wmi module which conflicts with the tuxedo-drivers
+   # clevo_wmi module. When clevo_xsm_wmi loads first, it grabs the Clevo WMI GUIDs,
+diff --git a/install/hardware/fix-yt6801-ethernet-adapter.sh b/install/hardware/fix-yt6801-ethernet-adapter.sh
+index f88a9cec624..de388a5df87 100644
+--- a/install/hardware/fix-yt6801-ethernet-adapter.sh
++++ b/install/hardware/fix-yt6801-ethernet-adapter.sh
+@@ -1,4 +1,4 @@
+ # Install drivers for Motorcomm YT6801 ethernet adapter used by the Slimbook Executive
+ if lspci | grep -i "YT6801\|Motorcomm.*Ethernet"; then
+-  omarchy-pkg-add yt6801-dkms
++  omarchy-pkg-add "$(omarchy-pkg-linux-headers)" yt6801-dkms
+ fi
+diff --git a/install/hardware/nvidia.sh b/install/hardware/nvidia.sh
+index 1c36787b770..04fa4a12302 100644
+--- a/install/hardware/nvidia.sh
++++ b/install/hardware/nvidia.sh
+@@ -1,4 +1,6 @@
+ if lspci | grep -qi 'nvidia'; then
++  omarchy-pkg-add "$(omarchy-pkg-linux-headers)"
++
+   if omarchy-hw-nvidia-gsp; then
+     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)
+   elif omarchy-hw-nvidia-without-gsp; then
+diff --git a/test/shell.d/pkg-linux-headers-test.sh b/test/shell.d/pkg-linux-headers-test.sh
+new file mode 100755
+index 00000000000..b5024303923
+--- /dev/null
++++ b/test/shell.d/pkg-linux-headers-test.sh
+@@ -0,0 +1,67 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++helper="$ROOT/bin/omarchy-pkg-linux-headers"
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++mkdir -p "$test_tmp/bin"
++
++cat >"$test_tmp/bin/pacman" <<'SH'
++#!/bin/bash
++if [[ $1 == -Qq && -n ${2:-} ]]; then
++  grep -qx "$2" "$TEST_PACMAN_Q" && { printf '%s\n' "$2"; exit 0; }
++  exit 1
++fi
++exit 1
++SH
++chmod +x "$test_tmp/bin/pacman"
++
++installed() {
++  printf '%s\n' "$@" >"$test_tmp/installed"
++}
++
++headers() {
++  TEST_PACMAN_Q="$test_tmp/installed" PATH="$test_tmp/bin:$PATH" "$helper"
++}
++
++installed linux
++[[ $(headers) == linux-headers ]] || fail "stock linux selects linux-headers"
++pass "stock linux selects linux-headers"
++
++installed linux linux-ptl
++[[ $(headers) == linux-ptl-headers ]] || fail "linux-ptl wins over leftover stock linux"
++pass "linux-ptl wins over leftover stock linux"
++
++installed linux linux-t2
++[[ $(headers) == linux-t2-headers ]] || fail "linux-t2 wins over leftover stock linux"
++pass "linux-t2 wins over leftover stock linux"
++
++installed linux-zen
++[[ $(headers) == linux-zen-headers ]] || fail "linux-zen selects linux-zen-headers"
++pass "linux-zen selects linux-zen-headers"
++
++installed linux-lts linux-hardened
++[[ $(headers) == linux-lts-headers ]] || fail "linux-lts is preferred over linux-hardened"
++pass "linux-lts is preferred over linux-hardened"
++
++: >"$test_tmp/installed"
++[[ $(headers) == linux-headers ]] || fail "no kernel package still names linux-headers"
++pass "no kernel package still names linux-headers"
++
++for leaf in \
++  install/hardware/nvidia.sh \
++  install/hardware/fix-bcm43xx.sh \
++  install/hardware/fix-yt6801-ethernet-adapter.sh \
++  install/hardware/fix-tuxedo-backlight.sh \
++  bin/omarchy-install-gaming-xbox-controllers
++do
++  grep -q 'omarchy-pkg-linux-headers' "$ROOT/$leaf" ||
++    fail "$leaf asks the helper for kernel headers"
++  if grep -F 'linux-headers' "$ROOT/$leaf" | grep -vq 'omarchy-pkg-linux-headers'; then
++    fail "$leaf does not hardcode linux-headers next to DKMS"
++  fi
++done
++pass "DKMS installers ask the helper instead of hardcoding linux-headers"

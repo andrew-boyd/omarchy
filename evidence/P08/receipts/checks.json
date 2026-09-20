@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/facetimehd-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - the FaceTime HD fix is wired into hardware setup\nok - detector matches PCI 14e4:1570\nok - detector skips machines without a FaceTime HD camera\nDetected FaceTime HD camera\nok - leaf installs firmware, calibration data, and the DKMS module\nok - leaf is a no-op on machines without a FaceTime HD camera\nok - the migration installs the FaceTime HD packages\nok - the migration is a no-op without a FaceTime HD camera\n"
+    },
+    {
+      "test": "test/shell.d/camera-consolidation-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 20,
+      "output": "ok - install retains source Apple-prefix gate for 'Apple Inc.'\nok - install retains source Apple-prefix gate for 'Apple Computer, Inc.'\nok - install retains source Apple-prefix gate for 'Appleish'\nok - install retains source Apple-prefix gate for 'apple inc.'\nok - install retains source Apple-prefix gate for 'LENOVO'\nok - install retains source Apple-prefix gate for ''\nok - install skips unavailable DMI\nok - install skips adjacent PCI ID\nok - migration retains source Apple-prefix gate for 'Apple Inc.'\nok - migration retains source Apple-prefix gate for 'Apple Computer, Inc.'\nok - migration retains source Apple-prefix gate for 'Appleish'\nok - migration retains source Apple-prefix gate for 'apple inc.'\nok - migration retains source Apple-prefix gate for 'LENOVO'\nok - migration retains source Apple-prefix gate for ''\nok - migration skips unavailable DMI\nok - migration skips adjacent PCI ID\nok - selected delivery has no alternate package manager or live module loading\nok - failed package delivery leaves the real migration pending\nok - successful retry completes the pending migration\nok - completed migration is skipped on rerun\n"
+    }
+  ]
+}

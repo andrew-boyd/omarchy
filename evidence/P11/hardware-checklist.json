@@ -1,0 +1,10 @@
+[
+  "Record exact model, codec/subsystem IDs, kernel/header/package versions and chosen track before a trial.",
+  "Use a recoverable test installation; retain the prior kernel, modules, packages and user audio configuration for rollback.",
+  "Test speakers, headphones, microphone, mute and volume independently; distinguish source reports from your observations.",
+  "Record cold boot and repeated suspend/resume, mixer defaults, existing-install migration and fresh-install behavior separately.",
+  "Capture DKMS and package transaction logs on the actual target kernel; 7.2.3 build evidence does not establish Omarchy 7.2.5 or offline ISO delivery.",
+  "For MacBook comparisons use one complete alternative at a time. #12286 changes EFI/sleep state; it is held for review and excluded from the combined candidate.",
+  "For iMac review preserve custom WirePlumber rules and routes first. The original source replaces/reset these; do not infer preservation from its passing suite.",
+  "Restore captured packages/configuration and boot the prior kernel to verify rollback; no physical trial or rollback occurred here."
+]

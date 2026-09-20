@@ -1,0 +1,24 @@
+{
+  "number": 12634,
+  "source_url": "https://github.com/omacom/omarchy/pull/12634",
+  "author": "RenanBezerraGuima",
+  "source_head": "5b76c3a9778ee6b400db252acef12823b175439b",
+  "source_ancestor": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "d483f213dfac263ca736f09c65ce56f5ed33e1a6efb03481d15ef6e922bc4bf2",
+  "applied": true,
+  "apply_output": "",
+  "selected": false,
+  "hardware_verified": false,
+  "tree_sha": "2433c250052c620211884443fd0d7256496f3b90",
+  "files": [
+    {
+      "path": "bin/omarchy-system-wake",
+      "source_sha256": "bb53b0dbb12127d43e00660d438129f15d5b0bdaeb3d65e1058c3523f9f10f5c",
+      "target_sha256": "bb53b0dbb12127d43e00660d438129f15d5b0bdaeb3d65e1058c3523f9f10f5c",
+      "identical_to_source": true
+    }
+  ],
+  "checks_passed": true,
+  "assertions": 18
+}

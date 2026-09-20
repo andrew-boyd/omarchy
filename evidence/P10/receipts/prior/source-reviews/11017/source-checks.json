@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 10,
+      "output": "ok - skips non-apple\nok - skips other-model\nok - skips other-chip\nok - skips other-board\nok - preserves generic and model-specific NVRAM, including compressed files\nok - installs verified NVRAM with a unique local MAC and preserves it on rerun\nok - preserves the interface address when it is not the Broadcom placeholder\nok - handles installation without a bound network interface\nok - refuses installation on bad-digest\nok - refuses installation on download-failure\n"
+    }
+  ]
+}

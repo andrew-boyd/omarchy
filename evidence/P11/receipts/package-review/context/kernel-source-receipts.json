@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-09-20T02:13:21.608796+00:00",
+  "checksum_url": "https://cdn.kernel.org/pub/linux/kernel/v7.x/sha256sums.asc",
+  "checksums_sha256": "d75813a53038bbde9820530e74aa31f6cdb3e8cb9dca9ebc82d995842adc6181",
+  "archives": [
+    {
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.3.tar.xz",
+      "name": "linux-7.2.3.tar.xz",
+      "sha256": "8ba259e8e7b13ec6ef0941c8a39ad90b24bd4a4d6c0010ba6bafb794550ecd03",
+      "bytes": 160060344
+    },
+    {
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.1.9.tar.xz",
+      "name": "linux-7.1.9.tar.xz",
+      "sha256": "3271a4ae3897b38352980f2b0975bae61bca81c644d186221c5ae928bcc072b0",
+      "bytes": 158435316
+    }
+  ],
+  "signature_verified": false
+}

@@ -1,0 +1,11 @@
+{
+  "exit_code": 0,
+  "passed": true,
+  "kernel": "7.2.3-arch1-3",
+  "dkms_sha256": "d525e1d0a9ea75d9156149c2c2c0057a3ed8099e2fdc6528a8b27f6372833d6c",
+  "script_sha256": "5bfebadc37d06165d6ec0b6b4c15499ac07986d6b3612df947ecdf1473468d52",
+  "package_sha256": "9354c0f3f6c2fe54c433a5328ff5eeb4aa4949f6d8b186b9ef6e1ab4ccc6279f",
+  "hardware_verified": false,
+  "host_installed": false,
+  "isolation": "Disconnected read-only host; private home, /etc/dkms, /var/lib/dkms and all source, build and module destinations."
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-iso/pull/182",
+  "repository": "omacom/omarchy-iso",
+  "number": 182,
+  "title": "Install linux-omarchy by default except on T2 Macs",
+  "author": "ryanrhughes",
+  "head_sha": "b507a20b7e0406cd10779ca332105f9a89754731",
+  "state": "merged",
+  "updated_at": "2026-09-15T01:39:34Z",
+  "body": "Fresh non-T2 installs select stock `linux`, even when the bundled Omarchy runtime and offline mirror carry `linux-omarchy`. Select `linux-omarchy` in the configurator and use it as the boot-validation fallback. T2 Macs still select `linux-t2`, and explicit kernel selections remain respected.\n\nValidation:\n\n- `./test/all` passed: 65 Python tests plus the shell checks. Partition-numbering checks skipped because `parted` is unavailable.\n- Added coverage for both T2 PCI IDs, non-T2 hardware, and validation of default and explicit kernel UKIs.\n- Built an unsigned 4.0.4rc1 ISO from this commit. Mounted it read-only, confirmed the installer files match the tested source, exercised its non-T2/T2 kernel probe, and checked the bundled Omarchy, settings, kernel, headers, and IPU7 packages against their published RC SHA256 hashes.\n\nRan `omarchy-iso-test` on a fresh KVM guest: interactive installation and reboot succeeded. Verified the running kernel is `7.2.5-3-omarchy`, owned by `linux-omarchy`, with no stock, T2, or retired PTL kernel installed. The first acceptance run hit a weather-location OCR false negative (the saved screenshot visibly contains the location); the unchanged full suite passed on a second run using `--reuse-base`. Tests were synced from runtime commit `ec73ba5d0002dc76462209002d8804c98342e69c`. No physical hardware boot test was run.\n\nUnsigned RC ISO: https://iso.omarchy.org/omarchy-4.0.4rc1.iso\n\nSHA256: `9d251238932880c892769ff97754a2d7f2a5709ede4920c065e9068e484abe9a`\n\nThe complete public download was hashed and matches the build output.\n\n",
+  "original_source_changed": false
+}

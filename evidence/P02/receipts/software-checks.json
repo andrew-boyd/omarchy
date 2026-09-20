@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/broadcom-wl-headers-migration-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 13,
+      "output": "ok - missing headers are repaired once for linux\nok - missing headers are repaired once for linux-lts\nok - missing headers are repaired once for linux-zen\nok - missing headers are repaired once for linux-hardened\nok - missing headers are repaired once for linux linux-lts linux-zen linux-hardened\nok - missing headers are repaired once for linux linux-omarchy linux-omarchy-headers\nok - missing headers are repaired once for linux linux-t2 linux-t2-headers\nok - machines without broadcom-wl-dkms are left alone\nok - header installation failure is propagated\nok - no stock header repair for broadcom-wl-dkms\nok - no stock header repair for broadcom-wl-dkms linux-custom\nok - no stock header repair for broadcom-wl-dkms linux-omarchy linux-t2\nok - a failed transaction stops and can be retried\n"
+    },
+    {
+      "test": "test/shell.d/kernel-headers-migration-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "ok - missing headers are repaired once for linux-omarchy\nok - missing headers are repaired once for linux-t2\nok - missing headers are repaired once for linux-omarchy linux-t2\nok - header repair skips unrelated kernels\nok - header installation failure is propagated\n"
+    }
+  ]
+}

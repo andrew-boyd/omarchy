@@ -1,0 +1,91 @@
+{
+  "passed": true,
+  "recipe_checks": [
+    {
+      "package": "fprintd-t1bridge",
+      "srcinfo_passed": true,
+      "verified_source_inputs": [
+        {
+          "name": "0001-Honor-driver-native-duplicate-detection.patch",
+          "sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+          "kind": "unchanged upstream patch"
+        },
+        {
+          "name": "0002-Fix-tests-for-current-GLib.patch",
+          "sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+          "kind": "unchanged upstream patch"
+        }
+      ]
+    },
+    {
+      "package": "libfprint-t1bridge",
+      "srcinfo_passed": true,
+      "verified_source_inputs": [
+        {
+          "name": "0001-Add-T1Bridge-fingerprint-driver.patch",
+          "sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+          "kind": "unchanged upstream patch"
+        },
+        {
+          "name": "0002-Use-relative-test-helper-path.patch",
+          "sha256": "43a10082d4909eb0ba161679537dae9ab23835f69f20d414c671251aae5424ed",
+          "kind": "unchanged upstream patch"
+        }
+      ]
+    },
+    {
+      "package": "t1bridge",
+      "srcinfo_passed": true,
+      "verified_source_inputs": [
+        {
+          "name": "t1bridge-0.1.9.tar.gz",
+          "sha256": "5938c25b710271b78ddc1fef59d6af078ade835e0b5124bc65bcf0777285f166",
+          "kind": "cached public release"
+        }
+      ]
+    },
+    {
+      "package": "t1bridge-dkms",
+      "srcinfo_passed": true,
+      "verified_source_inputs": [
+        {
+          "name": "t1bridge-0.1.9.tar.gz",
+          "sha256": "5938c25b710271b78ddc1fef59d6af078ade835e0b5124bc65bcf0777285f166",
+          "kind": "cached public release"
+        }
+      ]
+    },
+    {
+      "package": "t1bridge-omarchy",
+      "srcinfo_passed": true,
+      "verified_source_inputs": [
+        {
+          "name": "t1bridge-omarchy-0.2.1.tar.gz",
+          "sha256": "bbd4b4a6f923cc308fbdeb6703c0fb71858d68140fa44e10cec217611c1b0e90",
+          "kind": "cached public release"
+        }
+      ]
+    }
+  ],
+  "fresh_scope": "Five recipe metadata evaluations in a disconnected read-only namespace; cached archives, four unchanged fingerprint patches and relocated license checked against source hashes.",
+  "optional_evidence_reused": {
+    "original_release_assertions": 23,
+    "original_release_build_passed": true,
+    "log_sha256": "81c8f71d0fa66616274e45992202982c0da06f9f192487f66edd800d68e531ea",
+    "upstream_dpms_failure_preserved": true,
+    "qualification": "Only the original 0.2.1-1 build is evidence for this candidate. The later repaired brightness implementation and its added checks are excluded."
+  },
+  "core_evidence_reused": {
+    "release_source_sha256": "5938c25b710271b78ddc1fef59d6af078ade835e0b5124bc65bcf0777285f166",
+    "all_features": {
+      "groups": 23,
+      "passed": 1020,
+      "failed": 0,
+      "ignored": 1
+    },
+    "qualification": "Same released runtime/kernel sources. Prior package builds used modified recipes: their package-conflict, header-check and package-lifecycle assertions do not certify these original recipes. Target-kernel and clean dependency resolution remain unverified."
+  },
+  "fingerprint_library_evidence": "Existing source patches and matching version dependency preserved. Recipe metadata, four patch hashes and license relocation checked; no new library build or PAM/runtime validation claimed.",
+  "hardware_verified": false,
+  "host_mutation": false
+}

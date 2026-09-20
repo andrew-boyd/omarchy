@@ -1,0 +1,101 @@
+diff --git a/bin/omarchy-system-lid-open b/bin/omarchy-system-lid-open
+new file mode 100755
+index 00000000000..a6a1c87318e
+--- /dev/null
++++ b/bin/omarchy-system-lid-open
+@@ -0,0 +1,20 @@
++#!/bin/bash
++
++# omarchy:summary=Reconcile displays and wake the panel when the laptop lid opens
++# omarchy:group=system
++# omarchy:hidden=true
++
++# Reconcile first, exactly as the lid-open binding has always done.
++omarchy-hyprland-monitor-clamshell
++
++# The reconciler only dispatches a DPMS enable when it has just cleared a
++# clamshell flag, and that flag is never written on a laptop with no external
++# monitor. A laptop-only lid open therefore had no path back from the lock
++# screen's idle blank: the panel stayed dark until a keypress reached the
++# password field, and logind swallows the power button, so reaching for that
++# instead makes a working machine look hung.
++#
++# omarchy-brightness-display on already skips its dispatch while every enabled
++# monitor reports dpmsStatus true, so a lid open that never blanked stays a
++# no-op and no display is forced through a second modeset.
++omarchy-brightness-display on
+diff --git a/default/hypr/bindings/utilities.lua b/default/hypr/bindings/utilities.lua
+index 406b773f6b6..85667469f52 100644
+--- a/default/hypr/bindings/utilities.lua
++++ b/default/hypr/bindings/utilities.lua
+@@ -32,7 +32,7 @@ o.bind_toggle("SUPER + CTRL + N", "Toggle nightlight", "nightlight")
+ o.bind("SUPER + CTRL + Delete", "Toggle laptop display", "omarchy-hyprland-monitor-internal toggle")
+ o.bind("SUPER + CTRL + ALT + Delete", "Toggle laptop display mirroring", "omarchy-hyprland-monitor-internal-mirror toggle")
+ o.bind("switch:on:Lid Switch", nil, "omarchy-system-lid-close", { locked = true })
+-o.bind("switch:off:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
++o.bind("switch:off:Lid Switch", nil, "omarchy-system-lid-open", { locked = true })
+ 
+ o.bind("PRINT", "Screenshot", "omarchy-capture-screenshot")
+ o.bind("ALT + PRINT", "Screenrecording", "omarchy-capture-screenrecording --stop-recording || omarchy-menu toggle trigger.capture.screenrecord")
+diff --git a/test/shell.d/lid-open-test.sh b/test/shell.d/lid-open-test.sh
+new file mode 100755
+index 00000000000..1aa43e86188
+--- /dev/null
++++ b/test/shell.d/lid-open-test.sh
+@@ -0,0 +1,43 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++lid_open="$ROOT/bin/omarchy-system-lid-open"
++tmpdir=$(mktemp -d)
++trap 'rm -rf "$tmpdir"' EXIT
++
++mock_bin="$tmpdir/bin"
++call_log="$tmpdir/calls"
++mkdir -p "$mock_bin"
++: >"$call_log"
++
++for command in omarchy-hyprland-monitor-clamshell omarchy-brightness-display; do
++  cat >"$mock_bin/$command" <<SH
++#!/bin/bash
++echo "$command \$*" >>"\$CALL_LOG"
++SH
++done
++chmod +x "$mock_bin"/*
++
++CALL_LOG="$call_log" PATH="$mock_bin:$PATH" "$lid_open"
++mapfile -t calls <"$call_log"
++
++# The reconciler settles which outputs exist before anything asks the
++# compositor to light them, which is the order the binding has always used.
++[[ ${calls[0]:-} == "omarchy-hyprland-monitor-clamshell " ]] ||
++  fail "lid open reconciles displays first" "first call was ${calls[0]:-none}"
++pass "lid open reconciles displays first"
++
++# Without this the laptop-only case has no path from the lock screen's idle
++# blank back to a lit panel: the reconciler dispatches a DPMS enable only when
++# it has just cleared a clamshell flag, and no such flag is ever written when
++# there is no external monitor to go clamshell with.
++[[ ${calls[1]:-} == "omarchy-brightness-display on" ]] ||
++  fail "lid open wakes the panel" "second call was ${calls[1]:-none}"
++pass "lid open wakes the panel"
++
++(( ${#calls[@]} == 2 )) ||
++  fail "lid open does no more than reconcile and wake" "${#calls[@]} calls"
++pass "lid open does no more than reconcile and wake"
+diff --git a/test/shell.d/monitor-recovery-test.sh b/test/shell.d/monitor-recovery-test.sh
+index 3401abc18da..623bd4c59e0 100755
+--- a/test/shell.d/monitor-recovery-test.sh
++++ b/test/shell.d/monitor-recovery-test.sh
+@@ -98,7 +98,7 @@ grep -F 'omarchy-hyprland-monitor-external-active' "$monitor_mirror" >/dev/null
+ pass "internal mirror helper recovers when no active external display remains"
+ 
+ grep -F 'switch:on:Lid Switch", nil, "omarchy-system-lid-close"' "$utilities" >/dev/null
+-grep -F 'switch:off:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell"' "$utilities" >/dev/null
++grep -F 'switch:off:Lid Switch", nil, "omarchy-system-lid-open"' "$utilities" >/dev/null
+ pass "lid switch bindings lock on close and reconcile clamshell display state"
+ 
+ grep -F 'omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true' "$system_wake" >/dev/null

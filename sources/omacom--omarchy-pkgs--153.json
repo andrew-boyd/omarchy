@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/153",
+  "repository": "omacom/omarchy-pkgs",
+  "number": 153,
+  "title": "Add MacBook12 CS4208 DKMS package",
+  "author": "doctor",
+  "head_sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+  "state": "open",
+  "updated_at": "2026-09-18T19:18:34Z",
+  "body": "## Summary\n\n- add `macbook12-audio-driver-dkms`, the package expected by basecamp/omarchy#6921\n- pin the known-good upstream driver revision and verify every source checksum\n- package the DKMS source under `/usr/src/macbook12-audio-driver-0.1`\n- declare the required DKMS/kernel-header dependencies and the conflicting legacy CS4208 package\n\nThe two small local lifecycle overrides match [upstream driver PR #60](https://github.com/leifliddy/macbook12-audio-driver/pull/60) and can be dropped once that change is released.\n\n## Validation\n\n- `makepkg --verifysource`\n- clean `makepkg` build\n- inspected package metadata and installed file layout\n- extracted the package into an isolated root and completed `dkms add`, `dkms build`, and `dkms install` for `7.1.8-arch1-3`\n- confirmed the installed module path, CS4208 alias, module name, and vermagic\n- `bin/repo build --dry-run --package macbook12-audio-driver-dkms`\n\nHardware validation was performed on a MacBook10,1 running Omarchy; its internal speakers work with the expected stereo profile.\n",
+  "original_source_changed": false
+}

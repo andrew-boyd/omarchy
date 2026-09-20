@@ -1,0 +1,15 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "932100df6584207c8a0de68877e8cdb2d44776be",
+  "patch_sha256": "06a7ddc25ac90156fb9c48d71a415253da5a446770a9f117104a6bc1018148c8",
+  "production_matches_source": true,
+  "source_test_matches_source": true,
+  "production_provenance": "Production migration and upstream test are byte-identical to #12328. Only a supplemental fixture test was added locally; its setup is derived from the credited source test.",
+  "known_source_suite_failure": {
+    "suite": "original-check-suite.json",
+    "exit_code": 1,
+    "failure_line": "not ok - the superseded migration must not install the PTL variant first",
+    "candidate_assertions_before_failure": 10,
+    "baseline_assertions_before_failure": 8
+  }
+}

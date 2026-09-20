@@ -1,0 +1,28 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 10,
+      "output": "ok - skips non-apple\nok - skips other-model\nok - skips other-chip\nok - skips other-board\nok - preserves generic and model-specific NVRAM, including compressed files\nok - installs verified NVRAM with a unique local MAC and preserves it on rerun\nok - preserves the interface address when it is not the Broadcom placeholder\nok - handles installation without a bound network interface\nok - refuses installation on bad-digest\nok - refuses installation on download-failure\n"
+    },
+    {
+      "test": "test/shell.d/brcmfmac-5ghz-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 33,
+      "output": "ok - the BCM43602 5 GHz NVRAM runs during setup\nok - the vendored NVRAM has full 5 GHz calibration and provenance\nok - Mac support chapter mentions 5 GHz calibration\nok - a MacBookPro14,3 with BCM43602 gets both NVRAM names and the live MAC\nok - MacBookPro14,2 gets its DMI-specific NVRAM\nok - the older Apple vendor string is recognized\nok - the permanent address wins over a randomised netdev address\nok - placeholder wiphy keeps macaddr= as a per-machine address\nok - macaddr= is a per-machine address when no MAC is discoverable\nok - Broadcom 00:90:4c placeholders fall through to a per-machine MAC\nok - two machine-ids produce two different macaddr= values\nok - empty machine-id without a live MAC fails and persists nothing\nok - a Mac whose Wi-Fi brcmfmac does not drive is left alone\nok - a T2-era chip is left to apple-bcm-firmware\nok - the 2 GHz-only BCM43602 variant is left alone\nok - MacBookPro13,3 is outside the model gate\nok - a 2015 BCM43602 Mac is outside the model gate\nok - non-Apple hardware is left alone\nok - a Mac with no wireless device is left alone\nok - an existing NVRAM is never clobbered\nok - a packaged NVRAM prevents writing the override\nok - a compressed packaged NVRAM prevents writing the override\nok - a failed install does not look like success\nok - a half-written NVRAM pair is rolled back\nok - a failed dest rename is rolled back\nok - the migration installs NVRAM and asks for a reboot\nok - the migration is idempotent\nok - the migration uses a per-machine MAC when none is discoverable\nok - the migration never overwrites an existing NVRAM\nok - the migration skips MacBookPro13,3\nok - the migration skips non-Apple hardware\nok - a failed migration install does not look like success\nok - the rerun after a failed migration installs and asks for the reboot\n"
+    },
+    {
+      "test": "test/shell.d/broadcom-calibration-integration-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - combined wiring invokes each selected leaf and the existing supplicant quirk once\nok - 13,3 selects only its board-specific download and preserves it on rerun\nok - MacBookPro14,2 selects only the existing 14,x calibration without downloading the 13,3 file\nok - MacBookPro14,3 selects only the existing 14,x calibration without downloading the 13,3 file\nok - combined leaves preserve their model, board, vendor and chip exclusions\nok - both leaves preserve an existing compressed generic board file\nok - a failed 13,3 download cannot fall through to the other model calibration\n"
+    }
+  ]
+}

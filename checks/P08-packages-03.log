@@ -1,0 +1,137 @@
+[1m================================[0m
+[1mUpstream Package Sync[0m
+[1m================================[0m
+Release selection:
+  ok: quarantine falls back past the young v2.0.0
+  ok: selected release reports its published_at
+  ok: x86_64 checksum via {tag} template and ./ prefix
+  ok: aarch64 checksum via {pkgver} template
+  ok: no policy selects the newest stable release
+  ok: prerelease v1.9.9 and draft v1.9.8 are never selected
+  ok: bypass lifts the quarantine
+  ok: x86_64 checksum via * binary-mode prefix
+  ok: latest_only ignores incompatible historical tags
+  ok: everything quarantined reports no update
+  ok: already checked in reports no update
+Failure paths:
+  ok: invalid published_at fails the sync
+  ok: unusable tag fails the sync
+  ok: missing aarch64 checksum fails the sync
+Release API digests:
+  ok: x86_64 checksum via the asset digest
+  ok: aarch64 checksum via the asset digest
+  ok: asset without a digest fails the sync
+  ok: asset re-cut under another release number fails the sync
+  ok: digest without the sha256: prefix fails the sync
+  ok: provider rejects checksums and digests together
+  ok: provider rejects a non-boolean digests
+Ordered GitHub assets with supplemental sources:
+  ok: ordered GitHub assets produce an ordered checksum array
+  ok: GitHub supplemental source is downloaded and hashed
+  ok: GitHub asset lists and disjoint sources validate
+  ok: GitHub assets and sources cannot target the same checksum array
+Debian Packages provider:
+  ok: Debian provider selects the newest exact package stanza
+  ok: Debian x86_64 source is hashed
+  ok: Debian aarch64 source is hashed
+  ok: Debian declaration validates
+  ok: checked-in Debian version avoids source downloads
+End-to-end Debian sync with the checked-in 1password recipe:
+  ok: 1password sync updates without failures
+  ok: 1password pkgver is the single download version source
+  ok: 1password pkgrel resets to 1
+  ok: 1password x86 URL follows the rewritten pkgver
+  ok: 1password ARM URL follows the rewritten pkgver
+Quarantine backstop:
+  ok: old enough passes
+  ok: too young is held
+  ok: no policy passes anything
+  ok: deliberate bypass passes
+  ok: missing published_at is unprovable
+  ok: relative-date expression is unprovable, not an age
+  ok: numeric-offset ISO timestamp passes
+Duration parser:
+  ok: min_release_age "24h"
+  ok: min_release_age "90m"
+  ok: min_release_age "2d"
+  ok: min_release_age 3600
+  ok: min_release_age "600s"
+  ok: min_release_age "010h"
+  ok: min_release_age "abc"
+  ok: min_release_age "24hh"
+  ok: min_release_age false
+  ok: min_release_age ""
+  ok: min_release_age "9999999999"
+Manifest validation:
+  ok: upstream: false is rejected
+  ok: upstream without checksums/assets is rejected
+  ok: upstream with both checksums and digests is rejected
+  ok: non-boolean digests is rejected
+  ok: checksums: false alongside digests is rejected
+  ok: digests: null is rejected
+  ok: digests: false beside a checksums manifest is accepted
+  ok: digests: false alone is rejected
+  ok: the digests declaration shape is accepted
+  ok: multiple provider types are rejected
+  ok: the real declaration shape is accepted
+Git-tag provider:
+  ok: pacman ordering selects 1.10.0 over 1.9.0
+  ok: remote source template is downloaded and hashed
+  ok: local source entry is hashed
+  ok: git-tags declaration validates
+npm provider:
+  ok: npm dist-tag selects its version
+  ok: npm tarball placeholder is hashed
+  ok: npm pkgver template is hashed
+  ok: npm publication time is preserved
+  ok: npm declaration validates
+End-to-end sync_package with the checked-in mise-bin metadata:
+  ok: sync_package updates without failures
+  ok: the 24h manifest policy holds v2026.9.10.91 and ships v2026.9.10.90
+  ok: pkgrel resets to 1
+  ok: x86_64 checksum lands in the PKGBUILD
+  ok: aarch64 checksum lands in the PKGBUILD
+  ok: malformed upstream stays discoverable for scheduled runs
+  ok: malformed upstream fails the sync instead of skipping
+Cua Driver release hook:
+  ok: component found beyond the first 100 releases
+  ok: stable-shaped prerelease accepted at exactly 24h
+  ok: x86_64 checksum
+  ok: ARM checksum
+  ok: publication date preserved
+  ok: release page larger than the argument limit succeeds
+  ok: large release page preserves version selection
+  ok: older page outranks recently rebuilt lower version
+  ok: drafts/nightlies rejected and young release quarantined
+  ok: all candidates too young is a successful skip
+  ok: all young candidates emit empty JSON
+  ok: quarantine reason is reported
+  ok: current package version is unchanged
+  ok: no stable component candidate fails
+  ok: no stable component candidate reports the reason
+  ok: empty feed fails
+  ok: empty feed reports the reason
+  ok: relative publication date fails
+  ok: relative publication date reports the reason
+  ok: impossible publication date fails
+  ok: impossible publication date reports the reason
+  ok: missing publication date fails
+  ok: missing publication date reports the reason
+  ok: API error object on later page fails
+  ok: API error object on later page reports the reason
+  ok: malformed JSON on later page fails
+  ok: malformed JSON on later page reports the reason
+  ok: malformed release entry fails
+  ok: malformed release entry reports the reason
+  ok: network failure after first page fails
+  ok: network failure after first page reports the reason
+  ok: feed exceeds pagination bound fails
+  ok: feed exceeds pagination bound reports the reason
+  ok: checksum download failure fails
+  ok: checksum download failure reports the reason
+  ok: missing ARM checksum fails
+  ok: missing ARM checksum reports the reason
+  ok: invalid checksum fails
+  ok: invalid checksum reports the reason
+
+[0;32m✓[0m Self-test passed

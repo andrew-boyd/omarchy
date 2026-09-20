@@ -1,0 +1,7 @@
+{
+  "upstream": "t1bridge-omarchy-0.2.1",
+  "expected_failure": true,
+  "exit_code": 1,
+  "log": "logs/als-upstream-negative-control.log",
+  "assertion": "Production session check accepts DPMS-off internal panel"
+}

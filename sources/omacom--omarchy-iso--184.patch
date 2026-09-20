@@ -1,0 +1,256 @@
+diff --git a/configs/airootfs/usr/share/omarchy-iso/orchestrator/context.py b/configs/airootfs/usr/share/omarchy-iso/orchestrator/context.py
+index 9b5c50ff..02494b0d 100644
+--- a/configs/airootfs/usr/share/omarchy-iso/orchestrator/context.py
++++ b/configs/airootfs/usr/share/omarchy-iso/orchestrator/context.py
+@@ -50,6 +50,13 @@ def from_env(cls) -> "InstallContext":
+         user_configuration = json.loads(config_path.read_text())
+         omarchy_install = user_configuration.get("omarchy_install") or _default_omarchy_install(user_configuration)
+ 
++        # Autoinstall configs may omit kernels, which makes archinstall default
++        # to stock linux. Apply the same hardware default as the configurator,
++        # while honoring an explicit selection (including storage-only configs).
++        if not user_configuration.get("kernels"):
++            kernel = (omarchy_install.get("storage") or {}).get("kernel") or _default_kernel()
++            user_configuration["kernels"] = [kernel]
++
+         # Deferred provisioning: the whole system installs but user creation is deferred to
+         # first boot. Selected by the configurator (omarchy_install.defer_provisioning) or by
+         # an `defer-provisioning` marker file on an autoinstall drive, which also replaces the
+@@ -175,6 +182,18 @@ def _inject_provisioning_encryption_password(arch_configuration: dict, user_cred
+     user_credentials["encryption_password"] = password
+ 
+ 
++def _default_kernel(pci_devices: Path = Path("/sys/bus/pci/devices")) -> str:
++    for device in pci_devices.glob("*"):
++        try:
++            vendor = (device / "vendor").read_text().strip().lower()
++            device_id = (device / "device").read_text().strip().lower()
++        except OSError:
++            continue
++        if vendor == "0x106b" and device_id in {"0x1801", "0x1802"}:
++            return "linux-t2"
++    return "linux-omarchy"
++
++
+ def _default_omarchy_install(user_configuration: dict) -> dict[str, Any]:
+     disk_config = user_configuration.get("disk_config", {})
+     mode = "protected" if disk_config.get("config_type") == "pre_mounted_config" else "full_disk"
+diff --git a/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py b/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py
+index e489ee45..1ebd4ce3 100644
+--- a/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py
++++ b/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py
+@@ -269,6 +269,11 @@ def arch_install_system(ctx: InstallContext) -> None:
+                 pacman_config=config.pacman_config,
+             )
+ 
++            # Headers are optional kernel dependencies. Install them before any
++            # DKMS package so generic installs have them too, and module builds
++            # use the target kernel instead of the live ISO's kernel.
++            installer.add_additional_packages([f"{kernel}-headers" for kernel in config.kernels])
++
+             if not configure_keyboard(installer.target, kb_layout):
+                 error(f"Invalid keyboard language specified: {kb_layout}")
+ 
+@@ -1644,6 +1649,7 @@ def _tailscale_authkey(path: Path) -> str:
+ 
+ def validate_boot(ctx: InstallContext) -> None:
+     _assert_boot_hooks_restored(ctx)
++    _validate_kernel_headers(ctx)
+ 
+     boot = _boot_intent(ctx)
+     storage = _storage_intent(ctx)
+@@ -1742,6 +1748,19 @@ def _assert_boot_hooks_restored(ctx: InstallContext) -> None:
+             raise RuntimeError(f"{path} is missing — future kernel updates would ship no UKI")
+ 
+ 
++def _validate_kernel_headers(ctx: InstallContext) -> None:
++    kernels = sorted((ctx.target / "usr/lib/modules").glob("*/pkgbase"))
++    if not kernels:
++        raise RuntimeError("no installed kernel found in target")
++    for pkgbase in kernels:
++        release = pkgbase.parent.name
++        header_release = pkgbase.parent / "build/include/config/kernel.release"
++        if not header_release.is_file():
++            raise RuntimeError(f"{pkgbase.read_text().strip()} ({release}) has no kernel headers")
++        if header_release.read_text().strip() != release:
++            raise RuntimeError(f"{pkgbase.read_text().strip()} headers do not match kernel {release}")
++
++
+ # Every kernel package leaves its pkgbase next to its modules, which is also
+ # the name limine-mkinitcpio-hook builds the UKI under.
+ def _installed_kernels(ctx: InstallContext) -> list[str]:
+diff --git a/test/integration.d/base-test.sh b/test/integration.d/base-test.sh
+index 10d4d2e2..df2d6baa 100644
+--- a/test/integration.d/base-test.sh
++++ b/test/integration.d/base-test.sh
+@@ -403,7 +403,7 @@ EOF
+             "efi_binary": "limine_x64.efi",
+             "enable_fallback": true
+         },
+-        "storage": { "kernel": "linux" }
++        "storage": { "kernel": "linux-omarchy" }
+     },
+     "disk_config": {
+         "config_type": "default_layout",
+@@ -448,7 +448,7 @@ EOF
+         ]
+     },
+     "hostname": "$GUEST_HOSTNAME",
+-    "kernels": [ "linux" ],
++    "kernels": [ "linux-omarchy" ],
+     "network_config": { "type": "iso" },
+     "ntp": true,
+     "parallel_downloads": 8,
+diff --git a/test/unit/test_kernel_selection.py b/test/unit/test_kernel_selection.py
+index 773e4196..5e01f73f 100644
+--- a/test/unit/test_kernel_selection.py
++++ b/test/unit/test_kernel_selection.py
+@@ -1,5 +1,6 @@
+ """Fresh installs use the Omarchy kernel, except for T2 Macs."""
+ 
++import json
+ import os
+ import re
+ import subprocess
+@@ -7,6 +8,7 @@
+ import tempfile
+ import types
+ import unittest
++from contextlib import ExitStack
+ from pathlib import Path
+ from unittest import mock
+ 
+@@ -16,7 +18,7 @@
+     "orchestrator.archinstall_adapter",
+     types.ModuleType("orchestrator.archinstall_adapter"),
+ )
+-from orchestrator import phases_impl  # noqa: E402
++from orchestrator import context, phases_impl  # noqa: E402
+ 
+ 
+ class KernelSelectionTest(unittest.TestCase):
+@@ -42,6 +44,115 @@ def test_hardware_detection(self):
+                 )
+                 self.assertEqual(result.stdout.strip(), expected)
+ 
++    def test_unattended_kernel_default_uses_pci_hardware(self):
++        for vendor, device, expected in [
++            ("0x8086", "0xb080", "linux-omarchy"),
++            ("0x106b", "0x2001", "linux-omarchy"),
++            ("0x106b", "0x1801", "linux-t2"),
++            ("0x106b", "0x1802", "linux-t2"),
++        ]:
++            with self.subTest(device=device), tempfile.TemporaryDirectory() as tmp:
++                pci = Path(tmp)
++                slot = pci / "0000:00:00.0"
++                slot.mkdir()
++                (slot / "vendor").write_text(vendor + "\n")
++                (slot / "device").write_text(device + "\n")
++                self.assertEqual(context._default_kernel(pci), expected)
++        with tempfile.TemporaryDirectory() as tmp:
++            self.assertEqual(context._default_kernel(Path(tmp)), "linux-omarchy")
++
++    def test_context_passes_effective_kernels_to_archinstall(self):
++        for config, default, expected in [
++            ({}, "linux-omarchy", ["linux-omarchy"]),
++            ({"kernels": []}, "linux-omarchy", ["linux-omarchy"]),
++            ({"kernels": None}, "linux-t2", ["linux-t2"]),
++            ({}, "linux-t2", ["linux-t2"]),
++            ({"kernels": ["linux-lts"]}, "linux-omarchy", ["linux-lts"]),
++            ({"kernels": ["linux-omarchy", "linux-lts"]}, "linux-t2", ["linux-omarchy", "linux-lts"]),
++            ({"omarchy_install": {"storage": {"kernel": "linux-t2"}}}, "linux-omarchy", ["linux-t2"]),
++        ]:
++            with self.subTest(config=config, default=default), tempfile.TemporaryDirectory() as tmp:
++                root = Path(tmp)
++                config_path = root / "config.json"
++                creds_path = root / "creds.json"
++                config_path.write_text(json.dumps(config))
++                creds_path.write_text(json.dumps({"users": [{"username": "test"}]}))
++                with mock.patch.dict(os.environ, {
++                    "OMARCHY_INSTALL_CONFIG": str(config_path),
++                    "OMARCHY_INSTALL_CREDS": str(creds_path),
++                    "OMARCHY_INSTALL_STATE_DIR": str(root / "state"),
++                }, clear=True), mock.patch.object(context, "_default_kernel", return_value=default):
++                    ctx = context.InstallContext.from_env()
++                self.assertEqual(ctx.user_configuration["kernels"], expected)
++                self.assertEqual(json.loads(ctx.arch_config_path.read_text())["kernels"], expected)
++
++    def test_headers_install_before_dkms_packages(self):
++        for kernels in (["linux-omarchy"], ["linux-t2"], ["linux-omarchy", "linux-lts"]):
++            for fail_headers in (False, True):
++                with self.subTest(kernels=kernels, fail_headers=fail_headers), ExitStack() as stack:
++                    events = []
++                    installer = mock.MagicMock()
++                    installer.minimal_installation.side_effect = lambda **kwargs: events.append("base")
++
++                    def install_packages(packages):
++                        events.append(packages)
++                        if fail_headers:
++                            raise RuntimeError("header install failed")
++
++                    installer.add_additional_packages.side_effect = install_packages
++                    config = types.SimpleNamespace(
++                        kernels=kernels, locale_config=None, mirror_config=None,
++                        swap=None, auth_config=None, app_config=None, timezone=None,
++                        ntp=False, hostname="test", pacman_config="/etc/pacman.conf",
++                    )
++                    ctx = types.SimpleNamespace(
++                        state={"arch_config_handler": types.SimpleNamespace(config=config), "mirror_handler": None},
++                        target=Path("/unused"), tailscale_authkey_path=None,
++                    )
++                    for name in ("_mount_offline_package_cache", "_mask_mkinitcpio_pacman_hooks",
++                                 "_configure_limine_boot", "_write_pre_mounted_fstab"):
++                        stack.enter_context(mock.patch.object(phases_impl, name))
++                    unmask = stack.enter_context(mock.patch.object(phases_impl, "_unmask_mkinitcpio_pacman_hooks"))
++                    unmount = stack.enter_context(mock.patch.object(phases_impl, "_unmount_offline_package_cache"))
++                    stack.enter_context(mock.patch.object(phases_impl, "configure_keyboard", return_value=True))
++                    stack.enter_context(mock.patch.object(phases_impl, "_install_early_packages", side_effect=lambda inst: events.append("early")))
++                    stack.enter_context(mock.patch.object(phases_impl, "_runtime_package_list", return_value=["omarchy"]))
++                    stack.enter_context(mock.patch.object(phases_impl.arch, "is_pre_mount", return_value=True, create=True))
++                    stack.enter_context(mock.patch.object(phases_impl.arch, "root_user", return_value=None, create=True))
++                    opened = stack.enter_context(mock.patch.object(phases_impl.arch, "open_installer", create=True))
++                    opened.return_value.__enter__.return_value = installer
++                    if fail_headers:
++                        with self.assertRaisesRegex(RuntimeError, "header install failed"):
++                            phases_impl.arch_install_system(ctx)
++                    else:
++                        phases_impl.arch_install_system(ctx)
++                    expected = ["base", [f"{kernel}-headers" for kernel in kernels]]
++                    if not fail_headers:
++                        expected += ["early", ["omarchy"]]
++                    self.assertEqual(events, expected)
++                    unmask.assert_called_once_with(ctx)
++                    unmount.assert_called_once_with(ctx)
++
++    def test_validation_rejects_missing_or_mismatched_headers(self):
++        for kernel in ("linux-omarchy", "linux-t2"):
++            with self.subTest(kernel=kernel), tempfile.TemporaryDirectory() as tmp:
++                target = Path(tmp)
++                ctx = types.SimpleNamespace(target=target)
++                with self.assertRaisesRegex(RuntimeError, "no installed kernel"):
++                    phases_impl._validate_kernel_headers(ctx)
++                modules = target / "usr/lib/modules/7.2-test"
++                modules.mkdir(parents=True)
++                (modules / "pkgbase").write_text(kernel + "\n")
++                with self.assertRaisesRegex(RuntimeError, "no kernel headers"):
++                    phases_impl._validate_kernel_headers(ctx)
++                header_release = modules / "build/include/config/kernel.release"
++                header_release.parent.mkdir(parents=True)
++                header_release.write_text("7.2-stock\n")
++                with self.assertRaisesRegex(RuntimeError, "headers do not match"):
++                    phases_impl._validate_kernel_headers(ctx)
++                header_release.write_text("7.2-test\n")
++                phases_impl._validate_kernel_headers(ctx)
++
+     def test_boot_validation_uses_default_or_explicit_kernel(self):
+         for storage, configuration, expected in [
+             ({}, {}, "linux-omarchy"),
+@@ -52,6 +163,8 @@ def test_boot_validation_uses_default_or_explicit_kernel(self):
+             with self.subTest(kernel=expected, storage=storage), tempfile.TemporaryDirectory() as tmp:
+                 target = Path(tmp)
+                 files = {
++                    f"usr/lib/modules/7.2-test/pkgbase": expected + "\n",
++                    "usr/lib/modules/7.2-test/build/include/config/kernel.release": "7.2-test\n",
+                     "boot/limine.conf": "/Omarchy\n",
+                     "etc/kernel/cmdline": "root=UUID=test\n",
+                     "etc/default/limine": "CUSTOM_UKI_NAME=omarchy\n",

@@ -1,0 +1,15 @@
+{
+  "tests": [
+    "test/shell.d/omarchy-kernel-migration-test.sh"
+  ],
+  "file_sha256": {
+    "test/shell.d/intel-mac-kernel-policy-test.sh": "efd92aa05768b1a7ebff9c856a6657bf2c3e54a958544f41082fd611a9cf12b9",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/omarchy-kernel-migration-test.sh": "72c833ee02b9d1aed3733826e5c885029306b06ef58496d2d076359978f41928",
+    "migrations/1789325478.sh": "60d0dbe15471cfb873571c662f11107a43b6af2c4fa227ded6f74f6a2b59571d",
+    "bin/omarchy-migrate": "0c14cb7853174d5289172496e22c1bd444b20c00c1aefd589e1faa3ae6941abe",
+    "bin/omarchy-pkg-add": "76bf74a1e4e65d07a29c06ebc5a621bf36662efc0a175ffc53b723bd80339a3e",
+    "bin/omarchy-pkg-present": "32ea3b03185958cb3d071ba10386c3629c97a1d2c70500ce52fbd223b27656e7",
+    "bin/omarchy-pkg-missing": "c4f92a3341fc894614ca93a6134d284742ceff8c01e1712c8d484f74207a1473"
+  }
+}

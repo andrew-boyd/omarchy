@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10458",
+  "repository": "omacom/omarchy",
+  "number": 10458,
+  "title": "Enable speakers on Late 2015 21.5-inch iMacs",
+  "author": "inspiretelapps",
+  "head_sha": "5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+  "state": "open",
+  "updated_at": "2026-09-08T16:50:11Z",
+  "body": "## Summary\n\nLate 2015 21.5-inch iMacs (`iMac16,1` / `iMac16,2`) drive four digital CS4208 speaker channels. Analog Stereo is the headphone DAC and HDMI is the internal display, so both look like valid outputs while the speakers stay silent. Master hardware volume also does not change speaker loudness, so the Omarchy output slider moves with no audible change.\n\nThis installs a DMI-gated WirePlumber drop-in that:\n- selects Analog Surround 4.0 on the CS4208 card\n- uses software volume (`api.alsa.soft-mixer`)\n- deprioritizes HDMI so it does not steal the default sink\n\nSame shape as the ASUS ROG audio mixer quirk. Does not overlap with the CS8409 DKMS work for 2016\u20132019 Macs.\n\n## Hardware\n\nVerified on **iMac16,2** (Cirrus Logic CS4208, codec subsystem `0x106b8100`) on linux 7.1.9 / Omarchy 4.0.2: YouTube silent on Analog Stereo and HDMI, plays on Analog Surround 4.0; system volume slider works after software volume.\n\n## Test plan\n\n- `bash test/shell.d/imac-cs4208-speakers-test.sh`\n- `./test/cli`\n- On iMac16,1 or iMac16,2: install / migrate \u2192 `omarchy restart audio` \u2192 speakers play, output slider changes loudness\n- Other hardware: hook and migration no-op",
+  "original_source_changed": false
+}

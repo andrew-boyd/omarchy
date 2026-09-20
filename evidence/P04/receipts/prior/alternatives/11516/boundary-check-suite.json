@@ -1,0 +1,13 @@
+{
+  "tests": [
+    "test/shell.d/lid-connector-boundaries-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hw-external-monitors": "e3608173a94a4183b10ebe601a78fb6548956e9f57afdda4a095c792722dd685",
+    "bin/omarchy-hyprland-monitor-external-active": "3ccc2ec167eff8122163cd809393527c5491b925195b08e075381b389b946456",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/hw-external-monitors-test.sh": "6016411df38c8ac5af0aad08ea0089649b1b5255c928b49727aa620dd275a34d",
+    "test/shell.d/lid-close-test.sh": "620eab3e3edd82be2e11e1a243e12e1cdf19d0970cfcc07a4e97ad54a1d529d8",
+    "test/shell.d/lid-connector-boundaries-test.sh": "7f514189e3f721ea39cf68e8701a554c8da9d33ea5d664a987738c9f76bbc7d0"
+  }
+}

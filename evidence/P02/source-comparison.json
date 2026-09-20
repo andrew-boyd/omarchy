@@ -1,0 +1,37 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
+  "patch_sha256": "904a56c26c968a70159f0aeb22b0674212c597bb4e374073435914e489a84e85",
+  "production_provenance": "The production migration is byte-identical to #12074. Local additions are fixture tests. #12090 and #12249 remain compared alternatives; merged Omarchy, package and ISO changes are context, not new rollup patches.",
+  "file_provenance": [
+    {
+      "path": "migrations/1789546355.sh",
+      "sha256": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12074,
+          "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+          "identical": true,
+          "diff": "provenance/headers-vs-12074/migrations/1789546355.sh.diff"
+        }
+      ]
+    },
+    {
+      "path": "test/shell.d/broadcom-wl-headers-migration-test.sh",
+      "sha256": "5bf51cc3b4921891caa087c81c67eb147f7d08e7855d6c7a80c1538e63e661fc",
+      "test_only": true,
+      "source_comparisons": []
+    }
+  ],
+  "source_blobs": [
+    {
+      "number": 12074,
+      "path": "migrations/1789546355.sh",
+      "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/6d9986a1704f166ea3134e0ade2148f8291ce3d8/migrations/1789546355.sh",
+      "file": "source-files/12074/migrations/1789546355.sh",
+      "sha256": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9"
+    }
+  ]
+}

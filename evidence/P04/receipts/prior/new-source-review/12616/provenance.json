@@ -1,0 +1,30 @@
+{
+  "number": 12616,
+  "source_url": "https://github.com/omacom/omarchy/pull/12616",
+  "author": "HritwikSinghal",
+  "source_head": "aa4630f75ce5dea81a386ebe09c3fbda6967f40d",
+  "source_ancestor": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "8cceef70d5c8143087006445a9361801ea0404dd1a55624da24316d22c2b9f2c",
+  "applied": true,
+  "apply_output": "",
+  "selected": false,
+  "hardware_verified": false,
+  "tree_sha": "7ce023d52f0bd7fd7879ae3202dd1b3caa016230",
+  "files": [
+    {
+      "path": "bin/omarchy-hyprland-monitor-external-active",
+      "source_sha256": "d9c62fbd5e8f71358b8917bb658dcf8e5f31b78bc2cfec2beeb5b553d0fdbeb7",
+      "target_sha256": "d9c62fbd5e8f71358b8917bb658dcf8e5f31b78bc2cfec2beeb5b553d0fdbeb7",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/monitor-external-active-test.sh",
+      "source_sha256": "969e971f73e34ec502be8a218354aadb1162c0863532d6c0dfc05eda0cd94284",
+      "target_sha256": "969e971f73e34ec502be8a218354aadb1162c0863532d6c0dfc05eda0cd94284",
+      "identical_to_source": true
+    }
+  ],
+  "checks_passed": true,
+  "assertions": 11
+}

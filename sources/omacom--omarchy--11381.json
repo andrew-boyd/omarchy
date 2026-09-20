@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11381",
+  "repository": "omacom/omarchy",
+  "number": 11381,
+  "title": "Install the pre-T2 FaceTime HD camera driver and firmware",
+  "author": "rand0mdud3",
+  "head_sha": "24760fca3dc9a78ad00c12fadd89c413d937f91b",
+  "state": "open",
+  "updated_at": "2026-09-18T15:04:45Z",
+  "body": "Fixes #11373.\n\nPre-T2 Macs' built-in FaceTime HD camera (Broadcom 1570) has no in-tree driver: the PCI function sits driverless, no /dev/video exists, and Omarchy references the stack nowhere. This adds install/hardware/apple/fix-facetimehd.sh (gated on Apple DMI + 14e4:1570), wired into all.sh, plus migration 1789095456.sh sourcing the leaf for existing installs. It installs facetimehd-firmware + facetimehd-dkms-git via omarchy-pkg-aur-add and best-effort modprobes on live sessions (PCI alias binds it at boot). Never fatal, following fix-synaptic-touchpad.sh: failed installs warn, chroot modprobe mismatches stay quiet.\n\nProven on MacBookPro11,5, not just mocked: Apple's firmware CDN served the download (hashes OK), DKMS built clean against 7.2.3-arch1-3, modprobe created /dev/video0 reporting 1280x720@30, and three frames captured (varied sizes, live sensor). live leaf re-run no-ops cleanly with the camera up.\n\nTests: test/shell.d/apple-facetimehd-test.sh 9/9 (gating incl. older Apple vendor string, non-clobber paths, failed-install warning path, migration). ./test/cli green.",
+  "original_source_changed": false
+}

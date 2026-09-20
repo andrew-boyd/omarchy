@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/broadcom-resume-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "ok - observed policy conflict: migration replaces a customized sleep hook\nok - pre records the device whose unbind write succeeds\nok - observed failure handling: failed post bind exits zero and deletes recovery state\nok - observed retry limit: a second post cannot retry the discarded device\nok - observed pairing limit: a second pre truncates outstanding recorded devices\n"
+    }
+  ]
+}

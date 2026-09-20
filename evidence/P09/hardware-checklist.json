@@ -1,0 +1,9 @@
+[
+  "Resolve the source ownership/cleanup findings before selecting a live candidate. Neither complete source proposal is currently recommended for installation; no host workaround should be replaced from this review.",
+  "On an agreed recoverable test system, record DMI model, exact controller vendor/device/subsystem and PCI class, controller firmware, kernel, sleep mode, NVMe device-to-PCI mapping and whether storage is internal, replaced or externally attached. An Apple drive model string is not an Apple PCI vendor ID.",
+  "Record the original failure and its recovery path on the exact hardware. Compare a proposed controller setting with the captured baseline while keeping other power/workaround settings fixed. Do not infer necessity from discovery or from a failure log ending at suspend entry.",
+  "Capture the existing unit and drop-ins, ownership, enabled state, target address, and deliberate customizations before any approved trial. Missing or unreadable sysfs data must remain an unknown observation, not permission to remove a custom unit.",
+  "Check that only the intended affected storage controller changes and that unrelated GPU/bridge settings remain as captured. Cover multiple-controller and absent-controller situations without applying a first-device assumption to real storage.",
+  "Record repeated short/long suspend and cold-boot behavior, storage availability, errors and required recovery. Distinguish deep from s2idle and successful NVMe recovery from successful whole-system resume.",
+  "For rollback, restore captured units, drop-ins, enablement and prior parameter values through the known recovery route; do not assume restoring every value to one recreates the baseline. Restore migration-marker state deliberately. No physical trial or rollback was performed here."
+]

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11624",
+  "repository": "omacom/omarchy",
+  "number": 11624,
+  "title": "Scope the MacBook NVMe suspend fix to Apple's NVMe controller",
+  "author": "niconistal",
+  "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+  "state": "open",
+  "updated_at": "2026-09-13T04:45:01Z",
+  "body": "`install/hardware/apple/fix-suspend-nvme.sh` disables D3cold on `0000:01:00.0` for every model in its regex, including the 15-inch MacBookPro13,3 and 14,3. On those two models `01:00.0` is the AMD GPU and the NVMe drive is at `02:00.0`. The file exists, so the check passes and the fix lands on the GPU. The drive is never touched.\n\nFrom a MacBookPro14,3 on Omarchy 4.0.3:\n\n```\n01:00.0  [0300] AMD Radeon Pro 560 [1002:67ef]   d3cold_allowed = 0\n02:00.0  [0108] Samsung SM961 NVMe [144d:a804]   d3cold_allowed = 1\n```\n\nThe quirk comes from [Dunedan/mbp-2016-linux](https://github.com/Dunedan/mbp-2016-linux#suspend--hibernation), which scopes it to \"models with Apple's NVMe controller (MacBookPro13,1, MacBookPro13,2, MacBookPro14,1 and MacBookPro14,2)\". The lspci dumps in that repo show those models with Apple's controller `[106b:2003]` at `01:00.0`, and the 13,3 and 14,3 with the GPU there instead.\n\n## Changes\n\n- **Leaf:** drop 13,3 and 14,3 from the model match. Apply the fix only when the device at `01:00.0` reports Apple's vendor ID `0x106b`, instead of just checking that a device exists there. The 12-inch MacBooks and 13-inch models keep the fix.\n- **Unit:** the `ExecStart` path loses its `\\:` escapes, which systemd logs as \"Ignoring unknown escape sequences\" on every boot. The written value is unchanged.\n- **Migration:** existing installs where `01:00.0` is not Apple's controller have the service disabled and removed. The GPU goes back to its default at the next boot.\n- **Test:** `test/shell.d/apple-suspend-nvme-test.sh` covers both the leaf and the migration, for every affected model and both 15-inch ones.\n\n## Testing\n\n- `test/shell.d/apple-suspend-nvme-test.sh` passes.\n- `./test/shell`: the only failures are four suites that also fail on a clean `quattro` checkout here, because there is no `omarchy-pkgs` checkout.\n- Not run on a 13-inch machine. The leaf's behaviour there is unchanged except for the added vendor check.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "original_source_changed": false
+}

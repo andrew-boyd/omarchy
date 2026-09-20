@@ -1,0 +1,92 @@
+diff --git a/bin/omarchy-hw-bcm43xx b/bin/omarchy-hw-bcm43xx
+new file mode 100755
+index 00000000000..8711d3cb086
+--- /dev/null
++++ b/bin/omarchy-hw-bcm43xx
+@@ -0,0 +1,18 @@
++#!/bin/bash
++
++# omarchy:summary=Detect Broadcom BCM4360/BCM4331 Wi-Fi that needs the wl driver.
++# omarchy:hidden=true
++
++pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
++
++shopt -s nullglob
++
++for device in "$pci_devices_path"/*; do
++  [[ -r $device/vendor && -r $device/device ]] || continue
++  [[ $(<"$device/vendor") == "0x14e4" ]] || continue
++  case $(<"$device/device") in
++    0x43a0 | 0x4331) exit 0 ;;
++  esac
++done
++
++exit 1
+diff --git a/install/hardware/fix-bcm43xx.sh b/install/hardware/fix-bcm43xx.sh
+index 6b7e5648f1f..146977cb6d1 100644
+--- a/install/hardware/fix-bcm43xx.sh
++++ b/install/hardware/fix-bcm43xx.sh
+@@ -2,9 +2,7 @@
+ # - BCM4360 (2013–2015 MacBooks)
+ # - BCM4331 (2012, early 2013 MacBooks)
+ 
+-pci_info=$(lspci -nn)
+-
+-if (echo "$pci_info" | grep -q "14e4:43a0" || echo "$pci_info" | grep -q "14e4:4331"); then
++if omarchy-hw-bcm43xx; then
+   echo "BCM4360 / BCM4331 detected"
+   omarchy-pkg-add broadcom-wl-dkms linux-headers
+ fi
+diff --git a/test/shell.d/hw-bcm43xx-test.sh b/test/shell.d/hw-bcm43xx-test.sh
+new file mode 100644
+index 00000000000..096e1c0263a
+--- /dev/null
++++ b/test/shell.d/hw-bcm43xx-test.sh
+@@ -0,0 +1,47 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp=$(mktemp -d)
++trap 'rm -rf "$tmp"' EXIT
++
++write_pci() {
++  rm -rf "$tmp/devices"
++  mkdir -p "$tmp/devices"
++  local index=0 spec slot
++  for spec in "$@"; do
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$tmp/devices/$slot"
++    printf '%s\n' "${spec%%:*}" >"$tmp/devices/$slot/vendor"
++    printf '%s\n' "$(cut -d: -f2 <<<"$spec")" >"$tmp/devices/$slot/device"
++    index=$((index + 1))
++  done
++}
++
++hw() {
++  OMARCHY_PCI_DEVICES_PATH="$tmp/devices" "$ROOT/bin/omarchy-hw-bcm43xx"
++}
++
++write_pci 0x14e4:0x43a0
++hw || fail "BCM4360 is detected"
++pass "BCM4360 is detected from sysfs"
++
++write_pci 0x14e4:0x4331
++hw || fail "BCM4331 is detected"
++pass "BCM4331 is detected from sysfs"
++
++write_pci 0x14e4:0x43ba
++hw && fail "a brcmfmac part is not the wl driver"
++pass "newer Broadcom Wi-Fi is left to brcmfmac"
++
++write_pci
++hw && fail "empty PCI space is not bcm43xx"
++pass "a machine with no PCI devices is not bcm43xx"
++
++grep -Fq 'omarchy-hw-bcm43xx' "$ROOT/install/hardware/fix-bcm43xx.sh" ||
++  fail "Broadcom wl install uses omarchy-hw-bcm43xx"
++! grep -q lspci "$ROOT/install/hardware/fix-bcm43xx.sh" ||
++  fail "Broadcom wl install no longer greps lspci twice"
++pass "Broadcom wl install does not parse a full lspci dump"

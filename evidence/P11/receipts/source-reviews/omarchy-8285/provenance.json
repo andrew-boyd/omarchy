@@ -1,0 +1,38 @@
+{
+  "repository": "omacom/omarchy",
+  "number": 8285,
+  "head_sha": "4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+  "source_ancestor": "93010924047d09f62f702bf8b5c07d0149c11943",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "6de0139ede6b770677e8e6826c4761ada0266add27d2fac6c889f09430bd700b",
+  "files": [
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "b3e9f6d0ca4b32df4c61ee1d0914f4f57adc441a7abb69d67f092b2ec83f1eca",
+      "identical_to_source": false,
+      "candidate_sha256": "d2362c424d71b4005d53b02702ef3f89d7a8e98f38114953c5bd85b8be4a613d",
+      "difference_reason": "Current target preserved exactly plus the source-only inserted lines."
+    },
+    {
+      "path": "install/hardware/apple/fix-cs8409-audio.sh",
+      "source_sha256": "2daca1b6833792bd4c183a899d951d1cd0e3eea13141a695d6426ea2fbdff682",
+      "identical_to_source": true,
+      "candidate_sha256": "2daca1b6833792bd4c183a899d951d1cd0e3eea13141a695d6426ea2fbdff682"
+    },
+    {
+      "path": "install/omarchy-other.packages",
+      "source_sha256": "98b687288afbfa7a2e3283d6077c51feeb39ef57f05021bb73e0edb8a01306cf",
+      "identical_to_source": false,
+      "candidate_sha256": "2a94694086a6aab4765067bb201dfd4755218cbd5186ad4ce1828f9f3368f9be",
+      "difference_reason": "Current target preserved exactly plus the source-only inserted lines."
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "41930fa4bf063f84c5d17db4309cf07c17efc8ca",
+  "reconciled_patch_sha256": "78d982daa2bc7930b3ab633b89bf97c7100a419cad2420404ce650270d0377a2"
+}

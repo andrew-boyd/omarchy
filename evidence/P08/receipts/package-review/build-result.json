@@ -1,0 +1,39 @@
+{
+  "exit_code": 0,
+  "passed": true,
+  "inputs": {
+    "recipe_sha256": "7fba462d8b473f6bd3d0829fc2abd30f7ddbcdc80f79bae7db79bbc121a82e20",
+    "driver_source": {
+      "url": "https://github.com/patjak/facetimehd.git",
+      "tag": "0.7.2",
+      "sha": "54fb8f25fcf76d4d5af682875f044dc0b6fa0b65",
+      "checked_at": "2026-09-20T00:29:27+00:00"
+    },
+    "recipe_source": {
+      "name": "facetimehd-dkms",
+      "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+      "head_sha": "ca34f817216017b9d51e3bde6f7c5af281766a35",
+      "files": [
+        ".SRCINFO",
+        ".gitignore",
+        ".nvchecker.toml",
+        "PKGBUILD"
+      ]
+    },
+    "script_sha256": "340f557fdbfd2bfe1937784ae1eb6c08633bba89e4718283ba0acf56b6ab593c",
+    "kernel": "7.2.3-arch1-3",
+    "header_inputs": {
+      "Makefile": "4b88b396c76d889d03542666fc6ecc6e5a6dd3b052c616daea25d1c628ccebe0",
+      ".config": "6017403a3877866fc30c603dea9587824cfa6b61ea5468b5fdbbd468d12d93ad",
+      "Module.symvers": "188b2385fe61bdda0ee966bdb244a56b4e652d2e3e6684740b3b9d2fc01410ff",
+      "include/generated/utsrelease.h": "4eece18ad309dbf5b27f89a1e4b5a02ccd63080233a86927903971e14db2e360"
+    },
+    "limits": "One available kernel header tree, dependencies skipped for offline package assembly. No firmware retrieval, DKMS registration, target 7.2.5 build, module loading or frame capture."
+  },
+  "artifacts": {
+    "facetimehd-dkms-0.7.2-1-any.pkg.tar.zst": "9354c0f3f6c2fe54c433a5328ff5eeb4aa4949f6d8b186b9ef6e1ab4ccc6279f",
+    "facetimehd.ko": "9bb4a6b993701f3a88c669327ce3151a24236a82705544aeb2efa3b4cd27f434"
+  },
+  "hardware_verified": false,
+  "host_installed": false
+}

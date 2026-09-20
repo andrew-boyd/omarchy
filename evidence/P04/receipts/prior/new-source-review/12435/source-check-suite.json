@@ -1,0 +1,17 @@
+{
+  "tests": [
+    "test/shell.d/resume-monitor-test.sh",
+    "test/shell.d/systemd-test.sh"
+  ],
+  "syntax": [],
+  "file_sha256": {
+    "bin/omarchy-system-resume-monitor": "101ecabdac871fae4ef48f3402d7a057a846db190a0ccb4e3404cdfa7346d9ed",
+    "default/systemd/user/omarchy-resume-focus-monitor.service": "b05440403f321a2d1c3944b9dc5fe96179afd019085a73f04db0970c990fde6d",
+    "install/user/first-run/enable-user-units.sh": "72db14a5bf31f355048ea4df914747ca126853e696f2d935cc5935dd0f9587aa",
+    "shell/plugins/lock/LockView.qml": "6a9aeeb1812c35057ba96c1c9f45b16f2cbafc1307c4861bd95a5ecb6640b7bc",
+    "shell/plugins/lock/Service.qml": "845e4c74604ba3b466b1c8786990d791013a3c54f24eef1dafbd6cb6ea1303aa",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/resume-monitor-test.sh": "80de3aad4293ce02c4c107b10fb972586d6de8803e35b149008e5e9717cf800e",
+    "test/shell.d/systemd-test.sh": "890695c430398cafc2a0b50eaa0e01cbadf51a60f1136adfbe246182e8188c05"
+  }
+}

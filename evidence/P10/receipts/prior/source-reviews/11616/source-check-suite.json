@@ -1,0 +1,13 @@
+{
+  "tests": [
+    "test/shell.d/brcmfmac-nvram-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/all.sh": "c58a43dfc08b01ff230dc8379a67ea73e2d892a2512b3b6a3cea3fc7f726dc92",
+    "install/hardware/apple/brcmfmac43602-pcie.txt": "5f1e2ec400301f02ef75a650ce06cf4ab77ef77a6f4a08259c3503fdf12c7e0d",
+    "install/hardware/apple/fix-brcmfmac-nvram.sh": "95d820c0fd4f56c74176e7d934d113c7336f88206c3ac1555a5f3ded91fd2295",
+    "migrations/1786391101.sh": "daeccfa7077ebdb572325be1ebd616aac5539a4d888f4be852c27f559c0f03dc",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/brcmfmac-nvram-test.sh": "274af6ef9d608228b71042ea30b2d3f583bc3fe7475e4e0fb41e91c9a536775f"
+  }
+}

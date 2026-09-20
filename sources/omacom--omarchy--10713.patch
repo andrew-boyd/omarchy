@@ -1,0 +1,63 @@
+diff --git a/bin/omarchy-system-lid-close b/bin/omarchy-system-lid-close
+index eb3dc097efb..64711dbe5eb 100755
+--- a/bin/omarchy-system-lid-close
++++ b/bin/omarchy-system-lid-close
+@@ -10,10 +10,10 @@
+ # closes gives Quickshell a head start before logind even decides to suspend.
+ # omarchy-system-sleep-lock then usually finds the session already secure.
+ #
+-# A docked lid close does not suspend (HandleLidSwitchDocked defaults to
+-# ignore), so it must not lock either: that is clamshell mode, still in use on
+-# the external display.
+-if omarchy-hw-laptop-closed && ! omarchy-hw-external-monitors; then
++# Keep an active external display usable in clamshell mode. Raw DRM connectors
++# also include devices Hyprland does not use, such as the T2 Mac Touch Bar;
++# those must not prevent locking when the laptop display is closed.
++if omarchy-hw-laptop-closed && ! omarchy-hyprland-monitor-external-active; then
+   omarchy-system-lock >/dev/null 2>&1 || true
+ fi
+ 
+diff --git a/test/shell.d/lid-close-test.sh b/test/shell.d/lid-close-test.sh
+index 746dcfc5381..a622bd07635 100755
+--- a/test/shell.d/lid-close-test.sh
++++ b/test/shell.d/lid-close-test.sh
+@@ -8,8 +8,7 @@ lid_close="$ROOT/bin/omarchy-system-lid-close"
+ tmpdir=$(mktemp -d)
+ trap 'rm -rf "$tmpdir"' EXIT
+ 
+-# closed/docked are the two facts logind uses to decide whether a lid close
+-# suspends, so each scenario pins them and records what the lid handler did.
++# Pin the lid state and whether Hyprland has an active external display.
+ setup_scenario() {
+   scenario_dir="$tmpdir/$1"
+   mock_bin="$scenario_dir/bin"
+@@ -23,7 +22,7 @@ setup_scenario() {
+ #!/bin/bash
+ exit $closed
+ SH
+-  cat >"$mock_bin/omarchy-hw-external-monitors" <<SH
++  cat >"$mock_bin/omarchy-hyprland-monitor-external-active" <<SH
+ #!/bin/bash
+ exit $docked
+ SH
+@@ -91,3 +90,20 @@ run_lid_close
+ [[ ${calls[1]} == "omarchy-hyprland-monitor-clamshell" ]] ||
+   fail "a failing lock still reconciles displays" "calls: ${calls[*]}"
+ pass "a failing lock still reconciles displays"
++
++# A Touch Bar may report a connected DRM connector without appearing in
++# Hyprland's monitor list. Exercise the real active-monitor helper here.
++setup_scenario touch_bar 0 1
++cp "$ROOT/bin/omarchy-hyprland-monitor-external-active" "$mock_bin/omarchy-hyprland-monitor-external-active"
++cat >"$mock_bin/hyprctl" <<'SH'
++#!/bin/bash
++printf '%s\n' '[{"name":"eDP-1","disabled":false}]'
++SH
++cat >"$mock_bin/omarchy-hw-external-monitors" <<'SH'
++#!/bin/bash
++exit 0
++SH
++chmod +x "$mock_bin/hyprctl" "$mock_bin/omarchy-hw-external-monitors"
++run_lid_close
++[[ ${calls[0]} == "omarchy-system-lock" ]] || fail "a Touch Bar does not suppress locking"
++pass "a connected DRM device outside Hyprland does not suppress locking"

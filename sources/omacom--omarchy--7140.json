@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7140",
+  "repository": "omacom/omarchy",
+  "number": 7140,
+  "title": "Install CS8409 speaker driver on 2016-2017 MacBook Pros",
+  "author": "shawnyeager",
+  "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+  "state": "open",
+  "updated_at": "2026-09-08T16:50:44Z",
+  "body": "## Why\n\n2016\u20132017 MacBook Pros (`MacBookPro13,1`\u2013`14,3`, including the two-port 13\\\" models with no Touch Bar) use Cirrus CS8409 HDA plus external speaker amps. In-tree `snd_hda_codec_cs8409` leaves those amps unprogrammed. The sink shows up unmuted; speakers stay silent.\n\nThe manual currently lists sound as not functioning. This replaces that with an installer hook. Verified end-to-end on a MacBookPro14,3: patched module loads after reboot, dmesg takes the Apple path, speakers play.\n\n**Depends on the package:** https://github.com/omacom-io/omarchy-pkgs/pull/155. That adds `snd-hda-macbookpro-dkms` to omarchy-pkgs. The hook cannot succeed until that package is in the repo.\n\n## What\n\n- `omarchy-hw-apple-cs8409` matches `MacBookPro13,[123]|MacBookPro14,[123]`. T2 and later are excluded.\n- `install/hardware/apple/fix-cs8409-audio.sh` installs `linux-headers` and `snd-hda-macbookpro-dkms`.\n- Migration `1786889011` does the same for existing installs.\n- Manual: speakers/headphones work; internal mic is still quiet/incomplete (upstream).\n\nNo udev, no modules-load. The HDA stack autoloads; DKMS puts the patched `snd-hda-codec-cs8409` in `updates/` so it wins after reboot.\n\n## Test plan\n\n- [x] `./test/cli`\n- [x] `test/shell.d/cs8409-audio-test.sh`\n- [x] MacBookPro14,3: reboot after the driver is installed \u2192 speakers play",
+  "original_source_changed": false
+}

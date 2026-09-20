@@ -1,0 +1,368 @@
+diff --git a/bin/omarchy-hw-bcm43xx b/bin/omarchy-hw-bcm43xx
+new file mode 100755
+index 00000000000..8711d3cb086
+--- /dev/null
++++ b/bin/omarchy-hw-bcm43xx
+@@ -0,0 +1,18 @@
++#!/bin/bash
++
++# omarchy:summary=Detect Broadcom BCM4360/BCM4331 Wi-Fi that needs the wl driver.
++# omarchy:hidden=true
++
++pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
++
++shopt -s nullglob
++
++for device in "$pci_devices_path"/*; do
++  [[ -r $device/vendor && -r $device/device ]] || continue
++  [[ $(<"$device/vendor") == "0x14e4" ]] || continue
++  case $(<"$device/device") in
++    0x43a0 | 0x4331) exit 0 ;;
++  esac
++done
++
++exit 1
+diff --git a/bin/omarchy-hw-t2 b/bin/omarchy-hw-t2
+new file mode 100755
+index 00000000000..50034968204
+--- /dev/null
++++ b/bin/omarchy-hw-t2
+@@ -0,0 +1,22 @@
++#!/bin/bash
++
++# omarchy:summary=Detect whether the computer has an Apple T2 security chip.
++# omarchy:hidden=true
++
++# Vendor 106b (Apple), devices 1801/1802. Read cached sysfs IDs rather than
++# lspci, which reads PCI config space. The chatty lspci | grep -q form also
++# SIGPIPE'd on a long device list and looked like "no T2" under pipefail.
++
++pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
++
++shopt -s nullglob
++
++for device in "$pci_devices_path"/*; do
++  [[ -r $device/vendor && -r $device/device ]] || continue
++  [[ $(<"$device/vendor") == "0x106b" ]] || continue
++  case $(<"$device/device") in
++    0x1801 | 0x1802) exit 0 ;;
++  esac
++done
++
++exit 1
+diff --git a/install/hardware/apple/fix-t2.sh b/install/hardware/apple/fix-t2.sh
+index 948828d4d41..fb7be59b0df 100644
+--- a/install/hardware/apple/fix-t2.sh
++++ b/install/hardware/apple/fix-t2.sh
+@@ -1,6 +1,5 @@
+-# Detect T2 MacBook models using PCI IDs
+-# Vendor: 106b (Apple), Device IDs: 1801 or 1802 (T2 Security Chip)
+-if lspci -nn | grep "106b:180[12]" >/dev/null; then
++# Detect T2 MacBook models using the T2 PCI IDs (Apple 106b:1801/1802).
++if omarchy-hw-t2; then
+   echo "Detected MacBook with T2 chip. Installing support items..."
+ 
+   omarchy-pkg-add \
+diff --git a/install/hardware/fix-bcm43xx.sh b/install/hardware/fix-bcm43xx.sh
+index 0f9cf474a5b..8f31e8ad736 100644
+--- a/install/hardware/fix-bcm43xx.sh
++++ b/install/hardware/fix-bcm43xx.sh
+@@ -2,9 +2,7 @@
+ # - BCM4360 (2013–2015 MacBooks)
+ # - BCM4331 (2012, early 2013 MacBooks)
+ 
+-pci_info=$(lspci -nn)
+-
+-if (echo "$pci_info" | grep -q "14e4:43a0" || echo "$pci_info" | grep -q "14e4:4331"); then
++if omarchy-hw-bcm43xx; then
+   echo "BCM4360 / BCM4331 detected"
+   omarchy-pkg-add broadcom-wl-dkms
+ fi
+diff --git a/install/hardware/nvidia.sh b/install/hardware/nvidia.sh
+index 1c36787b770..4c39bd8cf8c 100644
+--- a/install/hardware/nvidia.sh
++++ b/install/hardware/nvidia.sh
+@@ -1,4 +1,6 @@
+-if lspci | grep -qi 'nvidia'; then
++# omarchy-hw-nvidia reads sysfs IDs. lspci would walk PCI config space and
++# wake a runtime-suspended GPU, and Hyprland already uses the same helper.
++if omarchy-hw-nvidia; then
+   if omarchy-hw-nvidia-gsp; then
+     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)
+   elif omarchy-hw-nvidia-without-gsp; then
+@@ -17,13 +19,13 @@ if lspci | grep -qi 'nvidia'; then
+ 
+   # Configure modprobe for early KMS
+   mkdir -p /etc/modprobe.d
+-  cat > /etc/modprobe.d/nvidia.conf <<'EOF'
++  cat > /etc/modprobe.d/nvidia.conf <<'NVEOF'
+ options nvidia_drm modeset=1
+-EOF
++NVEOF
+ 
+   # Configure mkinitcpio for early loading
+   mkdir -p /etc/mkinitcpio.conf.d
+-  cat > /etc/mkinitcpio.conf.d/nvidia.conf <<'EOF'
++  cat > /etc/mkinitcpio.conf.d/nvidia.conf <<'NVEOF'
+ MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)
+-EOF
++NVEOF
+ fi
+diff --git a/install/hardware/pacman.sh b/install/hardware/pacman.sh
+index 7533d3f378c..0812dea758a 100644
+--- a/install/hardware/pacman.sh
++++ b/install/hardware/pacman.sh
+@@ -1,6 +1,6 @@
+ # Hardware-specific pacman repository extensions that must survive the final
+ # pacman.conf restore.
+-if lspci -nn | grep "106b:180[12]" >/dev/null; then
++if omarchy-hw-t2; then
+   if ! grep -q '^\[arch-mact2\]' /etc/pacman.conf; then
+     cat >> /etc/pacman.conf <<'EOF'
+ 
+diff --git a/install/hardware/vulkan.sh b/install/hardware/vulkan.sh
+index a2447d46ffa..245cd56cf57 100644
+--- a/install/hardware/vulkan.sh
++++ b/install/hardware/vulkan.sh
+@@ -1,18 +1,31 @@
+ # Install Vulkan drivers matching detected GPU hardware
+ # (NVIDIA Vulkan is handled by nvidia.sh via nvidia-utils)
++#
++# Walk sysfs the way omarchy-hw-nvidia does. lspci reads PCI config space and
++# resumes runtime-suspended GPUs; three greps used to do that once per vendor.
+ 
+-declare -A VULKAN_DRIVERS=(
+-  [Intel]=vulkan-intel
+-  [AMD]=vulkan-radeon
+-  [Apple]=vulkan-asahi
+-)
++pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
+ 
+ PACKAGES=()
+ 
+-for vendor in "${!VULKAN_DRIVERS[@]}"; do
+-  if lspci | grep -iE "(VGA|Display).*$vendor" > /dev/null; then
+-    PACKAGES+=("${VULKAN_DRIVERS[$vendor]}")
+-  fi
++add_vulkan_pkg() {
++  local pkg=$1
++  local existing
++  for existing in "${PACKAGES[@]+"${PACKAGES[@]}"}"; do
++    [[ $existing == "$pkg" ]] && return
++  done
++  PACKAGES+=("$pkg")
++}
++
++shopt -s nullglob
++for device in "$pci_devices_path"/*; do
++  [[ -r $device/vendor && -r $device/class ]] || continue
++  [[ $(<"$device/class") == 0x03* ]] || continue
++  case $(<"$device/vendor") in
++    0x8086) add_vulkan_pkg vulkan-intel ;;
++    0x1002) add_vulkan_pkg vulkan-radeon ;;
++    0x106b) add_vulkan_pkg vulkan-asahi ;;
++  esac
+ done
+ 
+ if (( ${#PACKAGES[@]} > 0 )); then
+diff --git a/test/shell.d/hw-bcm43xx-test.sh b/test/shell.d/hw-bcm43xx-test.sh
+new file mode 100644
+index 00000000000..096e1c0263a
+--- /dev/null
++++ b/test/shell.d/hw-bcm43xx-test.sh
+@@ -0,0 +1,47 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp=$(mktemp -d)
++trap 'rm -rf "$tmp"' EXIT
++
++write_pci() {
++  rm -rf "$tmp/devices"
++  mkdir -p "$tmp/devices"
++  local index=0 spec slot
++  for spec in "$@"; do
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$tmp/devices/$slot"
++    printf '%s\n' "${spec%%:*}" >"$tmp/devices/$slot/vendor"
++    printf '%s\n' "$(cut -d: -f2 <<<"$spec")" >"$tmp/devices/$slot/device"
++    index=$((index + 1))
++  done
++}
++
++hw() {
++  OMARCHY_PCI_DEVICES_PATH="$tmp/devices" "$ROOT/bin/omarchy-hw-bcm43xx"
++}
++
++write_pci 0x14e4:0x43a0
++hw || fail "BCM4360 is detected"
++pass "BCM4360 is detected from sysfs"
++
++write_pci 0x14e4:0x4331
++hw || fail "BCM4331 is detected"
++pass "BCM4331 is detected from sysfs"
++
++write_pci 0x14e4:0x43ba
++hw && fail "a brcmfmac part is not the wl driver"
++pass "newer Broadcom Wi-Fi is left to brcmfmac"
++
++write_pci
++hw && fail "empty PCI space is not bcm43xx"
++pass "a machine with no PCI devices is not bcm43xx"
++
++grep -Fq 'omarchy-hw-bcm43xx' "$ROOT/install/hardware/fix-bcm43xx.sh" ||
++  fail "Broadcom wl install uses omarchy-hw-bcm43xx"
++! grep -q lspci "$ROOT/install/hardware/fix-bcm43xx.sh" ||
++  fail "Broadcom wl install no longer greps lspci twice"
++pass "Broadcom wl install does not parse a full lspci dump"
+diff --git a/test/shell.d/hw-t2-test.sh b/test/shell.d/hw-t2-test.sh
+new file mode 100644
+index 00000000000..232ae9143ce
+--- /dev/null
++++ b/test/shell.d/hw-t2-test.sh
+@@ -0,0 +1,52 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp=$(mktemp -d)
++trap 'rm -rf "$tmp"' EXIT
++
++write_pci() {
++  rm -rf "$tmp/devices"
++  mkdir -p "$tmp/devices"
++  local index=0 spec slot
++  for spec in "$@"; do
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$tmp/devices/$slot"
++    printf '%s\n' "${spec%%:*}" >"$tmp/devices/$slot/vendor"
++    printf '%s\n' "$(cut -d: -f2 <<<"$spec")" >"$tmp/devices/$slot/device"
++    printf '%s\n' "${spec##*:}" >"$tmp/devices/$slot/class"
++    index=$((index + 1))
++  done
++}
++
++hw_t2() {
++  OMARCHY_PCI_DEVICES_PATH="$tmp/devices" "$ROOT/bin/omarchy-hw-t2"
++}
++
++write_pci 0x106b:0x1801:0x068000
++hw_t2 || fail "T2 chip 1801 is detected"
++pass "Apple T2 device 1801 is detected from sysfs"
++
++write_pci 0x106b:0x1802:0x068000
++hw_t2 || fail "T2 chip 1802 is detected"
++pass "Apple T2 device 1802 is detected from sysfs"
++
++write_pci 0x106b:0x1803:0x068000
++hw_t2 && fail "a different Apple PCI id is not a T2 chip"
++pass "other Apple PCI functions are not treated as T2"
++
++write_pci
++hw_t2 && fail "empty PCI space is not T2"
++pass "a machine with no PCI devices is not T2"
++
++grep -Fq 'omarchy-hw-t2' "$ROOT/install/hardware/apple/fix-t2.sh" ||
++  fail "T2 package install uses omarchy-hw-t2"
++grep -Fq 'omarchy-hw-t2' "$ROOT/install/hardware/pacman.sh" ||
++  fail "the arch-mact2 repo drop-in uses omarchy-hw-t2"
++! grep -q 'lspci' "$ROOT/install/hardware/apple/fix-t2.sh" ||
++  fail "T2 package install no longer greps lspci"
++! grep -q 'lspci' "$ROOT/install/hardware/pacman.sh" ||
++  fail "the arch-mact2 repo drop-in no longer greps lspci"
++pass "T2 install paths share one sysfs helper"
+diff --git a/test/shell.d/nvidia-hw-detect-test.sh b/test/shell.d/nvidia-hw-detect-test.sh
+new file mode 100644
+index 00000000000..ca000097f28
+--- /dev/null
++++ b/test/shell.d/nvidia-hw-detect-test.sh
+@@ -0,0 +1,19 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++nvidia_sh="$ROOT/install/hardware/nvidia.sh"
++
++grep -Fq 'omarchy-hw-nvidia' "$nvidia_sh" ||
++  fail "NVIDIA install uses the sysfs helper already used at session start"
++! grep -Eq "lspci.*nvidia" "$nvidia_sh" ||
++  fail "NVIDIA install does not grep lspci for the GPU"
++
++# The GSP / 580xx split already goes through the helpers; keep that pairing.
++grep -Fq 'omarchy-hw-nvidia-gsp' "$nvidia_sh" ||
++  fail "NVIDIA install still chooses the GSP driver via sysfs"
++grep -Fq 'omarchy-hw-nvidia-without-gsp' "$nvidia_sh" ||
++  fail "NVIDIA install still chooses the 580xx driver via sysfs"
++pass "NVIDIA driver install detects the GPU the same way Hyprland does"
+diff --git a/test/shell.d/vulkan-sysfs-test.sh b/test/shell.d/vulkan-sysfs-test.sh
+new file mode 100644
+index 00000000000..2152e66a78f
+--- /dev/null
++++ b/test/shell.d/vulkan-sysfs-test.sh
+@@ -0,0 +1,59 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp=$(mktemp -d)
++trap 'rm -rf "$tmp"' EXIT
++
++write_pci() {
++  rm -rf "$tmp/devices"
++  mkdir -p "$tmp/devices"
++  local index=0 spec slot
++  for spec in "$@"; do
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$tmp/devices/$slot"
++    printf '%s\n' "${spec%%:*}" >"$tmp/devices/$slot/vendor"
++    printf '%s\n' "${spec##*:}" >"$tmp/devices/$slot/class"
++    index=$((index + 1))
++  done
++}
++
++stub_bin="$tmp/bin"
++mkdir -p "$stub_bin"
++cat >"$stub_bin/omarchy-pkg-add" <<'SH'
++#!/bin/bash
++printf '%s\n' "$@" >>"$OMARCHY_TEST_VULKAN_PKGS"
++SH
++chmod +x "$stub_bin/omarchy-pkg-add"
++
++run_vulkan() {
++  : >"$tmp/pkgs"
++  OMARCHY_PCI_DEVICES_PATH="$tmp/devices" \
++    OMARCHY_TEST_VULKAN_PKGS="$tmp/pkgs" \
++    PATH="$stub_bin:$PATH" \
++    bash "$ROOT/install/hardware/vulkan.sh"
++}
++
++write_pci 0x8086:0x030000
++run_vulkan
++grep -Fxq 'vulkan-intel' "$tmp/pkgs" || fail "Intel display gets vulkan-intel" "$(cat "$tmp/pkgs")"
++pass "Intel display installs vulkan-intel from sysfs"
++
++write_pci 0x1002:0x030000 0x10de:0x030200
++run_vulkan
++grep -Fxq 'vulkan-radeon' "$tmp/pkgs" || fail "AMD iGPU gets vulkan-radeon on a hybrid machine"
++! grep -q nvidia "$tmp/pkgs" || fail "NVIDIA Vulkan stays with nvidia.sh"
++pass "hybrid AMD+NVIDIA only adds vulkan-radeon here"
++
++write_pci 0x8086:0x040300
++run_vulkan
++[[ ! -s $tmp/pkgs ]] || fail "an Intel audio function is not a GPU" "$(cat "$tmp/pkgs")"
++pass "non-display PCI functions do not pull Vulkan drivers"
++
++grep -Fq 'OMARCHY_PCI_DEVICES_PATH' "$ROOT/install/hardware/vulkan.sh" ||
++  fail "Vulkan install reads the same sysfs override as omarchy-hw-nvidia"
++! grep -E '^[^#]*lspci' "$ROOT/install/hardware/vulkan.sh" ||
++  fail "Vulkan install no longer shells out to lspci"
++pass "Vulkan install does not wake GPUs via lspci"

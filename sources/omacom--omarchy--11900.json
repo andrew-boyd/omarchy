@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11900",
+  "repository": "omacom/omarchy",
+  "number": 11900,
+  "title": "Treat kernel headers as part of the base system",
+  "author": "ryanrhughes",
+  "head_sha": "24417bf191e09fc4d672c74c34e184449e92aeda",
+  "state": "merged",
+  "updated_at": "2026-09-15T05:33:56Z",
+  "body": "Kernel headers are part of the base system: the ISO installs matching headers for every selected kernel before hardware setup. Remove kernel/header selection from the NVIDIA, Xbox, Broadcom, Tuxedo, YT6801, and Cam Link installers; DKMS consumers simply install their drivers. MacBook SPI and IPU7 already follow that model.\n\nA small migration installs missing headers for existing linux-omarchy and linux-t2 systems, including systems with both kernels installed. The acceptance test checks the running kernel and its matching header release. Remove the stock kernel/header entries from the runtime's ISO cache manifest and document the base-install guarantee.\n\nValidation: migration fixtures pass for both kernel families, multiple kernels, idempotence, unrelated kernels, and package-install failure. Changed shell files pass bash -n. A fresh ISO built with the simplified 4.0.4 backport (8f3ab025) passed installation, reboot, and the full KVM acceptance suite. linux-omarchy and linux-omarchy-headers are both 7.2.5-3; stock linux/linux-headers are absent. The guest migration and NVIDIA script hashes match the tested source, and the removed header selector is absent.\n\nCompanion changes: release backport #11901, ISO omacom/omarchy-iso#184, and DKMS dependency cleanup omacom/omarchy-pkgs#454. Publish the updated runtime and packages before building the next release ISO.\n",
+  "original_source_changed": false
+}

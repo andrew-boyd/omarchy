@@ -1,0 +1,2 @@
+ok - network QR helper escapes WPA credentials through stdin
+ok - network QR helper keeps the bare matrix without --meta

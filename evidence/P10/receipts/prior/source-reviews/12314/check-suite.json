@@ -1,0 +1,14 @@
+{
+  "tests": [
+    "test/shell.d/brcmfmac-suspend-test.sh"
+  ],
+  "file_sha256": {
+    "default/systemd/system-sleep/rebind-brcmfmac": "0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1",
+    "docs/file-layout.md": "b22480ed05d1904c552431490c28c84ed5afa3bb756e4536d8418139ec05910f",
+    "install/hardware/all.sh": "076e6ea152c84d980d6a174ab5ace18d671000c096cdb038582f89392b892011",
+    "install/hardware/apple/fix-brcmfmac-suspend.sh": "3bf4b6bc0e73850b97e2298dd50123ade08984369186e3d347aca6aaab4c67ce",
+    "migrations/1789668939.sh": "31784502362914ea232d7fad536dc95cd607927b2c9786e3071c30acccee835e",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/brcmfmac-suspend-test.sh": "6084036dd2d290e1ae4a857d6ad19e2e3388d658a5aa86822656512bf614aba5"
+  }
+}

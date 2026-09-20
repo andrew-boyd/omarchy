@@ -1,0 +1,206 @@
+{
+  "checked_at": "2026-09-20T00:26:25+00:00",
+  "package_repo_sha": "49c44db179b37fc188c698eb90d5e705947d2def",
+  "complete_tree_paths": 1002,
+  "camera_recipe_paths": [],
+  "receipts": [
+    {
+      "url": "https://pkgs.omarchy.org/stable/x86_64/omarchy.db",
+      "checked_at": "2026-09-20T00:26:24+00:00",
+      "file": "stable.db",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://pkgs.omarchy.org/rc/x86_64/omarchy.db",
+      "checked_at": "2026-09-20T00:26:24+00:00",
+      "file": "rc.db",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://pkgs.omarchy.org/edge/x86_64/omarchy.db",
+      "checked_at": "2026-09-20T00:26:24+00:00",
+      "file": "edge.db",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://aur.archlinux.org/rpc/v5/info?arg%5B%5D=facetimehd-firmware&arg%5B%5D=facetimehd-data&arg%5B%5D=facetimehd-dkms&arg%5B%5D=facetimehd-dkms-git",
+      "checked_at": "2026-09-20T00:26:24+00:00",
+      "file": "aur-info.json",
+      "status": 200,
+      "final_url": "https://aur.archlinux.org/rpc/v5/info?arg%5B%5D=facetimehd-firmware&arg%5B%5D=facetimehd-data&arg%5B%5D=facetimehd-dkms&arg%5B%5D=facetimehd-dkms-git",
+      "last_modified": null,
+      "sha256": "a1140556e449be34145c602e6b35a3278cda358459e9cbbd9d149379c3c8e22d",
+      "results": [
+        {
+          "CoMaintainers": [
+            "xiota"
+          ],
+          "Conflicts": [
+            "bcwc-pcie-firmware"
+          ],
+          "Description": "Firmware for the FacetimeHD (Broadcom 1570) PCIe webcam",
+          "FirstSubmitted": 1495655482,
+          "ID": 1750220,
+          "Keywords": [
+            "driver",
+            "facetime",
+            "macbook",
+            "webcam"
+          ],
+          "LastModified": 1749484884,
+          "License": [
+            "LicenseRef-Apple"
+          ],
+          "Maintainer": "htv04",
+          "MakeDepends": [
+            "cpio",
+            "xz"
+          ],
+          "Name": "facetimehd-firmware",
+          "NumVotes": 24,
+          "OutOfDate": null,
+          "PackageBase": "facetimehd-firmware",
+          "PackageBaseID": 122836,
+          "Popularity": 0,
+          "Provides": [
+            "bcwc-pcie-firmware"
+          ],
+          "Submitter": "whynothugo",
+          "URL": null,
+          "URLPath": "/cgit/aur.git/snapshot/facetimehd-firmware.tar.gz",
+          "Version": "1:1.43_5-2"
+        },
+        {
+          "CoMaintainers": [
+            "xiota"
+          ],
+          "Description": "Sensor calibration data for the FacetimeHD (Broadcom 1570) PCIe webcam",
+          "FirstSubmitted": 1720404717,
+          "ID": 1705331,
+          "Keywords": [
+            "driver",
+            "facetime",
+            "macbook",
+            "webcam"
+          ],
+          "LastModified": 1744853481,
+          "License": [
+            "LicenseRef-Apple"
+          ],
+          "Maintainer": "htv04",
+          "MakeDepends": [
+            "7zip"
+          ],
+          "Name": "facetimehd-data",
+          "NumVotes": 0,
+          "OutOfDate": null,
+          "PackageBase": "facetimehd-data",
+          "PackageBaseID": 207869,
+          "Popularity": 0,
+          "Submitter": "htv04",
+          "URL": "https://github.com/patjak/facetimehd",
+          "URLPath": "/cgit/aur.git/snapshot/facetimehd-data.tar.gz",
+          "Version": "5.1.5769-2"
+        },
+        {
+          "CoMaintainers": [
+            "xiota"
+          ],
+          "Conflicts": [
+            "bcwc-pcie",
+            "bcwc-pcie-dkms"
+          ],
+          "Depends": [
+            "facetimehd-firmware",
+            "dkms"
+          ],
+          "Description": "Reverse engineered Linux driver for the FacetimeHD (Broadcom 1570) PCIe webcam",
+          "FirstSubmitted": 1720405780,
+          "ID": 2246215,
+          "Keywords": [
+            "driver",
+            "facetime",
+            "macbook",
+            "webcam"
+          ],
+          "LastModified": 1789693021,
+          "License": [
+            "GPL-2.0-only"
+          ],
+          "Maintainer": "htv04",
+          "MakeDepends": [
+            "git"
+          ],
+          "Name": "facetimehd-dkms",
+          "NumVotes": 0,
+          "OptDepends": [
+            "facetimehd-data"
+          ],
+          "OutOfDate": null,
+          "PackageBase": "facetimehd-dkms",
+          "PackageBaseID": 207871,
+          "Popularity": 0,
+          "Provides": [
+            "bcwc-pcie",
+            "bcwc-pcie-dkms"
+          ],
+          "Submitter": "htv04",
+          "URL": "https://github.com/patjak/facetimehd",
+          "URLPath": "/cgit/aur.git/snapshot/facetimehd-dkms.tar.gz",
+          "Version": "0.7.2-1"
+        },
+        {
+          "CoMaintainers": [
+            "xiota"
+          ],
+          "Conflicts": [
+            "facetimehd-dkms",
+            "bcwc-pcie",
+            "bcwc-pcie-dkms"
+          ],
+          "Depends": [
+            "facetimehd-firmware",
+            "dkms"
+          ],
+          "Description": "Reverse engineered Linux driver for the FacetimeHD (Broadcom 1570) PCIe webcam",
+          "FirstSubmitted": 1720405065,
+          "ID": 2068302,
+          "Keywords": [
+            "driver",
+            "facetime",
+            "macbook",
+            "webcam"
+          ],
+          "LastModified": 1778172300,
+          "License": [
+            "GPL-2.0-only"
+          ],
+          "Maintainer": "htv04",
+          "MakeDepends": [
+            "git"
+          ],
+          "Name": "facetimehd-dkms-git",
+          "NumVotes": 32,
+          "OptDepends": [
+            "facetimehd-data"
+          ],
+          "OutOfDate": null,
+          "PackageBase": "facetimehd-dkms-git",
+          "PackageBaseID": 207870,
+          "Popularity": 0,
+          "Provides": [
+            "facetimehd-dkms",
+            "bcwc-pcie",
+            "bcwc-pcie-dkms"
+          ],
+          "Submitter": "htv04",
+          "URL": "https://github.com/patjak/facetimehd",
+          "URLPath": "/cgit/aur.git/snapshot/facetimehd-dkms-git.tar.gz",
+          "Version": "0.7.0.1.r0.g805d865-2"
+        }
+      ],
+      "missing_names": []
+    }
+  ],
+  "qualification": "Read-only published metadata. This establishes availability at the recorded endpoints and time, not package build compatibility, offline ISO inclusion, firmware retrieval or real frame capture."
+}

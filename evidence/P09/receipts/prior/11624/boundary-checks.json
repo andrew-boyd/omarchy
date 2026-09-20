@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/nvme-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 8,
+      "output": "ok - supported model and Apple vendor create the fixed-address service\nok - observed detection limit: vendor alone accepts a non-NVMe class without a power attribute\nok - observed ownership conflict: matching leaf replaces a deliberate custom unit\nok - observed cleanup conflict: missing-vendor removes custom unit without model/content proof\nok - observed cleanup conflict: empty-vendor removes custom unit without model/content proof\nok - observed cleanup conflict: unreadable-vendor removes custom unit without model/content proof\nok - observed cleanup conflict: other-vendor removes custom unit without model/content proof\nok - migration retains a custom unit when the fixed-address vendor is Apple\n"
+    }
+  ]
+}

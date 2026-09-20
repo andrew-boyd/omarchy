@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12314",
+  "repository": "omacom/omarchy",
+  "number": 12314,
+  "title": "apple: rebind brcmfmac across suspend",
+  "author": "teomurgi",
+  "head_sha": "84e001d85936f8f15b5a65bd41f90e4f8ca29984",
+  "state": "open",
+  "updated_at": "2026-09-20T12:13:22Z",
+  "body": "## Problem\n\nOn Macs whose Wi-Fi is driven by `brcmfmac` (BCM4350 and relatives), a long suspend wedges the Broadcom firmware. After wake the kernel logs `brcmf_msgbuf_query_dcmd: Timeout on response for query command` for every request, NetworkManager sees `do-change-link: failure 5 (Input/output error)`, and the interface never recovers \u2014 only a reboot brings Wi-Fi back. Short suspends (seconds) resume fine; the failure shows up after hours asleep.\n\nObserved on a MacBook10,1 (BCM4350, `14e4:43a3`): suspended 16:53, resumed 19:55, firmware dead from the first msgbuf command after wake.\n\n## Fix\n\nA `systemd/system-sleep` hook unbinds the Wi-Fi PCI device from `brcmfmac` before sleep and rebinds it after wake, forcing a clean firmware reload. NetworkManager then sees a fresh interface and reconnects on its own (~seconds after wake). Devices unbound at `pre` are recorded under `/run` and only those are rebound at `post`; a `post` with no matching `pre` is a no-op.\n\n## Gating\n\nMirrors `fix-brcmfmac-supplicant.sh`: T2 Macs via the T2 PCI ID, older Macs via the `brcmfmac` PCI IDs from `brcm_hw_ids.h`. Hardware brcmfmac doesn't drive is left alone.\n\n## Rollout\n\n- New installs: `install/hardware/apple/fix-brcmfmac-suspend.sh` runs from `install/hardware/all.sh`.\n- Existing installs: migration installs the hook. No reboot needed \u2014 systemd-sleep runs every executable in `system-sleep` on the next suspend. Idempotent: an identical hook is left untouched, a locally modified one is refreshed.\n\n## Tests\n\n`test/shell.d/brcmfmac-suspend-test.sh` (13 assertions): hardware gating for the leaf and migration, idempotency, refresh of a modified hook, and the hook's own pre/post/no-op behavior against a stub sysfs. `brcmfmac-supplicant-test.sh` and `system-sleep-ownership-migration-test.sh` still pass.",
+  "original_source_changed": false
+}

@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/macbook12-audio-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 14,
+      "output": "ok - the audio fix script exists\nok - script gates on 12-inch MacBook models\nok - script references the macbook12-audio driver\nok - script uses DKMS for auto-rebuild on kernel updates\nok - script installs the driver via its DKMS installer\nok - script uses omarchy-pkg-add for build prerequisites\nok - script installs the WirePlumber soft-mixer rule\nok - script forces software volume mixing\nok - script un-mutes the EFI startup chime\nok - script clears the chime mute bit (0x80)\nok - script pins suspend to the freeze sleep state\nok - script empties MemorySleepMode to force the /sys/power/state freeze path\nok - script installs a systemd sleep.conf.d drop-in\nok - the audio fix runs during hardware setup\nall tests passed\n"
+    }
+  ]
+}

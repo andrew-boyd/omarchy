@@ -1,0 +1,18 @@
+{
+  "tests": [
+    "test/shell.d/cs4208-audio-test.sh"
+  ],
+  "file_sha256": {
+    "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+    "install/hardware/all.sh": "5abe1d99dc25bbd2cc0a629282da2c0be38ded8d6a3b939a7d8c63a1ca52ddec",
+    "install/hardware/apple/fix-cs4208-audio.sh": "1de8949038dbec5782c3ecd18deecc2f420892978c6857c16cdcbae0c0e26d62",
+    "install/hardware/apple/omarchy-cs4208-audio.service": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+    "install/omarchy-other.packages": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc",
+    "install/user/all.sh": "f0bdc0638f09c3f87ad3ade6464da97fddba411d1df1c8cc274327409318961c",
+    "install/user/hardware/apple/fix-cs4208-audio.sh": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4",
+    "manual/44-mac-support.md": "f2943a333efb31ae3440459fa6e5992750810a59e7a0f05a323c7330a78958a2",
+    "migrations/1789869577.sh": "7f8b53ff488bc390f813a791440c57a4e01d9ccf59662cca392f37d0395397fa",
+    "test/shell.d/cs4208-audio-test.sh": "a7964169e7df3ca1183c124559c11188f0aabe220f30a938fdbe4d3e001b1d5c",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

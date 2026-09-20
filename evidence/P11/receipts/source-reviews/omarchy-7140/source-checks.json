@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/cs8409-audio-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 16,
+      "output": "ok - MacBookPro14,3 has CS8409 audio\nok - MacBookPro14,2 has CS8409 audio\nok - MacBookPro14,1 has CS8409 audio\nok - MacBookPro13,3 has CS8409 audio\nok - MacBookPro13,2 has CS8409 audio\nok - MacBookPro13,1 has CS8409 audio\nok - MacBookPro15,1 is T2, not CS8409\nok - MacBook8,1 is SPI-only\nok - CS8409 install hook is wired\nok - install hook installs snd-hda-macbookpro-dkms\nok - Mac support chapter documents CS8409 speakers\nok - migration installs the driver on CS8409 hardware only\nDetected MacBook with Cirrus CS8409 audio\nok - install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)\nok - install hook skips T2 hardware\nok - migration installs the driver on MacBookPro14,3\nok - migration skips non-CS8409 hardware\n"
+    }
+  ]
+}

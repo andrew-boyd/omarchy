@@ -1,0 +1,46 @@
+{
+  "number": 7487,
+  "head_sha": "eb8c83e8b5f7931e883adcada3f8eab38f650a93",
+  "source_ancestor": "f32ebbdb730c4e8fe11e4046cef4267e466264ea",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "e0785880d57babc7a1c50e962740803a0f8c247f4d3e439e2aaf04a5c18c8182",
+  "files": [
+    {
+      "path": "default/firmware/apple/brcmfmac43602-pcie.txt",
+      "source_sha256": "9111375d9552d096cd05ca2ee705e7866882d3bb81372df33b40813bd3a47117",
+      "identical_to_source": true,
+      "candidate_sha256": "9111375d9552d096cd05ca2ee705e7866882d3bb81372df33b40813bd3a47117"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "0a23cbfa5fe0c9bb9f83904b3b5f8fd0ee2084d5edf30eae19be09de9ef20449",
+      "identical_to_source": false,
+      "candidate_sha256": "c58a43dfc08b01ff230dc8379a67ea73e2d892a2512b3b6a3cea3fc7f726dc92"
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-nvram.sh",
+      "source_sha256": "6f4303812112d7c88704ecac6eace9adf9f9b8140a2fe9ebc44cac001598116e",
+      "identical_to_source": true,
+      "candidate_sha256": "6f4303812112d7c88704ecac6eace9adf9f9b8140a2fe9ebc44cac001598116e"
+    },
+    {
+      "path": "migrations/1786961462.sh",
+      "source_sha256": "4e1bb433f096d7d5ab47a329eb63804123c797845434359376b4f8dc1799970c",
+      "identical_to_source": true,
+      "candidate_sha256": "4e1bb433f096d7d5ab47a329eb63804123c797845434359376b4f8dc1799970c"
+    },
+    {
+      "path": "test/shell.d/brcmfmac-nvram-test.sh",
+      "source_sha256": "ae9ed880d4e0926eacc8a87f3558c46c105f0e8e6b111ae476ca7eeef08194d8",
+      "identical_to_source": true,
+      "candidate_sha256": "ae9ed880d4e0926eacc8a87f3558c46c105f0e8e6b111ae476ca7eeef08194d8"
+    }
+  ],
+  "applied": true,
+  "apply_output": "/home/reviewer/Work/vintage-pr-review/.state/canonical/2026-09-19T230738Z-plan-audit/broadcom-source/7487/source.patch:64: trailing whitespace.\nbtcdyn_profile_type=0x2  \nwarning: 1 line adds whitespace errors.\n",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": false,
+  "whitespace_output": "default/firmware/apple/brcmfmac43602-pcie.txt:58: trailing whitespace.\n+btcdyn_profile_type=0x2  \n",
+  "target_tree": "9b063296d578733c3935ce736dc5740ce1aa9639"
+}

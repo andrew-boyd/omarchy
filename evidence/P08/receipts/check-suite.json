@@ -1,0 +1,18 @@
+{
+  "tests": [
+    "test/shell.d/facetimehd-test.sh",
+    "test/shell.d/camera-consolidation-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hw-facetimehd": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+    "bin/omarchy-migrate": "0c14cb7853174d5289172496e22c1bd444b20c00c1aefd589e1faa3ae6941abe",
+    "install/hardware/all.sh": "2e9c3b32c4dce1245e26c15169018d7f1345a42b704d36591b3253006cb5942f",
+    "install/hardware/apple/fix-facetimehd.sh": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891",
+    "install/omarchy-other.packages": "9c0e9b41df13db8a37e7b809ea5948b7cb3dbe8c90d3f305fc8f88e95fd38bdf",
+    "manual/44-mac-support.md": "6240d79883b502025d80bcaf9c7624673d033fcc5eff2642ae559991a69c9094",
+    "migrations/1789542390.sh": "98c28a28296442f5df74bb0707d34f97015b6dca2cd035ce7128a4efd7e0b01b",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/camera-consolidation-test.sh": "2a160976ce2987349a7ee686e89b27406c29b1cbd08c5f9c428ca69af5bc21fd",
+    "test/shell.d/facetimehd-test.sh": "cb06996c72e4ae21efd0b75338a4d6bab9882aa3d193c8062d17725ffa8740e9"
+  }
+}

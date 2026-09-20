@@ -1,0 +1,122 @@
+[
+  {
+    "source": "omarchy-9880",
+    "passed": true,
+    "results": [
+      {
+        "test": "test/shell.d/spi-keyboard-test.sh",
+        "assertions": 5,
+        "exit_code": 0,
+        "failure": []
+      }
+    ]
+  },
+  {
+    "source": "omarchy-11273",
+    "passed": true,
+    "results": [
+      {
+        "test": "test/shell.d/lock-blank-fingerprint-test.sh",
+        "assertions": 25,
+        "exit_code": 0,
+        "failure": []
+      }
+    ]
+  },
+  {
+    "source": "omarchy-11952",
+    "passed": true,
+    "results": [
+      {
+        "test": "test/shell.d/lock-fingerprint-message-test.sh",
+        "assertions": 7,
+        "exit_code": 0,
+        "failure": []
+      }
+    ]
+  },
+  {
+    "source": "omarchy-7064",
+    "passed": true,
+    "results": [
+      {
+        "test": "test/shell.d/t1-touchbar-test.sh",
+        "assertions": 22,
+        "exit_code": 0,
+        "failure": []
+      }
+    ]
+  },
+  {
+    "source": "omarchy-10331",
+    "passed": false,
+    "results": [
+      {
+        "test": "test/shell.d/t1-als-brightness-test.sh",
+        "assertions": 20,
+        "exit_code": 0,
+        "failure": []
+      },
+      {
+        "test": "test/shell.d/config-test.sh",
+        "assertions": 8,
+        "exit_code": 1,
+        "failure": [
+          "not ok - omarchy-pkgs checkout found for PKGBUILD coverage"
+        ]
+      }
+    ]
+  },
+  {
+    "source": "fingerprint-selected",
+    "passed": true,
+    "results": [
+      {
+        "test": "test/shell.d/lock-blank-fingerprint-test.sh",
+        "assertions": 25,
+        "exit_code": 0,
+        "failure": []
+      },
+      {
+        "test": "test/shell.d/lock-fingerprint-message-test.sh",
+        "assertions": 7,
+        "exit_code": 0,
+        "failure": []
+      }
+    ]
+  },
+  {
+    "source": "omarchy-12007",
+    "kind": "bash -n only; production commands not executed",
+    "passed": true,
+    "checks": [
+      {
+        "path": "install/hardware/apple/fix-spi-keyboard.sh",
+        "sha256": "48fa39ad590c298c90f42862ef9a8827b4cfdac7a24433bde4dfb5a0250849b9",
+        "exit_code": 0,
+        "output": ""
+      },
+      {
+        "path": "migrations/1789490499.sh",
+        "sha256": "c847f2499c69544b8330612f06b8e2eeb9d715e130581eb8f41f4aaa1be9d271",
+        "exit_code": 0,
+        "output": ""
+      }
+    ],
+    "hardware_verified": false
+  },
+  {
+    "source": "omarchy-11904",
+    "kind": "bash -n only; production commands not executed",
+    "passed": true,
+    "checks": [
+      {
+        "path": "bin/omarchy-diagnose-suspend-wake",
+        "sha256": "a1e30ddbb2b2c3650f37f0970d0bae8e8c8f371d7c42ba2a04d44ab58234d109",
+        "exit_code": 0,
+        "output": ""
+      }
+    ],
+    "hardware_verified": false
+  }
+]

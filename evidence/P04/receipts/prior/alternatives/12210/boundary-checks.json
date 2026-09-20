@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lid-debounce-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - observed defect: omarchy-system-lid-open terminates an unrelated live PID from its runtime file\nok - observed defect: omarchy-system-lid-suspend terminates an unrelated live PID from its runtime file\nok - observed policy: GenericLaptop selects 3 seconds\nok - observed policy: MacBookPro13,3 selects 20 seconds\nok - observed policy: MacBookPro14,2 selects 20 seconds\nok - observed policy: lid open sets a zero backlight to 40 percent\nok - nonzero backlight remains unchanged\n"
+    }
+  ]
+}

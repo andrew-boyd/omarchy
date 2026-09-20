@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/audio-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "ok - observation: #12286 fresh setup replaces same-name mixer and sleep files\nok - observation: #12286 added-only DKMS entry skips the driver build\nok - observation: #12286 clears the fixture chime bit and writes fixed attribute bytes\nok - observation: #12286 migration preserves existing same-name drop-ins\nok - observation: #12286 migration disables and removes a custom same-name legacy service\n"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9735",
+  "repository": "omacom/omarchy",
+  "number": 9735,
+  "title": "Force SPI PIO on MacBook8,1 so the built-in keyboard works",
+  "author": "jeissonneira",
+  "head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+  "state": "open",
+  "updated_at": "2026-09-12T06:13:21Z",
+  "body": "## Summary\n\nOn MacBook8,1 (12-inch Early 2015) the installer already loads `applespi` and the PXA SPI modules. That is not enough. The GSPI controller (`00:15.4`) does transfers through the companion DesignWare DMA engine (`00:15.0`), and on this board those DMA transfers never complete. `applespi` times out with `-110`, IRQ 21 stays at zero, and the built-in keyboard and trackpad never work. #1954.\n\nForce the controller into PIO and it probes immediately. `dw_dmac_pci` is builtin, so the switch is a kernel parameter:\n\n```\ninitcall_blacklist=dw_pci_driver_init\n```\n\nDeep/S3 then wedges the same SPI device until reboot, so sleep defaults to `s2idle`.\n\nSame shape as the ASUS Panther Lake backlight leaf: detect the machine, write a Limine drop-in. No new package. No vendored C.\n\n## Changes\n\n- `install/hardware/apple/fix-spi-keyboard.sh` \u2014 on MacBook8,1 only, write `/etc/limine-entry-tool.d/macbook81-spi-pio.conf`. Other SPI MacBooks are unchanged.\n- Migration `1788318101.sh` for existing installs. Idempotent. Rebuilds the UKI. No-ops on anything that is not MacBook8,1.\n- `test/shell.d/macbook81-spi-pio-test.sh`\n- Manual note: USB keyboard for the installer itself; glass keys after the first reboot.\n\n## Tested\n\nMacBook8,1 (A1534, Early 2015), Core M-5Y31, Omarchy 4.0.2, kernel 7.1.9-arch1-2. Keyboard and trackpad work at LUKS, at the login screen, and after lid close.\n\nThe same PIO cmdline is what [matthiasjg](https://gist.github.com/matthiasjg/78aaf7802146f0b89be3da9e4feb111f) documented on #1954; the original reporter and two other MacBook8,1s confirmed it.\n\nSpeakers, camera, and Bluetooth stay out of this PR.\n\nFixes #1954",
+  "original_source_changed": false
+}

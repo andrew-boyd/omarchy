@@ -1,0 +1,400 @@
+{
+  "P08-packages": {
+    "id": "P08-packages",
+    "commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
+    "tree_sha": "1e67c884154c830dac79418e81aa028351b5a4ca",
+    "results": [
+      {
+        "command": "node --test tests/pr-workflow-approval.cjs",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.32,
+        "log": "P08-packages-00.log",
+        "log_sha256": "3476a556fa964acd68f6d4bf4b79c875a3fd5134a82b8536d16940ebab2e16a9",
+        "original_log_sha256": "3476a556fa964acd68f6d4bf4b79c875a3fd5134a82b8536d16940ebab2e16a9"
+      },
+      {
+        "command": "python tests/oma-service-removal.py",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.83,
+        "log": "P08-packages-01.log",
+        "log_sha256": "a3dceede55f97b0db13b674036ef9c95246704e39316fc476bf73ec43ce5f2e4",
+        "original_log_sha256": "a3dceede55f97b0db13b674036ef9c95246704e39316fc476bf73ec43ce5f2e4"
+      },
+      {
+        "command": "python tests/upstream-watch.py",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.14,
+        "log": "P08-packages-02.log",
+        "log_sha256": "431fb2c7aa2baf991107e897e9d6b5081d61750dbd74970380cc58c21d545036",
+        "original_log_sha256": "431fb2c7aa2baf991107e897e9d6b5081d61750dbd74970380cc58c21d545036"
+      },
+      {
+        "command": "./bin/sync-upstream self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 5.14,
+        "log": "P08-packages-03.log",
+        "log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b",
+        "original_log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b"
+      },
+      {
+        "command": "./bin/sync-rebuilds --self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.21,
+        "log": "P08-packages-04.log",
+        "log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a",
+        "original_log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a"
+      },
+      {
+        "command": "./bin/omarchy-pkgs self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.1,
+        "log": "P08-packages-05.log",
+        "log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f",
+        "original_log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f"
+      },
+      {
+        "command": "./bin/omarchy-release self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.2,
+        "log": "P08-packages-06.log",
+        "log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715",
+        "original_log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715"
+      },
+      {
+        "command": "./tests/partial-release.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.74,
+        "log": "P08-packages-07.log",
+        "log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7",
+        "original_log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7"
+      },
+      {
+        "command": "./tests/published-build-plan.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.99,
+        "log": "P08-packages-08.log",
+        "log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa",
+        "original_log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa"
+      },
+      {
+        "command": "./tests/controller.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.43,
+        "log": "P08-packages-09.log",
+        "log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995",
+        "original_log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995"
+      }
+    ],
+    "metadata_syntax": [
+      {
+        "path": "pkgbuilds/facetimehd-data/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/facetimehd-data/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/facetimehd-dkms/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/facetimehd-dkms/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/facetimehd-firmware/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/facetimehd-firmware/PKGBUILD",
+        "exit_code": 0
+      }
+    ],
+    "hardware_verified": false,
+    "unrun": [
+      "tests/publish-artifact.sh: rclone unavailable in the isolated local environment.",
+      "build-isolation: prescribed Docker fixture image/daemon unavailable in this disconnected environment.",
+      "build-pr: maintainer-controlled remote CI; no PR has been created.",
+      "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
+    ]
+  },
+  "P11-packages": {
+    "id": "P11-packages",
+    "commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
+    "tree_sha": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+    "results": [
+      {
+        "command": "node --test tests/pr-workflow-approval.cjs",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.33,
+        "log": "P11-packages-00.log",
+        "log_sha256": "5ba92278878d995cde695bc1c9ca2063a6caffca2716eb0cdf45b2f3900930bf",
+        "original_log_sha256": "5ba92278878d995cde695bc1c9ca2063a6caffca2716eb0cdf45b2f3900930bf"
+      },
+      {
+        "command": "python tests/oma-service-removal.py",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.81,
+        "log": "P11-packages-01.log",
+        "log_sha256": "21d978e5f716a414089392419ba392b5ec7e9313dc0f8d7ba159df6b1e0c36dd",
+        "original_log_sha256": "21d978e5f716a414089392419ba392b5ec7e9313dc0f8d7ba159df6b1e0c36dd"
+      },
+      {
+        "command": "python tests/upstream-watch.py",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.11,
+        "log": "P11-packages-02.log",
+        "log_sha256": "864e9200c49b3cb67bce452d10174ff75f45e4970a09f0488c5a2d265983d8e2",
+        "original_log_sha256": "864e9200c49b3cb67bce452d10174ff75f45e4970a09f0488c5a2d265983d8e2"
+      },
+      {
+        "command": "./bin/sync-upstream self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 5.09,
+        "log": "P11-packages-03.log",
+        "log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b",
+        "original_log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b"
+      },
+      {
+        "command": "./bin/sync-rebuilds --self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.2,
+        "log": "P11-packages-04.log",
+        "log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a",
+        "original_log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a"
+      },
+      {
+        "command": "./bin/omarchy-pkgs self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.1,
+        "log": "P11-packages-05.log",
+        "log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f",
+        "original_log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f"
+      },
+      {
+        "command": "./bin/omarchy-release self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.12,
+        "log": "P11-packages-06.log",
+        "log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715",
+        "original_log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715"
+      },
+      {
+        "command": "./tests/partial-release.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.73,
+        "log": "P11-packages-07.log",
+        "log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7",
+        "original_log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7"
+      },
+      {
+        "command": "./tests/published-build-plan.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.99,
+        "log": "P11-packages-08.log",
+        "log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa",
+        "original_log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa"
+      },
+      {
+        "command": "./tests/controller.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.43,
+        "log": "P11-packages-09.log",
+        "log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995",
+        "original_log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995"
+      }
+    ],
+    "metadata_syntax": [
+      {
+        "path": "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD",
+        "exit_code": 0
+      }
+    ],
+    "hardware_verified": false,
+    "unrun": [
+      "tests/publish-artifact.sh: rclone unavailable in the isolated local environment.",
+      "build-isolation: prescribed Docker fixture image/daemon unavailable in this disconnected environment.",
+      "build-pr: maintainer-controlled remote CI; no PR has been created.",
+      "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
+    ]
+  },
+  "P12-packages": {
+    "id": "P12-packages",
+    "commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
+    "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+    "results": [
+      {
+        "command": "node --test tests/pr-workflow-approval.cjs",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.31,
+        "log": "P12-packages-00.log",
+        "log_sha256": "4dc72c6f216710dc9ba1450decd0f7e6baa363010c63c7c90a2bc2d96df876b9",
+        "original_log_sha256": "4dc72c6f216710dc9ba1450decd0f7e6baa363010c63c7c90a2bc2d96df876b9"
+      },
+      {
+        "command": "python tests/oma-service-removal.py",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.81,
+        "log": "P12-packages-01.log",
+        "log_sha256": "7865bc2a69da20aa5574160e44ad8f6afe6f9246db6bcb88b3fae7e79420030b",
+        "original_log_sha256": "7865bc2a69da20aa5574160e44ad8f6afe6f9246db6bcb88b3fae7e79420030b"
+      },
+      {
+        "command": "python tests/upstream-watch.py",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.23,
+        "log": "P12-packages-02.log",
+        "log_sha256": "0c65fd8f598cefa3e52b0a862a63377e64388153fe7771cc02904a68dbd70719",
+        "original_log_sha256": "0c65fd8f598cefa3e52b0a862a63377e64388153fe7771cc02904a68dbd70719"
+      },
+      {
+        "command": "./bin/sync-upstream self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 6.93,
+        "log": "P12-packages-03.log",
+        "log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b",
+        "original_log_sha256": "c2d77eb103c0b751ee083bf6fedaac7742906cba8c00abc3e0ef52423191693b"
+      },
+      {
+        "command": "./bin/sync-rebuilds --self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.64,
+        "log": "P12-packages-04.log",
+        "log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a",
+        "original_log_sha256": "c38b087a42a6d0301c6cd9040f432e6d9afa65b0ea8f291f48c635e24b96e13a"
+      },
+      {
+        "command": "./bin/omarchy-pkgs self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.12,
+        "log": "P12-packages-05.log",
+        "log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f",
+        "original_log_sha256": "539860117ff78adfefd4b9e2da35e21228b1464251648189bc618a51f2a24a0f"
+      },
+      {
+        "command": "./bin/omarchy-release self-test",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.18,
+        "log": "P12-packages-06.log",
+        "log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715",
+        "original_log_sha256": "96795387fb4c708b25c246046d95fa5850db35e4415a051199da18c7407be715"
+      },
+      {
+        "command": "./tests/partial-release.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 1.11,
+        "log": "P12-packages-07.log",
+        "log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7",
+        "original_log_sha256": "c2f9159e9597c49737fbe77266038de53cf809048017d922c11664ccb0dbeab7"
+      },
+      {
+        "command": "./tests/published-build-plan.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 3.35,
+        "log": "P12-packages-08.log",
+        "log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa",
+        "original_log_sha256": "a3be457f68bf4495870941060ab88f0fd00df0864ff3a37babb73d00097a02aa"
+      },
+      {
+        "command": "./tests/controller.sh",
+        "exit_code": 0,
+        "passed": true,
+        "elapsed_seconds": 0.71,
+        "log": "P12-packages-09.log",
+        "log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995",
+        "original_log_sha256": "438871407cfa101d9538877ede3e3799407cdfecdd6ec24b84ce5201ada6c995"
+      }
+    ],
+    "metadata_syntax": [
+      {
+        "path": "pkgbuilds/fprintd-t1bridge/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/fprintd-t1bridge/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/libfprint-t1bridge/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/libfprint-t1bridge/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/t1bridge-dkms/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/t1bridge-dkms/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/t1bridge-omarchy/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/t1bridge-omarchy/PKGBUILD",
+        "exit_code": 0
+      },
+      {
+        "path": "pkgbuilds/t1bridge/.omarchy/package.json",
+        "valid_json": true
+      },
+      {
+        "path": "pkgbuilds/t1bridge/PKGBUILD",
+        "exit_code": 0
+      }
+    ],
+    "hardware_verified": false,
+    "unrun": [
+      "tests/publish-artifact.sh: rclone unavailable in the isolated local environment.",
+      "build-isolation: prescribed Docker fixture image/daemon unavailable in this disconnected environment.",
+      "build-pr: maintainer-controlled remote CI; no PR has been created.",
+      "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
+    ]
+  }
+}

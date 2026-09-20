@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10808",
+  "repository": "omacom/omarchy",
+  "number": 10808,
+  "title": "Share one sysfs T2 helper for packages and arch-mact2",
+  "author": "Chessing234",
+  "head_sha": "7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+  "state": "closed",
+  "updated_at": "2026-09-16T08:24:40Z",
+  "body": "## Summary\n- `fix-t2.sh` and `hardware/pacman.sh` both grepped `lspci -nn` for Apple 106b:1801/1802.\n- New `omarchy-hw-t2` reads sysfs like `omarchy-hw-nvidia`, so we do not SIGPIPE a chatty lspci under pipefail (the #6608 class of bug).\n\n## Test plan\n- [x] `test/shell.d/hw-t2-test.sh`\n- [ ] T2 Mac still gets linux-t2 and the arch-mact2 repo\n",
+  "original_source_changed": false
+}

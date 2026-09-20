@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/brcmfmac-suspend-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 13,
+      "output": "ok - the brcmfmac suspend fix runs during hardware setup\nok - the hook source is executable\nok - a Mac with a BCM4350 gets the sleep hook\nok - a T2 Mac gets the sleep hook\nok - a Mac whose Wi-Fi brcmfmac does not drive is left alone\nok - non-Apple hardware is left alone\nok - the migration installs the hook on a Mac that predates it\nok - the migration is idempotent\nok - the migration refreshes a modified hook\nok - the migration skips non-Apple hardware\nok - pre-sleep unbinds the bound device\nok - post-sleep rebinds the same device and clears state\nok - post without pre is a no-op\n"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 10331,
+  "url": "https://github.com/omacom/omarchy/pull/10331",
+  "head_sha": "6872374822badc716a150e39385569f7b782618c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "eb56446c4286c2d01bed3ed25d937850fc3b4810",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "e22dfaa56a8d9fd8f6bdcfc06e7b9554b03c711ae449c9260f8e339f31266ff0",
+  "applied": true,
+  "apply_output": "error: patch failed: test/shell.d/config-test.sh:141\nerror: test/shell.d/config-test.sh: patch does not apply\n",
+  "files": [
+    {
+      "path": "bin/omarchy-als-brightness",
+      "status": "added",
+      "source_sha256": "3cf8b667f684812496397865c25e9a9e59809e9e748d520f8b40a6b47bd930e3",
+      "candidate_sha256": "3cf8b667f684812496397865c25e9a9e59809e9e748d520f8b40a6b47bd930e3",
+      "identical_to_source": true
+    },
+    {
+      "path": "bin/omarchy-hw-apple-t1-als",
+      "status": "added",
+      "source_sha256": "40c0f1368b997df150eb1d52e3aab1e10d70a2800ddf3dbf94aedfd872ac1ba7",
+      "candidate_sha256": "40c0f1368b997df150eb1d52e3aab1e10d70a2800ddf3dbf94aedfd872ac1ba7",
+      "identical_to_source": true
+    },
+    {
+      "path": "bin/omarchy-toggle-als-brightness",
+      "status": "added",
+      "source_sha256": "4643b108a50370a85ee6478bfa9d912826619626ba9eba8749599e7e46b23aae",
+      "candidate_sha256": "4643b108a50370a85ee6478bfa9d912826619626ba9eba8749599e7e46b23aae",
+      "identical_to_source": true
+    },
+    {
+      "path": "default/omarchy/omarchy-menu.jsonc",
+      "status": "modified",
+      "source_sha256": "dd332213f828b8d71b5496bab0e63a15e3d3f25a906a1114c90e406a93c56414",
+      "candidate_sha256": "7a7fe30e3ed25c097116341db3ea1c76fc1b605fada210e8689be4ac67a4e288",
+      "identical_to_source": false
+    },
+    {
+      "path": "default/systemd/user/omarchy-als-brightness.service",
+      "status": "added",
+      "source_sha256": "70e3f0d87aba839448c1a68a60d84a1ac201abc7768236b02d44f5cb6dc34686",
+      "candidate_sha256": "70e3f0d87aba839448c1a68a60d84a1ac201abc7768236b02d44f5cb6dc34686",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "status": "modified",
+      "source_sha256": "35760a7428d934272849c8fac9738c3bd2bd84778891ca305d0ee7cb90591b38",
+      "candidate_sha256": "87519d6944687d65b009c6a9ce201fbd2644315e2a2858d5c30d7125bd60ea55",
+      "identical_to_source": false
+    },
+    {
+      "path": "install/hardware/apple/fix-t1-als-brightness.sh",
+      "status": "added",
+      "source_sha256": "6102ed27fa25c9b6cb4b07c2b9f2168df287835801308f7f3383a42ed7749fb5",
+      "candidate_sha256": "6102ed27fa25c9b6cb4b07c2b9f2168df287835801308f7f3383a42ed7749fb5",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/user/first-run/enable-user-units.sh",
+      "status": "modified",
+      "source_sha256": "52d8e581dcdc936a2b5981290f9bb31dd6fd89f7d6f7583a6d2f7ed4a7750330",
+      "candidate_sha256": "52d8e581dcdc936a2b5981290f9bb31dd6fd89f7d6f7583a6d2f7ed4a7750330",
+      "identical_to_source": true
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "status": "modified",
+      "source_sha256": "7ded4eb0323fd845d3e8c42485851230715f49f8de25e9eceacc237368b82970",
+      "candidate_sha256": "7ded4eb0323fd845d3e8c42485851230715f49f8de25e9eceacc237368b82970",
+      "identical_to_source": true
+    },
+    {
+      "path": "migrations/1788621849.sh",
+      "status": "added",
+      "source_sha256": "9249805ff3c56937288d2c55e2a98dc7539741c7769e313b2f56ea611314fc00",
+      "candidate_sha256": "9249805ff3c56937288d2c55e2a98dc7539741c7769e313b2f56ea611314fc00",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/config-test.sh",
+      "status": "modified",
+      "source_sha256": "1bac50b97299c31674cd1116ee9b54adddc756bc05fea194300a16cd0325529d",
+      "candidate_sha256": "41f892c25244c44d04994537fe9af2b572771cb9e4930862f117f2732e12633b",
+      "identical_to_source": false
+    },
+    {
+      "path": "test/shell.d/t1-als-brightness-test.sh",
+      "status": "added",
+      "source_sha256": "8bce52e15db184d8440dc34fce8bd39da064e209ddf8f364caa836c03e336dbb",
+      "candidate_sha256": "8bce52e15db184d8440dc34fce8bd39da064e209ddf8f364caa836c03e336dbb",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "2a2ad2bb6d7747afb47008787d0acd9d4463a7bf",
+  "reconciled_patch_sha256": "8474ed1c7e2410b2f9fca7ecbd4c0f94a5da6d15e7debf1bafabcfe51d5e37b9",
+  "reconciliation": {
+    "file": "test/shell.d/config-test.sh",
+    "rule": "Preserve current config test and add exactly the source service mapping to its package_defaults list."
+  }
+}

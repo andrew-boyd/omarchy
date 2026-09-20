@@ -1,0 +1,52 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 9880,
+  "url": "https://github.com/omacom/omarchy/pull/9880",
+  "head_sha": "2d49be5e65c514f029ba3a99b8ebaf9ec5da0147",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "d3d23fdddef846ebb98b52122a6ece66211c0daf",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "87108a6b0db10424364e38a61bee5c7479cc535b8535f2ad2cf5ae87a8d27604",
+  "applied": true,
+  "apply_output": "error: patch failed: install/omarchy-other.packages:25\nerror: install/omarchy-other.packages: patch does not apply\n",
+  "files": [
+    {
+      "path": "install/hardware/apple/fix-spi-keyboard.sh",
+      "status": "modified",
+      "source_sha256": "923f99127c00bb9a23c8e516abe917024dc229fddaa8a0a6a747090a7a702bc7",
+      "candidate_sha256": "923f99127c00bb9a23c8e516abe917024dc229fddaa8a0a6a747090a7a702bc7",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/omarchy-other.packages",
+      "status": "modified",
+      "source_sha256": "b4f17c26f29e73e859f4f1dce375d8a3abf4307e16c52c3971fdebf246c01fb8",
+      "candidate_sha256": "53440af1c7a3510db792a9418202f01f6ec70d349717ff47e87615ecdb1de9ff",
+      "identical_to_source": false
+    },
+    {
+      "path": "migrations/1788476400.sh",
+      "status": "added",
+      "source_sha256": "5f2515a3a0d62a673faea3afe574971bc0844c33151b6d04fe4ee61cece806dc",
+      "candidate_sha256": "5f2515a3a0d62a673faea3afe574971bc0844c33151b6d04fe4ee61cece806dc",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/spi-keyboard-test.sh",
+      "status": "added",
+      "source_sha256": "249826b7447b1fa1f434df3132d97742e80e34834f3e3e18e931247a8679e4ad",
+      "candidate_sha256": "249826b7447b1fa1f434df3132d97742e80e34834f3e3e18e931247a8679e4ad",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
+  "reconciled_patch_sha256": "c96a2377d62e32b5cd344ce93cb10cc3ad4deb69bdf85956aeabc7c81931f1ee",
+  "reconciliation": {
+    "file": "install/omarchy-other.packages",
+    "rule": "Preserve current target and apply exactly the source package removal."
+  }
+}

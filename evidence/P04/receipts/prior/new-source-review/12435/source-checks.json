@@ -1,0 +1,23 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/resume-monitor-test.sh",
+      "mode": "fixture",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 3,
+      "output": "ok - resume monitor calls into the shell once per resume, ignoring sleep events\nok - resume monitor cleans up its producer when the pipeline itself is terminated\nok - resume monitor --consume calls the shell only for boolean false lines\n"
+    },
+    {
+      "test": "test/shell.d/systemd-test.sh",
+      "mode": "fixture",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 17,
+      "output": "ok - bt-agent skips when bluetooth.service is inactive\nok - bt-agent still restarts after runtime failures\nok - sleep lock service uses the package-backed monitor path\nok - sleep lock service follows the initialized graphical session\nok - first-run reloads and enables the sleep lock service\nok - resume focus monitor service uses the package-backed monitor path\nok - resume focus monitor service follows the initialized graphical session\nok - resume focus monitor restarts after a crash\nok - first-run reloads and enables the resume focus monitor service\nok - Omarchy 4 upgrade repairs the legacy sleep lock unit path\nok - no unit watches the migration directory, so package updates cannot trigger the notifier\nok - migration notifier checks once per login after the graphical session is ready\nok - first-run enables the login-only migration notifier\nok - fcitx5 runs supervised, so a lost input method comes back instead of killing XCompose until logout\nok - only user app scopes are systemd-oomd kill candidates\nok - systemd-oomd acts on sustained memory stall\nok - new installs enable systemd-oomd\n"
+    }
+  ]
+}

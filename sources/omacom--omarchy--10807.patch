@@ -1,0 +1,110 @@
+diff --git a/install/hardware/vulkan.sh b/install/hardware/vulkan.sh
+index a2447d46ffa..245cd56cf57 100644
+--- a/install/hardware/vulkan.sh
++++ b/install/hardware/vulkan.sh
+@@ -1,18 +1,31 @@
+ # Install Vulkan drivers matching detected GPU hardware
+ # (NVIDIA Vulkan is handled by nvidia.sh via nvidia-utils)
++#
++# Walk sysfs the way omarchy-hw-nvidia does. lspci reads PCI config space and
++# resumes runtime-suspended GPUs; three greps used to do that once per vendor.
+ 
+-declare -A VULKAN_DRIVERS=(
+-  [Intel]=vulkan-intel
+-  [AMD]=vulkan-radeon
+-  [Apple]=vulkan-asahi
+-)
++pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
+ 
+ PACKAGES=()
+ 
+-for vendor in "${!VULKAN_DRIVERS[@]}"; do
+-  if lspci | grep -iE "(VGA|Display).*$vendor" > /dev/null; then
+-    PACKAGES+=("${VULKAN_DRIVERS[$vendor]}")
+-  fi
++add_vulkan_pkg() {
++  local pkg=$1
++  local existing
++  for existing in "${PACKAGES[@]+"${PACKAGES[@]}"}"; do
++    [[ $existing == "$pkg" ]] && return
++  done
++  PACKAGES+=("$pkg")
++}
++
++shopt -s nullglob
++for device in "$pci_devices_path"/*; do
++  [[ -r $device/vendor && -r $device/class ]] || continue
++  [[ $(<"$device/class") == 0x03* ]] || continue
++  case $(<"$device/vendor") in
++    0x8086) add_vulkan_pkg vulkan-intel ;;
++    0x1002) add_vulkan_pkg vulkan-radeon ;;
++    0x106b) add_vulkan_pkg vulkan-asahi ;;
++  esac
+ done
+ 
+ if (( ${#PACKAGES[@]} > 0 )); then
+diff --git a/test/shell.d/vulkan-sysfs-test.sh b/test/shell.d/vulkan-sysfs-test.sh
+new file mode 100644
+index 00000000000..2152e66a78f
+--- /dev/null
++++ b/test/shell.d/vulkan-sysfs-test.sh
+@@ -0,0 +1,59 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp=$(mktemp -d)
++trap 'rm -rf "$tmp"' EXIT
++
++write_pci() {
++  rm -rf "$tmp/devices"
++  mkdir -p "$tmp/devices"
++  local index=0 spec slot
++  for spec in "$@"; do
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$tmp/devices/$slot"
++    printf '%s\n' "${spec%%:*}" >"$tmp/devices/$slot/vendor"
++    printf '%s\n' "${spec##*:}" >"$tmp/devices/$slot/class"
++    index=$((index + 1))
++  done
++}
++
++stub_bin="$tmp/bin"
++mkdir -p "$stub_bin"
++cat >"$stub_bin/omarchy-pkg-add" <<'SH'
++#!/bin/bash
++printf '%s\n' "$@" >>"$OMARCHY_TEST_VULKAN_PKGS"
++SH
++chmod +x "$stub_bin/omarchy-pkg-add"
++
++run_vulkan() {
++  : >"$tmp/pkgs"
++  OMARCHY_PCI_DEVICES_PATH="$tmp/devices" \
++    OMARCHY_TEST_VULKAN_PKGS="$tmp/pkgs" \
++    PATH="$stub_bin:$PATH" \
++    bash "$ROOT/install/hardware/vulkan.sh"
++}
++
++write_pci 0x8086:0x030000
++run_vulkan
++grep -Fxq 'vulkan-intel' "$tmp/pkgs" || fail "Intel display gets vulkan-intel" "$(cat "$tmp/pkgs")"
++pass "Intel display installs vulkan-intel from sysfs"
++
++write_pci 0x1002:0x030000 0x10de:0x030200
++run_vulkan
++grep -Fxq 'vulkan-radeon' "$tmp/pkgs" || fail "AMD iGPU gets vulkan-radeon on a hybrid machine"
++! grep -q nvidia "$tmp/pkgs" || fail "NVIDIA Vulkan stays with nvidia.sh"
++pass "hybrid AMD+NVIDIA only adds vulkan-radeon here"
++
++write_pci 0x8086:0x040300
++run_vulkan
++[[ ! -s $tmp/pkgs ]] || fail "an Intel audio function is not a GPU" "$(cat "$tmp/pkgs")"
++pass "non-display PCI functions do not pull Vulkan drivers"
++
++grep -Fq 'OMARCHY_PCI_DEVICES_PATH' "$ROOT/install/hardware/vulkan.sh" ||
++  fail "Vulkan install reads the same sysfs override as omarchy-hw-nvidia"
++! grep -E '^[^#]*lspci' "$ROOT/install/hardware/vulkan.sh" ||
++  fail "Vulkan install no longer shells out to lspci"
++pass "Vulkan install does not wake GPUs via lspci"

@@ -1,0 +1,8 @@
+[
+  "Record model, GPUs, kernel, Hyprland/Quickshell versions and complete monitor JSON before testing; record which internal panel is physically usable.",
+  "Verify only the empty duplicate internal connector is disabled while the healthy panel remains active. Repeat after connector numbering changes, hotplug and configuration reload.",
+  "Check the only internal connector and real external displays awaiting mode recovery remain enabled by the recovery helper; verify recovery completes on the real device.",
+  "Check settings omit enabled and disabled identityless ghosts while retaining intentionally disabled real panels and external displays with identity or advertised modes.",
+  "Test dock/undock, mirroring and re-enabling a deliberately disabled real display. Record the rendered rows and enabled count alongside the backend JSON.",
+  "Assess the existing enabled-count guard when a real display is temporarily 0x0. This target preserves that baseline policy and does not guarantee that every counted display is currently showing a picture."
+]

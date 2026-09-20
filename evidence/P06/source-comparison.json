@@ -1,0 +1,6 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
+  "patch_sha256": "c96a2377d62e32b5cd344ce93cb10cc3ad4deb69bdf85956aeabc7c81931f1ee",
+  "software_evidence": "Five recorded original assertions reused; both actual retirement patches and the exact P12 dependency archive were previously verified. Package-list reconciliation is preserved without new runtime logic."
+}

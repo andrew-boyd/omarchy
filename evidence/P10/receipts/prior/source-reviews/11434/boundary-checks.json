@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/broadcom-resume-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 4,
+      "output": "ok - observed policy conflict: installation replaces a customized resume unit and enables it\nok - post-only helper reports a failed bind after successful unbind\nok - observed retry limit: already-unbound device is skipped on the next helper invocation\nok - observed selection limit: first unbound matching controller prevents checking a later bound match\n"
+    }
+  ]
+}

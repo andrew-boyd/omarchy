@@ -1,0 +1,10 @@
+{
+  "tests": [
+    "test/shell.d/lock-blank-fingerprint-test.sh"
+  ],
+  "file_sha256": {
+    "shell/plugins/lock/Service.qml": "02ce98721c4a9d76779eb91e83e3f7b271cd0c4b0ce93d27cd192c87ada2c964",
+    "test/shell.d/lock-blank-fingerprint-test.sh": "d204e0b7243770d0e83f979d95bdcf7532307a065f49365bd246d8fc2feb4318",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

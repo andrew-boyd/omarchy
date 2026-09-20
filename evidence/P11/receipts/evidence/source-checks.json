@@ -1,0 +1,105 @@
+{
+  "sources": [
+    {
+      "number": 9516,
+      "target_tree": "eb62c5655440e6264b359994deeef024c125060e",
+      "passed": true,
+      "assertions": 24,
+      "fixture_adjustment": null,
+      "results": [
+        {
+          "test": "test/shell.d/cs8409-audio-test.sh",
+          "exit_code": 0,
+          "passed": true,
+          "assertions": 24,
+          "output": "ok - MacBookPro14,3 has CS8409 audio\nok - MacBookPro14,2 has CS8409 audio\nok - MacBookPro14,1 has CS8409 audio\nok - MacBookPro13,3 has CS8409 audio\nok - MacBookPro13,2 has CS8409 audio\nok - MacBookPro13,1 has CS8409 audio\nok - iMac18,3 has CS8409 audio\nok - iMac18,2 has CS8409 audio\nok - iMac18,1 has CS8409 audio\nok - iMac19,1 has CS8409 audio\nok - iMac19,2 has CS8409 audio\nok - MacBookPro15,1 is T2, not CS8409\nok - iMacPro1,1 is T2, not CS8409\nok - MacBook8,1 is SPI-only\nok - CS8409 install hook is wired\nok - install hook installs snd-hda-macbookpro-dkms\nok - Mac support chapter documents CS8409 speakers\nok - migration installs the driver on CS8409 hardware only\nDetected Mac with Cirrus CS8409 audio\nok - install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)\nok - install hook skips T2 hardware\nok - migration installs the driver on MacBookPro14,3\nDetected Mac with Cirrus CS8409 audio\nok - install hook runs on iMac18,3 (CS8409)\nok - migration installs the driver on iMac18,3\nok - migration skips non-CS8409 hardware\n"
+        }
+      ]
+    },
+    {
+      "number": 7140,
+      "target_tree": "dffdb25d74ceceb460b3c7dc2d8af1bdd5e35acf",
+      "passed": true,
+      "assertions": 16,
+      "fixture_adjustment": null,
+      "results": [
+        {
+          "test": "test/shell.d/cs8409-audio-test.sh",
+          "exit_code": 0,
+          "passed": true,
+          "assertions": 16,
+          "output": "ok - MacBookPro14,3 has CS8409 audio\nok - MacBookPro14,2 has CS8409 audio\nok - MacBookPro14,1 has CS8409 audio\nok - MacBookPro13,3 has CS8409 audio\nok - MacBookPro13,2 has CS8409 audio\nok - MacBookPro13,1 has CS8409 audio\nok - MacBookPro15,1 is T2, not CS8409\nok - MacBook8,1 is SPI-only\nok - CS8409 install hook is wired\nok - install hook installs snd-hda-macbookpro-dkms\nok - Mac support chapter documents CS8409 speakers\nok - migration installs the driver on CS8409 hardware only\nDetected MacBook with Cirrus CS8409 audio\nok - install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)\nok - install hook skips T2 hardware\nok - migration installs the driver on MacBookPro14,3\nok - migration skips non-CS8409 hardware\n"
+        }
+      ]
+    },
+    {
+      "number": 11625,
+      "target_tree": "c02ad7cff5a37ecbcbe74aee9b8264e02e7cd311",
+      "passed": true,
+      "assertions": 9,
+      "fixture_adjustment": null,
+      "results": [
+        {
+          "test": "test/shell.d/snd-hda-macbookpro-test.sh",
+          "exit_code": 0,
+          "passed": true,
+          "assertions": 9,
+          "output": "ok - the audio fix script exists\nok - script detects Cirrus Logic CS8409\nok - script references snd_hda_macbookpro driver\nok - script uses DKMS for auto-rebuild on kernel updates\nok - script uses omarchy-pkg-add for dependencies\nok - the audio fix runs during hardware setup\nok - script uses variable for driver directory\nok - script checks if already installed\nok - script rebuilds initramfs\nall tests passed\n"
+        }
+      ]
+    },
+    {
+      "number": 6921,
+      "target_tree": "83eb87f047f0b81053b0707e22c9f815881507f3",
+      "passed": true,
+      "assertions": 10,
+      "fixture_adjustment": "Only the source migration ID reference is relocated; assertion logic is unchanged.",
+      "results": [
+        {
+          "test": "test/shell.d/cs4208-audio-test.sh",
+          "exit_code": 0,
+          "passed": true,
+          "assertions": 10,
+          "output": "ok - the CS4208 audio fix is wired into setup\nok - a 2017 12-inch MacBook gets the CS4208 driver\nok - a 2016 12-inch MacBook gets the CS4208 driver\nok - the 2015 12-inch MacBook is left alone\nok - a MacBook Pro is left alone\nok - non-Apple hardware is left alone\nok - the migration installs the CS4208 driver\nok - the migration skips a machine that already has the package\nok - the migration skips a hand-installed DKMS driver\nok - the migration skips unrelated hardware\n"
+        }
+      ]
+    },
+    {
+      "number": 12286,
+      "target_tree": "81614aff9d92e958818d9d1978dd6d40a5fc7f2f",
+      "passed": true,
+      "assertions": 14,
+      "fixture_adjustment": null,
+      "results": [
+        {
+          "test": "test/shell.d/macbook12-audio-test.sh",
+          "exit_code": 0,
+          "passed": true,
+          "assertions": 14,
+          "output": "ok - the audio fix script exists\nok - script gates on 12-inch MacBook models\nok - script references the macbook12-audio driver\nok - script uses DKMS for auto-rebuild on kernel updates\nok - script installs the driver via its DKMS installer\nok - script uses omarchy-pkg-add for build prerequisites\nok - script installs the WirePlumber soft-mixer rule\nok - script forces software volume mixing\nok - script un-mutes the EFI startup chime\nok - script clears the chime mute bit (0x80)\nok - script pins suspend to the freeze sleep state\nok - script empties MemorySleepMode to force the /sys/power/state freeze path\nok - script installs a systemd sleep.conf.d drop-in\nok - the audio fix runs during hardware setup\nall tests passed\n"
+        }
+      ]
+    },
+    {
+      "number": 10458,
+      "target_tree": "e093a169a6f4ebbf1e5b6504f40f00fab81743b0",
+      "passed": true,
+      "assertions": 17,
+      "fixture_adjustment": null,
+      "results": [
+        {
+          "test": "test/shell.d/imac-cs4208-speakers-test.sh",
+          "exit_code": 0,
+          "passed": true,
+          "assertions": 17,
+          "output": "ok - the detector is executable\nok - the CS4208 speaker workaround runs during user setup\nok - a migration enables the workaround on existing installs\nok - the WirePlumber drop-in selects 4.0 output and software volume on CS4208\nok - the detector matches iMac16,2\nok - the detector matches iMac16,1\nok - the detector matches iMac16,2 case-insensitively\nok - the detector rejects iMac17,1\nok - the detector rejects later CS8409 iMacs\nok - the detector rejects other Apple machines\nok - the detector rejects a longer product name\nok - the detector fails closed on an empty product name\nok - the detector fails closed when the DMI attribute is missing\nok - the leaf installs the WirePlumber drop-in on the target machine\nok - the leaf no-ops on other hardware\nok - the migration installs the workaround on the target machine\nok - the migration no-ops on other hardware\n"
+        }
+      ]
+    }
+  ],
+  "no_original_suite": [
+    8285
+  ],
+  "hardware_verified": false,
+  "scope": "Original installer suites only; package checks are recorded separately."
+}

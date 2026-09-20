@@ -1,0 +1,4616 @@
+diff --git a/.github/workflows/sync-aur.yml b/.github/workflows/sync-aur.yml
+deleted file mode 100644
+index b5d3fd3f2..000000000
+--- a/.github/workflows/sync-aur.yml
++++ /dev/null
+@@ -1,91 +0,0 @@
+-name: Sync AUR Packages
+-
+-on:
+-  schedule:
+-    # Every 6 hours
+-    - cron: '0 */6 * * *'
+-  workflow_dispatch:
+-    inputs:
+-      packages:
+-        description: 'Specific packages to sync (space-separated, leave empty for all)'
+-        required: false
+-        default: ''
+-
+-jobs:
+-  sync:
+-    runs-on: ubuntu-latest
+-    permissions:
+-      contents: write
+-      pull-requests: write
+-
+-    steps:
+-      - name: Checkout repository
+-        uses: actions/checkout@v4
+-        with:
+-          persist-credentials: false
+-
+-      - name: Sync AUR packages
+-        run: |
+-          docker run --rm \
+-            -e PACKAGES="$PACKAGES" \
+-            -e HOST_UID="$(id -u)" \
+-            -e HOST_GID="$(id -g)" \
+-            -v "$PWD/bin:/workspace/bin:ro" \
+-            -v "$PWD/helpers:/workspace/helpers:ro" \
+-            -v "$PWD/pkgbuilds:/workspace/pkgbuilds" \
+-            -w /workspace \
+-            archlinux:base-devel bash -lc '
+-              set -euo pipefail
+-
+-              pacman -Syu --noconfirm git jq
+-
+-              groupadd -g "$HOST_GID" runner
+-              useradd -m -u "$HOST_UID" -g "$HOST_GID" runner
+-              chown -R runner:runner /workspace/pkgbuilds
+-
+-              if [[ -n "${PACKAGES:-}" ]]; then
+-                read -r -a package_args <<< "$PACKAGES"
+-                runuser -u runner -- ./bin/sync-aur "${package_args[@]}"
+-              else
+-                runuser -u runner -- ./bin/sync-aur
+-              fi
+-            '
+-        env:
+-          PACKAGES: ${{ github.event.inputs.packages }}
+-
+-      - name: Check for changes
+-        id: changes
+-        run: |
+-          if [ -z "$(git status --porcelain)" ]; then
+-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+-          else
+-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+-          fi
+-
+-      - name: Create Pull Request
+-        if: steps.changes.outputs.has_changes == 'true'
+-        uses: peter-evans/create-pull-request@v7
+-        with:
+-          token: ${{ secrets.GITHUB_TOKEN }}
+-          commit-message: 'chore: sync AUR packages'
+-          title: 'chore: sync AUR packages'
+-          body: |
+-            Automated AUR package sync.
+-
+-            Package sync behavior is controlled by `.omarchy/package.json`.
+-          branch: auto/sync-aur
+-          delete-branch: true
+-          labels: automated
+-          reviewers: ryanrhughes
+-
+-      - name: Notify Basecamp on failure
+-        if: failure() && env.BASECAMP_CHATBOT_URL != ''
+-        env:
+-          BASECAMP_CHATBOT_URL: ${{ secrets.BASECAMP_CHATBOT_URL }}
+-        run: |
+-          curl -s -o /dev/null \
+-            -H "Content-Type: application/json" \
+-            -d "$(jq -n --arg content \
+-              "🔴 <strong>AUR sync failed</strong><br><a href=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View run</a>" \
+-              '{content: $content}')" \
+-            "$BASECAMP_CHATBOT_URL"
+diff --git a/.github/workflows/sync-upstream.yml b/.github/workflows/sync-upstream.yml
+index c19c9ae3c..2e691367e 100644
+--- a/.github/workflows/sync-upstream.yml
++++ b/.github/workflows/sync-upstream.yml
+@@ -27,9 +27,11 @@ jobs:
+       # Runs in an Arch container for vercmp: whether a release is an upgrade has
+       # to be decided by the same comparator pacman will use on users' machines.
+       - name: Update packages from upstream release feeds
++        id: sync
+         run: |
+           docker run --rm \
+             -e PACKAGES="$PACKAGES" \
++            -e UPSTREAM_GITHUB_TOKEN="$UPSTREAM_GITHUB_TOKEN" \
+             -e HOST_UID="$(id -u)" \
+             -e HOST_GID="$(id -g)" \
+             -v "$PWD/bin:/workspace/bin:ro" \
+@@ -39,7 +41,7 @@ jobs:
+             archlinux:base-devel bash -lc '
+               set -euo pipefail
+ 
+-              pacman -Syu --noconfirm git jq
++              pacman -Syu --noconfirm git jq python libarchive
+ 
+               groupadd -g "$HOST_GID" runner
+               useradd -m -u "$HOST_UID" -g "$HOST_GID" runner
+@@ -54,8 +56,12 @@ jobs:
+             '
+         env:
+           PACKAGES: ${{ github.event.inputs.packages }}
++          UPSTREAM_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ 
++      # Failed feeds leave their recipes untouched; completed updates still
++      # reach review. The failed sync step keeps the workflow red and notifies.
+       - name: Check for changes
++        if: ${{ !cancelled() && steps.sync.outcome != 'skipped' }}
+         id: changes
+         run: |
+           if [ -z "$(git status --porcelain)" ]; then
+@@ -65,7 +71,7 @@ jobs:
+           fi
+ 
+       - name: Create Pull Request
+-        if: steps.changes.outputs.has_changes == 'true'
++        if: ${{ !cancelled() && steps.changes.outputs.has_changes == 'true' }}
+         uses: peter-evans/create-pull-request@v7
+         with:
+           token: ${{ secrets.GITHUB_TOKEN }}
+@@ -75,8 +81,9 @@ jobs:
+             Automated update of packages that track an upstream vendor release
+             feed rather than the AUR.
+ 
+-            Each package reports its newest release through
+-            `.omarchy/upstream.sh`.
++            Release watches and providers are declared in `.omarchy/package.json`;
++            exceptional feeds use `.omarchy/upstream.sh`. Failed package updates
++            are left untouched; check the workflow result for outstanding failures.
+           branch: auto/sync-upstream
+           delete-branch: true
+           labels: automated
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index a1a307a95..4b646905a 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -39,7 +39,8 @@ jobs:
+             -w /workspace \
+             archlinux:base-devel bash -lc '
+               set -euo pipefail
+-              pacman -Syu --noconfirm git jq
++              pacman -Syu --noconfirm git jq python libarchive
++              python tests/upstream-watch.py
+               ./bin/sync-upstream self-test
+               ./bin/sync-rebuilds --self-test
+               ./bin/omarchy-pkgs self-test
+diff --git a/.gitignore b/.gitignore
+index 7873a6d04..7b1f63b03 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -37,3 +37,6 @@ pkgbuilds/yay/yay/
+ .srcdest/
+ .repo-host
+ .worktrees/
++
++# Python helpers and offline tests
++__pycache__/
+diff --git a/README.md b/README.md
+index 2ba3ce565..5ff0edcd4 100644
+--- a/README.md
++++ b/README.md
+@@ -23,9 +23,9 @@ The filesystem no longer encodes release policy. Instead:
+   (`OMARCHY_RC_PINS=1`, which `omarchy-release rc` sets) may build it for rc — master's
+   shipped pins can never overwrite an in-flight RC. The dev pair
+   (`omarchy-dev`, `omarchy-settings-dev`) is pinned to `edge`
+-- AUR sync behavior is controlled by `source`, `sync`, `aur`, patches, and hooks in `.omarchy/`
++- Omarchy owns every checked-in recipe; upstream watches update release metadata without replacing packaging or architecture support
+ - packages can opt out of unscoped builds with `skip_build`; explicit `--package` builds remain available
+-- packages that follow a vendor release feed instead of the AUR carry an `.omarchy/upstream.sh` hook
++- packages follow direct upstream watches/providers in `.omarchy/package.json`, or a custom `.omarchy/upstream.sh` hook
+ 
+ ## Prerequisites
+ ### aarch64 Builds (Optional)
+@@ -329,14 +329,16 @@ push uploaded, so `push` stops when it finds packages already staged there —
+ usually leftovers from a failed run. Remove them on the host, or pass
+ `--include-staged` to publish them too.
+ 
+-### Sync AUR PKGBUILDs
++### Import an initial AUR recipe
+ 
+ ```bash
+-bin/sync-aur                            # Sync all AUR packages with sync enabled
+-bin/sync-aur yay v4l2-relayd            # Sync specific packages
++bin/add-package package-name --source aur
+ ```
+ 
+-AUR sync is metadata-driven. It preserves `.omarchy/`, replaces the package root with AUR contents, applies `.omarchy/patches/*.patch`, runs `.omarchy/post-sync.sh` when present, applies pkgrel metadata, removes AUR-only `.SRCINFO` and `.gitignore` files, and records `upstream_commit`.
++AUR is an optional source for an initial recipe. Imported packages become
++Omarchy-owned immediately; subsequent updates use direct upstream releases.
++There is no scheduled AUR sync. Edit the checked-in PKGBUILD to maintain
++architecture support and packaging behavior.
+ 
+ ### Sync Upstream Releases
+ 
+@@ -550,8 +552,8 @@ bin/omarchy-release                  # Release front door (start / pick / rc / s
+ bin/repo list                        # List package metadata
+ bin/repo deploy                      # Build locally, then publish from the host
+ bin/repo push                        # Upload local builds to the host and publish
+-bin/add-package <package>            # Add an AUR/local package with metadata
+-bin/package-worktree <package>       # Create upstream/patched/current scratch workspace
++bin/add-package <package>            # Add an Omarchy-owned package with metadata
++bin/package-worktree <package>       # Inspect historical AUR provenance in a scratch workspace
+ bin/repo remove <package>            # Remove package
+ bin/sync-upstream                    # Update packages that track a vendor release feed
+ bin/sync-rebuilds                    # Bump pkgrel for packages whose dependencies moved
+@@ -570,7 +572,7 @@ bin/repo list                        # Table view of source package metadata
+ bin/repo list --json                 # Agent/script-friendly JSON
+ bin/repo list --repo --mirror stable # List packages in a published repo database
+ 
+-bin/package-worktree v4l2-relayd     # Create upstream/patched/current scratch workspace
++bin/package-worktree yay            # Compare with the original imported AUR recipe
+ ```
+ 
+ ## Cutting an Omarchy Release
+@@ -684,9 +686,7 @@ omarchy-pkgs/
+ │       ├── PKGBUILD
+ │       └── .omarchy/
+ │           ├── package.json    # Source/sync/release metadata
+-│           ├── patches/        # Omarchy patches reapplied after AUR sync
+-│           ├── post-sync.sh    # Optional dynamic post-sync customization hook
+-│           └── upstream.sh     # Optional vendor release feed hook (non-AUR packages)
++│           └── upstream.sh     # Optional custom vendor release feed hook
+ ├── build/
+ ├── build-output/               # Unsigned packages (temporary)
+ │   ├── edge/                   # (rc/ and stable/ alongside, each x86_64 + aarch64)
+@@ -706,45 +706,28 @@ Each source package has Omarchy metadata at `pkgbuilds/<package>/.omarchy/packag
+ 
+ Minimal examples:
+ 
+-```json
+-{ "source": "aur" }
+-```
+-
+-```json
+-{ "source": "aur", "sync": false }
+-```
+-
+-```json
+-{ "source": "aur", "release_ring": "fast" }
+-```
+-
+ ```json
+ { "source": "local" }
+-```
+-
+-```json
++{ "source": "local", "release_ring": "fast" }
+ { "source": "local", "skip_build": true }
+-```
+-
+-```json
+-{ "source": "aur", "pkgrel": { "suffix": 1 } }
++{ "source": "local", "upstream": { "watch": { "github": "abenz1267/walker", "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)" } } }
+ ```
+ 
+ Fields:
+ 
+-- `source`: `aur` or `local`. A `local` package can still follow an upstream release, either declaratively via `upstream` or with an `.omarchy/upstream.sh` hook.
+-- `upstream`: optional for `local` packages following GitHub releases, git tags, npm dist-tags, or a Debian `Packages` index. GitHub architecture assets may be a string or an ordered array, and can be combined with disjoint versioned `sources` — see [Sync Upstream Releases](#sync-upstream-releases). Mutually exclusive with `.omarchy/upstream.sh`.
++- `source`: `local` for maintained packages. The legacy `aur` value is used only during an initial import. A local recipe can follow an upstream watch, provider, or `.omarchy/upstream.sh` hook.
++- `upstream`: optional direct release watch (see [Upstream watches](docs/upstream-sources.md)), or an existing GitHub, git-tag, npm, or Debian provider. GitHub architecture assets may be a string or an ordered array, and can be combined with disjoint versioned `sources` — see [Sync Upstream Releases](#sync-upstream-releases). Mutually exclusive with `.omarchy/upstream.sh`.
+ - `min_release_age`: optional quarantine for upstream releases (`"24h"`, `"2d"`, or bare seconds). The newest release older than the window ships; anything younger waits, and a release whose age cannot be proven fails the sync. Bypass deliberately with `BYPASS_MIN_RELEASE_AGE=1 bin/sync-upstream <package>`.
+-- `sync`: optional for AUR packages; defaults to `true`. Set `false` for AUR-origin packages that Omarchy maintains manually.
+-- `aur`: optional AUR package name when it differs from the local package directory, usually for split packages.
++- `sync`: `false` records an existing manual maintenance hold. Held packages have no upstream watch/provider/hook and are excluded from automatic updates.
++- `origin`: optional historical import provenance, with `aur` (package name) and `commit`. It does not control updates.
+ - `release_ring`: optional. `fast` means the package is built directly for stable as well as edge, with the artifacts replicated into rc for parity. Packages without a ring build in edge and reach stable through the pipeline (`bin/repo advance`).
+ - `channels`: optional array bounding where the package may be built (`edge`, `rc`, `stable`). Without the key a package is a member of every channel and follows the default build rules above; `bin/repo advance` refuses to carry a package anywhere it isn't a member.
+ - `pinned`: optional boolean. A pinned package's version is set per release by `omarchy-release` on the `rc` branch, so it is never built for stable (promotion only) and is built for rc only from that branch's worktree (`OMARCHY_RC_PINS=1`). Used by `omarchy` and `omarchy-settings`.
+ - `skip_build`: optional boolean; defaults to `false`. Set `true` to exclude a package from scheduled version checks and unscoped builds. The package can still be built explicitly with `bin/repo release --package <name>`.
+-- `pkgrel`: optional Omarchy pkgrel suffix for a version-pinned rebuild bump. This emits `<aur pkgrel>.<suffix>` instead of replacing AUR's pkgrel. `offset` can be used only when preserving monotonic upgrades from old absolute pkgrel bumps. The metadata is removed automatically when AUR sync changes `pkgver`; the current package version is read from the checked-in PKGBUILD, so the version is not duplicated in JSON.
++- `pkgrel`: legacy import customization metadata. Maintained recipes keep their complete package release directly in PKGBUILD; rebuilds increment it there.
+ - `rebuild_on`: optional array of package names this package links against closely enough that it must be rebuilt when they change, independent of its own source. Read by `bin/sync-rebuilds`.
+ - `rebuilt_against`: written by `bin/sync-rebuilds`. Maps each published architecture to the versions of its `rebuild_on` packages that the current pkgrel was bumped for.
+-- `upstream_commit`: set by `bin/sync-aur` for AUR packages. Used by `bin/package-worktree` to recreate the exact raw AUR package that Omarchy last synced.
++- `upstream_commit`: legacy AUR metadata, superseded by `origin.commit`. `bin/package-worktree` can use historical provenance to inspect the original recipe.
+ 
+ ### Build Matrix
+ 
+@@ -756,78 +739,26 @@ Fields:
+ 
+ ## Adding Packages
+ 
+-### From AUR
++### Start from an existing recipe
+ 
+ ```bash
+-bin/add-package package-name
++bin/add-package package-name --source aur --fast
++# Review the imported files, own any architecture/packaging changes directly,
++# and declare an upstream watch/provider or hook in .omarchy/.
++bin/sync-upstream package-name
+ bin/repo release --package package-name
+ ```
+ 
+-### From AUR, fast release ring
+-
+-```bash
+-bin/add-package package-name --fast
+-bin/repo release --package package-name
+-bin/repo release --mirror stable --package package-name
+-```
+-
+-### AUR-origin, manually maintained by Omarchy
+-
+-```bash
+-bin/add-package package-name --no-sync
+-```
+-
+-### Local Customizations for AUR Packages
+-
+-For static changes, create `pkgbuilds/package-name/.omarchy/patches/*.patch` to maintain modifications across AUR syncs.
+-
+-The recommended workflow is to use a scratch workspace:
+-
+-```bash
+-bin/package-worktree package-name --dir /tmp/package-name-worktree
+-```
+-
+-This creates:
+-
+-```text
+-upstream/  # raw AUR package at upstream_commit
+-patched/   # AUR + existing Omarchy .omarchy customizations
+-current/   # current checked-in package directory
+-```
+-
+-Patch-authoring flow:
+-
+-```bash
+-# 1. Make the intended change in pkgbuilds/package-name/
+-
+-# 2. Recreate the scratch workspace
+-bin/package-worktree package-name --dir /tmp/package-name-worktree
+-
+-# 3. Inspect drift from patched -> current
+-# For multi-file changes, inspect this and split into focused patches.
+-diff -ruN /tmp/package-name-worktree/patched /tmp/package-name-worktree/current
+-
+-# For a single PKGBUILD change, write a patch like this:
+-mkdir -p pkgbuilds/package-name/.omarchy/patches
+-(
+-  cd /tmp/package-name-worktree/patched
+-  diff -u --label a/PKGBUILD --label b/PKGBUILD \
+-    PKGBUILD /tmp/package-name-worktree/current/PKGBUILD || true
+-) > pkgbuilds/package-name/.omarchy/patches/my-fix.patch
+-
+-# 4. Verify the package is reproducible from AUR + .omarchy
+-bin/sync-aur package-name
+-bin/package-worktree package-name --dir /tmp/package-name-check
+-diff -ruN /tmp/package-name-check/patched /tmp/package-name-check/current
+-```
+-
+-For dynamic changes that depend on the current upstream version, add `pkgbuilds/package-name/.omarchy/post-sync.sh`. The hook runs after the AUR package is copied into a temporary worktree and before the Omarchy pkgrel suffix is applied. After patches/hooks/metadata pkgrel overrides, `bin/sync-aur` removes AUR-only `.SRCINFO` and `.gitignore` files before writing the package back.
++The import records historical provenance in `origin`. It does not opt a package
++into future AUR imports. Upstream watches update only release scalars and source
++checksums; downstream build behavior stays in the recipe. Ordinary source-code
++patches still belong beside PKGBUILD and are applied by `prepare()` as needed.
+ 
+-### Custom Package
++### Custom package
+ 
+ ```bash
+-bin/add-package my-package --local --scaffold
+-# Fill in PKGBUILD and package files
++bin/add-package my-package --scaffold
++# Fill in PKGBUILD, package files, and upstream metadata
+ bin/repo release --package my-package
+ ```
+ 
+@@ -910,9 +841,8 @@ The repository includes GitHub workflows and systemd services for automated rele
+ 
+ #### GitHub Workflows
+ 
+-1. **sync-aur.yml** (Every 6 hours): Syncs AUR packages according to `.omarchy/package.json` and opens a PR when changes are found.
+-2. **sync-upstream.yml** (Every 6 hours): Runs `.omarchy/upstream.sh` for packages that track a vendor release feed and opens a PR when a newer version is out.
+-3. **sync-rebuilds.yml** (Every 6 hours): Bumps pkgrel for packages whose `rebuild_on` dependencies have moved in the official repositories and opens a PR.
++1. **sync-upstream.yml** (Every 6 hours): Watches direct upstream feeds and updates owned recipes. Successful package updates reach a PR even if another feed fails; failed recipes stay untouched and the workflow remains red.
++2. **sync-rebuilds.yml** (Every 6 hours): Bumps pkgrel for packages whose `rebuild_on` dependencies have moved in the official repositories and opens a PR.
+ 
+ #### Systemd Services
+ 
+diff --git a/bin/add-package b/bin/add-package
+index ee18f803f..b347b8d15 100755
+--- a/bin/add-package
++++ b/bin/add-package
+@@ -6,7 +6,7 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
+ source "$BUILD_ROOT/helpers/paths.sh"
+ 
+ PACKAGE=""
+-SOURCE="aur"
++SOURCE="local"
+ SYNC="true"
+ RELEASE_RING=""
+ AUR_PACKAGE=""
+@@ -17,14 +17,14 @@ usage() {
+   cat <<EOF
+ Usage: $0 <package> [OPTIONS]
+ 
+-Create pkgbuilds/<package> with Omarchy metadata. AUR packages are synced
+-immediately after metadata is written.
++Create an Omarchy-owned package. --source aur imports a starting recipe once;
++future releases must use an upstream watch, provider, or hook.
+ 
+ Options:
+-  --source <aur|local>       Package source (default: aur)
++  --source <aur|local>       Initial recipe source (default: local)
+   --local                    Shortcut for --source local
+   --aur <name>               AUR package name when different from local directory
+-  --no-sync                  For AUR packages, mark sync disabled after initial setup
++  --no-sync                  Keep the imported recipe manually maintained
+   --fast                     Put package in the fast release ring
+   --release-ring <ring>      Release ring (currently: fast)
+   --scaffold                 For local packages, create a starter PKGBUILD
+@@ -32,9 +32,9 @@ Options:
+   -h, --help                 Show this help message
+ 
+ Examples:
+-  $0 yay
+-  $0 spotify --fast
+-  $0 signal-desktop --no-sync
++  $0 yay --source aur
++  $0 spotify --source aur --fast
++  $0 signal-desktop --source aur --no-sync
+   $0 omarchy-zsh --local --scaffold
+ EOF
+ }
+@@ -97,6 +97,10 @@ if [[ -z "$PACKAGE" ]]; then
+   usage
+   exit 1
+ fi
++if [[ ! $PACKAGE =~ ^[a-zA-Z0-9@_+][a-zA-Z0-9@._+-]*$ ]]; then
++  print_error "Invalid package name: $PACKAGE"
++  exit 1
++fi
+ 
+ case "$SOURCE" in
+   aur|local) ;;
+@@ -112,6 +116,11 @@ PACKAGE_DIR="$PKGBUILDS_DIR/$PACKAGE"
+ OMARCHY_DIR="$PACKAGE_DIR/.omarchy"
+ METADATA_FILE="$OMARCHY_DIR/package.json"
+ 
++if [[ "$SOURCE" == aur && -f "$PACKAGE_DIR/PKGBUILD" ]]; then
++  print_error "Refusing to replace the maintained recipe for $PACKAGE"
++  exit 1
++fi
++
+ if [[ -f "$METADATA_FILE" && "$FORCE" != true ]]; then
+   print_error "Package metadata already exists: $METADATA_FILE"
+   print_info "Use --force to overwrite it"
+@@ -146,18 +155,8 @@ jq -n "${jq_args[@]}" "$jq_filter" > "$METADATA_FILE"
+ print_success "Wrote $METADATA_FILE"
+ 
+ if [[ "$SOURCE" == "aur" ]]; then
+-  if [[ "$SYNC" == "false" ]]; then
+-    # Temporarily sync once, then restore sync=false so future automated syncs skip it.
+-    tmpfile=$(mktemp)
+-    jq 'del(.sync)' "$METADATA_FILE" > "$tmpfile"
+-    mv "$tmpfile" "$METADATA_FILE"
+-    "$BUILD_ROOT/bin/sync-aur" "$PACKAGE"
+-    jq '. + {sync: false}' "$METADATA_FILE" > "$tmpfile"
+-    mv "$tmpfile" "$METADATA_FILE"
+-    print_info "AUR sync disabled for future runs"
+-  else
+-    "$BUILD_ROOT/bin/sync-aur" "$PACKAGE"
+-  fi
++  "$BUILD_ROOT/bin/import-aur" "$PACKAGE"
++
+ else
+   if [[ "$SCAFFOLD" == true && ! -f "$PACKAGE_DIR/PKGBUILD" ]]; then
+     cat > "$PACKAGE_DIR/PKGBUILD" <<EOF
+diff --git a/bin/import-aur b/bin/import-aur
+new file mode 100755
+index 000000000..cbc5ec508
+--- /dev/null
++++ b/bin/import-aur
+@@ -0,0 +1,62 @@
++#!/bin/bash
++# Internal initial-recipe import used by add-package. Maintained recipes are
++# never replaced; subsequent releases go through sync-upstream.
++set -euo pipefail
++
++BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
++source "$BUILD_ROOT/helpers/message-helpers.sh"
++source "$BUILD_ROOT/helpers/paths.sh"
++
++if [[ ${1:-} == --help || ${1:-} == -h ]]; then
++  echo "Usage: bin/add-package <package> --source aur [--aur <upstream-name>]"
++  exit 0
++fi
++if [[ $# != 1 || ! $1 =~ ^[a-zA-Z0-9@_+][a-zA-Z0-9@._+-]*$ ]]; then
++  print_error "Use bin/add-package <package> --source aur for an initial import"
++  exit 1
++fi
++package=$1
++package_dir="$PKGBUILDS_DIR/$package"
++metadata="$package_dir/.omarchy/package.json"
++if [[ -f "$package_dir/PKGBUILD" ]]; then
++  print_error "Refusing to replace the maintained recipe for $package"
++  exit 1
++fi
++if [[ ! -f "$metadata" ]] || [[ $(jq -r .source "$metadata") != aur ]]; then
++  print_error "Initial import requires metadata created by bin/add-package --source aur"
++  exit 1
++fi
++aur_package=$(jq -r --arg name "$package" '.aur // $name' "$metadata")
++if [[ ! $aur_package =~ ^[a-zA-Z0-9@_+][a-zA-Z0-9@._+-]*$ ]]; then
++  print_error "Invalid AUR package name"
++  exit 1
++fi
++# Refuse unrelated package files: an import only starts from .omarchy metadata.
++shopt -s dotglob nullglob
++for item in "$package_dir"/*; do
++  if [[ ${item##*/} != .omarchy ]]; then
++    print_error "Initial import needs an empty package directory: $package_dir"
++    exit 1
++  fi
++done
++
++work=$(mktemp -d "$PKGBUILDS_DIR/.import-aur.XXXXXX")
++trap 'rm -rf "$work"' EXIT
++print_info "Importing $package from AUR package $aur_package..."
++git clone --quiet "https://aur.archlinux.org/${aur_package}.git" "$work/recipe"
++[[ -f "$work/recipe/PKGBUILD" ]] || { print_error "AUR package has no PKGBUILD"; exit 1; }
++commit=$(git -C "$work/recipe" rev-parse HEAD)
++rm -rf "$work/recipe/.git" "$work/recipe/.omarchy"
++rm -f "$work/recipe/.SRCINFO" "$work/recipe/.gitignore"
++cp -a "$package_dir/.omarchy" "$work/recipe/.omarchy"
++jq --arg name "$aur_package" --arg commit "$commit" '
++  .source = "local" | .origin = {aur: $name, commit: $commit}
++  | del(.aur, .upstream_commit)
++' "$metadata" > "$work/recipe/.omarchy/package.json"
++# Stage on the same filesystem, restoring the metadata directory on failure.
++mv "$package_dir" "$work/original"
++if ! mv "$work/recipe" "$package_dir"; then
++  mv "$work/original" "$package_dir"
++  exit 1
++fi
++print_success "Imported $package; review the recipe and configure its direct upstream watch"
+diff --git a/bin/package-worktree b/bin/package-worktree
+index 8deca925b..37ca4ed5e 100755
+--- a/bin/package-worktree
++++ b/bin/package-worktree
+@@ -17,13 +17,13 @@ Usage: $0 <package> [OPTIONS]
+ Create a scratch workspace for inspecting an AUR-backed package.
+ 
+ The workspace contains:
+-  upstream/  Raw AUR package at .omarchy/package.json upstream_commit, or HEAD
++  upstream/  Raw AUR package at the recorded origin.commit, or HEAD
+   patched/   Raw AUR package with Omarchy .omarchy patches/hooks/pkgrel applied
+   current/   Current checked-in package directory
+ 
+ Options:
+   --dir <path>       Workspace directory (default: mktemp under /tmp)
+-  --commit <sha>     Use a specific AUR commit instead of upstream_commit
++  --commit <sha>     Use a specific AUR commit instead of origin.commit
+   -h, --help         Show this help message
+ 
+ Examples:
+@@ -75,13 +75,13 @@ if [[ ! -f "$METADATA" ]]; then
+   exit 1
+ fi
+ 
+-if [[ "$(jq -r '.source // ""' "$METADATA")" != "aur" ]]; then
++if [[ "$(jq -r '.origin.aur // .aur // (if .source == "aur" then "legacy" else "" end)' "$METADATA")" == "" ]]; then
+   print_error "package-worktree only supports AUR-backed packages"
+   exit 1
+ fi
+ 
+-AUR_PACKAGE=$(jq -r --arg package "$PACKAGE" '.aur // $package' "$METADATA")
+-UPSTREAM_COMMIT=${COMMIT_OVERRIDE:-$(jq -r '.upstream_commit // ""' "$METADATA")}
++AUR_PACKAGE=$(jq -r --arg package "$PACKAGE" '.origin.aur // .aur // $package' "$METADATA")
++UPSTREAM_COMMIT=${COMMIT_OVERRIDE:-$(jq -r '.origin.commit // .upstream_commit // ""' "$METADATA")}
+ 
+ if [[ -z "$DEST_DIR" ]]; then
+   DEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/omarchy-${PACKAGE}.XXXXXX")
+@@ -224,7 +224,7 @@ print_info "AUR package: $AUR_PACKAGE"
+ if [[ -n "$UPSTREAM_COMMIT" ]]; then
+   print_info "Upstream commit: $UPSTREAM_COMMIT"
+ else
+-  print_warning "No upstream_commit recorded; using AUR HEAD"
++  print_warning "No origin.commit recorded; using AUR HEAD"
+ fi
+ 
+ rm -rf "$UPSTREAM_DIR" "$PATCHED_DIR" "$CURRENT_DIR"
+diff --git a/bin/sync-aur b/bin/sync-aur
+deleted file mode 100755
+index 59af6ca9e..000000000
+--- a/bin/sync-aur
++++ /dev/null
+@@ -1,434 +0,0 @@
+-#!/bin/bash
+-set -euo pipefail
+-
+-BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
+-source "$BUILD_ROOT/helpers/message-helpers.sh"
+-source "$BUILD_ROOT/helpers/paths.sh"
+-source "$BUILD_ROOT/helpers/package-metadata.sh"
+-
+-TEMP_DIR=$(mktemp -d)
+-trap 'rm -rf "$TEMP_DIR"' EXIT
+-
+-SPECIFIC_PACKAGES=()
+-
+-usage() {
+-  cat <<EOF
+-Usage: $0 [PACKAGE...]
+-
+-Sync AUR-backed packages into pkgbuilds/<package>/.
+-
+-Package selection is driven by pkgbuilds/<package>/.omarchy/package.json:
+-  { "source": "aur" }                  # synced from matching AUR package name
+-  { "source": "aur", "aur": "yaru" }  # synced from different AUR package name
+-  { "source": "aur", "sync": false }  # AUR-origin, but not auto-synced
+-
+-Arguments:
+-  PACKAGE    One or more package names to sync (optional)
+-
+-Examples:
+-  $0                    # Sync all AUR packages with sync enabled
+-  $0 yay cursor-bin     # Sync specific packages
+-EOF
+-}
+-
+-while [[ $# -gt 0 ]]; do
+-  case "$1" in
+-    -h|--help)
+-      usage
+-      exit 0
+-      ;;
+-    --tier)
+-      print_error "--tier is no longer supported; package metadata controls sync behavior"
+-      exit 1
+-      ;;
+-    --*)
+-      print_error "Unknown option: $1"
+-      exit 1
+-      ;;
+-    *)
+-      SPECIFIC_PACKAGES+=("$1")
+-      shift
+-      ;;
+-  esac
+-done
+-
+-print_header "AUR Package Sync"
+-mkdir -p "$PKGBUILDS_DIR"
+-
+-SYNCED=0
+-SKIPPED=0
+-FAILED=0
+-SYNCED_PACKAGES=()
+-SPECIFIC_MODE=false
+-
+-get_pkgbuild_field() {
+-  local package_dir="$1"
+-  local field="$2"
+-  local value=""
+-
+-  if [[ -f "$package_dir/PKGBUILD" ]]; then
+-    value=$(grep -m1 "^${field}=" "$package_dir/PKGBUILD" | cut -d= -f2- | tr -d "\"'") || true
+-    if [[ -n "$value" ]]; then
+-      echo "$value"
+-      return
+-    fi
+-  fi
+-
+-  if [[ -f "$package_dir/.SRCINFO" ]]; then
+-    awk -F' = ' -v field="$field" '$1 ~ "^[[:space:]]*" field "$" { print $2; exit }' "$package_dir/.SRCINFO"
+-  fi
+-}
+-
+-set_pkgrel() {
+-  local package_dir="$1"
+-  local pkgrel="$2"
+-  local pkgbuild="$package_dir/PKGBUILD"
+-
+-  if [[ -f "$pkgbuild" ]]; then
+-    sed -i "s/^pkgrel=.*/pkgrel=$pkgrel/" "$pkgbuild"
+-  fi
+-}
+-
+-display_package_name() {
+-  local package_dir="$1"
+-  local name
+-  name=$(basename "$package_dir")
+-  echo "${name%.work}"
+-}
+-
+-remove_aur_only_files() {
+-  local package_dir="$1"
+-
+-  rm -f "$package_dir/.SRCINFO" "$package_dir/.gitignore"
+-}
+-
+-copy_aur_contents() {
+-  local aur_dir="$1"
+-  local target_dir="$2"
+-
+-  mkdir -p "$target_dir"
+-
+-  shopt -s dotglob nullglob
+-  local item base
+-  for item in "$aur_dir"/*; do
+-    base=$(basename "$item")
+-    [[ "$base" == ".git" ]] && continue
+-    cp -a "$item" "$target_dir/"
+-  done
+-  shopt -u dotglob nullglob
+-}
+-
+-commit_synced_worktree() {
+-  local work_dir="$1"
+-  local target_dir="$2"
+-  local parent base staged_dir backup_root backup_dir
+-
+-  parent=$(dirname "$target_dir")
+-  base=$(basename "$target_dir")
+-  staged_dir=$(mktemp -d "$parent/.${base}.staged.XXXXXX")
+-  backup_root=$(mktemp -d "$parent/.${base}.backup.XXXXXX")
+-  backup_dir="$backup_root/$base"
+-
+-  # Copy to the package filesystem before swapping. This keeps the original
+-  # package directory intact if copying from /tmp fails or is interrupted.
+-  if ! cp -a "$work_dir/." "$staged_dir/"; then
+-    print_error "Failed to stage synced package for $base"
+-    rm -rf "$staged_dir" "$backup_root"
+-    return 1
+-  fi
+-
+-  if [[ -e "$target_dir" ]]; then
+-    if ! mv "$target_dir" "$backup_dir"; then
+-      print_error "Failed to back up existing package directory: $target_dir"
+-      rm -rf "$staged_dir" "$backup_root"
+-      return 1
+-    fi
+-  fi
+-
+-  if ! mv "$staged_dir" "$target_dir"; then
+-    print_error "Failed to install synced package directory: $target_dir"
+-    if [[ -e "$backup_dir" ]]; then
+-      mv "$backup_dir" "$target_dir" || true
+-    fi
+-    rm -rf "$staged_dir" "$backup_root"
+-    return 1
+-  fi
+-
+-  rm -rf "$backup_root" "$work_dir"
+-}
+-
+-set_upstream_commit() {
+-  local package_dir="$1"
+-  local commit="$2"
+-  local metadata="$package_dir/.omarchy/package.json"
+-  local tmpfile
+-
+-  tmpfile=$(mktemp)
+-  jq --arg commit "$commit" '.upstream_commit = $commit' "$metadata" > "$tmpfile"
+-  mv "$tmpfile" "$metadata"
+-}
+-
+-apply_omarchy_patches() {
+-  local package_dir="$1"
+-  local patches_dir="$package_dir/.omarchy/patches"
+-  local applied=false
+-
+-  [[ -d "$patches_dir" ]] || return 1
+-
+-  shopt -s nullglob
+-  local patch_files=("$patches_dir"/*.patch)
+-  local patch_dir_files=("$patches_dir"/*)
+-  shopt -u nullglob
+-
+-  if [[ ${#patch_files[@]} -eq 0 ]]; then
+-    if [[ ${#patch_dir_files[@]} -gt 0 ]]; then
+-      print_warning "No .patch files found in $patches_dir"
+-    fi
+-    return 1
+-  fi
+-
+-  print_info "Applying Omarchy patches for $(display_package_name "$package_dir")..."
+-  local patch_file
+-  for patch_file in "${patch_files[@]}"; do
+-    print_info "  $(basename "$patch_file")"
+-    if ! (cd "$package_dir" && patch -p1 --forward --batch --no-backup-if-mismatch < "$patch_file"); then
+-      print_error "Failed to apply patch: $patch_file"
+-      return 2
+-    fi
+-    applied=true
+-  done
+-
+-  [[ "$applied" == true ]]
+-}
+-
+-run_omarchy_post_sync_hook() {
+-  local package_dir="$1"
+-  local package="$2"
+-  local aur_package="$3"
+-  local aur_pkgrel="$4"
+-  local hook="$package_dir/.omarchy/post-sync.sh"
+-
+-  [[ -f "$hook" ]] || return 1
+-
+-  print_info "Running Omarchy post-sync hook for $(display_package_name "$package_dir")..."
+-  if ! (
+-    cd "$package_dir"
+-    PACKAGE_NAME="$package" \
+-      AUR_PACKAGE_NAME="$aur_package" \
+-      AUR_PKGREL="$aur_pkgrel" \
+-      bash ".omarchy/post-sync.sh"
+-  ); then
+-    print_error "Failed to run post-sync hook: $hook"
+-    return 2
+-  fi
+-
+-  return 0
+-}
+-
+-apply_pkgrel_suffix_if_customized() {
+-  local package_dir="$1"
+-  local aur_pkgrel="$2"
+-
+-  [[ -n "$aur_pkgrel" ]] || return 0
+-
+-  print_info "Applying Omarchy pkgrel suffix for $(display_package_name "$package_dir"): pkgrel=$aur_pkgrel.1"
+-  set_pkgrel "$package_dir" "$aur_pkgrel.1"
+-}
+-
+-apply_pkgrel_override() {
+-  local package_dir="$1"
+-  local aur_pkgrel="$2"
+-  local previous_pkgver="$3"
+-  local metadata="$package_dir/.omarchy/package.json"
+-  local pkgbuild="$package_dir/PKGBUILD"
+-
+-  [[ -f "$metadata" ]] || return 1
+-  jq -e 'has("pkgrel")' "$metadata" >/dev/null || return 1
+-
+-  local current_pkgver suffix offset base rel tmpfile
+-  # Read through the same accessor that produced previous_pkgver. Parsing it a
+-  # second time here let a quoted pkgver= compare unequal to itself, which threw
+-  # away the pkgrel metadata of an unchanged package on every sync.
+-  current_pkgver=$(get_pkgbuild_field "$package_dir" pkgver)
+-
+-  if [[ -n "$previous_pkgver" && "$current_pkgver" != "$previous_pkgver" ]]; then
+-    print_info "Removing stale pkgrel metadata for $(display_package_name "$package_dir") (pkgver changed: $previous_pkgver -> $current_pkgver)"
+-    tmpfile=$(mktemp)
+-    jq 'del(.pkgrel)' "$metadata" > "$tmpfile"
+-    mv "$tmpfile" "$metadata"
+-    return 1
+-  fi
+-
+-  suffix=$(jq -r '.pkgrel.suffix // 1' "$metadata")
+-  offset=$(jq -r '.pkgrel.offset // 0' "$metadata")
+-
+-  if [[ ! "$offset" =~ ^[0-9]+$ || ! "$aur_pkgrel" =~ ^[0-9]+$ ]]; then
+-    print_error "pkgrel offset requires numeric AUR pkgrel for $(display_package_name "$package_dir")"
+-    return 2
+-  fi
+-
+-  base=$((aur_pkgrel + offset))
+-  rel="$base.$suffix"
+-
+-  print_info "Applying pkgrel suffix for $(display_package_name "$package_dir"): AUR pkgrel=$aur_pkgrel, offset=$offset, suffix=$suffix -> pkgrel=$rel"
+-  set_pkgrel "$package_dir" "$rel"
+-  return 0
+-}
+-
+-clone_aur_package() {
+-  local aur_package="$1"
+-  local dest="$2"
+-  local clone_log="$TEMP_DIR/clone.log"
+-  local attempt
+-
+-  for attempt in 1 2 3; do
+-    rm -rf "$dest"
+-    if git clone "https://aur.archlinux.org/${aur_package}.git" "$dest" >"$clone_log" 2>&1; then
+-      return 0
+-    fi
+-    if [[ $attempt -lt 3 ]]; then
+-      print_warning "Clone of $aur_package failed (attempt $attempt/3), retrying in 10s..."
+-      sleep 10
+-    fi
+-  done
+-
+-  print_warning "Failed to clone $aur_package after 3 attempts: $(tail -n 1 "$clone_log")"
+-  return 1
+-}
+-
+-sync_package() {
+-  local package="$1"
+-  local package_dir="$PKGBUILDS_DIR/$package"
+-  local metadata="$package_dir/.omarchy/package.json"
+-
+-  if [[ ! -f "$metadata" ]]; then
+-    if [[ "$SPECIFIC_MODE" == true ]]; then
+-      print_error "Package $package is missing .omarchy/package.json"
+-      ((++FAILED))
+-    else
+-      print_warning "Skipping $package: missing .omarchy/package.json"
+-      ((++SKIPPED))
+-    fi
+-    return 0
+-  fi
+-
+-  if [[ "$(jq -r '.source // ""' "$metadata")" != "aur" ]]; then
+-    print_info "Skipping $package: source is not AUR"
+-    ((++SKIPPED))
+-    return 0
+-  fi
+-
+-  if [[ "$(jq -r 'if has("sync") then .sync else true end' "$metadata")" == "false" ]]; then
+-    print_info "Skipping $package: AUR sync disabled"
+-    ((++SKIPPED))
+-    return 0
+-  fi
+-
+-  local aur_package
+-  aur_package=$(jq -r --arg package "$package" '.aur // $package' "$metadata")
+-
+-  if [[ "$aur_package" == "$package" ]]; then
+-    print_info "Syncing $package from AUR..."
+-  else
+-    print_info "Syncing $package from AUR package $aur_package..."
+-  fi
+-
+-  cd "$TEMP_DIR"
+-
+-  if ! clone_aur_package "$aur_package" "$TEMP_DIR/$aur_package"; then
+-    ((++FAILED))
+-    return 0
+-  fi
+-
+-  if [[ ! -f "$TEMP_DIR/$aur_package/PKGBUILD" ]]; then
+-    print_warning "AUR repository for $aur_package is empty (package does not exist in AUR)"
+-    ((++FAILED))
+-    return 0
+-  fi
+-
+-  local aur_dir="$TEMP_DIR/$aur_package"
+-  local work_dir="$TEMP_DIR/${package}.work"
+-  local aur_pkgrel previous_pkgver upstream_commit
+-  aur_pkgrel=$(get_pkgbuild_field "$aur_dir" pkgrel)
+-  previous_pkgver=$(get_pkgbuild_field "$package_dir" pkgver || true)
+-  upstream_commit=$(git -C "$aur_dir" rev-parse HEAD)
+-
+-  rm -rf "$work_dir"
+-  copy_aur_contents "$aur_dir" "$work_dir"
+-  rm -rf "$work_dir/.omarchy"
+-  cp -a "$package_dir/.omarchy" "$work_dir/.omarchy"
+-
+-  local customized=false
+-
+-  if apply_omarchy_patches "$work_dir"; then
+-    customized=true
+-  else
+-    local patch_status=$?
+-    if [[ $patch_status -eq 2 ]]; then
+-      ((++FAILED))
+-      return 0
+-    fi
+-  fi
+-
+-  if run_omarchy_post_sync_hook "$work_dir" "$package" "$aur_package" "$aur_pkgrel"; then
+-    customized=true
+-  else
+-    local hook_status=$?
+-    if [[ $hook_status -eq 2 ]]; then
+-      ((++FAILED))
+-      return 0
+-    fi
+-  fi
+-
+-  local pkgrel_overridden=false
+-  set +e
+-  apply_pkgrel_override "$work_dir" "$aur_pkgrel" "$previous_pkgver"
+-  local pkgrel_status=$?
+-  set -e
+-  case "$pkgrel_status" in
+-    0) pkgrel_overridden=true ;;
+-    1) ;;
+-    *) ((++FAILED)); return 0 ;;
+-  esac
+-
+-  if [[ "$customized" == true && "$pkgrel_overridden" == false ]]; then
+-    apply_pkgrel_suffix_if_customized "$work_dir" "$aur_pkgrel"
+-  fi
+-
+-  remove_aur_only_files "$work_dir"
+-
+-  set_upstream_commit "$work_dir" "$upstream_commit"
+-  if ! commit_synced_worktree "$work_dir" "$package_dir"; then
+-    ((++FAILED))
+-    return 0
+-  fi
+-
+-  SYNCED_PACKAGES+=("$package")
+-  ((++SYNCED))
+-}
+-
+-if [[ ${#SPECIFIC_PACKAGES[@]} -gt 0 ]]; then
+-  SPECIFIC_MODE=true
+-  for package in "${SPECIFIC_PACKAGES[@]}"; do
+-    sync_package "$package"
+-  done
+-else
+-  while IFS= read -r package; do
+-    sync_package "$package"
+-  done < <(packages_for_aur_sync)
+-fi
+-
+-echo ""
+-if [[ $FAILED -gt 0 ]]; then
+-  print_error "Sync completed with failures"
+-else
+-  print_success "Sync complete!"
+-fi
+-echo "  Target: $PKGBUILDS_DIR"
+-echo "  Synced: $SYNCED"
+-echo "  Skipped: $SKIPPED"
+-echo "  Failed: $FAILED"
+-
+-if [[ $FAILED -gt 0 ]]; then
+-  exit 1
+-fi
+diff --git a/bin/sync-upstream b/bin/sync-upstream
+index 046a39b38..2f8450681 100755
+--- a/bin/sync-upstream
++++ b/bin/sync-upstream
+@@ -9,6 +9,7 @@ source "$BUILD_ROOT/helpers/upstream-github.sh"
+ 
+ TEMP_DIR=$(mktemp -d)
+ trap 'rm -rf "$TEMP_DIR"' EXIT
++export UPSTREAM_CACHE_DIR="$TEMP_DIR/watch-cache"
+ 
+ SPECIFIC_PACKAGES=()
+ 
+@@ -332,6 +333,12 @@ sync_package() {
+     return 0
+   fi
+ 
++  if jq -e '.sync == false' "$package_dir/.omarchy/package.json" >/dev/null 2>&1; then
++    print_info "Skipping $package: upstream updates held by sync=false"
++    ((++SKIPPED))
++    return 0
++  fi
++
+   local provider has_upstream=false
+   provider=$(package_upstream_provider "$package_dir")
+   if package_has_upstream_provider "$package_dir"; then
+@@ -372,6 +379,21 @@ sync_package() {
+ 
+   print_info "Checking $package for upstream releases..."
+ 
++  if [[ "$provider" == watch ]]; then
++    local result
++    if ! result=$(python3 "$BUILD_ROOT/helpers/upstream-watch.py" sync "$package_dir" --min-age "$min_age"); then
++      print_error "Upstream watch failed for $package"
++      ((++FAILED))
++    elif [[ $(jq -r .status <<<"$result") == updated ]]; then
++      print_success "  $(jq -r '.before + " -> " + .after' <<<"$result")"
++      ((++UPDATED))
++    else
++      print_info "  $(jq -r '.reason' <<<"$result")"
++      ((++SKIPPED))
++    fi
++    return 0
++  fi
++
+   local release release_status=0
+   if [[ -n "$provider" ]]; then
+     case "$provider" in
+diff --git a/docs/upstream-sources.md b/docs/upstream-sources.md
+new file mode 100644
+index 000000000..9276bd2ef
+--- /dev/null
++++ b/docs/upstream-sources.md
+@@ -0,0 +1,178 @@
++# Direct upstream watches
++
++Omarchy owns the recipes in `pkgbuilds/`. `bin/sync-upstream` discovers new
++releases directly from project/vendor feeds and updates versions, declared
++release variables, and the source checksums already used by the recipe. It never
++imports upstream PKGBUILDs or runs downloaded build scripts. Architecture support,
++root install hooks, dependencies, and build functions remain ours to maintain.
++
++`upstream.watch` complements the existing declarative providers and custom hooks:
++
++```json
++{
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/walker",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  }
++}
++```
++
++## Watch fields
++
++Choose exactly one provider: `github` (owner/repository), `git_tags` (repository
++HTTPS URL), `git_branch` (repository URL plus explicit `branch`), `npm` or `pypi`
++(package name), `debian` (Packages index plus exact `package`), `json` (URL plus
++version `path`), `regex` (text URL), `redirect` (final HTTPS download URL), or
++`archive` (inspect archive metadata without extracting/executing code).
++
++Tag, text, redirect and archive watches use an explicit `pattern` with a named
++`version` capture. Tag patterns match the entire tag. `version` optionally formats
++those captures into an Arch pkgver; e.g. Sublime uses `4.{version}`. JSON feeds can
++expose additional capture values through `fields`, a name-to-JSON-path map.
++
++`variables` maps recipe scalars such as `_commit` or `_build` to capture templates.
++Only explicitly declared underscore-prefixed variables can change. GitHub
++`{commit}` resolves the selected tag, not a moving target_commitish branch.
++`submodules` can map a recipe variable to a gitlink in the selected GitHub tag;
++RustDesk uses this for hbb_common. Downloaded repository code is never evaluated.
++
++For upstreams that rebuild a release, declare a numeric `revision` template and
++its `revision_variable`. With unchanged pkgver, only an increasing revision can
++advance that variable, and the downstream pkgrel increments instead of resetting.
++Cursor CLI uses `sequence` to preserve its date/counter/hash version convention
++when the vendor publishes a second hash on the same day. A new pkgver resets
++pkgrel to 1, but the complete epoch:pkgver-pkgrel must still increase.
++
++GitHub releases exclude drafts and prereleases unless `allow_prerelease` is true.
++Existing `min_release_age` policies apply: a feed without a verifiable publication
++time cannot bypass a configured hold. Git branch watches derive a commit count
++and date from the actual branch history and write an immutable source pin.
++
++Checksums retain their algorithms (SHA256, SHA512, BLAKE2, etc.) and source order.
++Changed git sources are hashed with makepkg's git-archive convention. Unchanged
++sources retain their hashes; `mutable_sources` explicitly names entries such as
++`source:0` that must be fetched again for a new version despite a stable URL.
++Existing `SKIP` entries remain unchanged (including signed metadata verified by
++the recipe); new skips are never introduced. Changed URLs are still fetched.
++A matching GitHub release asset SHA256 digest avoids downloading large assets.
++Missing architecture artifacts or malformed metadata fail the package atomically.
++Every declared architecture must read back the same release and checksum values.
++
++Archive watches use `member` to select a text member, or `filenames: true` to read
++versions from archive member names. Debian archives are read through their control
++metadata. `unescape_json` handles JSON strings embedded in a vendor's HTML page.
++
++## Maintenance and validation
++
++Running watches locally requires Python 3.11+, Bash, curl, git, jq, Arch's
++`vercmp`, and `bsdtar`. CI installs these in its Arch container.
++
++- Edit packaging and architecture changes directly in PKGBUILD. The old AUR
++  overlays have been folded into these recipes and removed.
++- Keep source-code patches and install hooks checked in as ordinary package files.
++- Bump pkgrel when changing a recipe at the same version. Removing a dotted AUR
++  suffix must never lower the complete version.
++- Add a watch with each new package. `bin/add-package --source aur` is a one-time
++  import; it records historical `origin` metadata and leaves an owned recipe.
++- `python helpers/upstream-watch.py check pkgbuilds/NAME` checks release discovery
++  without rewriting the recipe. `bin/sync-upstream NAME` performs the update.
++- `python tests/upstream-watch.py` tests update atomicity, architecture coverage,
++  version ordering, source hashes and hostile metadata using offline fixtures.
++
++The scheduled workflow continues reviewing completed updates if another package
++fails. The failing recipe stays unchanged and the run still reports failure.
++
++## Migrated package watches
++
++68 active AUR packages now use direct watches. The nine previously disabled
++packages retain manual maintenance holds. Historical AUR provenance is recorded
++in `origin` and has no effect on release selection.
++
++| Package | Provider | Upstream |
++|---|---|---|
++| `1password-beta` | debian | [https://downloads.1password.com/linux/debian/amd64/dists/beta/main/binary-amd64/Packages](https://downloads.1password.com/linux/debian/amd64/dists/beta/main/binary-amd64/Packages) |
++| `1password-cli` | json | [https://app-updates.agilebits.com/check/1/0/CLI2/en/0](https://app-updates.agilebits.com/check/1/0/CLI2/en/0) |
++| `aether` | github | [omacom/aether](https://github.com/omacom/aether) |
++| `asusctl` | git_tags | [https://github.com/OpenGamingCollective/asusctl.git](https://github.com/OpenGamingCollective/asusctl.git) |
++| `basecamp-cli` | github | [basecamp/basecamp-cli](https://github.com/basecamp/basecamp-cli) |
++| `bun-bin` | github | [oven-sh/bun](https://github.com/oven-sh/bun) |
++| `claude-code` | regex | [https://downloads.claude.ai/claude-code-releases/latest](https://downloads.claude.ai/claude-code-releases/latest) |
++| `cliamp` | github | [bjarneo/cliamp](https://github.com/bjarneo/cliamp) |
++| `crush-bin` | github | [charmbracelet/crush](https://github.com/charmbracelet/crush) |
++| `cursor-bin` | json | [https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable](https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable) |
++| `cursor-cli` | regex | [https://cursor.com/install](https://cursor.com/install) |
++| `dbxcli-bin` | github | [dropbox/dbxcli](https://github.com/dropbox/dbxcli) |
++| `dropbox` | redirect | [https://www.dropbox.com/download?plat=lnx.x86_64](https://www.dropbox.com/download?plat=lnx.x86_64) |
++| `dropbox-cli` | regex | [https://linux.dropbox.com/packages/](https://linux.dropbox.com/packages/) |
++| `elephant` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-all` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-archlinuxpkgs` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-bluetooth` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-calc` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-clipboard` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-desktopapplications` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-files` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-menus` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-providerlist` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-runner` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-symbols` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-todo` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-unicode` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `elephant-websearch` | github | [abenz1267/elephant](https://github.com/abenz1267/elephant) |
++| `heroic-games-launcher-bin` | github | [Heroic-Games-Launcher/HeroicGamesLauncher](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher) |
++| `hyprshade` | pypi | [hyprshade](https://pypi.org/project/hyprshade/) |
++| `lib32-nvidia-580xx-utils` | regex | [https://download.nvidia.com/XFree86/Linux-x86_64/](https://download.nvidia.com/XFree86/Linux-x86_64/) |
++| `limine-mkinitcpio-hook` | git_tags | [https://gitlab.com/Zesko/limine-entry-tool.git](https://gitlab.com/Zesko/limine-entry-tool.git) |
++| `limine-snapper-sync` | git_tags | [https://gitlab.com/Zesko/limine-snapper-sync.git](https://gitlab.com/Zesko/limine-snapper-sync.git) |
++| `lmstudio-bin` | regex | [https://lmstudio.ai/download](https://lmstudio.ai/download) |
++| `localsend` | github | [localsend/localsend](https://github.com/localsend/localsend) |
++| `localsend-bin` | github | [localsend/localsend](https://github.com/localsend/localsend) |
++| `macbook12-spi-driver-dkms` | git_branch | [https://github.com/marc-git/macbook12-spi-driver.git](https://github.com/marc-git/macbook12-spi-driver.git) |
++| `makima-bin` | github | [cyber-sushi/makima](https://github.com/cyber-sushi/makima) |
++| `minecraft-launcher` | archive | [https://launcher.mojang.com/download/Minecraft.deb](https://launcher.mojang.com/download/Minecraft.deb) |
++| `nautilus-dropbox` | github | [dropbox/nautilus-dropbox](https://github.com/dropbox/nautilus-dropbox) |
++| `nautilus-open-any-terminal` | git_tags | [https://github.com/Stunkymonkey/nautilus-open-any-terminal.git](https://github.com/Stunkymonkey/nautilus-open-any-terminal.git) |
++| `nordvpn-bin` | debian | [https://repo.nordvpn.com/deb/nordvpn/debian/dists/stable/main/binary-amd64/Packages](https://repo.nordvpn.com/deb/nordvpn/debian/dists/stable/main/binary-amd64/Packages) |
++| `nvidia-580xx-utils` | regex | [https://download.nvidia.com/XFree86/Linux-x86_64/](https://download.nvidia.com/XFree86/Linux-x86_64/) |
++| `omarchy-chromium-bin` | github | [omacom/omarchy-chromium](https://github.com/omacom/omarchy-chromium) |
++| `omarchy-emacs` | git_tags | [https://github.com/scottjones/omarchy-emacs.git](https://github.com/scottjones/omarchy-emacs.git) |
++| `omazed` | git_tags | [https://github.com/aps6/omazed.git](https://github.com/aps6/omazed.git) |
++| `once-bin` | github | [basecamp/once](https://github.com/basecamp/once) |
++| `openai-codex-bin` | github | [openai/codex](https://github.com/openai/codex) |
++| `python-mediapipe` | github | [google-ai-edge/mediapipe](https://github.com/google-ai-edge/mediapipe) |
++| `python-sounddevice` | pypi | [sounddevice](https://pypi.org/project/sounddevice/) |
++| `python-terminaltexteffects` | pypi | [terminaltexteffects](https://pypi.org/project/terminaltexteffects/) |
++| `rustdesk` | github | [rustdesk/rustdesk](https://github.com/rustdesk/rustdesk) |
++| `spotify` | debian | [https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages](https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages) |
++| `sublime-text-4` | json | [https://www.sublimetext.com/updates/4/stable_update_check](https://www.sublimetext.com/updates/4/stable_update_check) |
++| `sunshine` | github | [LizardByte/Sunshine](https://github.com/LizardByte/Sunshine) |
++| `ttf-ia-writer` | git_branch | [https://github.com/iaolo/iA-Fonts.git](https://github.com/iaolo/iA-Fonts.git) |
++| `tuxedo-drivers-nocompatcheck-dkms` | git_tags | [https://gitlab.com/kronerm/tuxedo-drivers-nocompatcheck.git](https://gitlab.com/kronerm/tuxedo-drivers-nocompatcheck.git) |
++| `typora` | debian | [https://downloads.typora.io/linux/Packages](https://downloads.typora.io/linux/Packages) |
++| `ufw-docker` | git_tags | [https://github.com/chaifeng/ufw-docker.git](https://github.com/chaifeng/ufw-docker.git) |
++| `vi` | regex | [https://sources.archlinux.org/other/vi/](https://sources.archlinux.org/other/vi/) |
++| `visual-studio-code-bin` | json | [https://update.code.visualstudio.com/api/update/linux-deb-x64/stable/latest](https://update.code.visualstudio.com/api/update/linux-deb-x64/stable/latest) |
++| `walker` | github | [abenz1267/walker](https://github.com/abenz1267/walker) |
++| `xdg-terminal-exec` | git_tags | [https://gitlab.freedesktop.org/Vladimir-csp/xdg-terminal-exec.git](https://gitlab.freedesktop.org/Vladimir-csp/xdg-terminal-exec.git) |
++| `xpadneo-dkms` | github | [atar-axis/xpadneo](https://github.com/atar-axis/xpadneo) |
++| `yaru-icon-theme` | git_tags | [https://github.com/ubuntu/yaru.git](https://github.com/ubuntu/yaru.git) |
++| `yay` | github | [Jguer/yay](https://github.com/Jguer/yay) |
++| `yt6801-dkms` | archive | [https://www.motor-comm.com/Cn/Skippower/downloadFile.html?id=1817](https://www.motor-comm.com/Cn/Skippower/downloadFile.html?id=1817) |
++
++## Existing manual holds
++
++`grok-bot`, `libfprint-git`, `libretro-cap32-git`, `libretro-database-git`, `libretro-fbneo-git`, `libretro-uae-git`, `libretro-vice-git`, `quickshell-git`, `supergfxctl`.
++
++These packages were already excluded from automatic AUR updates. The migration preserves that policy.
++
++## Package-specific boundaries
++
++- NVIDIA watches remain on the 580 driver branch.
++- Hardware-specific packages keep their declared architectures; this migration does not invent ARM binaries for x86-only upstreams.
++- iA Duospace was deleted upstream. Its four legacy font files retain their original immutable pin while the other families track the current repository.
++- RustDesk reads hbb_common from the release gitlink; its existing build-time dependency/toolchain checks remain in force.
++- Spotify uses HTTPS and retains its signed Release/Packages verification.
++- Source and build compatibility still need review when upstream code changes. Direct watches remove AUR recipe churn, not the need to maintain packaging.
+diff --git a/helpers/package-metadata.sh b/helpers/package-metadata.sh
+index c66aef18c..a3ad04743 100644
+--- a/helpers/package-metadata.sh
++++ b/helpers/package-metadata.sh
+@@ -3,15 +3,13 @@
+ # Expects package directories in $PKGBUILDS_DIR, each with:
+ #   .omarchy/package.json
+ #
+-# Minimal schema:
+-#   { "source": "aur" }
+-#   { "source": "aur", "sync": false }
+-#   { "source": "aur", "aur": "different-aur-name" }
+-#   { "source": "aur", "release_ring": "fast" }
+-#   { "source": "aur", "skip_build": true }
+-#   { "source": "aur", "pkgrel": { "suffix": 1, "offset": 1 } }
+-#   { "source": "aur", "rebuild_on": ["qt6-base"] }
++# Minimal schema (legacy source:aur remains readable for initial imports):
+ #   { "source": "local" }
++#   { "source": "local", "sync": false }
++#   { "source": "local", "release_ring": "fast" }
++#   { "source": "local", "skip_build": true }
++#   { "source": "local", "rebuild_on": ["qt6-base"] }
++#   { "source": "local", "upstream": { "watch": { "github": "owner/repo", "pattern": "v(?P<version>[0-9.]+)" } } }
+ #   { "source": "local", "channels": ["edge"] }
+ #   { "source": "local", "channels": ["edge", "rc", "stable"] }
+ #   { "source": "local", "min_release_age": "24h" }
+@@ -21,7 +19,7 @@
+ #   { "source": "local", "upstream": { "npm": "@scope/package", "sources": { "any": ["{npm_tarball}"] } } }
+ #   { "source": "local", "upstream": { "debian": "https://example/debian/dists/stable/main/binary-amd64/Packages", "package": "example", "sources": { "any": ["https://example/releases/{pkgver}.tar.gz"] } } }
+ #
+-# bin/sync-aur also writes upstream_commit for AUR-backed packages, and
++# bin/import-aur records historical origin.aur and origin.commit;
+ # bin/sync-rebuilds writes rebuilt_against for packages declaring rebuild_on.
+ 
+ if [[ -z "${PKGBUILDS_DIR:-}" ]]; then
+@@ -523,8 +521,9 @@ validate_package_metadata() {
+     if has("upstream") | not then true
+     elif (.upstream | type) != "object" then false
+     else .upstream |
+-      ([has("github"), has("git_tags"), has("npm"), has("debian")] | map(select(.)) | length) == 1
+-      and if has("github") then
++      ([has("github"), has("git_tags"), has("npm"), has("debian"), has("watch")] | map(select(.)) | length) == 1
++      and if has("watch") then (.watch | type == "object")
++      elif has("github") then
+         (.github | type == "string" and test("\\A[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\\z"))
+         and (if has("checksums") then (.checksums | type == "string" and length > 0) else true end)
+         and (if has("digests") then (.digests | type == "boolean") else true end)
+@@ -550,10 +549,14 @@ validate_package_metadata() {
+       end
+     end
+   ' "$metadata" >/dev/null; then
+-    echo "invalid upstream for $(basename "$pkgdir"): configure exactly one valid github, git_tags, npm, or debian provider"
++    echo "invalid upstream for $(basename "$pkgdir"): configure exactly one valid github, git_tags, npm, debian, or watch provider"
+     return 1
+   fi
+ 
++  if jq -e '.upstream? | objects | has("watch")' "$metadata" >/dev/null; then
++    python3 "${BASH_SOURCE[0]%/*}/upstream-watch.py" validate "$pkgdir" || return 1
++  fi
++
+   pkgrel_type=$(jq -r 'if has("pkgrel") then .pkgrel | type else "missing" end' "$metadata")
+   case "$pkgrel_type" in
+     object|missing) ;;
+diff --git a/helpers/upstream-github.sh b/helpers/upstream-github.sh
+index 6c7e1ba48..f19da783a 100644
+--- a/helpers/upstream-github.sh
++++ b/helpers/upstream-github.sh
+@@ -31,7 +31,7 @@ package_upstream_provider() {
+   metadata=$(metadata_file_for_dir "$pkgdir")
+   jq -r '
+     (.upstream? | objects) as $u
+-    | [$u | keys[] | select(. == "github" or . == "git_tags" or . == "npm" or . == "debian")]
++    | [$u | keys[] | select(. == "github" or . == "git_tags" or . == "npm" or . == "debian" or . == "watch")]
+     | if length == 1 then .[0] else "" end
+   ' "$metadata"
+ }
+diff --git a/helpers/upstream-watch.py b/helpers/upstream-watch.py
+new file mode 100644
+index 000000000..6e17b9790
+--- /dev/null
++++ b/helpers/upstream-watch.py
+@@ -0,0 +1,566 @@
++#!/usr/bin/env python3
++"""Discover releases and update our own recipes; never import upstream build code.
++
++The watch selects release metadata. Sources, supported architectures, integrity
++algorithms and packaging behavior stay in the checked-in PKGBUILD. Only release
++scalars and checksum arrays are replaced, atomically, after every source passes.
++"""
++import argparse
++import datetime as dt
++import gzip
++import hashlib
++import io
++import json
++import os
++from pathlib import Path
++import re
++import subprocess
++import sys
++import tarfile
++import tempfile
++from urllib.parse import quote, urlsplit
++import zipfile
++
++PROVIDERS = {"github", "git_tags", "git_branch", "npm", "pypi", "debian", "json", "regex", "archive", "redirect"}
++VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+]*\Z")
++SCALAR = re.compile(r"[A-Za-z0-9._+/-]+\Z")
++SUM = re.compile(r"(md5|sha1|sha224|sha256|sha384|sha512|b2)sums(_[a-z0-9_]+)?\Z")
++HASHES = {"b2": "blake2b"}
++
++
++def run(args, **kwargs):
++    return subprocess.check_output(args, **kwargs)
++
++
++def vercmp(a, b):
++    return int(run(["vercmp", a, b], text=True).strip())
++
++
++def https(url):
++    parts = urlsplit(url)
++    if parts.scheme != "https" or not parts.hostname or parts.username or parts.password or re.search(r"[\s\x00-\x1f]", url):
++        raise ValueError(f"expected an HTTPS upstream URL: {url!r}")
++    return url
++
++
++class Fetcher:
++    def __init__(self, cache):
++        self.cache = Path(cache)
++        self.cache.mkdir(parents=True, exist_ok=True)
++
++    def file(self, url):
++        https(url)
++        dest = self.cache / hashlib.sha256(url.encode()).hexdigest()
++        if not dest.exists():
++            scratch = dest.with_suffix(f".{os.getpid()}.tmp")
++            command = ["curl", "--proto", "=https", "--proto-redir", "=https", "-fsSL",
++                       "--connect-timeout", "20", "--max-time", "300", "--retry", "2", "-o", str(scratch), url]
++            # Credentials only go to GitHub's API, never to release assets or vendors.
++            token = os.environ.get("UPSTREAM_GITHUB_TOKEN")
++            if token and urlsplit(url).hostname == "api.github.com":
++                command[1:1] = ["--config", "-"]
++                subprocess.run(command, input=f'header = "Authorization: Bearer {token}"\n', text=True, check=True)
++            else:
++                subprocess.run(command, check=True)
++            scratch.replace(dest)
++        return dest
++
++    def text(self, url):
++        data = self.file(url).read_bytes()
++        if data.startswith(b"\x1f\x8b"):
++            data = gzip.decompress(data)
++        return data.decode()
++
++    def json(self, url):
++        return json.loads(self.text(url))
++
++
++def validate(watch):
++    if not isinstance(watch, dict) or len(PROVIDERS & watch.keys()) != 1:
++        raise ValueError("watch must select exactly one release provider")
++    provider = next(iter(PROVIDERS & watch.keys()))
++    allowed = PROVIDERS | {"pattern", "path", "package", "branch", "variables", "fields",
++                           "submodules", "allow_prerelease", "unescape_json", "filenames",
++                           "sequence", "version", "revision", "revision_variable",
++                           "mutable_sources", "member", "dist_tag"}
++    if watch.keys() - allowed:
++        raise ValueError(f"unknown watch fields: {sorted(watch.keys() - allowed)}")
++    value = watch[provider]
++    if not isinstance(value, str) or not value:
++        raise ValueError(f"invalid watch.{provider}")
++    if provider == "github":
++        if not re.fullmatch(r"[\w.-]+/[\w.-]+", value):
++            raise ValueError("invalid GitHub repository")
++    elif provider in {"npm", "pypi"}:
++        if not re.fullmatch(r"(?:@[\w.-]+/)?[\w.-]+", value):
++            raise ValueError("invalid registry package")
++    else:
++        https(value)
++    if "pattern" in watch or provider in {"github", "git_tags", "regex", "archive", "redirect"}:
++        if not isinstance(watch.get("pattern"), str):
++            raise ValueError("watch needs an explicit release pattern")
++        pattern = re.compile(watch["pattern"])
++        if "version" not in pattern.groupindex:
++            raise ValueError("release pattern needs a named version group")
++    if provider == "json" and (not isinstance(watch.get("path"), str) or not watch["path"]):
++        raise ValueError("JSON watch needs a version path")
++    if provider == "debian":
++        name = watch.get("package", "")
++        if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9][a-z0-9+.-]*", name):
++            raise ValueError("Debian watch needs an exact package name")
++    if provider == "git_branch":
++        branch = watch.get("branch", "")
++        if not isinstance(branch, str) or not branch or branch.startswith("-"):
++            raise ValueError("git branch watch needs an explicit branch")
++        run(["git", "check-ref-format", "refs/heads/" + branch])
++    for field in ("variables", "submodules", "fields"):
++        mapping = watch.get(field, {})
++        if not isinstance(mapping, dict):
++            raise ValueError(f"watch.{field} must be a string mapping")
++        for name, value in mapping.items():
++            pattern = r"[a-z][a-z0-9_]*" if field == "fields" else r"_[a-z][a-z0-9_]*"
++            if not re.fullmatch(pattern, name) or not isinstance(value, str) or not value:
++                raise ValueError(f"invalid watch.{field} mapping")
++    if "submodules" in watch and provider != "github":
++        raise ValueError("submodules require a GitHub watch")
++    if watch.get("variables", {}).keys() & watch.get("submodules", {}).keys():
++        raise ValueError("a release variable cannot also be a submodule")
++    for path in watch.get("submodules", {}).values():
++        if path.startswith("/") or any(part in {"", ".", ".."} for part in path.split("/")):
++            raise ValueError("submodule path must be relative to the release repository")
++    for field in ("allow_prerelease", "unescape_json", "filenames", "sequence"):
++        if field in watch and not isinstance(watch[field], bool):
++            raise ValueError(f"watch.{field} must be boolean")
++    for field in ("version", "revision", "member", "dist_tag"):
++        if field in watch and (not isinstance(watch[field], str) or not watch[field]):
++            raise ValueError(f"watch.{field} must be a string template")
++    if "revision_variable" in watch:
++        name = watch["revision_variable"]
++        if not isinstance(name, str) or name not in watch.get("variables", {}) or not watch.get("revision"):
++            raise ValueError("revision_variable requires a declared variable and revision template")
++    for field in ("mutable_sources",):
++        entries = watch.get(field, [])
++        if not isinstance(entries, list) or any(not isinstance(v, str) or not re.fullmatch(r"source(?:_[a-z0-9_]+)?:[0-9]+", v) for v in entries):
++            raise ValueError(f"watch.{field} must name source-array:index entries")
++    return provider
++
++
++def json_path(data, path):
++    for key in path.split("."):
++        data = data[int(key)] if isinstance(data, list) else data[key]
++    return data
++
++
++def candidate(watch, values):
++    values = {k: str(v) for k, v in values.items() if v is not None}
++    version = watch.get("version", "{version}").format_map(values)
++    if not VERSION.fullmatch(version):
++        raise ValueError(f"unusable upstream version: {version!r}")
++    revision = watch.get("revision", "").format_map(values)
++    if revision and not re.fullmatch(r"[0-9]+", revision):
++        raise ValueError("upstream release revision must be numeric")
++    return {"pkgver": version, "values": values,
++            "published_at": values.get("published_at"),
++            "revision": revision}
++
++
++def matches(watch, text, extra=None, full=False):
++    pattern = re.compile(watch["pattern"])
++    found = [pattern.fullmatch(text)] if full else pattern.finditer(text)
++    for match in found:
++        if match:
++            yield candidate(watch, {**(extra or {}), **match.groupdict()})
++
++
++def discover(watch, fetch):
++    provider = validate(watch)
++    feed = watch[provider]
++    results = []
++    if provider == "github":
++        releases = fetch.json(f"https://api.github.com/repos/{feed}/releases?per_page=100")
++        if not isinstance(releases, list):
++            raise ValueError("GitHub did not return a release list")
++        for release in releases:
++            if release.get("draft") or (release.get("prerelease") and not watch.get("allow_prerelease")):
++                continue
++            for item in matches(watch, release["tag_name"], {"tag": release["tag_name"], "published_at": release["published_at"]}, full=True):
++                item["assets"] = release.get("assets", [])
++                results.append(item)
++    elif provider == "git_tags":
++        refs = run(["git", "ls-remote", "--tags", feed], text=True)
++        tags = {}
++        for line in refs.splitlines():
++            commit, ref = line.split()
++            tag = ref.removeprefix("refs/tags/")
++            if tag.endswith("^{}"):
++                tags[tag[:-3]] = commit
++            else:
++                tags.setdefault(tag, commit)
++        for tag, commit in tags.items():
++            results.extend(matches(watch, tag, {"tag": tag, "commit": commit}, full=True))
++    elif provider == "git_branch":
++        with tempfile.TemporaryDirectory(prefix="upstream-git-") as work:
++            subprocess.run(["git", "clone", "--quiet", "--bare", "--filter=blob:none", "--single-branch", "--branch", watch["branch"], feed, work], check=True)
++            commit = run(["git", "-C", work, "rev-parse", "HEAD"], text=True).strip()
++            count = run(["git", "-C", work, "rev-list", "--count", "HEAD"], text=True).strip()
++            date = run(["git", "-C", work, "show", "-s", "--format=%cs", "HEAD"], text=True).strip().replace("-", "")
++            timestamp = run(["git", "-C", work, "show", "-s", "--format=%cI", "HEAD"], text=True).strip()
++            results.append(candidate(watch, {"version": date, "date": date, "count": count, "commit": commit, "published_at": timestamp}))
++    elif provider == "npm":
++        data = fetch.json("https://registry.npmjs.org/" + quote(feed, safe=""))
++        version = data["dist-tags"][watch.get("dist_tag", "latest")]
++        results.append(candidate(watch, {"version": version, "published_at": data.get("time", {}).get(version)}))
++    elif provider == "pypi":
++        data = fetch.json(f"https://pypi.org/pypi/{feed}/json")
++        version = data["info"]["version"]
++        dates = [r["upload_time_iso_8601"] for r in data["releases"].get(version, []) if not r.get("yanked")]
++        if not dates:
++            raise ValueError("PyPI release has no unyanked files")
++        results.append(candidate(watch, {"version": version, "published_at": max(dates)}))
++    elif provider == "debian":
++        for stanza in re.split(r"\n\s*\n", fetch.text(feed).replace("\r", "")):
++            fields = dict(re.findall(r"^([A-Za-z0-9-]+): (.*)$", stanza, re.M))
++            if fields.get("Package") != watch["package"]:
++                continue
++            if "pattern" in watch:
++                results.extend(matches(watch, fields["Version"], full=True))
++            else:
++                results.append(candidate(watch, {"version": fields["Version"]}))
++    elif provider == "json":
++        data = fetch.json(feed)
++        values = {"version": json_path(data, watch["path"])}
++        values.update({name: json_path(data, path) for name, path in watch.get("fields", {}).items()})
++        results.append(candidate(watch, values))
++    elif provider == "redirect":
++        final_url = run(["curl", "--proto", "=https", "--proto-redir", "=https", "-fsSLI", "--max-time", "60", "-o", "/dev/null", "-w", "%{url_effective}", feed], text=True)
++        results.extend(matches(watch, final_url))
++    elif provider == "regex":
++        text = fetch.text(feed)
++        if watch.get("unescape_json"):
++            text = text.replace('\\"', '"')
++        results.extend(matches(watch, text))
++    elif provider == "archive":
++        file = fetch.file(feed)
++        if zipfile.is_zipfile(file):
++            with zipfile.ZipFile(file) as archive:
++                names = archive.namelist()
++                if watch.get("filenames"):
++                    results.extend(matches(watch, "\n".join(names)))
++                for name in ([] if watch.get("filenames") else names):
++                    if re.fullmatch(watch.get("member", ".*"), name):
++                        results.extend(matches(watch, archive.read(name).decode()))
++        elif file.read_bytes()[:8] == b"!<arch>\n":
++            names = run(["bsdtar", "-tf", str(file)], text=True).splitlines()
++            controls = [name for name in names if name.startswith("control.tar")]
++            if len(controls) != 1:
++                raise ValueError("deb does not contain exactly one control archive")
++            data = run(["bsdtar", "-xOf", str(file), controls[0]])
++            with tarfile.open(fileobj=io.BytesIO(data)) as archive:
++                members = [m for m in archive if m.name.removeprefix("./") == "control"]
++                if len(members) != 1:
++                    raise ValueError("deb control file is missing or ambiguous")
++                results.extend(matches(watch, archive.extractfile(members[0]).read().decode()))
++        else:
++            with tarfile.open(file) as archive:
++                for member in archive:
++                    if member.isfile() and re.fullmatch(watch.get("member", ".*"), member.name):
++                        results.extend(matches(watch, archive.extractfile(member).read().decode()))
++    if not results:
++        raise ValueError(f"no matching releases in {feed}")
++    return results
++
++
++def select_release(releases, min_age=0, now=None, bypass=False):
++    now = now or dt.datetime.now(dt.timezone.utc)
++    best = None
++    for release in releases:
++        if min_age and not bypass:
++            value = release.get("published_at")
++            if not value or not re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:?\d\d)", value):
++                raise ValueError("release age cannot be established")
++            if (now - dt.datetime.fromisoformat(value.replace("Z", "+00:00"))).total_seconds() < min_age:
++                continue
++        order = vercmp(release["pkgver"], best["pkgver"]) if best else 1
++        if best and order == 0:
++            order = vercmp(release["revision"] or "0", best["revision"] or "0")
++        if order > 0:
++            best = release
++    return best
++
++
++DUMP = r'''
++source "$1" >/dev/null || exit 1
++set +u
++for __watch_name in pkgver pkgrel epoch arch $(compgen -A variable | LC_ALL=C sort); do
++  case "$__watch_name" in
++    pkgver|pkgrel|epoch|arch|source|source_*|md5sums*|sha1sums*|sha224sums*|sha256sums*|sha384sums*|sha512sums*|b2sums*|_*)
++      [[ $__watch_name == __watch_* ]] && continue
++      declare -n __watch_value="$__watch_name"
++      printf '%s\0' "$__watch_name" "${#__watch_value[@]}" "${__watch_value[@]}"
++      unset -n __watch_value
++      ;;
++  esac
++done
++'''
++
++
++def read_recipe(path, arch="x86_64"):
++    with tempfile.TemporaryDirectory(prefix="recipe-read-") as work:
++        env = {**os.environ, "CARCH": arch, "SRCDEST": work, "srcdir": work, "pkgdir": work}
++        data = run(["bash", "-c", DUMP, "_", str(path.resolve())], cwd=path.parent, env=env).decode().split("\0")
++    result = {}
++    index = 0
++    while index < len(data) - 1:
++        name, size = data[index:index + 2]
++        index += 2
++        size = int(size)
++        result[name] = data[index:index + size]
++        index += size
++    return result
++
++
++def scalar(recipe, name, default=""):
++    return recipe.get(name, [default])[0] if recipe.get(name) else default
++
++
++def replace_scalar(text, name, value):
++    if not SCALAR.fullmatch(value):
++        raise ValueError(f"unsafe {name} value")
++    pattern = re.compile(r"^" + re.escape(name) + r"=.*$", re.M)
++    if len(pattern.findall(text)) != 1:
++        raise ValueError(f"expected one top-level {name}= assignment")
++    return pattern.sub(lambda _: f"{name}={value}", text)
++
++
++def replace_array(text, name, values):
++    starts = list(re.finditer(r"^" + re.escape(name) + r"=\(", text, re.M))
++    if len(starts) != 1:
++        raise ValueError(f"expected one top-level {name}= array")
++    start = starts[0]
++    depth, quote_char, escaped, comment = 1, None, False, False
++    for index in range(start.end(), len(text)):
++        char = text[index]
++        if comment:
++            if char == "\n": comment = False
++        elif escaped:
++            escaped = False
++        elif char == "\\" and quote_char != "'":
++            escaped = True
++        elif quote_char:
++            if char == quote_char: quote_char = None
++        elif char in "\"'": quote_char = char
++        elif char == "#" and (index == 0 or text[index - 1].isspace()): comment = True
++        elif char == "(": depth += 1
++        elif char == ")":
++            depth -= 1
++            if depth == 0:
++                replacement = name + "=(" + " ".join("'" + value + "'" for value in values) + ")"
++                return text[:start.start()] + replacement + text[index + 1:]
++    raise ValueError(f"unclosed {name} array")
++
++
++def bump_pkgrel(value):
++    if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", value):
++        raise ValueError(f"invalid pkgrel: {value}")
++    components = value.split(".")
++    components[-1] = str(int(components[-1]) + 1)
++    return ".".join(components)
++
++
++def complete_version(recipe):
++    return f"{scalar(recipe, 'epoch', '0')}:{scalar(recipe, 'pkgver')}-{scalar(recipe, 'pkgrel')}"
++
++
++def hash_file(path, algorithm):
++    with path.open("rb") as stream:
++        return hashlib.file_digest(stream, HASHES.get(algorithm, algorithm)).hexdigest()
++
++
++def source_url(source):
++    return source.split("::", 1)[-1]
++
++
++def git_source_file(url, cache):
++    base, fragment = url.removeprefix("git+").split("#", 1)
++    kind, ref = fragment.split("=", 1)
++    https(base)
++    if kind not in {"tag", "commit"} or (kind == "commit" and not re.fullmatch(r"[0-9a-f]{40}", ref)):
++        raise ValueError("VCS sources must name an immutable commit or a checksummed tag")
++    if kind == "tag":
++        run(["git", "check-ref-format", "refs/tags/" + ref])
++    dest = cache / (hashlib.sha256(url.encode()).hexdigest() + ".git.tar")
++    if not dest.exists():
++        with tempfile.TemporaryDirectory(prefix="upstream-source-", dir=cache) as work:
++            subprocess.run(["git", "init", "--quiet", "--bare", work], check=True)
++            subprocess.run(["git", "-C", work, "fetch", "--quiet", "--depth=1", base, "refs/tags/" + ref if kind == "tag" else ref], check=True)
++            scratch = Path(work) / "source.tar"
++            with scratch.open("wb") as output:
++                subprocess.run(["git", "-c", "core.abbrev=no", "-C", work, "archive", "--format", "tar", "FETCH_HEAD"], stdout=output, check=True)
++            # The cache must never retain partial archives after a git failure.
++            scratch.replace(dest)
++    return dest
++
++
++def updated_checksums(before, after, package, fetch, release, watch):
++    arrays = {}
++    source_names = {key for key in before if key == "source" or key.startswith("source_")}
++    if source_names != {key for key in after if key == "source" or key.startswith("source_")}:
++        raise ValueError("release changed the set of source architectures")
++    for source_name in sorted(source_names):
++        old_sources, sources = before[source_name], after[source_name]
++        suffix = source_name.removeprefix("source")
++        names = [name for name in before if SUM.fullmatch(name) and (SUM.fullmatch(name)[2] or "") == suffix]
++        if not sources:
++            continue
++        if len(sources) != len(old_sources) or not names:
++            raise ValueError(f"{source_name}: sources changed shape or have no checksums")
++        for name in names:
++            if len(before[name]) != len(sources):
++                raise ValueError(f"{name}: source/checksum count mismatch")
++            values = []
++            algorithm = SUM.fullmatch(name)[1]
++            for index, source in enumerate(sources):
++                old = before[name][index]
++                if source == old_sources[index] and f"{source_name}:{index}" not in watch.get("mutable_sources", []):
++                    values.append(old)
++                    continue
++                url = source_url(source)
++                # A release API digest can supply SHA256 without downloading a
++                # large asset, but only when its exact declared URL matches.
++                assets = [a for a in release.get("assets", []) if a.get("browser_download_url") == url]
++                if algorithm == "sha256" and len(assets) == 1 and re.fullmatch(r"sha256:[0-9a-f]{64}", assets[0].get("digest") or ""):
++                    values.append("SKIP" if old == "SKIP" else assets[0]["digest"][7:])
++                    continue
++                if url.startswith("git+https://"):
++                    file = git_source_file(url, fetch.cache)
++                elif url.startswith("https://"):
++                    file = fetch.file(url)
++                elif "://" not in url:
++                    file = (package / url).resolve()
++                    if not file.is_relative_to(package.resolve()) or not file.is_file():
++                        raise ValueError(f"unsafe local source: {url}")
++                else:
++                    raise ValueError(f"unsupported source transport: {url}")
++                # Preserve existing signature/prepare()-verified sources. Never
++                # introduce SKIP; still fetch changed URLs to verify availability.
++                values.append("SKIP" if old == "SKIP" else hash_file(file, algorithm))
++            if values != before[name]:
++                arrays[name] = values
++    return arrays
++
++
++def resolve_release_fields(watch, release, fetch):
++    values = release["values"].copy()
++    if "github" in watch and any("{commit}" in value for value in watch.get("variables", {}).values()):
++        ref = fetch.json(f"https://api.github.com/repos/{watch['github']}/git/ref/tags/{quote(values['tag'], safe='')}")['object']
++        if ref['type'] == 'tag':
++            ref = fetch.json(f"https://api.github.com/repos/{watch['github']}/git/tags/{ref['sha']}")['object']
++        if ref['type'] != 'commit' or not re.fullmatch(r"[0-9a-f]{40}", ref['sha']):
++            raise ValueError("release tag does not resolve to a commit")
++        values['commit'] = ref['sha']
++    variables = {k: template.format_map(values) for k, template in watch.get('variables', {}).items()}
++    for name, path in watch.get('submodules', {}).items():
++        entry = fetch.json(f"https://api.github.com/repos/{watch['github']}/contents/{quote(path, safe='/')}?ref={quote(values['tag'], safe='')}")
++        if not entry.get('submodule_git_url') or not re.fullmatch(r"[0-9a-f]{40}", entry.get('sha', '')):
++            raise ValueError(f"release does not contain submodule {path}")
++        variables[name] = entry['sha']
++    if any(not SCALAR.fullmatch(value) for value in variables.values()):
++        raise ValueError("unsafe release variable value")
++    release['variables'] = variables
++    return release
++
++
++def sync(package, fetch, min_age=0, check=False):
++    metadata = json.loads((package / ".omarchy/package.json").read_text())
++    if metadata.get("sync") is False:
++        return {"status": "skipped", "reason": "upstream updates held by sync=false"}
++    watch = metadata["upstream"]["watch"]
++    validate(watch)
++    path = package / "PKGBUILD"
++    original = path.read_text()
++    before = read_recipe(path)
++    release = select_release(discover(watch, fetch), min_age, bypass=os.environ.get("BYPASS_MIN_RELEASE_AGE") == "1")
++    if release is None:
++        return {"status": "skipped", "reason": "minimum release age"}
++    current = scalar(before, "pkgver")
++    if watch.get('sequence'):
++        prefix, counter, identity = current.rsplit('.', 2)
++        new_prefix, new_identity = release['values']['version'], release['values']['hash']
++        if new_prefix == prefix:
++            release['pkgver'] = current if new_identity == identity else f"{prefix}.{int(counter) + 1}.{new_identity}"
++    order = vercmp(release["pkgver"], current)
++    if order < 0:
++        return {"status": "skipped", "current": current, "available": release["pkgver"], "reason": "upstream is older"}
++    if order == 0 and not watch.get("revision_variable"):
++        return {"status": "skipped", "current": current, "reason": "already current"}
++    release = resolve_release_fields(watch, release, fetch)
++    changed_variables = {k: v for k, v in release["variables"].items() if scalar(before, k) != v}
++    if order == 0 and not changed_variables:
++        return {"status": "skipped", "current": current, "reason": "already current"}
++    if order == 0 and changed_variables:
++        # Only a declared, forward-moving release revision can rebuild the same
++        # version. A changed hash/commit alone is an immutable-release violation.
++        revision_field = watch.get("revision_variable")
++        if revision_field not in changed_variables or vercmp(changed_variables[revision_field], scalar(before, revision_field, "0")) <= 0:
++            raise ValueError("release metadata changed without a newer version/revision")
++    new_pkgrel = "1" if order > 0 else bump_pkgrel(scalar(before, "pkgrel"))
++    text = replace_scalar(original, "pkgver", release["pkgver"])
++    text = replace_scalar(text, "pkgrel", new_pkgrel)
++    for name, value in release["variables"].items():
++        text = replace_scalar(text, name, value)
++    if check:
++        return {"status": "available", "current": current, "release": release}
++    scratch = path.with_name("PKGBUILD.sync-upstream")
++    try:
++        scratch.write_text(text)
++        after = read_recipe(scratch)
++        if scalar(after, "pkgver") != release["pkgver"] or scalar(after, "pkgrel") != new_pkgrel:
++            raise ValueError("recipe did not retain the release version")
++        if vercmp(complete_version(after), complete_version(before)) <= 0:
++            raise ValueError("complete package version must increase")
++        if before["arch"] != after["arch"]:
++            raise ValueError("release changed supported architectures")
++        arrays = updated_checksums(before, after, package, fetch, release, watch)
++        for name, values in arrays.items():
++            text = replace_array(text, name, values)
++        scratch.write_text(text)
++        subprocess.run(["bash", "-n", str(scratch)], check=True)
++        for arch in before["arch"]:
++            result = read_recipe(scratch, "x86_64" if arch == "any" else arch)
++            if complete_version(result) != complete_version(after):
++                raise ValueError(f"{arch}: inconsistent release version")
++            for name, values in arrays.items():
++                if result.get(name) != values:
++                    raise ValueError(f"{arch}: rewritten {name} differs from the checked source hashes")
++            for name in after:
++                if name == "source" or name.startswith("source_"):
++                    if result.get(name) != after[name]:
++                        raise ValueError(f"{arch}: conditional {name} differs from the checked sources; use source_<arch> arrays")
++        scratch.chmod(path.stat().st_mode)
++        scratch.replace(path)
++        return {"status": "updated", "before": complete_version(before), "after": complete_version(after)}
++    finally:
++        scratch.unlink(missing_ok=True)
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("command", choices=["sync", "check", "validate"])
++    parser.add_argument("package", type=Path)
++    parser.add_argument("--min-age", type=int, default=0)
++    args = parser.parse_args()
++    package = args.package.resolve()
++    if args.command == "validate":
++        validate(json.loads((package / ".omarchy/package.json").read_text())["upstream"]["watch"])
++        return
++    with tempfile.TemporaryDirectory(prefix="upstream-watch-") as cache:
++        fetch = Fetcher(os.environ.get("UPSTREAM_CACHE_DIR", cache))
++        print(json.dumps(sync(package, fetch, args.min_age, check=args.command == "check")))
++
++
++if __name__ == "__main__":
++    try:
++        main()
++    except (ValueError, KeyError, TypeError, IndexError, re.error, OSError, subprocess.CalledProcessError) as error:
++        print(f"upstream watch failed: {error}", file=sys.stderr)
++        sys.exit(1)
+diff --git a/pkgbuilds/1password-beta/.omarchy/package.json b/pkgbuilds/1password-beta/.omarchy/package.json
+index 6954e9832..61c481aa0 100644
+--- a/pkgbuilds/1password-beta/.omarchy/package.json
++++ b/pkgbuilds/1password-beta/.omarchy/package.json
+@@ -1,5 +1,19 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "18d2de51dc01c9a58c1e8e96262f7afadcbf0648"
++  "upstream": {
++    "watch": {
++      "debian": "https://downloads.1password.com/linux/debian/amd64/dists/beta/main/binary-amd64/Packages",
++      "package": "1password",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)~(?P<build>[0-9]+)\\.BETA",
++      "version": "{version}_{build}.BETA",
++      "variables": {
++        "_tarver": "{version}-{build}.BETA"
++      }
++    }
++  },
++  "origin": {
++    "aur": "1password-beta",
++    "commit": "18d2de51dc01c9a58c1e8e96262f7afadcbf0648"
++  }
+ }
+diff --git a/pkgbuilds/1password-beta/.omarchy/post-sync.sh b/pkgbuilds/1password-beta/.omarchy/post-sync.sh
+deleted file mode 100755
+index 40bf26ac3..000000000
+--- a/pkgbuilds/1password-beta/.omarchy/post-sync.sh
++++ /dev/null
+@@ -1,83 +0,0 @@
+-#!/bin/bash
+-set -euo pipefail
+-
+-# Keep the AUR x86_64 checksums and add aarch64 sources. The aarch64
+-# artifacts are signed by 1Password's validpgpkeys, so we skip checksums there
+-# instead of baking version-specific hashes into Omarchy metadata.
+-set +u
+-CARCH=x86_64 source PKGBUILD
+-set -u
+-
+-if declare -p sha256sums >/dev/null 2>&1 && [[ ${#sha256sums[@]} -ge 2 ]]; then
+-  x86_sums=("${sha256sums[@]}")
+-elif declare -p sha256sums_x86_64 >/dev/null 2>&1 && [[ ${#sha256sums_x86_64[@]} -ge 2 ]]; then
+-  x86_sums=("${sha256sums_x86_64[@]}")
+-else
+-  echo "Unable to read x86_64 checksums from PKGBUILD" >&2
+-  exit 1
+-fi
+-
+-sha256_from_url() {
+-  curl -fsSL "$1" | sha256sum | awk '{ print $1 }'
+-}
+-
+-arm_url="https://downloads.1password.com/linux/tar/beta/aarch64/1password-${_tarver}.arm64.tar.gz"
+-arm_tar_sum=$(sha256_from_url "$arm_url")
+-arm_sig_sum=$(sha256_from_url "$arm_url.sig")
+-
+-emit_archdir() {
+-  cat <<'EOF'
+-case "${CARCH}" in
+-    x86_64)
+-        _archdir="x64"
+-        ;;
+-    aarch64)
+-        _archdir="arm64"
+-        ;;
+-esac
+-EOF
+-}
+-
+-emit_sources() {
+-  cat <<EOF
+-source=()
+-sha256sums=()
+-source_x86_64=(https://downloads.1password.com/linux/tar/beta/x86_64/1password-\${_tarver}.x64.tar.gz{,.sig})
+-source_aarch64=(https://downloads.1password.com/linux/tar/beta/aarch64/1password-\${_tarver}.arm64.tar.gz{,.sig})
+-sha256sums_x86_64=('${x86_sums[0]}'
+-                   '${x86_sums[1]}')
+-sha256sums_aarch64=('$arm_tar_sum'
+-                    '$arm_sig_sum')
+-EOF
+-}
+-
+-tmpfile=$(mktemp)
+-skip_checksums=false
+-
+-while IFS= read -r line || [[ -n "$line" ]]; do
+-  if [[ "$skip_checksums" == true ]]; then
+-    [[ "$line" == ")" ]] && skip_checksums=false
+-    continue
+-  fi
+-
+-  case "$line" in
+-    '_tar="1password-${_tarver}.x64.tar.gz"')
+-      emit_archdir >> "$tmpfile"
+-      ;;
+-    "arch=('x86_64')")
+-      echo "arch=('x86_64' 'aarch64')" >> "$tmpfile"
+-      ;;
+-    source=\(*)
+-      emit_sources >> "$tmpfile"
+-      ;;
+-    sha256sums=\(*)
+-      [[ "$line" == *")" ]] || skip_checksums=true
+-      ;;
+-    *)
+-      line=${line//1password-\$\{_tarver\}.x64/1password-\$\{_tarver\}.\$\{_archdir\}}
+-      printf '%s\n' "$line" >> "$tmpfile"
+-      ;;
+-  esac
+-done < PKGBUILD
+-
+-mv "$tmpfile" PKGBUILD
+diff --git a/pkgbuilds/1password-beta/PKGBUILD b/pkgbuilds/1password-beta/PKGBUILD
+index b55632291..f351980cd 100644
+--- a/pkgbuilds/1password-beta/PKGBUILD
++++ b/pkgbuilds/1password-beta/PKGBUILD
+@@ -9,8 +9,8 @@ case "${CARCH}" in
+         _archdir="arm64"
+         ;;
+ esac
+-pkgver=${_tarver//-/_}
+-pkgrel=25.1
++pkgver=8.12.38_25.BETA
++pkgrel=25.2
+ conflicts=('1password' '1password-beta-bin')
+ pkgdesc="Password manager and secure wallet"
+ arch=('x86_64' 'aarch64')
+diff --git a/pkgbuilds/1password-cli/.omarchy/package.json b/pkgbuilds/1password-cli/.omarchy/package.json
+index f879cccf4..70b0c8797 100644
+--- a/pkgbuilds/1password-cli/.omarchy/package.json
++++ b/pkgbuilds/1password-cli/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "b0d208821677a5dbb883a8b92f06a5c92b9e861a"
++  "upstream": {
++    "watch": {
++      "json": "https://app-updates.agilebits.com/check/1/0/CLI2/en/0",
++      "path": "version"
++    }
++  },
++  "origin": {
++    "aur": "1password-cli",
++    "commit": "b0d208821677a5dbb883a8b92f06a5c92b9e861a"
++  }
+ }
+diff --git a/pkgbuilds/aether/.omarchy/package.json b/pkgbuilds/aether/.omarchy/package.json
+index 153a08888..3664d9b52 100644
+--- a/pkgbuilds/aether/.omarchy/package.json
++++ b/pkgbuilds/aether/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "0f047f40a200121075ca3cedce59ddf226f2a0f1"
++  "upstream": {
++    "watch": {
++      "github": "omacom/aether",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "aether",
++    "commit": "0f047f40a200121075ca3cedce59ddf226f2a0f1"
++  }
+ }
+diff --git a/pkgbuilds/asusctl/.omarchy/package.json b/pkgbuilds/asusctl/.omarchy/package.json
+index 1b2f22af7..19004c801 100644
+--- a/pkgbuilds/asusctl/.omarchy/package.json
++++ b/pkgbuilds/asusctl/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "b0ec6ca495eb331a684db91b0fe12085a868b632"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://github.com/OpenGamingCollective/asusctl.git",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "asusctl",
++    "commit": "b0ec6ca495eb331a684db91b0fe12085a868b632"
++  }
+ }
+diff --git a/pkgbuilds/basecamp-cli/.omarchy/package.json b/pkgbuilds/basecamp-cli/.omarchy/package.json
+index 9dce3d69f..37b7a7049 100644
+--- a/pkgbuilds/basecamp-cli/.omarchy/package.json
++++ b/pkgbuilds/basecamp-cli/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "89c4eb5a0ac9ffe98aecd4ea8b789cf1fee42bf1"
++  "upstream": {
++    "watch": {
++      "github": "basecamp/basecamp-cli",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "basecamp-cli",
++    "commit": "89c4eb5a0ac9ffe98aecd4ea8b789cf1fee42bf1"
++  }
+ }
+diff --git a/pkgbuilds/basecamp-cli/PKGBUILD b/pkgbuilds/basecamp-cli/PKGBUILD
+index d7a1f7cfd..b0bd11737 100644
+--- a/pkgbuilds/basecamp-cli/PKGBUILD
++++ b/pkgbuilds/basecamp-cli/PKGBUILD
+@@ -1,7 +1,7 @@
+ # Maintainer: Basecamp <support@basecamp.com>
+ pkgname=basecamp-cli
+ pkgver=0.11.0
+-pkgrel=1
++pkgrel=2
+ pkgdesc="CLI for Basecamp project management"
+ arch=('x86_64' 'aarch64')
+ url="https://github.com/basecamp/basecamp-cli"
+@@ -13,8 +13,8 @@ optdepends=(
+   'zsh: for zsh shell completions'
+   'fish: for fish shell completions'
+ )
+-source_x86_64=("https://github.com/basecamp/basecamp-cli/releases/download/v0.11.0/basecamp_${pkgver}_linux_amd64.tar.gz")
+-source_aarch64=("https://github.com/basecamp/basecamp-cli/releases/download/v0.11.0/basecamp_${pkgver}_linux_arm64.tar.gz")
++source_x86_64=("https://github.com/basecamp/basecamp-cli/releases/download/v${pkgver}/basecamp_${pkgver}_linux_amd64.tar.gz")
++source_aarch64=("https://github.com/basecamp/basecamp-cli/releases/download/v${pkgver}/basecamp_${pkgver}_linux_arm64.tar.gz")
+ sha256sums_x86_64=('425ffab1251c4315c5f731f8367c3c8c37b54b6b1050eafdbe369e11e1a1ce51')
+ sha256sums_aarch64=('9c433b12a704402a98b238abb3128a0844a0bc682064adb260b11bc228b3595e')
+ 
+diff --git a/pkgbuilds/bun-bin/.omarchy/package.json b/pkgbuilds/bun-bin/.omarchy/package.json
+index dd5909b4a..ddb816361 100644
+--- a/pkgbuilds/bun-bin/.omarchy/package.json
++++ b/pkgbuilds/bun-bin/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "195b828d52ce9a181215f753927123e7ef2af252"
++  "upstream": {
++    "watch": {
++      "github": "oven-sh/bun",
++      "pattern": "bun-v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "bun-bin",
++    "commit": "195b828d52ce9a181215f753927123e7ef2af252"
++  }
+ }
+diff --git a/pkgbuilds/claude-code/.omarchy/package.json b/pkgbuilds/claude-code/.omarchy/package.json
+index b9e1212f6..7a2b0a17f 100644
+--- a/pkgbuilds/claude-code/.omarchy/package.json
++++ b/pkgbuilds/claude-code/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "27f61daa48ebdca87c9b2c7c83c162100d233ccc"
++  "upstream": {
++    "watch": {
++      "regex": "https://downloads.claude.ai/claude-code-releases/latest",
++      "pattern": "^(?P<version>[0-9]+(?:\\.[0-9]+)*)\\s*$"
++    }
++  },
++  "origin": {
++    "aur": "claude-code",
++    "commit": "27f61daa48ebdca87c9b2c7c83c162100d233ccc"
++  }
+ }
+diff --git a/pkgbuilds/cliamp/.omarchy/package.json b/pkgbuilds/cliamp/.omarchy/package.json
+index 665cb10b5..94f9d650b 100644
+--- a/pkgbuilds/cliamp/.omarchy/package.json
++++ b/pkgbuilds/cliamp/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "92fb021a1c78f75043cbbd402aca8b515af069ec"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "bjarneo/cliamp",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "cliamp",
++    "commit": "92fb021a1c78f75043cbbd402aca8b515af069ec"
++  }
+ }
+diff --git a/pkgbuilds/crush-bin/.omarchy/package.json b/pkgbuilds/crush-bin/.omarchy/package.json
+index c3eb109ab..857d5c1bb 100644
+--- a/pkgbuilds/crush-bin/.omarchy/package.json
++++ b/pkgbuilds/crush-bin/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "9c63847ccd3650646141f84384545c8fe2d68bb7"
++  "upstream": {
++    "watch": {
++      "github": "charmbracelet/crush",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "crush-bin",
++    "commit": "9c63847ccd3650646141f84384545c8fe2d68bb7"
++  }
+ }
+diff --git a/pkgbuilds/cursor-bin/.omarchy/package.json b/pkgbuilds/cursor-bin/.omarchy/package.json
+index 21d746993..7c63fb10f 100644
+--- a/pkgbuilds/cursor-bin/.omarchy/package.json
++++ b/pkgbuilds/cursor-bin/.omarchy/package.json
+@@ -1,5 +1,20 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "a87a0de17b0d8176ee4f046499b1e6e4b37cc422"
++  "upstream": {
++    "watch": {
++      "json": "https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable",
++      "path": "version",
++      "fields": {
++        "commit": "commitSha"
++      },
++      "variables": {
++        "_commit": "{commit}"
++      }
++    }
++  },
++  "origin": {
++    "aur": "cursor-bin",
++    "commit": "a87a0de17b0d8176ee4f046499b1e6e4b37cc422"
++  }
+ }
+diff --git a/pkgbuilds/cursor-bin/PKGBUILD b/pkgbuilds/cursor-bin/PKGBUILD
+index 24b94e963..d0a3e3272 100644
+--- a/pkgbuilds/cursor-bin/PKGBUILD
++++ b/pkgbuilds/cursor-bin/PKGBUILD
+@@ -2,7 +2,7 @@
+ 
+ pkgname=cursor-bin
+ pkgver=3.20.21
+-pkgrel=1
++pkgrel=2
+ pkgdesc='AI-first coding environment'
+ arch=('x86_64')
+ url="https://www.cursor.com"
+@@ -16,11 +16,7 @@ _commit=f09fca384ceca23f7bf21f9c23655b162641d747
+ source=("https://downloads.cursor.com/production/${_commit}/linux/x64/deb/amd64/deb/cursor_${pkgver}_amd64.deb"
+ "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code."{sh,mjs}
+ rg.sh)
+-sha512sums=('SKIP'
+-  '937299c6cb6be2f8d25f7dbc95cf77423875c5f8353b8bd6cd7cc8e5603cbf8405b14dbf8bd615db2e3b36ed680fc8e1909410815f7f8587b7267a699e00ab37'
+-  '793f9ff6306e3992ac89802d98110cba288ea1181a901467333293b7d76182ef9792c2a39ff49d9347a18a174b1f42bc58862091dff583f4146c2704eea28033'
+-  'e79fe7659f59d1ae02fc68816399bfd31587315df6cdb6ccf1d0ca76f7cdc692c2a42b30591c0091147bd97ef14b1c7745dc26bd7cb3ea6bba45698e5044fa2a')
+-sha512sums[0]=8329138d207309d16410f1cb58da18eea1a034a35f2bdd022ef9b373bb8f1b3d80e489e65256b7283c40e10da77962d158bfa3a64e742337a942633810d80dbe
++sha512sums=('8329138d207309d16410f1cb58da18eea1a034a35f2bdd022ef9b373bb8f1b3d80e489e65256b7283c40e10da77962d158bfa3a64e742337a942633810d80dbe' '937299c6cb6be2f8d25f7dbc95cf77423875c5f8353b8bd6cd7cc8e5603cbf8405b14dbf8bd615db2e3b36ed680fc8e1909410815f7f8587b7267a699e00ab37' '793f9ff6306e3992ac89802d98110cba288ea1181a901467333293b7d76182ef9792c2a39ff49d9347a18a174b1f42bc58862091dff583f4146c2704eea28033' 'e79fe7659f59d1ae02fc68816399bfd31587315df6cdb6ccf1d0ca76f7cdc692c2a42b30591c0091147bd97ef14b1c7745dc26bd7cb3ea6bba45698e5044fa2a')
+ noextract=(cursor_${pkgver}_amd64.deb) # avoid double tarball
+ _app=usr/share/cursor/resources/app
+ package() {
+diff --git a/pkgbuilds/cursor-cli/.omarchy/package.json b/pkgbuilds/cursor-cli/.omarchy/package.json
+index 3d6de68dd..bc8c3d2c8 100644
+--- a/pkgbuilds/cursor-cli/.omarchy/package.json
++++ b/pkgbuilds/cursor-cli/.omarchy/package.json
+@@ -1,5 +1,16 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "954e5556aa88f2309b86992b231c8b76f273cfb0"
++  "upstream": {
++    "watch": {
++      "regex": "https://cursor.com/install",
++      "pattern": "https://downloads\\.cursor\\.com/lab/(?P<version>[0-9]{4}\\.[0-9]{2}\\.[0-9]{2})-(?P<hash>[a-f0-9]+)/",
++      "version": "{version}.1.{hash}",
++      "sequence": true
++    }
++  },
++  "origin": {
++    "aur": "cursor-cli",
++    "commit": "954e5556aa88f2309b86992b231c8b76f273cfb0"
++  }
+ }
+diff --git a/pkgbuilds/dbxcli-bin/.omarchy/package.json b/pkgbuilds/dbxcli-bin/.omarchy/package.json
+index e8d76bc1e..53217cb3f 100644
+--- a/pkgbuilds/dbxcli-bin/.omarchy/package.json
++++ b/pkgbuilds/dbxcli-bin/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "80626b9efefc215d55eede4330d56c017a522682"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "dropbox/dbxcli",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "dbxcli-bin",
++    "commit": "80626b9efefc215d55eede4330d56c017a522682"
++  }
+ }
+diff --git a/pkgbuilds/dropbox-cli/.omarchy/package.json b/pkgbuilds/dropbox-cli/.omarchy/package.json
+index 407efd84a..aaeee664a 100644
+--- a/pkgbuilds/dropbox-cli/.omarchy/package.json
++++ b/pkgbuilds/dropbox-cli/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "b67e475d16f4e061a16af53dae212a46d9bc3ea9"
++  "upstream": {
++    "watch": {
++      "regex": "https://linux.dropbox.com/packages/",
++      "pattern": "nautilus-dropbox-(?P<version>[0-9]{4}\\.[0-9]{2}\\.[0-9]{2})\\.tar\\.bz2"
++    }
++  },
++  "origin": {
++    "aur": "dropbox-cli",
++    "commit": "b67e475d16f4e061a16af53dae212a46d9bc3ea9"
++  }
+ }
+diff --git a/pkgbuilds/dropbox-cli/.omarchy/patches/x86-only.patch b/pkgbuilds/dropbox-cli/.omarchy/patches/x86-only.patch
+deleted file mode 100644
+index 2448ae46d..000000000
+--- a/pkgbuilds/dropbox-cli/.omarchy/patches/x86-only.patch
++++ /dev/null
+@@ -1,11 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -11,7 +11,7 @@ pkgname=dropbox-cli
+- pkgver=2024.04.17
+- pkgrel=2
+- pkgdesc="Command line interface for Dropbox"
+--arch=("any")
+-+arch=("x86_64")
+- url="https://www.dropbox.com"
+- license=("GPL-3.0-or-later")
+- makedepends=("gdk-pixbuf2")
+diff --git a/pkgbuilds/dropbox/.omarchy/package.json b/pkgbuilds/dropbox/.omarchy/package.json
+index fba50300f..9250abe70 100644
+--- a/pkgbuilds/dropbox/.omarchy/package.json
++++ b/pkgbuilds/dropbox/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "6379feda6f36bbbd496c97f040e4f71c5a1dcec7"
++  "upstream": {
++    "watch": {
++      "redirect": "https://www.dropbox.com/download?plat=lnx.x86_64",
++      "pattern": "dropbox-lnx\\.x86_64-(?P<version>[0-9]+\\.4\\.[0-9]+)\\.tar\\.gz"
++    }
++  },
++  "origin": {
++    "aur": "dropbox",
++    "commit": "6379feda6f36bbbd496c97f040e4f71c5a1dcec7"
++  }
+ }
+diff --git a/pkgbuilds/elephant-all/.omarchy/package.json b/pkgbuilds/elephant-all/.omarchy/package.json
+index b45dcf338..0b3c0a124 100644
+--- a/pkgbuilds/elephant-all/.omarchy/package.json
++++ b/pkgbuilds/elephant-all/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "5614a0a61616643e448fb7c68d58237715ce2739"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-all",
++    "commit": "5614a0a61616643e448fb7c68d58237715ce2739"
++  }
+ }
+diff --git a/pkgbuilds/elephant-archlinuxpkgs/.omarchy/package.json b/pkgbuilds/elephant-archlinuxpkgs/.omarchy/package.json
+index f88665671..a020358b8 100644
+--- a/pkgbuilds/elephant-archlinuxpkgs/.omarchy/package.json
++++ b/pkgbuilds/elephant-archlinuxpkgs/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "659b81f1aa74a13fd2ebec222e19da2046d8e977"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-archlinuxpkgs",
++    "commit": "659b81f1aa74a13fd2ebec222e19da2046d8e977"
++  }
+ }
+diff --git a/pkgbuilds/elephant-bluetooth/.omarchy/package.json b/pkgbuilds/elephant-bluetooth/.omarchy/package.json
+index e3a0f17f6..d08f83f0b 100644
+--- a/pkgbuilds/elephant-bluetooth/.omarchy/package.json
++++ b/pkgbuilds/elephant-bluetooth/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "42d9dd5424884c51b8fe6bf7692caf0a31007f05"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-bluetooth",
++    "commit": "42d9dd5424884c51b8fe6bf7692caf0a31007f05"
++  }
+ }
+diff --git a/pkgbuilds/elephant-calc/.omarchy/package.json b/pkgbuilds/elephant-calc/.omarchy/package.json
+index b5f3ca00d..94f4a466f 100644
+--- a/pkgbuilds/elephant-calc/.omarchy/package.json
++++ b/pkgbuilds/elephant-calc/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "84aba9e90bbd65af45f83168cd6c7bce6ec4322e"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-calc",
++    "commit": "84aba9e90bbd65af45f83168cd6c7bce6ec4322e"
++  }
+ }
+diff --git a/pkgbuilds/elephant-clipboard/.omarchy/package.json b/pkgbuilds/elephant-clipboard/.omarchy/package.json
+index f7e54fa3a..1634055c2 100644
+--- a/pkgbuilds/elephant-clipboard/.omarchy/package.json
++++ b/pkgbuilds/elephant-clipboard/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "3176f9de1445e7115009383f9cdac116729fc7be"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-clipboard",
++    "commit": "3176f9de1445e7115009383f9cdac116729fc7be"
++  }
+ }
+diff --git a/pkgbuilds/elephant-desktopapplications/.omarchy/package.json b/pkgbuilds/elephant-desktopapplications/.omarchy/package.json
+index 3800fd9c7..e83c756a2 100644
+--- a/pkgbuilds/elephant-desktopapplications/.omarchy/package.json
++++ b/pkgbuilds/elephant-desktopapplications/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "c30e33db5fef912dec9aa157773b10ffab1e0307"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-desktopapplications",
++    "commit": "c30e33db5fef912dec9aa157773b10ffab1e0307"
++  }
+ }
+diff --git a/pkgbuilds/elephant-files/.omarchy/package.json b/pkgbuilds/elephant-files/.omarchy/package.json
+index 851441c18..b7f4bb923 100644
+--- a/pkgbuilds/elephant-files/.omarchy/package.json
++++ b/pkgbuilds/elephant-files/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "2d16502b7a905e7d7a03e0026c5519c3b3c4abf2"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-files",
++    "commit": "2d16502b7a905e7d7a03e0026c5519c3b3c4abf2"
++  }
+ }
+diff --git a/pkgbuilds/elephant-menus/.omarchy/package.json b/pkgbuilds/elephant-menus/.omarchy/package.json
+index f33dba7bf..81b6353ac 100644
+--- a/pkgbuilds/elephant-menus/.omarchy/package.json
++++ b/pkgbuilds/elephant-menus/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "5ab583fee6ba3e387d49ffe4e409bb84bc60ea24"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-menus",
++    "commit": "5ab583fee6ba3e387d49ffe4e409bb84bc60ea24"
++  }
+ }
+diff --git a/pkgbuilds/elephant-providerlist/.omarchy/package.json b/pkgbuilds/elephant-providerlist/.omarchy/package.json
+index eb32c1082..5646aba32 100644
+--- a/pkgbuilds/elephant-providerlist/.omarchy/package.json
++++ b/pkgbuilds/elephant-providerlist/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "1d756a138e926a81b9d33265f0197b8661168845"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-providerlist",
++    "commit": "1d756a138e926a81b9d33265f0197b8661168845"
++  }
+ }
+diff --git a/pkgbuilds/elephant-runner/.omarchy/package.json b/pkgbuilds/elephant-runner/.omarchy/package.json
+index 9d14cb301..f8d45c494 100644
+--- a/pkgbuilds/elephant-runner/.omarchy/package.json
++++ b/pkgbuilds/elephant-runner/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "e47641530d912199372204cf8780ef37f99f0b37"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-runner",
++    "commit": "e47641530d912199372204cf8780ef37f99f0b37"
++  }
+ }
+diff --git a/pkgbuilds/elephant-symbols/.omarchy/package.json b/pkgbuilds/elephant-symbols/.omarchy/package.json
+index c0525b305..2b2eeec6b 100644
+--- a/pkgbuilds/elephant-symbols/.omarchy/package.json
++++ b/pkgbuilds/elephant-symbols/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "32263e8b71390ab38b8aa1fd82fc2595b41a5157"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-symbols",
++    "commit": "32263e8b71390ab38b8aa1fd82fc2595b41a5157"
++  }
+ }
+diff --git a/pkgbuilds/elephant-todo/.omarchy/package.json b/pkgbuilds/elephant-todo/.omarchy/package.json
+index 134635f7f..4a63e04e3 100644
+--- a/pkgbuilds/elephant-todo/.omarchy/package.json
++++ b/pkgbuilds/elephant-todo/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "447978df5ea3afd1e10959d7973c0b35367724c3"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-todo",
++    "commit": "447978df5ea3afd1e10959d7973c0b35367724c3"
++  }
+ }
+diff --git a/pkgbuilds/elephant-unicode/.omarchy/package.json b/pkgbuilds/elephant-unicode/.omarchy/package.json
+index ed0012afc..8b9efa1d4 100644
+--- a/pkgbuilds/elephant-unicode/.omarchy/package.json
++++ b/pkgbuilds/elephant-unicode/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "23222b0d304a234c74f630c5b9176d58c6c6e0b3"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-unicode",
++    "commit": "23222b0d304a234c74f630c5b9176d58c6c6e0b3"
++  }
+ }
+diff --git a/pkgbuilds/elephant-websearch/.omarchy/package.json b/pkgbuilds/elephant-websearch/.omarchy/package.json
+index 2d9ea6f26..e5f3fe687 100644
+--- a/pkgbuilds/elephant-websearch/.omarchy/package.json
++++ b/pkgbuilds/elephant-websearch/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "6b5da831da33e3533593823826a8ffb1a008a299"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant-websearch",
++    "commit": "6b5da831da33e3533593823826a8ffb1a008a299"
++  }
+ }
+diff --git a/pkgbuilds/elephant/.omarchy/package.json b/pkgbuilds/elephant/.omarchy/package.json
+index 4f1debd49..13506dccf 100644
+--- a/pkgbuilds/elephant/.omarchy/package.json
++++ b/pkgbuilds/elephant/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "6dd02e6987a7a91be6a33e9600147523efa7fa5a"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/elephant",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "elephant",
++    "commit": "6dd02e6987a7a91be6a33e9600147523efa7fa5a"
++  }
+ }
+diff --git a/pkgbuilds/grok-bot/.omarchy/package.json b/pkgbuilds/grok-bot/.omarchy/package.json
+index a2a26fe95..2e8b08973 100644
+--- a/pkgbuilds/grok-bot/.omarchy/package.json
++++ b/pkgbuilds/grok-bot/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "05eb78fca06b482affda28b26223cbf249d4bbcd"
++  "origin": {
++    "aur": "grok-bot",
++    "commit": "05eb78fca06b482affda28b26223cbf249d4bbcd"
++  }
+ }
+diff --git a/pkgbuilds/heroic-games-launcher-bin/.omarchy/package.json b/pkgbuilds/heroic-games-launcher-bin/.omarchy/package.json
+index 119be0022..e245991ec 100644
+--- a/pkgbuilds/heroic-games-launcher-bin/.omarchy/package.json
++++ b/pkgbuilds/heroic-games-launcher-bin/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "44b4e963c69541700088a5719855d34f5cf16c85"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "Heroic-Games-Launcher/HeroicGamesLauncher",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "heroic-games-launcher-bin",
++    "commit": "44b4e963c69541700088a5719855d34f5cf16c85"
++  }
+ }
+diff --git a/pkgbuilds/heroic-games-launcher-bin/PKGBUILD b/pkgbuilds/heroic-games-launcher-bin/PKGBUILD
+index 18d37bb6e..2bc7604a3 100755
+--- a/pkgbuilds/heroic-games-launcher-bin/PKGBUILD
++++ b/pkgbuilds/heroic-games-launcher-bin/PKGBUILD
+@@ -3,14 +3,14 @@
+ 
+ pkgname=heroic-games-launcher-bin
+ pkgver=2.22.1
+-pkgrel=1
++pkgrel=2
+ pkgdesc="An Open source Launcher for Epic, Amazon and GOG Games"
+ arch=('x86_64')
+ url="https://heroicgameslauncher.com/"
+ license=('GPL-3.0-only')
+-_filename=Heroic-2.22.1-linux-x64.pacman
+-source=("https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v2.22.1/Heroic-2.22.1-linux-x64.pacman")
+-noextract=("Heroic-2.22.1-linux-x64.pacman")
++_filename=Heroic-${pkgver}-linux-x64.pacman
++source=("https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v${pkgver}/${_filename}")
++noextract=("${_filename}")
+ sha256sums=(66ed041a93ac2817b744d3d0985194adfa408c8d35f64d9a8967fa5e2a58f2c1)
+ options=(!strip)
+ depends=(
+@@ -27,4 +27,3 @@ package() {
+ }
+ 
+ # vim:set ts=2 sw=2 et: syntax=sh
+-
+diff --git a/pkgbuilds/hyprshade/.omarchy/package.json b/pkgbuilds/hyprshade/.omarchy/package.json
+index 56463ec67..bdd892b8b 100644
+--- a/pkgbuilds/hyprshade/.omarchy/package.json
++++ b/pkgbuilds/hyprshade/.omarchy/package.json
+@@ -1,5 +1,13 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "89c710019789541e4cf972ee847f266534d6a96d"
++  "upstream": {
++    "watch": {
++      "pypi": "hyprshade"
++    }
++  },
++  "origin": {
++    "aur": "hyprshade",
++    "commit": "89c710019789541e4cf972ee847f266534d6a96d"
++  }
+ }
+diff --git a/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/package.json b/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/package.json
+index 8fa7c050e..93ef7eb03 100644
+--- a/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/package.json
++++ b/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "bbe7b771c897f78e518ab4453b0bc9210ef2f201"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "regex": "https://download.nvidia.com/XFree86/Linux-x86_64/",
++      "pattern": "href=[\\'\"](?P<version>580\\.[0-9]+\\.[0-9]+)/[\\'\"]"
++    }
++  },
++  "origin": {
++    "aur": "lib32-nvidia-580xx-utils",
++    "commit": "bbe7b771c897f78e518ab4453b0bc9210ef2f201"
++  }
+ }
+diff --git a/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/patches/max-zstd-compression.patch b/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/patches/max-zstd-compression.patch
+deleted file mode 100644
+index 10f90eb2c..000000000
+--- a/pkgbuilds/lib32-nvidia-580xx-utils/.omarchy/patches/max-zstd-compression.patch
++++ /dev/null
+@@ -1,15 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -12,6 +12,12 @@
+- #makedepends=('nvidia-libgl')  # To avoid conflict during installation in the build chroot
+- license=('custom')
+- options=('!strip')
+-+
+-+# Omarchy: the build image compresses with zstd at its default level, which
+-+# leaves these unstripped driver blobs far larger than they need to be. Maximum
+-+# zstd saves 25 MB here, most of it on the ISO's offline mirror.
+-+COMPRESSZST=(zstd -c -z -q --ultra -22 --threads=0 -)
+-+
+- _pkg="NVIDIA-Linux-x86_64-${pkgver}"
+- source=("https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
+- sha512sums=('ca394b1e3f6c3403dc7ffe5d5fd7301bb06607fdbf75c9ffd338d7641c06d1878790c629108162adf4289ae829568973a48b7557183dbf7588e668f6d8edf3b3')
+diff --git a/pkgbuilds/libfprint-git/.omarchy/package.json b/pkgbuilds/libfprint-git/.omarchy/package.json
+index 48065ee61..eed18f7e9 100644
+--- a/pkgbuilds/libfprint-git/.omarchy/package.json
++++ b/pkgbuilds/libfprint-git/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "d225acd677e4a2af8f99698ea11386d8ad3af1bf"
++  "origin": {
++    "aur": "libfprint-git",
++    "commit": "d225acd677e4a2af8f99698ea11386d8ad3af1bf"
++  }
+ }
+diff --git a/pkgbuilds/libretro-cap32-git/.omarchy/package.json b/pkgbuilds/libretro-cap32-git/.omarchy/package.json
+index 42986beef..41c700581 100644
+--- a/pkgbuilds/libretro-cap32-git/.omarchy/package.json
++++ b/pkgbuilds/libretro-cap32-git/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "2dbe3348fb970d34155e652ce4a84fe4fbb42ecf"
++  "origin": {
++    "aur": "libretro-cap32-git",
++    "commit": "2dbe3348fb970d34155e652ce4a84fe4fbb42ecf"
++  }
+ }
+diff --git a/pkgbuilds/libretro-database-git/.omarchy/package.json b/pkgbuilds/libretro-database-git/.omarchy/package.json
+index 903102970..7fcb920c8 100644
+--- a/pkgbuilds/libretro-database-git/.omarchy/package.json
++++ b/pkgbuilds/libretro-database-git/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "11ff3d3d1fc62f44a35a813f818235b7313ff7e0"
++  "origin": {
++    "aur": "libretro-database-git",
++    "commit": "11ff3d3d1fc62f44a35a813f818235b7313ff7e0"
++  }
+ }
+diff --git a/pkgbuilds/libretro-fbneo-git/.omarchy/package.json b/pkgbuilds/libretro-fbneo-git/.omarchy/package.json
+index 88a2b8a79..07b490f31 100644
+--- a/pkgbuilds/libretro-fbneo-git/.omarchy/package.json
++++ b/pkgbuilds/libretro-fbneo-git/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "c33a5ce38a6a493fe88f092561d5197db1f97a1d"
++  "origin": {
++    "aur": "libretro-fbneo-git",
++    "commit": "c33a5ce38a6a493fe88f092561d5197db1f97a1d"
++  }
+ }
+diff --git a/pkgbuilds/libretro-uae-git/.omarchy/package.json b/pkgbuilds/libretro-uae-git/.omarchy/package.json
+index 6a6a5db23..479ac60eb 100644
+--- a/pkgbuilds/libretro-uae-git/.omarchy/package.json
++++ b/pkgbuilds/libretro-uae-git/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "f1bbed73caf47bfcb07a2c15f18485b42cb58584"
++  "origin": {
++    "aur": "libretro-uae-git",
++    "commit": "f1bbed73caf47bfcb07a2c15f18485b42cb58584"
++  }
+ }
+diff --git a/pkgbuilds/libretro-vice-git/.omarchy/package.json b/pkgbuilds/libretro-vice-git/.omarchy/package.json
+index c141b3693..664ce2327 100644
+--- a/pkgbuilds/libretro-vice-git/.omarchy/package.json
++++ b/pkgbuilds/libretro-vice-git/.omarchy/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "sync": false,
+-  "upstream_commit": "6b1839b0a1154ef29ddb2b67910f6d4c90bc1edd"
++  "origin": {
++    "aur": "libretro-vice-git",
++    "commit": "6b1839b0a1154ef29ddb2b67910f6d4c90bc1edd"
++  }
+ }
+diff --git a/pkgbuilds/limine-mkinitcpio-hook/.omarchy/package.json b/pkgbuilds/limine-mkinitcpio-hook/.omarchy/package.json
+index e8b8b6431..86036c237 100644
+--- a/pkgbuilds/limine-mkinitcpio-hook/.omarchy/package.json
++++ b/pkgbuilds/limine-mkinitcpio-hook/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "0c6f3a88d5928907d79c58bb67c9cb018774f60d"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://gitlab.com/Zesko/limine-entry-tool.git",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "limine-mkinitcpio-hook",
++    "commit": "0c6f3a88d5928907d79c58bb67c9cb018774f60d"
++  }
+ }
+diff --git a/pkgbuilds/limine-mkinitcpio-hook/.omarchy/patches/arm-gradle.patch b/pkgbuilds/limine-mkinitcpio-hook/.omarchy/patches/arm-gradle.patch
+deleted file mode 100644
+index d7af3e8ab..000000000
+--- a/pkgbuilds/limine-mkinitcpio-hook/.omarchy/patches/arm-gradle.patch
++++ /dev/null
+@@ -1,48 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -3,6 +3,7 @@
+- pkgname="limine-mkinitcpio-hook"
+- _pkgver=1.38.0
+- _extver=""
+-+_gradle_version=9.7.1
+- pkgver="${_pkgver}${_extver}"
+- pkgrel=1
+- pkgdesc="Install kernels for the Limine bootloader."
+-@@ -10,7 +11,8 @@
+- url="https://gitlab.com/Zesko/limine-entry-tool"
+- source=("${_pkgname}::git+${url}.git#tag=${pkgver}")
+- source_x86_64=("https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.2.4/graalvm-community-jdk-25i2-25.0.4_linux-x64_bin.tar.gz")
+--source_aarch64=("https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.2.4/graalvm-community-jdk-25i2-25.0.4_linux-aarch64_bin.tar.gz")
+-+source_aarch64=("https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.2.4/graalvm-community-jdk-25i2-25.0.4_linux-aarch64_bin.tar.gz"
+-+	"https://services.gradle.org/distributions/gradle-${_gradle_version}-bin.zip")
+- license=("GPL3")
+- provides=('limine-entry-tool')
+- options=(!debug !strip)
+-@@ -27,12 +29,14 @@
+- 	'sbctl: Signs UEFI boot files for Secure Boot when enabled'
+- 	'journalctl-desktop-notification: Sends desktop notifications when errors occur'
+- )
+--makedepends=('git' 'gradle')
+-+makedepends=('git')
+-+makedepends_x86_64=('gradle')
+- backup=(etc/limine-entry-tool.conf)
+- conflicts=('limine-entry-tool')
+- sha256sums=('11dd8211898585f79d8361d97606965bb2ca214dccace5b133dc5121e4bb4d01')
+- sha256sums_x86_64=('3f4a89de8eaa96f2ed677f09957c7e872cd8467aad3537f8b5394c1b8c4b942e')
+--sha256sums_aarch64=('22286f7ecd21b9aedb3226b9bf797469e1bd3eefc491e12ef3dd49b452d230b7')
+-+sha256sums_aarch64=('22286f7ecd21b9aedb3226b9bf797469e1bd3eefc491e12ef3dd49b452d230b7'
+-+	'acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a')
+- 
+- prepare() {
+- 	[[ -d "${_graalvm_version}" ]] && rm -rf "${_graalvm_version}"
+-@@ -48,7 +52,9 @@
+- 	export GRAALVM_HOME="$srcdir/${_graalvm_version}"
+- 	export JAVA_HOME="${GRAALVM_HOME}"
+- 	export NATIVE_IMAGE_OPTIONS="-march=compatibility --future-defaults=all"
+--	/usr/bin/gradle clean nativeCompile -Dorg.gradle.java.home="${JAVA_HOME}"
+-+	local gradle=/usr/bin/gradle
+-+	[[ $CARCH == aarch64 ]] && gradle="$srcdir/gradle-${_gradle_version}/bin/gradle"
+-+	"$gradle" clean nativeCompile -Dorg.gradle.java.home="${JAVA_HOME}"
+- }
+- 
+- package() {
+diff --git a/pkgbuilds/limine-mkinitcpio-hook/PKGBUILD b/pkgbuilds/limine-mkinitcpio-hook/PKGBUILD
+index b2e63c8c9..21b31651e 100644
+--- a/pkgbuilds/limine-mkinitcpio-hook/PKGBUILD
++++ b/pkgbuilds/limine-mkinitcpio-hook/PKGBUILD
+@@ -1,11 +1,9 @@
+ # Maintainer: Zesko
+ _pkgname="limine-entry-tool"
+ pkgname="limine-mkinitcpio-hook"
+-_pkgver=1.38.0
+-_extver=""
+ _gradle_version=9.7.1
+-pkgver="${_pkgver}${_extver}"
+-pkgrel=1.1
++pkgver=1.38.0
++pkgrel=1.2
+ pkgdesc="Install kernels for the Limine bootloader."
+ arch=('x86_64' 'aarch64')
+ url="https://gitlab.com/Zesko/limine-entry-tool"
+diff --git a/pkgbuilds/limine-snapper-sync/.omarchy/package.json b/pkgbuilds/limine-snapper-sync/.omarchy/package.json
+index 24ae4ddda..76ad41c5b 100644
+--- a/pkgbuilds/limine-snapper-sync/.omarchy/package.json
++++ b/pkgbuilds/limine-snapper-sync/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "35aff513bf1f0284380c8592d3de213f00bb6a7b"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://gitlab.com/Zesko/limine-snapper-sync.git",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "limine-snapper-sync",
++    "commit": "35aff513bf1f0284380c8592d3de213f00bb6a7b"
++  }
+ }
+diff --git a/pkgbuilds/limine-snapper-sync/.omarchy/patches/arm-gradle.patch b/pkgbuilds/limine-snapper-sync/.omarchy/patches/arm-gradle.patch
+deleted file mode 100644
+index 76ad31a0b..000000000
+--- a/pkgbuilds/limine-snapper-sync/.omarchy/patches/arm-gradle.patch
++++ /dev/null
+@@ -1,46 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -2,12 +2,14 @@
+- pkgname="limine-snapper-sync"
+- pkgver=1.31.0
+- pkgrel=1
+-+_gradle_version=9.7.1
+- pkgdesc="Integrates Limine boot entries with Snapper snapshots."
+- arch=('x86_64' 'aarch64')
+- url="https://gitlab.com/Zesko/limine-snapper-sync"
+- source=("${pkgname}::git+${url}.git#tag=${pkgver}")
+- source_x86_64=("https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-25.0.2/graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz")
+--source_aarch64=("https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-25.0.2/graalvm-community-jdk-25.0.2_linux-aarch64_bin.tar.gz")
+-+source_aarch64=("https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-25.0.2/graalvm-community-jdk-25.0.2_linux-aarch64_bin.tar.gz"
+-+	"https://services.gradle.org/distributions/gradle-${_gradle_version}-bin.zip")
+- license=("GPL3")
+- options=(!debug !strip)
+- _graalvm_version=graalvm_ce_jdk25
+-@@ -25,12 +27,14 @@
+- 	'b3sum: Fast Blake3 hash function to prevent duplication.'
+- 	'xxhash: Fast hashing utility for deduplication with shorter hashes.'
+- )
+--makedepends=('git' 'gradle')
+-+makedepends=('git')
+-+makedepends_x86_64=('gradle')
+- backup=(etc/limine-snapper-sync.conf)
+- conflicts=('limine-snapper-cli' 'limine-snapper-sync-git')
+- sha256sums=('ed236f1bbab966950bf11ba5a7958e97a76e66db7fd647b7737bab4b48c9fc40')
+- sha256sums_x86_64=('e0be791c8fda4d03b6b0a0cb824fef3149736170057b3a515252b44419606af0')
+--sha256sums_aarch64=('b4580d9f223d0a4b3a1757e58b18ff4c1db950e67e105fc5cb741457d2384a71')
+-+sha256sums_aarch64=('b4580d9f223d0a4b3a1757e58b18ff4c1db950e67e105fc5cb741457d2384a71'
+-+	'acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a')
+- 
+- prepare() {
+- 	[[ -d "${_graalvm_version}" ]] && rm -rf "${_graalvm_version}"
+-@@ -46,7 +50,9 @@
+- 	export GRAALVM_HOME="$srcdir/${_graalvm_version}"
+- 	export JAVA_HOME="${GRAALVM_HOME}"
+- 	export NATIVE_IMAGE_OPTIONS="-march=compatibility"
+--	/usr/bin/gradle clean nativeCompile -Dorg.gradle.java.home="${JAVA_HOME}"
+-+	local gradle=/usr/bin/gradle
+-+	[[ $CARCH == aarch64 ]] && gradle="$srcdir/gradle-${_gradle_version}/bin/gradle"
+-+	"$gradle" clean nativeCompile -Dorg.gradle.java.home="${JAVA_HOME}"
+- }
+- 
+- package() {
+diff --git a/pkgbuilds/lmstudio-bin/.omarchy/package.json b/pkgbuilds/lmstudio-bin/.omarchy/package.json
+index f59a78f7a..995d65c2a 100644
+--- a/pkgbuilds/lmstudio-bin/.omarchy/package.json
++++ b/pkgbuilds/lmstudio-bin/.omarchy/package.json
+@@ -1,5 +1,20 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "8e97652a62a284b0c3436688bed6dfae0b54c669"
++  "upstream": {
++    "watch": {
++      "regex": "https://lmstudio.ai/download",
++      "unescape_json": true,
++      "pattern": "\"linux\":\\{\"x64\":\\{\"version\":\"(?P<version>[0-9]+(?:\\.[0-9]+)*)\",\"build\":\"(?P<build>[0-9]+)\"",
++      "variables": {
++        "_build": "{build}"
++      },
++      "revision": "{build}",
++      "revision_variable": "_build"
++    }
++  },
++  "origin": {
++    "aur": "lmstudio-bin",
++    "commit": "8e97652a62a284b0c3436688bed6dfae0b54c669"
++  }
+ }
+diff --git a/pkgbuilds/lmstudio-bin/PKGBUILD b/pkgbuilds/lmstudio-bin/PKGBUILD
+index f13071097..48b1a5966 100644
+--- a/pkgbuilds/lmstudio-bin/PKGBUILD
++++ b/pkgbuilds/lmstudio-bin/PKGBUILD
+@@ -1,8 +1,9 @@
+ # Maintainer: noureddinex
+ pkgname=lmstudio-bin
+ pkgver=0.4.24
+-pkgrel=1
+-_pkgver=${pkgver}-${pkgrel}
++pkgrel=2
++_build=1
++_pkgver=${pkgver}-${_build}
+ pkgdesc="LM Studio - A desktop app for exploring and running large language models locally"
+ arch=('x86_64')
+ url="https://lmstudio.ai"
+diff --git a/pkgbuilds/localsend-bin/.omarchy/package.json b/pkgbuilds/localsend-bin/.omarchy/package.json
+index f6408c48b..6e350beee 100644
+--- a/pkgbuilds/localsend-bin/.omarchy/package.json
++++ b/pkgbuilds/localsend-bin/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "8dc54e7bdcbf24653b9247ec8af07aa012713b1c"
++  "upstream": {
++    "watch": {
++      "github": "localsend/localsend",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "localsend-bin",
++    "commit": "8dc54e7bdcbf24653b9247ec8af07aa012713b1c"
++  }
+ }
+diff --git a/pkgbuilds/localsend/.omarchy/package.json b/pkgbuilds/localsend/.omarchy/package.json
+index dc5e19003..5e3c138e4 100644
+--- a/pkgbuilds/localsend/.omarchy/package.json
++++ b/pkgbuilds/localsend/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "11788eb33c9298d611382884e8775fc34f874703"
++  "upstream": {
++    "watch": {
++      "github": "localsend/localsend",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "localsend",
++    "commit": "11788eb33c9298d611382884e8775fc34f874703"
++  }
+ }
+diff --git a/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json b/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json
+index d49dd703a..811c32692 100644
+--- a/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json
++++ b/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json
+@@ -1,4 +1,17 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "38f085c6470eee409c22a4753eaf58d58b4759fd"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_branch": "https://github.com/marc-git/macbook12-spi-driver.git",
++      "branch": "touchbar-driver-hid-driver",
++      "version": "0+git.{count}",
++      "variables": {
++        "_commit": "{commit}"
++      }
++    }
++  },
++  "origin": {
++    "aur": "macbook12-spi-driver-dkms",
++    "commit": "38f085c6470eee409c22a4753eaf58d58b4759fd"
++  }
+ }
+diff --git a/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD b/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD
+index 3254326cd..a462dcb8c 100644
+--- a/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD
++++ b/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD
+@@ -3,7 +3,8 @@
+ _pkgbase=macbook12-spi-driver
+ pkgname=(${_pkgbase}-dkms)
+ pkgver=0+git.315
+-pkgrel=1
++pkgrel=2
++_commit=807b65b6d9d7c29bd7ff633fbb80596a343e9eb9
+ pkgdesc="Driver for the keyboard, touchpad and touchbar found in newer MacBook (Pro) models"
+ arch=('i686' 'x86_64')
+ url="https://github.com/marc-git/macbook12-spi-driver"
+@@ -11,15 +12,11 @@ license=('GPL2')
+ depends=('dkms')
+ makedepends=('git')
+ optdepends=()
+-source=(git+https://github.com/marc-git/macbook12-spi-driver.git#branch=touchbar-driver-hid-driver
++source=(git+https://github.com/marc-git/macbook12-spi-driver.git#commit=${_commit}
+         dkms.conf)
+ sha256sums=('SKIP'
+             'e42243352d015a78e5d13260361d3052d0b84c4105bcb89191a319f2249cc47b')
+ 
+-pkgver() {
+-    cd $_pkgbase
+-    echo "0+git.$(git rev-list HEAD --count)"
+-}
+ 
+ package() {
+     install -dm755 "${pkgdir}"/usr/src/${_pkgbase}-${pkgver}
+diff --git a/pkgbuilds/makima-bin/.omarchy/package.json b/pkgbuilds/makima-bin/.omarchy/package.json
+index d3f3a0153..46b6b10fe 100644
+--- a/pkgbuilds/makima-bin/.omarchy/package.json
++++ b/pkgbuilds/makima-bin/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "b91ad74a6e85ab1c3697a0c0a7d7bd9cf17a802c"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "cyber-sushi/makima",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "makima-bin",
++    "commit": "b91ad74a6e85ab1c3697a0c0a7d7bd9cf17a802c"
++  }
+ }
+diff --git a/pkgbuilds/minecraft-launcher/.omarchy/package.json b/pkgbuilds/minecraft-launcher/.omarchy/package.json
+index dbde2a68d..1bd624114 100644
+--- a/pkgbuilds/minecraft-launcher/.omarchy/package.json
++++ b/pkgbuilds/minecraft-launcher/.omarchy/package.json
+@@ -1,5 +1,18 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "c6cac125f8cfc5d9a45e93b7f3ac9b01385dae23"
++  "upstream": {
++    "watch": {
++      "archive": "https://launcher.mojang.com/download/Minecraft.deb",
++      "pattern": "(?m)^Version: (?P<version>[0-9]+(?:\\.[0-9]+)*)$",
++      "mutable_sources": [
++        "source:0",
++        "source:1"
++      ]
++    }
++  },
++  "origin": {
++    "aur": "minecraft-launcher",
++    "commit": "c6cac125f8cfc5d9a45e93b7f3ac9b01385dae23"
++  }
+ }
+diff --git a/pkgbuilds/nautilus-dropbox/.omarchy/package.json b/pkgbuilds/nautilus-dropbox/.omarchy/package.json
+index a9b635dbe..d7046be68 100644
+--- a/pkgbuilds/nautilus-dropbox/.omarchy/package.json
++++ b/pkgbuilds/nautilus-dropbox/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "f7907953200ffd14f1260691f4ff1b7290fcd887"
++  "upstream": {
++    "watch": {
++      "github": "dropbox/nautilus-dropbox",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "nautilus-dropbox",
++    "commit": "f7907953200ffd14f1260691f4ff1b7290fcd887"
++  }
+ }
+diff --git a/pkgbuilds/nautilus-open-any-terminal/.omarchy/package.json b/pkgbuilds/nautilus-open-any-terminal/.omarchy/package.json
+index 667476e7a..8a36764e1 100644
+--- a/pkgbuilds/nautilus-open-any-terminal/.omarchy/package.json
++++ b/pkgbuilds/nautilus-open-any-terminal/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "b4bcde82a43129c09e22fd57351e61d5593a3d8f"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://github.com/Stunkymonkey/nautilus-open-any-terminal.git",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "nautilus-open-any-terminal",
++    "commit": "b4bcde82a43129c09e22fd57351e61d5593a3d8f"
++  }
+ }
+diff --git a/pkgbuilds/nordvpn-bin/.omarchy/package.json b/pkgbuilds/nordvpn-bin/.omarchy/package.json
+index 8038e159b..2edd57897 100644
+--- a/pkgbuilds/nordvpn-bin/.omarchy/package.json
++++ b/pkgbuilds/nordvpn-bin/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "8d4c074f4b0a373c04c6f41baba83d3bd7d6d97b"
++  "upstream": {
++    "watch": {
++      "debian": "https://repo.nordvpn.com/deb/nordvpn/debian/dists/stable/main/binary-amd64/Packages",
++      "package": "nordvpn"
++    }
++  },
++  "origin": {
++    "aur": "nordvpn-bin",
++    "commit": "8d4c074f4b0a373c04c6f41baba83d3bd7d6d97b"
++  }
+ }
+diff --git a/pkgbuilds/nvidia-580xx-utils/.omarchy/package.json b/pkgbuilds/nvidia-580xx-utils/.omarchy/package.json
+index ae8781ea8..9439b286b 100644
+--- a/pkgbuilds/nvidia-580xx-utils/.omarchy/package.json
++++ b/pkgbuilds/nvidia-580xx-utils/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "85c38619ce2267787d0515baa443739cb9d2883c"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "regex": "https://download.nvidia.com/XFree86/Linux-x86_64/",
++      "pattern": "href=[\\'\"](?P<version>580\\.[0-9]+\\.[0-9]+)/[\\'\"]"
++    }
++  },
++  "origin": {
++    "aur": "nvidia-580xx-utils",
++    "commit": "85c38619ce2267787d0515baa443739cb9d2883c"
++  }
+ }
+diff --git a/pkgbuilds/nvidia-580xx-utils/.omarchy/patches/max-zstd-compression.patch b/pkgbuilds/nvidia-580xx-utils/.omarchy/patches/max-zstd-compression.patch
+deleted file mode 100644
+index deb2e8fb0..000000000
+--- a/pkgbuilds/nvidia-580xx-utils/.omarchy/patches/max-zstd-compression.patch
++++ /dev/null
+@@ -1,15 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -13,6 +13,12 @@
+- url="http://www.nvidia.com/"
+- license=('custom')
+- options=('!strip')
+-+
+-+# Omarchy: the build image compresses with zstd at its default level, which
+-+# leaves these unstripped driver blobs far larger than they need to be. Maximum
+-+# zstd saves 89 MB across this pkgbase, most of it on the ISO's offline mirror.
+-+COMPRESSZST=(zstd -c -z -q --ultra -22 --threads=0 -)
+-+
+- _pkg="NVIDIA-Linux-x86_64-${pkgver}"
+- _pkg_open="NVIDIA-kernel-module-source-${pkgver}"
+- source=('nvidia-drm-outputclass.conf'
+diff --git a/pkgbuilds/omarchy-chromium-bin/.omarchy/package.json b/pkgbuilds/omarchy-chromium-bin/.omarchy/package.json
+index ef66e395a..1cd84baec 100644
+--- a/pkgbuilds/omarchy-chromium-bin/.omarchy/package.json
++++ b/pkgbuilds/omarchy-chromium-bin/.omarchy/package.json
+@@ -1,5 +1,19 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "344d4e2b006988df7f3a11952c7776d37891fb7a"
++  "upstream": {
++    "watch": {
++      "github": "omacom/omarchy-chromium",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)-(?P<build>[0-9]+)",
++      "variables": {
++        "_build": "{build}"
++      },
++      "revision": "{build}",
++      "revision_variable": "_build"
++    }
++  },
++  "origin": {
++    "aur": "omarchy-chromium-bin",
++    "commit": "344d4e2b006988df7f3a11952c7776d37891fb7a"
++  }
+ }
+diff --git a/pkgbuilds/omarchy-chromium-bin/PKGBUILD b/pkgbuilds/omarchy-chromium-bin/PKGBUILD
+index 5f634d17e..7711a41c6 100644
+--- a/pkgbuilds/omarchy-chromium-bin/PKGBUILD
++++ b/pkgbuilds/omarchy-chromium-bin/PKGBUILD
+@@ -2,7 +2,8 @@
+ 
+ pkgname=omarchy-chromium-bin
+ pkgver=148.0.7778.96
+-pkgrel=21
++pkgrel=22
++_build=21
+ pkgdesc="A web browser built for speed, simplicity, and security, with patches for Omarchy (binary package)"
+ arch=('x86_64' 'aarch64')
+ url="https://www.chromium.org/Home"
+@@ -14,8 +15,8 @@ provides=('chromium')
+ conflicts=('chromium' 'omarchy-chromium')
+ 
+ # Architecture-specific sources
+-source_x86_64=("https://github.com/omacom-io/omarchy-chromium/releases/download/v148.0.7778.96-21/omarchy-chromium-148.0.7778.96-21-x86_64.pkg.tar.zst")
+-source_aarch64=("https://github.com/omacom-io/omarchy-chromium/releases/download/v148.0.7778.96-21/omarchy-chromium-148.0.7778.96-21-aarch64.pkg.tar.zst")
++source_x86_64=("https://github.com/omacom-io/omarchy-chromium/releases/download/v${pkgver}-${_build}/omarchy-chromium-${pkgver}-${_build}-x86_64.pkg.tar.zst")
++source_aarch64=("https://github.com/omacom-io/omarchy-chromium/releases/download/v${pkgver}-${_build}/omarchy-chromium-${pkgver}-${_build}-aarch64.pkg.tar.zst")
+ sha256sums_x86_64=('f3f65950edb50722bbc99dde3beffa65a23e06593dcbe8ed7f17e92cc2613259')
+ sha256sums_aarch64=('30aa14f35a06f03eae5442e845245614c374ffa13dc7a3c367ed4c65e68b7856')
+ 
+@@ -23,7 +24,7 @@ package() {
+     cd "$srcdir"
+     
+     # Extract the package (filename varies by architecture)
+-    tar -xf omarchy-chromium-148.0.7778.96-21-${CARCH}.pkg.tar.zst
++    tar -xf omarchy-chromium-${pkgver}-${_build}-${CARCH}.pkg.tar.zst
+     
+     # Copy everything to the target directory
+     cp -r usr "$pkgdir/"
+diff --git a/pkgbuilds/omarchy-emacs/.omarchy/package.json b/pkgbuilds/omarchy-emacs/.omarchy/package.json
+index 5a35fc111..5d0b9fccd 100644
+--- a/pkgbuilds/omarchy-emacs/.omarchy/package.json
++++ b/pkgbuilds/omarchy-emacs/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "c79a5ad3d523ad9a22fa57274d8b3fab8e87e5b2"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://github.com/scottjones/omarchy-emacs.git",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "omarchy-emacs",
++    "commit": "c79a5ad3d523ad9a22fa57274d8b3fab8e87e5b2"
++  }
+ }
+diff --git a/pkgbuilds/omazed/.omarchy/package.json b/pkgbuilds/omazed/.omarchy/package.json
+index 4d2f6593b..84d820bfc 100644
+--- a/pkgbuilds/omazed/.omarchy/package.json
++++ b/pkgbuilds/omazed/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "cbc25a60a791ccda07ed5e8300e8acb267d23007"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://github.com/aps6/omazed.git",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "omazed",
++    "commit": "cbc25a60a791ccda07ed5e8300e8acb267d23007"
++  }
+ }
+diff --git a/pkgbuilds/once-bin/.omarchy/package.json b/pkgbuilds/once-bin/.omarchy/package.json
+index 55a25c1b5..a8dbd34b2 100644
+--- a/pkgbuilds/once-bin/.omarchy/package.json
++++ b/pkgbuilds/once-bin/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "24d97ea4671538cec0b827fc40b01a3f3fc8ff49"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "basecamp/once",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "once-bin",
++    "commit": "24d97ea4671538cec0b827fc40b01a3f3fc8ff49"
++  }
+ }
+diff --git a/pkgbuilds/openai-codex-bin/.omarchy/package.json b/pkgbuilds/openai-codex-bin/.omarchy/package.json
+index 9a120f1ea..8acb2220d 100644
+--- a/pkgbuilds/openai-codex-bin/.omarchy/package.json
++++ b/pkgbuilds/openai-codex-bin/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "f72ee6f702ebc825c1680241dd599fb890c5a66a"
++  "upstream": {
++    "watch": {
++      "github": "openai/codex",
++      "pattern": "rust-v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "openai-codex-bin",
++    "commit": "f72ee6f702ebc825c1680241dd599fb890c5a66a"
++  }
+ }
+diff --git a/pkgbuilds/python-mediapipe/.omarchy/package.json b/pkgbuilds/python-mediapipe/.omarchy/package.json
+index 6300a6978..144d4080c 100644
+--- a/pkgbuilds/python-mediapipe/.omarchy/package.json
++++ b/pkgbuilds/python-mediapipe/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "99700efde7dc0200719dfed1a1147ace2cd7b0c0"
++  "upstream": {
++    "watch": {
++      "github": "google-ai-edge/mediapipe",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "python-mediapipe",
++    "commit": "99700efde7dc0200719dfed1a1147ace2cd7b0c0"
++  }
+ }
+diff --git a/pkgbuilds/python-mediapipe/.omarchy/patches/verify-bazel-source.patch b/pkgbuilds/python-mediapipe/.omarchy/patches/verify-bazel-source.patch
+deleted file mode 100644
+index 6cd9fb340..000000000
+--- a/pkgbuilds/python-mediapipe/.omarchy/patches/verify-bazel-source.patch
++++ /dev/null
+@@ -1,42 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -2,6 +2,7 @@
+- # Maintainer: Hu Butui <hot123tea123@gmail.com>
+- 
+- _pkgname=mediapipe
+-+_bazel_version=7.4.1
+- pkgname=python-mediapipe
+- pkgver=1.0.0
+- pkgrel=2
+-@@ -27,10 +28,10 @@ makedepends=(
+-   python-installer
+-   python-setuptools
+-   python-wheel
+--  wget
+- )
+- 
+- source=("${_pkgname}-${pkgver}.tar.gz::https://github.com/google-ai-edge/mediapipe/archive/refs/tags/v${pkgver}.tar.gz"
+-+  "bazel-${_bazel_version}-linux-x86_64::https://github.com/bazelbuild/bazel/releases/download/${_bazel_version}/bazel-${_bazel_version}-linux-x86_64"
+-   "0004-use-opencv-headers.patch"
+-   "0005-set-hermetic-python-version-and-disable-odml-converter.patch"
+-   "0006-opencv5-geometry-header.patch"
+-@@ -38,6 +39,7 @@ source=("${_pkgname}-${pkgver}.tar.gz::https://github.com/google-ai-edge/medi
+-   "0007-bump-rules-java.patch"
+- )
+- sha256sums=('6343314dad0f4112610807ca723eee63feea00711dc2be9360928b6f0a5eba12'
+-+            'c97f02133adce63f0c28678ac1f21d65fa8255c80429b588aeeba8a1fac6202b'
+-             'd18e88a217a00dc77cf2bfaa1d33b5fbc912deed5df686b0d2455fb0db75a677'
+-             '62cbd43346e7a7705127656a74bec44852e5bbfc006c4723005fdd23af5258db'
+-             'fb082d88d9cca47534ae01fca676a3afdb909bfc82d52c97cf0eaedf34571d5f'
+-@@ -47,9 +49,8 @@ sha256sums=('6343314dad0f4112610807ca723eee63feea00711dc2be9360928b6f0a5eba12'
+- prepare() {
+-   # bazel in the ArchLinux is not working
+-   mkdir -p ${srcdir}/bin
+--  bazel_version=$(cat ${srcdir}/${_pkgname}-${pkgver}/.bazelversion)
+--  wget https://github.com/bazelbuild/bazel/releases/download/${bazel_version}/bazel-${bazel_version}-linux-x86_64 -O ${srcdir}/bin/bazel
+--  chmod +x ${srcdir}/bin/bazel
+-+  install -Dm755 "${srcdir}/bazel-${_bazel_version}-linux-x86_64" \
+-+    "${srcdir}/bin/bazel"
+-   export PATH=${srcdir}/bin:${PATH}
+-   cd "${srcdir}/${_pkgname}-${pkgver}"
+-   patch -p1 -i "${srcdir}/0004-use-opencv-headers.patch"
+diff --git a/pkgbuilds/python-sounddevice/.omarchy/package.json b/pkgbuilds/python-sounddevice/.omarchy/package.json
+index e50ad7b85..a7353c772 100644
+--- a/pkgbuilds/python-sounddevice/.omarchy/package.json
++++ b/pkgbuilds/python-sounddevice/.omarchy/package.json
+@@ -1,5 +1,13 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "c3a5320f95ada9ccebd629b5722276e645388ced"
++  "upstream": {
++    "watch": {
++      "pypi": "sounddevice"
++    }
++  },
++  "origin": {
++    "aur": "python-sounddevice",
++    "commit": "c3a5320f95ada9ccebd629b5722276e645388ced"
++  }
+ }
+diff --git a/pkgbuilds/python-terminaltexteffects/.omarchy/package.json b/pkgbuilds/python-terminaltexteffects/.omarchy/package.json
+index f305a7cfd..808589a44 100644
+--- a/pkgbuilds/python-terminaltexteffects/.omarchy/package.json
++++ b/pkgbuilds/python-terminaltexteffects/.omarchy/package.json
+@@ -1,4 +1,12 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "efbe1ae0019e7c44c9e1c7e22904f9fc77150b6a"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "pypi": "terminaltexteffects"
++    }
++  },
++  "origin": {
++    "aur": "python-terminaltexteffects",
++    "commit": "efbe1ae0019e7c44c9e1c7e22904f9fc77150b6a"
++  }
+ }
+diff --git a/pkgbuilds/quickshell-git/.omarchy/package.json b/pkgbuilds/quickshell-git/.omarchy/package.json
+index 2bb526a58..457456eb4 100644
+--- a/pkgbuilds/quickshell-git/.omarchy/package.json
++++ b/pkgbuilds/quickshell-git/.omarchy/package.json
+@@ -1,6 +1,5 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "2494139bce7b7fc71372da00b68fb745a2c72d90",
++  "source": "local",
+   "sync": false,
+   "rebuild_on": [
+     "qt6-base",
+@@ -11,5 +10,9 @@
+     "qt6-base": "6.11.2-3",
+     "qt6-declarative": "6.11.2-1",
+     "qt6-wayland": "6.11.2-1"
++  },
++  "origin": {
++    "aur": "quickshell-git",
++    "commit": "2494139bce7b7fc71372da00b68fb745a2c72d90"
+   }
+ }
+diff --git a/pkgbuilds/rustdesk/.omarchy/package.json b/pkgbuilds/rustdesk/.omarchy/package.json
+index 6fd38a8af..ec5cb2b7e 100644
+--- a/pkgbuilds/rustdesk/.omarchy/package.json
++++ b/pkgbuilds/rustdesk/.omarchy/package.json
+@@ -1,4 +1,16 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "b19996732fccf6c9d436afccb704d65b320cf837"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "rustdesk/rustdesk",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)",
++      "submodules": {
++        "_hbb_commit": "libs/hbb_common"
++      }
++    }
++  },
++  "origin": {
++    "aur": "rustdesk",
++    "commit": "b19996732fccf6c9d436afccb704d65b320cf837"
++  }
+ }
+diff --git a/pkgbuilds/rustdesk/PKGBUILD b/pkgbuilds/rustdesk/PKGBUILD
+index d5839faca..27fb9fbb3 100644
+--- a/pkgbuilds/rustdesk/PKGBUILD
++++ b/pkgbuilds/rustdesk/PKGBUILD
+@@ -149,27 +149,13 @@ DLAGENTS="${DLAGENTS[@]/curl /curl -L}"
+ set -u
+ _pkgname='rustdesk'
+ pkgname="${_pkgname}"
+-_pkgver='1.4.9'
+-pkgver="${_pkgver//-/.}"
+-pkgrel=1
++pkgver=1.4.9
++_pkgver=$pkgver
++pkgrel=2
+ _sfx=''
+ #_sfx='-pr1-998b758'
+-_HBB=( # dates are retrieved from git fetch; tig. Every version gets a specific hbb.
+-  '1.3.7:20250120-49c6b24a7a8c39d4448e07b743007ef1a3febd43'
+-  '1.3.8:20250223-7cf11f7b771e27ecbd14fd1dd0ced55a64f40eb5'
+-  '1.3.9:20250328-81b932b7bfa2ff8bc60189625fd6538db2fa9ea1'
+-  '1.4.0:20250509-6e556f7e1751a3a709cd5cca0df7268ba3cb1c48'
+-  '1.4.1:20250718-f91459c4ab80fc3cfdef0882b2af51f984bc914c'
+-  '1.4.2:20250904-9e7696c7d4e346508ba68e801a53c6d1f1748fb5'
+-  '1.4.3:20251008-5ed0afde0841659e2fb37ae7acaddc005fa1a8d3'
+-  '1.4.4:20251117-a86eda749e6fa33c282bab680e6b504d3ad87539'
+-  '1.4.5:20251117-073403edbf1fffcb3acfe8cbe7582ee873b23398'
+-  '1.4.6:20260302-48c37de3e6c4e399af6f51ca20e8e3e1fd037976'
+-  '1.4.7:20260601-df6badca5bf81b4e9836256cf8e31c993ad70dd1'
+-  '1.4.8:20260604-387603f47cbb15c0d3dc3d67ae3396d3eb707daf'
+-  '1.4.9:20260702-7e1c392c62d39c364127307cd408421dd5f8cfb0'
+-)
+-_pkgverhbb="$(_fn_VCL "${_pkgver}" -eq "${_HBB[@]}")"; unset _HBB; test "$(_vercmp "${_pkgver}" '1.3.7')" -lt 0 -o ! -z "${_pkgverhbb}" || exit 1
++_hbb_commit=7e1c392c62d39c364127307cd408421dd5f8cfb0
++_pkgverhbb=${_hbb_commit}
+ pkgdesc='Yet another remote desktop software, written in Rust. Works out of the box, no configuration required. Great alternative to TeamViewer and AnyDesk!'
+ arch=('x86_64')
+ url='https://rustdesk.com/'
+diff --git a/pkgbuilds/spotify/.omarchy/package.json b/pkgbuilds/spotify/.omarchy/package.json
+index 78e3705c1..b3bac26c3 100644
+--- a/pkgbuilds/spotify/.omarchy/package.json
++++ b/pkgbuilds/spotify/.omarchy/package.json
+@@ -1,5 +1,18 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "0af779c21295d2875d06b07f8760a0e98256f3e4"
++  "upstream": {
++    "watch": {
++      "debian": "https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages",
++      "package": "spotify-client",
++      "pattern": "1:(?P<version>[0-9]+(?:\\.[0-9]+)*)\\.(?P<commit>g[0-9a-f]+)",
++      "variables": {
++        "_commit": "{commit}"
++      }
++    }
++  },
++  "origin": {
++    "aur": "spotify",
++    "commit": "0af779c21295d2875d06b07f8760a0e98256f3e4"
++  }
+ }
+diff --git a/pkgbuilds/spotify/PKGBUILD b/pkgbuilds/spotify/PKGBUILD
+index 1255bb1f3..3594aa582 100644
+--- a/pkgbuilds/spotify/PKGBUILD
++++ b/pkgbuilds/spotify/PKGBUILD
+@@ -9,7 +9,7 @@ pkgname=spotify
+ pkgver='1.2.96.518'
+ epoch=1
+ _commit=g366879e1
+-pkgrel=2
++pkgrel=3
+ pkgdesc='A proprietary music streaming service'
+ arch=('x86_64')
+ license=('custom')
+@@ -23,17 +23,17 @@ options=('!strip')
+ # NOTE: We switched from stable to testing on 18th march, as the spotify
+ # stable repository is always outdated. Testing seems to be in sync with snap:
+ # https://snapcraft.io/spotify
+-# http://repository.spotify.com/dists/testing/Release
+-# http://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages
+-# http://repository.spotify.com/dists/testing/Release.gpg
+-source=("${pkgname}-${pkgver}-${_commit}-x86_64.deb::http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_${pkgver}.${_commit}_amd64.deb"
++# https://repository.spotify.com/dists/testing/Release
++# https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages
++# https://repository.spotify.com/dists/testing/Release.gpg
++source=("${pkgname}-${pkgver}-${_commit}-x86_64.deb::https://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_${pkgver}.${_commit}_amd64.deb"
+         "spotify.sh"
+         "spotify.protocol"
+         "LICENSE"
+         # GPG signature check
+-        "${pkgname}-${pkgver}-${pkgrel}-Release::http://repository.spotify.com/dists/testing/Release"
+-        "${pkgname}-${pkgver}-${pkgrel}-Release.sig::http://repository.spotify.com/dists/testing/Release.gpg"
+-        "${pkgname}-${pkgver}-${pkgrel}-x86_64-Packages::http://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages")
++        "${pkgname}-${pkgver}-${pkgrel}-Release::https://repository.spotify.com/dists/testing/Release"
++        "${pkgname}-${pkgver}-${pkgrel}-Release.sig::https://repository.spotify.com/dists/testing/Release.gpg"
++        "${pkgname}-${pkgver}-${pkgrel}-x86_64-Packages::https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages")
+ sha512sums=('98d25bd748258ca8b8357313cd35c7188bb0b26ed2d4390b0208473aa9fa3491a095559762f8ba06ec0828d73e05ee8fb488f0f357340191da4c65dd1f93c519'
+             'da48b628a4ea925dd8521133ebf364b261b11aed252d264dde6605d915cdb631919ffe672c58534bcdb60869e5d87a49a60a8198780b99517123f0031e83fdb1'
+             '999abe46766a4101e27477f5c9f69394a4bb5c097e2e048ec2c6cb93dfa1743eb436bde3768af6ba1b90eaac78ea8589d82e621f9cbe7d9ab3f41acee6e8ca20'
+diff --git a/pkgbuilds/sublime-text-4/.omarchy/package.json b/pkgbuilds/sublime-text-4/.omarchy/package.json
+index 40e745c3f..94bd8c618 100644
+--- a/pkgbuilds/sublime-text-4/.omarchy/package.json
++++ b/pkgbuilds/sublime-text-4/.omarchy/package.json
+@@ -1,5 +1,15 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "a00e0a71a6e923093b855e5fd9ee10441b362271"
++  "upstream": {
++    "watch": {
++      "json": "https://www.sublimetext.com/updates/4/stable_update_check",
++      "path": "latest_version",
++      "version": "4.{version}"
++    }
++  },
++  "origin": {
++    "aur": "sublime-text-4",
++    "commit": "a00e0a71a6e923093b855e5fd9ee10441b362271"
++  }
+ }
+diff --git a/pkgbuilds/sunshine/.omarchy/package.json b/pkgbuilds/sunshine/.omarchy/package.json
+index 74758a629..fa0de1ada 100644
+--- a/pkgbuilds/sunshine/.omarchy/package.json
++++ b/pkgbuilds/sunshine/.omarchy/package.json
+@@ -1,4 +1,16 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "42bc63ecad9478b35338d34ed923887bdbd81b29"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "LizardByte/Sunshine",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)",
++      "variables": {
++        "_commit": "{commit}"
++      }
++    }
++  },
++  "origin": {
++    "aur": "sunshine",
++    "commit": "42bc63ecad9478b35338d34ed923887bdbd81b29"
++  }
+ }
+diff --git a/pkgbuilds/sunshine/.omarchy/patches/arm-dependencies.patch b/pkgbuilds/sunshine/.omarchy/patches/arm-dependencies.patch
+deleted file mode 100644
+index 7b40c4c52..000000000
+--- a/pkgbuilds/sunshine/.omarchy/patches/arm-dependencies.patch
++++ /dev/null
+@@ -1,56 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -38,7 +38,6 @@
+-   'libcap'
+-   'libdrm'
+-   'libevdev'
+--  'libmfx'
+-   'libpipewire'
+-   'libpulse'
+-   'libva'
+-@@ -58,6 +57,9 @@
+-   'which'
+- )
+- 
+-+# Intel Media SDK is unavailable on ARM.
+-+depends_x86_64=('libmfx')
+-+
+- makedepends=(
+-   'appstream'
+-   'appstream-glib'
+-@@ -72,6 +74,9 @@
+-   'shaderc'
+- )
+- 
+-+# Use distro Vulkan headers instead of the bundled SDK's recursive sources.
+-+makedepends_aarch64=('vulkan-headers')
+-+
+- checkdepends=(
+-   'gcovr'
+-   'imagemagick'
+-@@ -119,7 +124,13 @@
+- 
+- prepare() {
+-     cd "$pkgname"
+--    git submodule update --recursive --init --depth 1
+-+    if [[ $CARCH == aarch64 ]]; then
+-+      git submodule update --init --depth 1
+-+      # Fetch Moonlight's nested sources without pulling in the bundled SDK.
+-+      git -C third-party/moonlight-common-c submodule update --recursive --init --depth 1
+-+    else
+-+      git submodule update --recursive --init --depth 1
+-+    fi
+- }
+- 
+- build() {
+-@@ -149,6 +160,10 @@
+-       -D SUNSHINE_PUBLISHER_ISSUE_URL='https://app.lizardbyte.dev/support'
+-     )
+- 
+-+    if [[ $CARCH == aarch64 ]]; then
+-+      _cmake_options+=(-D SUNSHINE_SYSTEM_VULKAN_HEADERS=ON)
+-+    fi
+-+
+-     if [[ "${_use_cuda::1}" != "t" ]]; then
+-       _cmake_options+=(-DSUNSHINE_ENABLE_CUDA=OFF -DCUDA_FAIL_ON_MISSING=OFF)
+-     else
+diff --git a/pkgbuilds/sunshine/.omarchy/patches/packager-build-flags.patch b/pkgbuilds/sunshine/.omarchy/patches/packager-build-flags.patch
+deleted file mode 100644
+index 3a5b6267d..000000000
+--- a/pkgbuilds/sunshine/.omarchy/patches/packager-build-flags.patch
++++ /dev/null
+@@ -1,15 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -155,9 +155,9 @@ build() {
+-       -D CMAKE_INSTALL_PREFIX=/usr
+-       -D SUNSHINE_EXECUTABLE_PATH=/usr/bin/sunshine
+-       -D SUNSHINE_ASSETS_DIR="share/sunshine"
+--      -D SUNSHINE_PUBLISHER_NAME='LizardByte'
+--      -D SUNSHINE_PUBLISHER_WEBSITE='https://app.lizardbyte.dev'
+--      -D SUNSHINE_PUBLISHER_ISSUE_URL='https://app.lizardbyte.dev/support'
+-+      -D SUNSHINE_PUBLISHER_NAME='Omarchy'
+-+      -D SUNSHINE_PUBLISHER_WEBSITE='https://omarchy.org'
+-+      -D SUNSHINE_PUBLISHER_ISSUE_URL='https://github.com/omacom/omarchy-pkgs/issues'
+-     )
+- 
+-     if [[ $CARCH == aarch64 ]]; then
+diff --git a/pkgbuilds/sunshine/PKGBUILD b/pkgbuilds/sunshine/PKGBUILD
+index a9842ce2e..0e4d20cc9 100644
+--- a/pkgbuilds/sunshine/PKGBUILD
++++ b/pkgbuilds/sunshine/PKGBUILD
+@@ -6,11 +6,11 @@
+ : "${_support_headless_testing:=false}"
+ : "${_use_cuda:=detect}" # nvenc
+ 
+-: "${_commit:=cb72dffa3233c5815cd5ba88f09f049dd679ba75}"
++_commit=cb72dffa3233c5815cd5ba88f09f049dd679ba75
+ 
+ pkgname='sunshine'
+ pkgver=2026.906.222525
+-pkgrel=1.1
++pkgrel=1.2
+ pkgdesc="Self-hosted game stream host for Moonlight"
+ arch=('x86_64' 'aarch64')
+ url=https://app.lizardbyte.dev/Sunshine
+@@ -135,7 +135,7 @@ prepare() {
+ 
+ build() {
+     export BRANCH="master"
+-    export BUILD_VERSION="2026.906.222525"
++    export BUILD_VERSION="${pkgver}"
+     export COMMIT="${_commit}"
+ 
+     export CC="gcc${_gcc_env_suffix}"
+diff --git a/pkgbuilds/supergfxctl/.omarchy/package.json b/pkgbuilds/supergfxctl/.omarchy/package.json
+index a48e41202..f72c893de 100644
+--- a/pkgbuilds/supergfxctl/.omarchy/package.json
++++ b/pkgbuilds/supergfxctl/.omarchy/package.json
+@@ -1,4 +1,8 @@
+ {
+-  "source": "aur",
+-  "sync": false
++  "source": "local",
++  "sync": false,
++  "origin": {
++    "aur": "supergfxctl",
++    "commit": null
++  }
+ }
+diff --git a/pkgbuilds/ttf-ia-writer/.omarchy/package.json b/pkgbuilds/ttf-ia-writer/.omarchy/package.json
+index 34f97370a..2fec43049 100644
+--- a/pkgbuilds/ttf-ia-writer/.omarchy/package.json
++++ b/pkgbuilds/ttf-ia-writer/.omarchy/package.json
+@@ -1,4 +1,17 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "e9aa94080338d7a7f83a561ce64bf30ab4fb24e4"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_branch": "https://github.com/iaolo/iA-Fonts.git",
++      "branch": "master",
++      "version": "{date}.r{count}",
++      "variables": {
++        "_commit": "{commit}"
++      }
++    }
++  },
++  "origin": {
++    "aur": "ttf-ia-writer",
++    "commit": "e9aa94080338d7a7f83a561ce64bf30ab4fb24e4"
++  }
+ }
+diff --git a/pkgbuilds/ttf-ia-writer/PKGBUILD b/pkgbuilds/ttf-ia-writer/PKGBUILD
+index fc23d454e..6946a1423 100644
+--- a/pkgbuilds/ttf-ia-writer/PKGBUILD
++++ b/pkgbuilds/ttf-ia-writer/PKGBUILD
+@@ -2,14 +2,17 @@
+ pkgname=ttf-ia-writer
+ pkgdesc='Subset of the fonts provided by iA Writer'
+ pkgver=20181225
+-pkgrel=1
++pkgrel=2
+ url=https://github.com/iaolo/iA-Fonts
+ conflicts=(ttf-ia-writer-duospace)
+ provides=(${conflicts[@]})
+ license=(custom:OFL)
+ arch=(any)
+ 
+-_baseurl="${url}/raw/b337fe1a4c93026268f70e4b2678371f3e89e2ce/"
++_commit=b337fe1a4c93026268f70e4b2678371f3e89e2ce
++_baseurl="${url}/raw/${_commit}/"
++# Duospace was removed upstream; retain the shipped legacy family at its last pin.
++_legacy_baseurl="${url}/raw/b337fe1a4c93026268f70e4b2678371f3e89e2ce/"
+ source=("${_baseurl}/iA%20Writer%20Mono/Static/iAWriterMonoS-Bold.ttf"
+         "${_baseurl}/iA%20Writer%20Mono/Static/iAWriterMonoS-BoldItalic.ttf"
+         "${_baseurl}/iA%20Writer%20Mono/Static/iAWriterMonoS-Italic.ttf"
+@@ -22,10 +25,10 @@ source=("${_baseurl}/iA%20Writer%20Mono/Static/iAWriterMonoS-Bold.ttf"
+         "${_baseurl}/iA%20Writer%20Duo/Static/iAWriterDuoS-BoldItalic.ttf"
+         "${_baseurl}/iA%20Writer%20Duo/Static/iAWriterDuoS-Italic.ttf"
+         "${_baseurl}/iA%20Writer%20Duo/Static/iAWriterDuoS-Regular.ttf"
+-        "${_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-Bold.ttf"
+-        "${_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-BoldItalic.ttf"
+-        "${_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-Italic.ttf"
+-        "${_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-Regular.ttf")
++        "${_legacy_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-Bold.ttf"
++        "${_legacy_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-BoldItalic.ttf"
++        "${_legacy_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-Italic.ttf"
++        "${_legacy_baseurl}/iA%20Writer%20Duospace/TTF%20(PC)/iAWriterDuospace-Regular.ttf")
+ 
+ package () {
+ 	install -m644 -D -t "${pkgdir}/usr/share/fonts/${pkgname}" *.ttf
+diff --git a/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/.omarchy/package.json b/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/.omarchy/package.json
+index d150d8ea1..b86b16463 100644
+--- a/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/.omarchy/package.json
++++ b/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/.omarchy/package.json
+@@ -1,4 +1,18 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "58203050bad3d23406a1e2e4357f1b7be2c6a45b"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://gitlab.com/kronerm/tuxedo-drivers-nocompatcheck.git",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)-patched\\.(?P<build>[0-9]+)",
++      "variables": {
++        "_patchrel": "{build}"
++      },
++      "revision": "{build}",
++      "revision_variable": "_patchrel"
++    }
++  },
++  "origin": {
++    "aur": "tuxedo-drivers-nocompatcheck-dkms",
++    "commit": "58203050bad3d23406a1e2e4357f1b7be2c6a45b"
++  }
+ }
+diff --git a/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/PKGBUILD b/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/PKGBUILD
+index b6a78faa6..c8c30ea8a 100644
+--- a/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/PKGBUILD
++++ b/pkgbuilds/tuxedo-drivers-nocompatcheck-dkms/PKGBUILD
+@@ -4,7 +4,8 @@ _pkgname=tuxedo-drivers
+ _reponame=${_pkgname}-nocompatcheck
+ pkgname=${_reponame}-dkms
+ pkgver=4.22.1
+-pkgrel=1
++pkgrel=2
++_patchrel=1
+ pkgdesc="TUXEDO Computers kernel module drivers. Compatibility check disabled - works when using identical models from other brands, example being TUXEDO Pulse 14 Gen 4 and Schenker Via 14 Pro (M24)"
+ url="https://gitlab.com/kronerm/${_reponame}"
+ license=("GPL-2.0-or-later")
+@@ -29,14 +30,14 @@ provides=('tuxedo-drivers-dkms'
+ 	'ite_8297'
+ 	'ite_829x')
+ conflicts=('tuxedo-drivers-dkms' 'tuxedo-keyboard-dkms' 'tuxedo-keyboard-ite-dkms')
+-source=($pkgname-$pkgver.tar.gz::https://gitlab.com/kronerm/${_reponame}/-/archive/v${pkgver}-patched.${pkgrel}/tuxedo-drivers-v${pkgver}-patched.${pkgrel}.tar.gz dkms.conf)
++source=($pkgname-$pkgver.tar.gz::https://gitlab.com/kronerm/${_reponame}/-/archive/v${pkgver}-patched.${_patchrel}/tuxedo-drivers-v${pkgver}-patched.${_patchrel}.tar.gz dkms.conf)
+ sha256sums=('739e101123cdd44f619c5533dc6509608be517416a5e19807ca012a9f98e59f2'
+             '0b1f2ceb729b1944504d1227e39b202159076846aaa38f8b6237b9535e543a21')
+ sha512sums=('d8fb9a24c8722e27d62267b9e0dfffa131ceaae26e2fc89065badb1fd1545cc617a5be338492592f6a2cd25f8f2ac6cc25b819856b88529e373bb0c8b4bfa145'
+             'dda443b5966221a355fecdae7a2eb23346666cbcf93707d2fff660a32ec75cee592ae211c8d22e55413d530f59e8667292a0346d8bf6b2d280b45f3bc09efafd')
+ 
+ package() {
+-	extracted_source_dir=("$_reponame"-v"$pkgver"-patched."$pkgrel"-*/)
++	extracted_source_dir=("$_reponame"-v"$pkgver"-patched."$_patchrel"-*/)
+ 
+ 	target_dkms_dir="$pkgdir"/usr/src/"$_pkgname"-v"$pkgver"
+ 	install -Dm644 "$srcdir"/dkms.conf "$target_dkms_dir"/dkms.conf
+diff --git a/pkgbuilds/typora/.omarchy/package.json b/pkgbuilds/typora/.omarchy/package.json
+index 3c3fcb918..fc0627d50 100644
+--- a/pkgbuilds/typora/.omarchy/package.json
++++ b/pkgbuilds/typora/.omarchy/package.json
+@@ -1,4 +1,14 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "029ff738d5928db82edfa34fc365fcb6743a74e5"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "debian": "https://downloads.typora.io/linux/Packages",
++      "package": "typora",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*)(?:-[0-9]+)?"
++    }
++  },
++  "origin": {
++    "aur": "typora",
++    "commit": "029ff738d5928db82edfa34fc365fcb6743a74e5"
++  }
+ }
+diff --git a/pkgbuilds/ufw-docker/.omarchy/package.json b/pkgbuilds/ufw-docker/.omarchy/package.json
+index 9e3761d90..fcd805753 100644
+--- a/pkgbuilds/ufw-docker/.omarchy/package.json
++++ b/pkgbuilds/ufw-docker/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "76e18ac8c40a4e8f018f4b35289718a29eca3d6d"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://github.com/chaifeng/ufw-docker.git",
++      "pattern": "(?P<version>[0-9]{6})"
++    }
++  },
++  "origin": {
++    "aur": "ufw-docker",
++    "commit": "76e18ac8c40a4e8f018f4b35289718a29eca3d6d"
++  }
+ }
+diff --git a/pkgbuilds/vi/.omarchy/package.json b/pkgbuilds/vi/.omarchy/package.json
+index a07823fd7..5354a14c9 100644
+--- a/pkgbuilds/vi/.omarchy/package.json
++++ b/pkgbuilds/vi/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "9aa84b0998874261e94bbbe25e0dcf3de7286b94"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "regex": "https://sources.archlinux.org/other/vi/",
++      "pattern": "ex-(?P<version>[0-9]{6})\\.tar\\.xz"
++    }
++  },
++  "origin": {
++    "aur": "vi",
++    "commit": "9aa84b0998874261e94bbbe25e0dcf3de7286b94"
++  }
+ }
+diff --git a/pkgbuilds/visual-studio-code-bin/.omarchy/package.json b/pkgbuilds/visual-studio-code-bin/.omarchy/package.json
+index 48711f670..9daebc810 100644
+--- a/pkgbuilds/visual-studio-code-bin/.omarchy/package.json
++++ b/pkgbuilds/visual-studio-code-bin/.omarchy/package.json
+@@ -1,5 +1,14 @@
+ {
+-  "source": "aur",
++  "source": "local",
+   "release_ring": "fast",
+-  "upstream_commit": "4e46b8b4ca50f6aed23c848aa4f2d16fbd2432e5"
++  "upstream": {
++    "watch": {
++      "json": "https://update.code.visualstudio.com/api/update/linux-deb-x64/stable/latest",
++      "path": "productVersion"
++    }
++  },
++  "origin": {
++    "aur": "visual-studio-code-bin",
++    "commit": "4e46b8b4ca50f6aed23c848aa4f2d16fbd2432e5"
++  }
+ }
+diff --git a/pkgbuilds/walker/.omarchy/package.json b/pkgbuilds/walker/.omarchy/package.json
+index ba3a04096..30aa09124 100644
+--- a/pkgbuilds/walker/.omarchy/package.json
++++ b/pkgbuilds/walker/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "9dbe9e62a133a14a16f4a6f6e9fe7de04ef651ef"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "abenz1267/walker",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "walker",
++    "commit": "9dbe9e62a133a14a16f4a6f6e9fe7de04ef651ef"
++  }
+ }
+diff --git a/pkgbuilds/xdg-terminal-exec/.omarchy/package.json b/pkgbuilds/xdg-terminal-exec/.omarchy/package.json
+index 8a4d80690..5e59cc244 100644
+--- a/pkgbuilds/xdg-terminal-exec/.omarchy/package.json
++++ b/pkgbuilds/xdg-terminal-exec/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "a52e8f23c0be7d482b944c6cf5ddee172da171e4"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://gitlab.freedesktop.org/Vladimir-csp/xdg-terminal-exec.git",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "xdg-terminal-exec",
++    "commit": "a52e8f23c0be7d482b944c6cf5ddee172da171e4"
++  }
+ }
+diff --git a/pkgbuilds/xpadneo-dkms/.omarchy/package.json b/pkgbuilds/xpadneo-dkms/.omarchy/package.json
+index e23a5b811..906b4215e 100644
+--- a/pkgbuilds/xpadneo-dkms/.omarchy/package.json
++++ b/pkgbuilds/xpadneo-dkms/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "ae15a8de85094bee24c0e24408a22decb21121e7"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "atar-axis/xpadneo",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "xpadneo-dkms",
++    "commit": "ae15a8de85094bee24c0e24408a22decb21121e7"
++  }
+ }
+diff --git a/pkgbuilds/xpadneo-dkms/.omarchy/patches/arm-kernel-headers.patch b/pkgbuilds/xpadneo-dkms/.omarchy/patches/arm-kernel-headers.patch
+deleted file mode 100644
+index 9dcc175fe..000000000
+--- a/pkgbuilds/xpadneo-dkms/.omarchy/patches/arm-kernel-headers.patch
++++ /dev/null
+@@ -1,11 +0,0 @@
+---- a/PKGBUILD
+-+++ b/PKGBUILD
+-@@ -14,7 +14,9 @@ arch=(any)
+- license=('GPL-2.0-only AND GPL-3.0-or-later')
+--checkdepends=('dkms' 'fakeroot' 'LINUX-HEADERS')
+-+checkdepends=('dkms' 'fakeroot')
+-+checkdepends_x86_64=('LINUX-HEADERS')
+-+checkdepends_aarch64=('linux-aarch64-headers')
+- source=("xpadneo-v${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+- b2sums=('2858e466c5fde7e3d06d878dd7fb695751375e11a112bd3d389f9db5a82ef3ffcc1e3431b213f4807aeb8f05fd4280c7ca2a0a56305b0e984eb9b70df4843735')
+- 
+diff --git a/pkgbuilds/yaru-icon-theme/.omarchy/package.json b/pkgbuilds/yaru-icon-theme/.omarchy/package.json
+index b9d987c9c..c20fa15d0 100644
+--- a/pkgbuilds/yaru-icon-theme/.omarchy/package.json
++++ b/pkgbuilds/yaru-icon-theme/.omarchy/package.json
+@@ -1,5 +1,13 @@
+ {
+-  "source": "aur",
+-  "aur": "yaru",
+-  "upstream_commit": "7206d6736121b4564998262d99d6afdbc28b1563"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "git_tags": "https://github.com/ubuntu/yaru.git",
++      "pattern": "(?P<version>[0-9]+(?:\\.[0-9]+)*(?:ubuntu)?)"
++    }
++  },
++  "origin": {
++    "aur": "yaru",
++    "commit": "7206d6736121b4564998262d99d6afdbc28b1563"
++  }
+ }
+diff --git a/pkgbuilds/yay/.omarchy/package.json b/pkgbuilds/yay/.omarchy/package.json
+index 82766e44c..eec3de3f9 100644
+--- a/pkgbuilds/yay/.omarchy/package.json
++++ b/pkgbuilds/yay/.omarchy/package.json
+@@ -1,4 +1,13 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "cb43f84828ab4f9700f7c6f9c6d7a923d4cfaff0"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "github": "Jguer/yay",
++      "pattern": "v(?P<version>[0-9]+(?:\\.[0-9]+)*)"
++    }
++  },
++  "origin": {
++    "aur": "yay",
++    "commit": "cb43f84828ab4f9700f7c6f9c6d7a923d4cfaff0"
++  }
+ }
+diff --git a/pkgbuilds/yt6801-dkms/.omarchy/package.json b/pkgbuilds/yt6801-dkms/.omarchy/package.json
+index 436ae2c5e..fa2b446dd 100644
+--- a/pkgbuilds/yt6801-dkms/.omarchy/package.json
++++ b/pkgbuilds/yt6801-dkms/.omarchy/package.json
+@@ -1,4 +1,17 @@
+ {
+-  "source": "aur",
+-  "upstream_commit": "020a0f11079cc974794e49856a1a98ab677570a9"
++  "source": "local",
++  "upstream": {
++    "watch": {
++      "archive": "https://www.motor-comm.com/Cn/Skippower/downloadFile.html?id=1817",
++      "filenames": true,
++      "pattern": "yt6801-(?P<version>[0-9]+(?:\\.[0-9]+)*)\\.tar\\.gz",
++      "mutable_sources": [
++        "source:0"
++      ]
++    }
++  },
++  "origin": {
++    "aur": "yt6801-dkms",
++    "commit": "020a0f11079cc974794e49856a1a98ab677570a9"
++  }
+ }
+diff --git a/tests/upstream-watch.py b/tests/upstream-watch.py
+new file mode 100644
+index 000000000..856a928f7
+--- /dev/null
++++ b/tests/upstream-watch.py
+@@ -0,0 +1,334 @@
++#!/usr/bin/env python3
++"""Offline integration tests for owned-recipe updates and failure isolation."""
++import importlib.util
++import json
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import tempfile
++import unittest
++from unittest.mock import patch
++import zipfile
++
++ROOT = Path(__file__).resolve().parents[1]
++spec = importlib.util.spec_from_file_location("upstream_watch", ROOT / "helpers/upstream-watch.py")
++w = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(w)
++
++
++class WatchTest(unittest.TestCase):
++    def setUp(self):
++        self.work = tempfile.TemporaryDirectory()
++        self.addCleanup(self.work.cleanup)
++        self.root = Path(self.work.name)
++        self.package = self.root / "package"
++        (self.package / ".omarchy").mkdir(parents=True)
++        self.fetch = w.Fetcher(self.root / "cache")
++        self.write_watch({"github": "owner/tool", "pattern": r"v(?P<version>[0-9.]+)"})
++        self.recipe = self.package / "PKGBUILD"
++        self.recipe.write_text("""pkgname=tool
++pkgver=1.0
++pkgrel=3.1
++arch=('x86_64' 'aarch64')
++source_x86_64=("https://example.test/tool-$pkgver-x64")
++source_aarch64=("https://example.test/tool-$pkgver-arm64")
++sha256sums_x86_64=('old-x64')
++sha256sums_aarch64=('old-arm64')
++package() { touch SHOULD-NOT-RUN; }
++""")
++
++    def write_watch(self, watch):
++        (self.package / ".omarchy/package.json").write_text(json.dumps({"source": "local", "upstream": {"watch": watch}}))
++
++    def release(self, version="2.0", **values):
++        return {"pkgver": version, "values": {"version": version, "tag": "v" + version, **values}, "revision": "", "published_at": "2026-01-01T00:00:00Z"}
++
++    def fake_file(self, url):
++        p = self.root / ("source-" + url.rsplit("/", 1)[-1])
++        p.write_text(url)
++        return p
++
++    def sync_release(self, release, file=None):
++        with patch.object(w, "discover", return_value=[release]), patch.object(self.fetch, "file", side_effect=file or self.fake_file):
++            return w.sync(self.package, self.fetch)
++
++    def test_updates_both_arches_without_running_build_functions(self):
++        result = self.sync_release(self.release())
++        self.assertEqual(result["after"], "0:2.0-1")
++        recipe = w.read_recipe(self.recipe)
++        for arch, upstream in [("x86_64", "x64"), ("aarch64", "arm64")]:
++            file = self.fake_file(f"https://example.test/tool-2.0-{upstream}")
++            self.assertEqual(recipe["sha256sums_" + arch], [w.hash_file(file, "sha256")])
++        self.assertFalse((self.package / "SHOULD-NOT-RUN").exists())
++
++    def test_missing_arm_payload_preserves_original_recipe(self):
++        original = self.recipe.read_bytes()
++        def fetch(url):
++            if url.endswith('arm64'):
++                raise ValueError("ARM release not published")
++            return self.fake_file(url)
++        with self.assertRaisesRegex(ValueError, "ARM"):
++            self.sync_release(self.release(), fetch)
++        self.assertEqual(self.recipe.read_bytes(), original)
++        self.assertFalse(self.recipe.with_name('PKGBUILD.sync-upstream').exists())
++
++    def test_changed_checksum_override_is_detected_and_rolled_back(self):
++        self.recipe.write_text(self.recipe.read_text() + "sha256sums_aarch64[0]='stale'\n")
++        original = self.recipe.read_bytes()
++        with self.assertRaisesRegex(ValueError, "differs"):
++            self.sync_release(self.release())
++        self.assertEqual(self.recipe.read_bytes(), original)
++
++    def test_old_or_equal_versions_do_not_download_sources(self):
++        for version in ['0.9', '1.0']:
++            with patch.object(w, 'discover', return_value=[self.release(version)]), patch.object(self.fetch, 'file') as fetch:
++                self.assertEqual(w.sync(self.package, self.fetch)['status'], 'skipped')
++                fetch.assert_not_called()
++
++    def test_manual_hold_prevents_release_discovery(self):
++        path = self.package / '.omarchy/package.json'
++        metadata = json.loads(path.read_text())
++        metadata['sync'] = False
++        path.write_text(json.dumps(metadata))
++        with patch.object(w, 'discover') as discover:
++            self.assertEqual(w.sync(self.package, self.fetch)['status'], 'skipped')
++            discover.assert_not_called()
++
++    def test_epoch_change_in_recipe_cannot_mask_downgrade(self):
++        self.recipe.write_text(self.recipe.read_text() + "if [[ $pkgver == 1.0 ]]; then epoch=2; else epoch=1; fi\n")
++        original = self.recipe.read_bytes()
++        with self.assertRaisesRegex(ValueError, "complete package version"):
++            self.sync_release(self.release())
++        self.assertEqual(self.recipe.read_bytes(), original)
++
++    def test_same_version_build_revision_advances_downstream_pkgrel(self):
++        self.write_watch({'github': 'owner/tool', 'pattern': r'v(?P<version>[0-9.]+)-(?P<build>[0-9]+)', 'variables': {'_build': '{build}'}, 'revision': '{build}', 'revision_variable': '_build'})
++        self.recipe.write_text(self.recipe.read_text().replace('pkgrel=3.1', 'pkgrel=3.1\n_build=8').replace('tool-$pkgver-', 'tool-$pkgver-$_build-'))
++        release = self.release('1.0', build='9');release['revision'] = '9'
++        self.assertEqual(self.sync_release(release)['after'], '0:1.0-3.2')
++        self.assertEqual(w.scalar(w.read_recipe(self.recipe), '_build'), '9')
++        release = self.release('1.0', build='7');release['revision'] = '7'
++        original = self.recipe.read_bytes()
++        with self.assertRaisesRegex(ValueError, 'without a newer'):
++            self.sync_release(release)
++        self.assertEqual(self.recipe.read_bytes(), original)
++
++    def test_sha512_blake2_and_local_hashes_are_preserved(self):
++        self.recipe.write_text("""pkgver=1.0
++pkgrel=1
++arch=('any')
++source=("https://example.test/tool-$pkgver" 'fix.patch')
++sha512sums=('old' 'local-sha512')
++b2sums=('old' 'local-b2')
++""")
++        (self.package / 'fix.patch').write_text('local patch')
++        self.sync_release(self.release())
++        recipe = w.read_recipe(self.recipe)
++        file = self.fake_file('https://example.test/tool-2.0')
++        self.assertEqual(recipe['sha512sums'], [w.hash_file(file, 'sha512'), 'local-sha512'])
++        self.assertEqual(recipe['b2sums'], [w.hash_file(file, 'b2'), 'local-b2'])
++
++    def test_mutable_sources_are_rehashed_when_version_changes(self):
++        self.write_watch({'regex': 'https://example.test/feed', 'pattern': r'(?P<version>[0-9.]+)', 'mutable_sources': ['source_x86_64:0']})
++        self.recipe.write_text(self.recipe.read_text().replace('tool-$pkgver-x64','tool-current-x64'))
++        self.sync_release(self.release())
++        result = w.read_recipe(self.recipe)
++        self.assertEqual(result['sha256sums_x86_64'], [w.hash_file(self.fake_file('https://example.test/tool-current-x64'), 'sha256')])
++
++    def test_release_selection_and_age(self):
++        a, b = self.release('1.9'), self.release('1.10')
++        self.assertEqual(w.select_release([a, b])['pkgver'], '1.10')
++        b['published_at'] = '2 days ago'
++        with self.assertRaisesRegex(ValueError, 'age'):
++            w.select_release([b], 86400)
++        b['published_at'] = '2999-01-01T00:00:00Z'
++        self.assertIsNone(w.select_release([b], 86400))
++        self.assertEqual(w.select_release([b], 86400, bypass=True), b)
++
++    def test_hostile_release_values_do_not_reach_shell(self):
++        for value in ['1.0\ntouch bad', '$(touch bad)', '`id`', '1.0;id', '1.0"']:
++            with self.assertRaises(ValueError):
++                w.candidate({}, {'version': value})
++        with self.assertRaises(ValueError):
++            w.replace_scalar('pkgver=1.0\n', 'pkgver', '$(id)')
++        for url in ['http://example.test', 'https://user:password@example.test/file', 'https://example.test/\nfile']:
++            with self.assertRaises(ValueError):w.https(url)
++
++    def test_array_writer_handles_comments_and_quoted_parentheses(self):
++        text = "sha256sums=( # closing ) in a comment\n 'old(value)'\n) # trailing\npackage() { :; }\n"
++        output = w.replace_array(text, 'sha256sums', ['abc'])
++        self.assertEqual(output, "sha256sums=('abc') # trailing\npackage() { :; }\n")
++
++    def test_git_hash_matches_makepkg(self):
++        repo = self.root / 'git'
++        repo.mkdir()
++        subprocess.run(['git', 'init', '-q', str(repo)], check=True)
++        (repo / 'source').write_text('upstream code')
++        subprocess.run(['git', '-C', str(repo), 'add', '.'], check=True)
++        subprocess.run(['git', '-C', str(repo), '-c', 'user.name=Test', '-c', 'user.email=test@example.test', 'commit', '-qm', 'release'], check=True)
++        subprocess.run(['git', '-C', str(repo), 'tag', 'v1.0'], check=True)
++        command = w.subprocess.run
++        def redirect(args, **kwargs):
++            if 'fetch' in args:
++                args = [str(repo) if arg == 'https://example.test/tool.git' else arg for arg in args]
++            return command(args, **kwargs)
++        with patch.object(w.subprocess, 'run', side_effect=redirect):
++            archive = w.git_source_file('git+https://example.test/tool.git#tag=v1.0', self.fetch.cache)
++        expected = subprocess.check_output(['git', '-c', 'core.abbrev=no', '-C', str(repo), 'archive', '--format', 'tar', 'v1.0'])
++        self.assertEqual(archive.read_bytes(), expected)
++
++    def test_invalid_optional_metadata_fails_validation(self):
++        valid = {'github': 'owner/tool', 'pattern': r'v(?P<version>[0-9.]+)'}
++        for extra in [{'variables': []}, {'fields': {'commit': 3}}, {'submodules': {'pkgver': 'libs/common'}},
++                      {'allow_prerelease': 'false'}, {'sequence': 1}, {'mutable_sources': ['source:no']},
++                      {'revision_variable': '_build'}, {'submodules': {'_commit': '../outside'}},
++                      {'allow_prerelase': True}]:
++            with self.subTest(extra=extra), self.assertRaises(ValueError):
++                w.validate({**valid, **extra})
++        with self.assertRaisesRegex(ValueError, 'numeric'):
++            w.candidate({'revision': '{build}'}, {'version': '1.0', 'build': 'beta'})
++
++    def test_github_selects_stable_matching_tag_and_resolves_gitlinks(self):
++        watch = {'github': 'owner/tool', 'pattern': r'v(?P<version>[0-9.]+)',
++                 'variables': {'_commit': '{commit}'}, 'submodules': {'_common': 'libs/common'}}
++        def fetch(url):
++            if '/releases?' in url:
++                return [{'tag_name': tag, 'published_at': '2026-01-01T00:00:00Z', **flags}
++                        for tag, flags in [('v1.0', {}), ('v2.0', {}), ('v3.0', {'prerelease': True}),
++                                           ('v4.0', {'draft': True}), ('unrelated-v5.0', {})]]
++            if '/git/ref/' in url: return {'object': {'type': 'tag', 'sha': 'a' * 40}}
++            if '/git/tags/' in url: return {'object': {'type': 'commit', 'sha': 'b' * 40}}
++            if '/contents/' in url:
++                self.assertTrue(url.endswith('?ref=v2.0'))
++                return {'sha': 'c' * 40, 'submodule_git_url': 'https://example.test/common'}
++            self.fail(url)
++        with patch.object(self.fetch, 'json', side_effect=fetch):
++            release = w.select_release(w.discover(watch, self.fetch))
++            self.assertEqual(release['pkgver'], '2.0')
++            self.assertEqual(w.resolve_release_fields(watch, release, self.fetch)['variables'],
++                             {'_commit': 'b' * 40, '_common': 'c' * 40})
++
++    def test_vendor_feeds_preserve_version_schemes(self):
++        cases = [
++            ('1password-beta', 'Package: unrelated\nVersion: 99.0\n\nPackage: 1password\nVersion: 8.12.38~25.BETA\n', '8.12.38_25.BETA'),
++            ('spotify', 'Package: spotify-client\nVersion: 1:1.2.96.518.g366879e1\n', '1.2.96.518'),
++            ('typora', 'Package: typora\nVersion: 1.12.6-1\n\nPackage: typora\nVersion: 1.9.0-1\n', '1.12.6'),
++            ('nvidia-580xx-utils', '<a href="580.159.04/">580.159.04/</a> <a href="590.1/">590.1/</a>', '580.159.04'),
++        ]
++        for name, feed, expected in cases:
++            watch = json.loads((ROOT / 'pkgbuilds' / name / '.omarchy/package.json').read_text())['upstream']['watch']
++            with self.subTest(package=name), patch.object(self.fetch, 'text', return_value=feed):
++                self.assertEqual(w.select_release(w.discover(watch, self.fetch))['pkgver'], expected)
++        with patch.object(self.fetch, 'json', return_value={'release': {'version': '2.0', 'commit': 'a' * 40}}):
++            release = w.discover({'json': 'https://example.test/feed', 'path': 'release.version', 'fields': {'commit': 'release.commit'}}, self.fetch)[0]
++            self.assertEqual(release['values']['commit'], 'a' * 40)
++
++    def test_registry_releases_and_archive_filenames(self):
++        with patch.object(self.fetch, 'json', return_value={'dist-tags': {'latest': '2.0'}, 'time': {'2.0': '2026-01-01T00:00:00Z'}}):
++            self.assertEqual(w.discover({'npm': '@owner/tool'}, self.fetch)[0]['pkgver'], '2.0')
++        with patch.object(self.fetch, 'json', return_value={'info': {'version': '2.0'}, 'releases': {'2.0': [{'yanked': True}]}}):
++            with self.assertRaisesRegex(ValueError, 'unyanked'):
++                w.discover({'pypi': 'tool'}, self.fetch)
++        archive = self.root / 'vendor.zip'
++        with zipfile.ZipFile(archive, 'w') as z:
++            z.writestr('driver/yt6801-1.0.34.tar.gz', 'not executed or extracted')
++        watch = json.loads((ROOT / 'pkgbuilds/yt6801-dkms/.omarchy/package.json').read_text())['upstream']['watch']
++        with patch.object(self.fetch, 'file', return_value=archive):
++            self.assertEqual(w.discover(watch, self.fetch)[0]['pkgver'], '1.0.34')
++
++    def test_cursor_same_day_hash_uses_counter_not_hash_order(self):
++        self.write_watch({'regex': 'https://example.test/feed', 'pattern': r'(?P<version>[0-9.]+)-(?P<hash>[a-f0-9]+)',
++                          'version': '{version}.1.{hash}', 'sequence': True})
++        self.recipe.write_text(self.recipe.read_text().replace('pkgver=1.0', 'pkgver=2026.09.14.1.ffff'))
++        release = w.candidate({'version': '{version}.1.{hash}'}, {'version': '2026.09.14', 'hash': 'aaaa'})
++        self.assertEqual(self.sync_release(release)['after'], '0:2026.09.14.2.aaaa-1')
++        self.assertEqual(self.sync_release(release)['status'], 'skipped')
++
++    def test_existing_signed_metadata_skips_are_retained(self):
++        self.recipe.write_text(self.recipe.read_text().replace("'old-arm64'", "'SKIP'") + "sha256sums_aarch64[0]='SKIP'\n")
++        self.sync_release(self.release())
++        self.assertEqual(w.read_recipe(self.recipe)['sha256sums_aarch64'], ['SKIP'])
++        self.assertTrue((self.root / 'source-tool-2.0-arm64').exists())
++
++    def test_conditional_arm_source_cannot_use_x86_hash(self):
++        self.recipe.write_text(self.recipe.read_text() + 'if [[ $CARCH == aarch64 ]]; then source_aarch64=("https://example.test/different-$pkgver"); fi\n')
++        original = self.recipe.read_bytes()
++        with self.assertRaisesRegex(ValueError, 'conditional source'):
++            self.sync_release(self.release())
++        self.assertEqual(self.recipe.read_bytes(), original)
++
++    def test_cli_continues_after_one_package_fails(self):
++        for directory in ['bin', 'helpers']:
++            shutil.copytree(ROOT / directory, self.root / directory)
++        for name in ['bad', 'good', 'held']:
++            pkg = self.root / 'pkgbuilds' / name
++            shutil.copytree(self.package, pkg)
++            (pkg / '.omarchy/package.json').write_text(json.dumps({'source': 'local', 'sync': name != 'held', 'upstream': {'watch': {
++                'regex': 'https://example.test/feed', 'pattern': '(?P<version>[0-9.]+)'}}}))
++            path = pkg / 'PKGBUILD'
++            path.write_text(path.read_text().replace('example.test/tool-', f'example.test/{name}-'))
++        stub = self.root / 'stub'
++        stub.mkdir()
++        curl = stub / 'curl'
++        curl.write_text('''#!/usr/bin/env python3
++import sys
++from pathlib import Path
++url = sys.argv[-1]
++if 'bad-2.0-arm64' in url: sys.exit(22)
++Path(sys.argv[sys.argv.index('-o') + 1]).write_text('2.0' if url.endswith('/feed') else url)
++''')
++        curl.chmod(0o755)
++        bad = self.root / 'pkgbuilds/bad/PKGBUILD'
++        original = bad.read_bytes()
++        result = subprocess.run([str(self.root / 'bin/sync-upstream'), 'bad', 'good', 'held'],
++                                env={**os.environ, 'PATH': str(stub) + os.pathsep + os.environ['PATH']},
++                                text=True, capture_output=True)
++        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
++        self.assertEqual(bad.read_bytes(), original)
++        self.assertEqual(w.scalar(w.read_recipe(self.root / 'pkgbuilds/good/PKGBUILD'), 'pkgver'), '2.0')
++        self.assertEqual(w.scalar(w.read_recipe(self.root / 'pkgbuilds/held/PKGBUILD'), 'pkgver'), '1.0')
++        self.assertIn('Updated: 1', result.stdout)
++        self.assertIn('Failed: 1', result.stdout)
++
++    def test_aur_import_is_once_only_and_records_local_ownership(self):
++        for directory in ['bin', 'helpers']:
++            shutil.copytree(ROOT / directory, self.root / directory)
++        repo = self.root / 'aur'
++        repo.mkdir()
++        subprocess.run(['git', 'init', '-q', str(repo)], check=True)
++        (repo / 'PKGBUILD').write_text('pkgver=1.0\npkgrel=1\ntouch SHOULD-NOT-RUN\n')
++        (repo / '.SRCINFO').write_text('AUR only')
++        subprocess.run(['git', '-C', str(repo), 'add', '.'], check=True)
++        subprocess.run(['git', '-C', str(repo), '-c', 'user.name=Test', '-c', 'user.email=test@example.test', 'commit', '-qm', 'recipe'], check=True)
++        stub = self.root / 'stub'
++        stub.mkdir()
++        git = stub / 'git'
++        git.write_text('''#!/usr/bin/env python3
++import os, sys
++args = [os.environ['AUR_FIXTURE'] if v == 'https://aur.archlinux.org/upstream-name.git' else v for v in sys.argv[1:]]
++os.execv(os.environ['REAL_GIT'], ['git', *args])
++''')
++        git.chmod(0o755)
++        env = {**os.environ, 'PATH': str(stub) + os.pathsep + os.environ['PATH'], 'AUR_FIXTURE': str(repo), 'REAL_GIT': shutil.which('git')}
++        command = [str(self.root / 'bin/add-package'), 'local-name', '--source', 'aur', '--aur', 'upstream-name', '--no-sync', '--fast']
++        result = subprocess.run(command, env=env, text=True, capture_output=True)
++        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
++        package = self.root / 'pkgbuilds/local-name'
++        metadata_file = package / '.omarchy/package.json'
++        metadata = json.loads(metadata_file.read_text())
++        self.assertEqual(metadata['source'], 'local')
++        self.assertEqual(metadata['origin']['aur'], 'upstream-name')
++        self.assertEqual(metadata['origin']['commit'], subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip())
++        self.assertFalse(metadata['sync'])
++        self.assertEqual(metadata['release_ring'], 'fast')
++        self.assertFalse((package / '.SRCINFO').exists())
++        self.assertFalse((package / 'SHOULD-NOT-RUN').exists())
++        original = metadata_file.read_bytes()
++        result = subprocess.run([*command, '--force'], env=env, text=True, capture_output=True)
++        self.assertNotEqual(result.returncode, 0)
++        self.assertEqual(metadata_file.read_bytes(), original)
++
++
++if __name__ == '__main__':
++    unittest.main(verbosity=2)

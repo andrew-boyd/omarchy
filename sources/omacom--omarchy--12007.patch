@@ -1,0 +1,37 @@
+diff --git a/install/hardware/apple/fix-spi-keyboard.sh b/install/hardware/apple/fix-spi-keyboard.sh
+index 330081b7631..f980235dcd1 100644
+--- a/install/hardware/apple/fix-spi-keyboard.sh
++++ b/install/hardware/apple/fix-spi-keyboard.sh
+@@ -3,7 +3,6 @@ product_name="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"
+ if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123] ]]; then
+   echo "Detected MacBook with SPI keyboard"
+ 
+-  omarchy-pkg-add macbook12-spi-driver-dkms
+   sudo mkdir -p /etc/mkinitcpio.conf.d
+   if [[ $product_name == "MacBook8,1" ]]; then
+     echo "MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)" | \
+diff --git a/install/omarchy-other.packages b/install/omarchy-other.packages
+index 4a8b128ff95..3ee898d7669 100644
+--- a/install/omarchy-other.packages
++++ b/install/omarchy-other.packages
+@@ -23,7 +23,6 @@ limine-snapper-sync
+ linux-firmware
+ linux-omarchy
+ linux-omarchy-headers
+-macbook12-spi-driver-dkms
+ nvidia-580xx-dkms
+ nvidia-dkms
+ nvidia-open-dkms
+diff --git a/migrations/1789490499.sh b/migrations/1789490499.sh
+new file mode 100644
+index 00000000000..2f39761bf58
+--- /dev/null
++++ b/migrations/1789490499.sh
+@@ -0,0 +1,7 @@
++echo "Remove macbook12-spi-driver-dkms, which no longer builds and isn't needed"
++
++# applespi has been in the mainline kernel since 5.3 and drives the keyboard and
++# trackpad on these MacBooks. The out-of-tree package fails to build on 7.x, so
++# every kernel update prints a DKMS error for it. The mkinitcpio MODULES drop-in
++# stays: it only names in-tree modules.
++omarchy-pkg-drop macbook12-spi-driver-dkms

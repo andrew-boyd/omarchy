@@ -1,0 +1,31 @@
+✔ an unvouched, labeled fork PR releases both required workflows (3.77655ms)
+✔ waits for the label-triggered build instead of stopping at the old build (1.290132ms)
+✔ approves only the two known workflows for this fork, branch, PR and SHA (0.571749ms)
+✔ accepts a run explicitly associated with this PR (0.439321ms)
+✔ does not restart running or completed workflows (0.293592ms)
+✔ an obsolete build hold cannot cancel a newer build that was already released (1.733997ms)
+✔ vouch status denounced fails closed (0.676463ms)
+✔ vouch status  fails closed (0.178423ms)
+✔ vouch status undefined fails closed (0.178455ms)
+✔ vouch status unexpected fails closed (0.246983ms)
+✔ a labeled bot can also clear GitHub's approval gate (0.293817ms)
+✔ a labeled collaborator can also clear GitHub's approval gate (0.200128ms)
+✔ a labeled vouched can also clear GitHub's approval gate (0.184867ms)
+✔ removed label stops approval, including changes immediately before a write (0.275216ms)
+✔ changed head stops approval, including changes immediately before a write (0.197116ms)
+✔ closed PR stops approval, including changes immediately before a write (0.196307ms)
+✔ revocation between approvals prevents releasing further workflows (0.218854ms)
+✔ a delayed tests workflow is also awaited (0.387503ms)
+✔ reopening a labeled PR waits for its new tests, even if old tests passed at the same SHA (0.403739ms)
+✔ missing current runs time out without approving stale builds (0.341475ms)
+✔ API failure is reported rather than silently treated as approval (0.347777ms)
+✔ the build reads the live label rather than its pre-label event payload (0.451199ms)
+✔ the build gate permits a missing vouch only with approval, never a denouncement or lookup failure (26.38415ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 120.106222

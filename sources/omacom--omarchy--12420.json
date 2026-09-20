@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12420",
+  "repository": "omacom/omarchy",
+  "number": 12420,
+  "title": "lock: stop fingerprint scans while the display is blanked",
+  "author": "slr01",
+  "head_sha": "939ab0b65da61edeeb01bea9baf9f2f86acc837f",
+  "state": "open",
+  "updated_at": "2026-09-18T16:01:07Z",
+  "body": "## What and why\n\nWhile a display is blanked, the lock screen keeps the fingerprint reader running scan cycles against an empty pad. On fingerprint readers that thermally self-disable (Broadcom CV3 / `0a5c:5843`, Goodix `27c6:533c`, Elan `04f3:0c4b`, all `libfprint-tod`), that cycles the driver into `Device disabled to prevent overheating` refusals: 31,534 `PAM_AUTHINFO_UNAVAIL` / code 9 returns in under four hours on a CV3, in a 205 s-refusing / 122 s-available cycle. Each refusal re-arms the 250 ms retry timer, so the reader stays in the storm.\n\nThis PR stops new scans while the display is blanked and re-arms on wake. With it, a CV3 logged **0 refusals across a 15-minute lock** and read on the first touch after wake ([measurement thread](/omacom/omarchy/pull/12201#issuecomment-5721534266)).\n\n## Changes (3 lines-worth of gating, purely additive vs stock)\n\n- `runBlank()`: stop `fingerprintRetryTimer` so a blanked display is not re-arming scan cycles\n- `startFingerprint()`: return early while `displaysBlank`\n- `runWake()`: re-arm a scan if a lock is active\n\nNo `abort()`: an in-flight scan is allowed to finish; on readers where `power/wakeup` is disabled, the reader cannot wake the compositor, so aborting on blank can strand it with nothing to re-arm it.\n\n## Notes\n\n- Composes with the libfprint temperature/backoff model in libfprint#7179 rather than colliding with it.\n- Purely additive against `quattro`; no behavior change while the display is awake.",
+  "original_source_changed": false
+}

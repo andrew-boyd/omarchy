@@ -1,0 +1,146 @@
+diff --git a/bin/omarchy-brightness-keyboard b/bin/omarchy-brightness-keyboard
+index f323b94f53a..720813359aa 100755
+--- a/bin/omarchy-brightness-keyboard
++++ b/bin/omarchy-brightness-keyboard
+@@ -13,7 +13,8 @@ direction="${1:-up}"
+ 
+ # Find keyboard backlight device (look for *kbd_backlight* pattern in leds class).
+ device=""
+-for candidate in /sys/class/leds/*kbd_backlight*; do
++leds_path=${OMARCHY_LEDS_PATH:-/sys/class/leds}
++for candidate in "$leds_path"/*kbd_backlight*; do
+   if [[ -e $candidate ]]; then
+     device="$(basename "$candidate")"
+     break
+@@ -29,7 +30,10 @@ if [[ $direction == "off" ]]; then
+   brightnessctl -sd "$device" set 0 >/dev/null
+   exit 0
+ elif [[ $direction == "restore" ]]; then
+-  brightnessctl -rd "$device" >/dev/null
++  current_brightness="$(brightnessctl -d "$device" get)"
++  if (( current_brightness == 0 )); then
++    brightnessctl -rd "$device" >/dev/null
++  fi
+   exit 0
+ fi
+ 
+diff --git a/bin/omarchy-system-wake b/bin/omarchy-system-wake
+index f558007f701..3487ee308b0 100755
+--- a/bin/omarchy-system-wake
++++ b/bin/omarchy-system-wake
+@@ -5,6 +5,6 @@
+ # omarchy:name=wake
+ # omarchy:examples=omarchy system wake
+ 
+-omarchy-brightness-display on
+ omarchy-brightness-keyboard restore
++omarchy-brightness-display on
+ omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true
+diff --git a/shell/plugins/lock/Service.qml b/shell/plugins/lock/Service.qml
+index 94d43b68ebd..b6d4ec2cd53 100644
+--- a/shell/plugins/lock/Service.qml
++++ b/shell/plugins/lock/Service.qml
+@@ -487,7 +487,7 @@ Item {
+       // blank the freshly woken unlock screen under the user. Wall-clock time
+       // exposes the gap: take a fresh run-up instead of blanking.
+       if (Date.now() - armedAt > interval + 2000) {
+-        root.armBlankTimer()
++        root.runWake()
+         return
+       }
+       // Only a password check in flight should hold the display up. The
+diff --git a/test/shell.d/brightness-keyboard-test.sh b/test/shell.d/brightness-keyboard-test.sh
+new file mode 100644
+index 00000000000..6d1b171f90d
+--- /dev/null
++++ b/test/shell.d/brightness-keyboard-test.sh
+@@ -0,0 +1,89 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++mock_bin="$test_tmp/bin"
++call_log="$test_tmp/calls"
++leds_path="$test_tmp/leds"
++state="$test_tmp/brightness"
++saved="$test_tmp/saved"
++mkdir -p "$mock_bin" "$leds_path/chromeos::kbd_backlight"
++
++cat >"$mock_bin/brightnessctl" <<'SH'
++#!/bin/bash
++printf 'brightnessctl %s\n' "$*" >>"$CALL_LOG"
++
++state="${BRIGHTNESS_STATE:?}"
++saved="${BRIGHTNESS_SAVED:?}"
++
++if [[ $1 == "-d" && $3 == "get" ]]; then
++  cat "$state"
++elif [[ $1 == "-d" && $3 == "max" ]]; then
++  printf '100\n'
++elif [[ $1 == "-sd" && $3 == "set" ]]; then
++  cat "$state" >"$saved"
++  printf '%s\n' "$4" >"$state"
++elif [[ $1 == "-rd" ]]; then
++  cat "$saved" >"$state"
++elif [[ $1 == "-d" && $3 == "set" ]]; then
++  printf '%s\n' "$4" >"$state"
++fi
++SH
++
++chmod +x "$mock_bin"/*
++
++run_keyboard() {
++  CALL_LOG="$call_log" BRIGHTNESS_STATE="$state" BRIGHTNESS_SAVED="$saved" \
++    OMARCHY_LEDS_PATH="$leds_path" PATH="$mock_bin:$ROOT/bin:$PATH" \
++    "$ROOT/bin/omarchy-brightness-keyboard" "$@"
++}
++
++begin() {
++  printf '%s\n' "$1" >"$state"
++  printf '%s\n' "$2" >"$saved"
++  : >"$call_log"
++}
++
++level() { cat "$state"; }
++save_level() { cat "$saved"; }
++
++# A blank records the level it found, so the following wake has something to
++# put back.
++begin 40 7
++run_keyboard off
++[[ $(level) == "0" ]] || fail "off blanks the backlight" "actual: $(level)"
++pass "off blanks the backlight"
++[[ $(save_level) == "40" ]] || fail "off saves the lit level" "actual: $(save_level)"
++pass "off saves the lit level"
++
++run_keyboard restore
++[[ $(level) == "40" ]] || fail "restore brings the saved level back" "actual: $(level)"
++pass "restore brings the saved level back"
++
++# The level being something other than zero is proof that it was set after the
++# blank -- the backlight hotkeys stay bound while locked -- so that choice is
++# newer than the saved value and has to survive the wake.
++begin 40 7
++run_keyboard off
++printf '55\n' >"$state"
++: >"$call_log"
++run_keyboard restore
++[[ $(level) == "55" ]] || fail "restore leaves a level changed while blanked" "actual: $(level)"
++pass "restore leaves a level changed while blanked"
++grep -q -- '-rd' "$call_log" && fail "restore does not write when the level changed" "$(cat "$call_log")"
++pass "restore does not write when the level changed"
++
++# Turning the backlight off by hand before locking is a choice, not state to be
++# undone on the next wake.
++begin 0 40
++run_keyboard off
++[[ $(save_level) == "0" ]] || fail "off saves a deliberate zero" "actual: $(save_level)"
++pass "off saves a deliberate zero"
++run_keyboard restore
++[[ $(level) == "0" ]] || fail "restore keeps a deliberate zero off" "actual: $(level)"
++pass "restore keeps a deliberate zero off"

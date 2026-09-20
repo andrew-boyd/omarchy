@@ -1,0 +1,11 @@
+{
+  "tests": [
+    "test/shell.d/apple-bcm43602-nvram-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/all.sh": "7a95738d4c4ebfa57439e41a6241dc263515891f155a4836659110c0c6cc8f3f",
+    "install/hardware/apple/fix-bcm43602-nvram.sh": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+    "test/shell.d/apple-bcm43602-nvram-test.sh": "af93217ff1279d37b211bcce5e89dfbb837587bf40175744cbe43d2e144c69a6",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "number": 11516,
+  "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+  "source_ancestor": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "target_tree": "4a8724b422adf4d5856c3779ae167c8d02098f9e",
+  "patch_sha256": "f343e9e88038b33e99a8ff6f22db0a4cce5e4acb228e1e20aa1b2073aa5036d7",
+  "files": [
+    {
+      "path": "bin/omarchy-hw-external-monitors",
+      "identical_to_source": true,
+      "source_sha256": "e3608173a94a4183b10ebe601a78fb6548956e9f57afdda4a095c792722dd685",
+      "candidate_sha256": "e3608173a94a4183b10ebe601a78fb6548956e9f57afdda4a095c792722dd685"
+    },
+    {
+      "path": "test/shell.d/hw-external-monitors-test.sh",
+      "identical_to_source": true,
+      "source_sha256": "6016411df38c8ac5af0aad08ea0089649b1b5255c928b49727aa620dd275a34d",
+      "candidate_sha256": "6016411df38c8ac5af0aad08ea0089649b1b5255c928b49727aa620dd275a34d"
+    }
+  ],
+  "source_tests_passed": true,
+  "hardware_verified": false
+}

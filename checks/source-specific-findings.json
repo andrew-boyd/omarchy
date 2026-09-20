@@ -1,0 +1,17 @@
+{
+  "P14": {
+    "expected_additional_failed_files": [
+      "test/shell.d/bin-style-test.sh"
+    ],
+    "expected_additional_assertions": [
+      "not ok - bin commands use command helpers"
+    ],
+    "source_file": "bin/omarchy-diagnose-suspend-wake",
+    "line": 44,
+    "source_pr": "https://github.com/omacom/omarchy/pull/11904",
+    "source_head": "2f27ee35051e043f2dd46da0ce7c7e5450444fe3",
+    "finding": "Unchanged source uses command -v rtcwake where target bin-style-test.sh requires the Omarchy command helper. No source fix applied.",
+    "disposition": "Explicit follow-up in the draft body; allowed under source-consolidation/draft-readiness scope.",
+    "hardware_verified": false
+  }
+}

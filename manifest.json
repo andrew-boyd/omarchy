@@ -1,0 +1,902 @@
+{
+  "status": "ready_for_draft_review",
+  "prepared_at": "2026-09-20T16:09:34.893752+00:00",
+  "features": 14,
+  "companions": 3,
+  "proposed_prs": 17,
+  "unique_source_prs": 67,
+  "original_source_context_refs": 52,
+  "feature_source_rows": 69,
+  "source_checked_at": "2026-09-20T15:52:09.400459+00:00",
+  "coordinating_owner": "andrew-boyd",
+  "index_branch": "intel-mac/review-index",
+  "index_url_after_publication": "https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/INTEL-MAC-ROLLUPS.md",
+  "public_links_live": false,
+  "hardware_verified": 0,
+  "remote_writes": 0,
+  "entries": [
+    {
+      "id": "P01",
+      "plan_id": "P01",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p01-keyboard-layout",
+      "commit": "65b280d9e2a8789c36a152bbb5d1a033588971e6",
+      "tree_sha": "c2bd98b8f0a904094b023973f1523bacc081b972",
+      "title": "[Intel Mac P01] Keep keyboard layout tracking on typing devices",
+      "draft": true,
+      "body_file": "bodies/P01.md",
+      "body_sha256": "a77033e3163a6b41906df38d4401d6880a609458ba0b241de44cd6c69f77ada2",
+      "patch_file": "patches/P01.patch",
+      "patch_sha256": "01e95cb7a37f4a4cf0d2c4a12d057aa9eb4cb239042a32a18fda859b37096796",
+      "source_count": 2,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12350",
+        "https://github.com/omacom/omarchy/pull/6834"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p01-keyboard-layout",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Independent shared UI candidate. No package companion.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P02",
+      "plan_id": "P02",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p02-kernel-headers",
+      "commit": "15f8b5970c1279950bc3335f474c2793189e82e0",
+      "tree_sha": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
+      "title": "[Intel Mac P02] Repair headers for retained stock kernels",
+      "draft": true,
+      "body_file": "bodies/P02.md",
+      "body_sha256": "89784058e1e9bd4e09350fcac8d19bf16b2e386353721745ecda0f59797cc836",
+      "patch_file": "patches/P02.patch",
+      "patch_sha256": "904a56c26c968a70159f0aeb22b0674212c597bb4e374073435914e489a84e85",
+      "source_count": 9,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11900",
+        "https://github.com/omacom/omarchy/pull/11901",
+        "https://github.com/omacom/omarchy/pull/12074",
+        "https://github.com/omacom/omarchy/pull/12090",
+        "https://github.com/omacom/omarchy/pull/12249",
+        "https://github.com/omacom/omarchy/pull/9692",
+        "https://github.com/omacom/omarchy-iso/pull/183",
+        "https://github.com/omacom/omarchy-iso/pull/184",
+        "https://github.com/omacom/omarchy-pkgs/pull/454"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p02-kernel-headers",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "The merged header foundations are already in the base. P13 is a separate kernel-policy proposal; header repair does not require adopting it.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P03",
+      "plan_id": "P03",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p03-hardware-detection",
+      "commit": "da27f6caa989360a0689ecde5433c075f51f2342",
+      "tree_sha": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
+      "title": "[Intel Mac P03] Consolidate Apple hardware detection",
+      "draft": true,
+      "body_file": "bodies/P03.md",
+      "body_sha256": "b1e1a861f03f513b01c3b410121be9bc08f476393270b112608edd46c9b915c5",
+      "patch_file": "patches/P03.patch",
+      "patch_sha256": "b5be149ea524ab18ce6d5e4de39c3d4d3355e316fd1741000459549022f7e26c",
+      "source_count": 5,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10807",
+        "https://github.com/omacom/omarchy/pull/10808",
+        "https://github.com/omacom/omarchy/pull/10810",
+        "https://github.com/omacom/omarchy/pull/11259",
+        "https://github.com/omacom/omarchy/pull/12076"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p03-hardware-detection",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Independent detection candidate. Later release integration must reconcile shared installer files with the camera/audio groups.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P04",
+      "plan_id": "P04",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p04-lid-handling",
+      "commit": "eb9d9c358cad7dc6ef00fb82278c39394f45c2cf",
+      "tree_sha": "9bb1fb0cd95cb5ed565ae553343a21351dc0d4db",
+      "title": "[Intel Mac P04] Consolidate lid handling and display classification",
+      "draft": true,
+      "body_file": "bodies/P04.md",
+      "body_sha256": "9c0b15602bff94e8b07d0c1804975bb4dab338b3958f46664f43382105118b5d",
+      "patch_file": "patches/P04.patch",
+      "patch_sha256": "8462a866b03db57b9ddafe9ff63e4bb83b6fd40db2d82018d6c8d238255441e8",
+      "source_count": 8,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10462",
+        "https://github.com/omacom/omarchy/pull/10713",
+        "https://github.com/omacom/omarchy/pull/11516",
+        "https://github.com/omacom/omarchy/pull/12210",
+        "https://github.com/omacom/omarchy/pull/12435",
+        "https://github.com/omacom/omarchy/pull/12502",
+        "https://github.com/omacom/omarchy/pull/12616",
+        "https://github.com/omacom/omarchy/pull/12634"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p04-lid-handling",
+      "recommended_labels": [
+        "mac",
+        "compatibility",
+        "sleep"
+      ],
+      "dependency_note": "Compare P05 display filtering and P12 shared lock-service work during later integration. The selected lid-lock diff does not require adopting competing wake/debounce implementations.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P05",
+      "plan_id": "P05",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p05-ghost-displays",
+      "commit": "ebf2c823ddb26188edc15b2f3e6ff70b4044e21f",
+      "tree_sha": "40a1c0dcac181830688141bdc956b54c013ea307",
+      "title": "[Intel Mac P05] Handle ghost internal displays",
+      "draft": true,
+      "body_file": "bodies/P05.md",
+      "body_sha256": "7fbd9bf5860a18e9c4e91a0ad26ed1d9f44a45e74d90a17e34f1c6766df49f29",
+      "patch_file": "patches/P05.patch",
+      "patch_sha256": "367c0a170e394f5a409339d699f921c84366635ac44098364831e386c843e5b8",
+      "source_count": 2,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10198",
+        "https://github.com/omacom/omarchy/pull/12072"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p05-ghost-displays",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Independent recovery/settings candidate. P04 handles lid decisions separately; combine their shared display concerns only with explicit integration testing.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P06",
+      "plan_id": "P06",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p06-spi-retirement",
+      "commit": "b569a71fce64d8f9522d8293f3c168274608b1b1",
+      "tree_sha": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
+      "title": "[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge",
+      "draft": true,
+      "body_file": "bodies/P06.md",
+      "body_sha256": "67757b8d2d17ca90af10717707d764f0d6cc681a5b570ddab86403d3e237f238",
+      "patch_file": "patches/P06.patch",
+      "patch_sha256": "c96a2377d62e32b5cd344ce93cb10cc3ad4deb69bdf85956aeabc7c81931f1ee",
+      "source_count": 3,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12007",
+        "https://github.com/omacom/omarchy/pull/9880",
+        "https://github.com/omacom/omarchy-pkgs/pull/445"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p06-spi-retirement",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Before a T1 retirement trial, complete and validate the existing P12 manual provider setup. The source migration does not enforce this prerequisite. Resolve P07 package ownership before combined rollout; this is a review branch, not an automatic transition.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P07",
+      "plan_id": "P07",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p07-spi-pio",
+      "commit": "0df69f595201dda4666138a86387edb5df9fee62",
+      "tree_sha": "73a922cb3040d54a999b0b92784b2f27c330992b",
+      "title": "[Intel Mac P07] Preserve the MacBook8,1 SPI PIO workaround",
+      "draft": true,
+      "body_file": "bodies/P07.md",
+      "body_sha256": "bc7e1ec0f40c11a12aaffcd3cce53a09862f7bee1774dbe44697531a43746bfb",
+      "patch_file": "patches/P07.patch",
+      "patch_sha256": "203312ee4cd5501d360743c3c6f8ddb5231d74cbfe588ad393271a20b269c815",
+      "source_count": 1,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9735"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p07-spi-pio",
+      "recommended_labels": [
+        "mac",
+        "compatibility",
+        "sleep"
+      ],
+      "dependency_note": "Retains the baseline SPI package. Resolve ownership before combining with P06 retirement. No new package companion.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P08",
+      "plan_id": "P08",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p08-facetime-camera",
+      "commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
+      "tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+      "title": "[Intel Mac P08] Consolidate FaceTime PCIe camera support",
+      "draft": true,
+      "body_file": "bodies/P08.md",
+      "body_sha256": "8b02ec81b54ac8f1823f1cfba5f680f2771c8edd8e4a12b638f5e41aad45974a",
+      "patch_file": "patches/P08.patch",
+      "patch_sha256": "171cf52dbc34fbd6232006011e3881154d6e714ab696cf414f0010c641135703",
+      "source_count": 2,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11381",
+        "https://github.com/omacom/omarchy/pull/12067"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p08-facetime-camera",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Review P08/packages first. Build, approve and make its matching packages available before installer/migration or offline-ISO acceptance. No new ISO PR is planned; ISO delivery remains an integration check.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P08-packages",
+      "plan_id": "P08",
+      "repository": "omacom/omarchy-pkgs",
+      "fork": "andrew-boyd/omarchy-pkgs",
+      "base_branch": "master",
+      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "branch": "intel-mac/p08-facetime-camera",
+      "commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
+      "tree_sha": "1e67c884154c830dac79418e81aa028351b5a4ca",
+      "title": "[Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages",
+      "draft": true,
+      "body_file": "bodies/P08-packages.md",
+      "body_sha256": "304fe9b151af71227245ec5e06aa7ef311d74b1bdf30c863894e34637915bf06",
+      "patch_file": "patches/P08-packages.patch",
+      "patch_sha256": "ac24d299ba8e87d641b71ec57cd715b3dd33608d3eec07d431ac89dd67f0a354",
+      "source_count": 2,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11381",
+        "https://github.com/omacom/omarchy/pull/12067"
+      ],
+      "followup_repository": "andrew-boyd/omarchy-pkgs",
+      "followup_base": "intel-mac/p08-facetime-camera",
+      "recommended_labels": [],
+      "dependency_note": "Review P08/packages first. Build, approve and make its matching packages available before installer/migration or offline-ISO acceptance. No new ISO PR is planned; ISO delivery remains an integration check.",
+      "checks": {
+        "kind": "package-self-tests",
+        "passed_commands": 10,
+        "total_commands": 10,
+        "full_ci_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P09",
+      "plan_id": "P09",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p09-nvme-suspend",
+      "commit": "83242e08651c458ae2e87a0f8d146ca459f74af5",
+      "tree_sha": "6343d43b395da10f887f755382af6d6c362a5f2d",
+      "title": "[Intel Mac P09] Consolidate NVMe suspend applicability",
+      "draft": true,
+      "body_file": "bodies/P09.md",
+      "body_sha256": "98f5c365996a22ca8112da4f900db38abbae81748d78f9043fa658dbc40aa759",
+      "patch_file": "patches/P09.patch",
+      "patch_sha256": "e08e8463d9e895cfca817856ee4a286a67a4e83bd2ce8c8431ae8d062021bb51",
+      "source_count": 2,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10877",
+        "https://github.com/omacom/omarchy/pull/11624"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p09-nvme-suspend",
+      "recommended_labels": [
+        "mac",
+        "compatibility",
+        "sleep"
+      ],
+      "dependency_note": "Review unit ownership and actual controller applicability before live trials. P14 diagnostics is optional separate evidence, not a dependency or proof that this quirk is needed.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P10",
+      "plan_id": "P10",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p10-broadcom-wifi",
+      "commit": "c85a3e400a950e2867b0069aeb9a6eacdda2fa15",
+      "tree_sha": "aa0e2108412410f11a0077878769c42533b08d48",
+      "title": "[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery",
+      "draft": true,
+      "body_file": "bodies/P10.md",
+      "body_sha256": "17e0dce5ada20e06cfdf1e98294356c520dbd666eb254fa65394ba12dfb2b57e",
+      "patch_file": "patches/P10.patch",
+      "patch_sha256": "a4c4c7bf27fea00c1b3a342e7cabe162e836179b928865f020eef8e74e6a4db0",
+      "source_count": 6,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11017",
+        "https://github.com/omacom/omarchy/pull/11434",
+        "https://github.com/omacom/omarchy/pull/11616",
+        "https://github.com/omacom/omarchy/pull/12314",
+        "https://github.com/omacom/omarchy/pull/7487",
+        "https://github.com/omacom/omarchy/pull/7671"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p10-broadcom-wifi",
+      "recommended_labels": [
+        "mac",
+        "compatibility",
+        "sleep"
+      ],
+      "dependency_note": "Reconcile shared installer/manual files with P08/P11 in a later combined release branch. Select one recovery lifecycle per trial. P12 does not establish whole-system suspend support.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P11",
+      "plan_id": "P11",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p11-cirrus-audio",
+      "commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
+      "tree_sha": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
+      "title": "[Intel Mac P11] Consolidate model-specific Cirrus audio support",
+      "draft": true,
+      "body_file": "bodies/P11.md",
+      "body_sha256": "85df99a109e44b8e2d43c811c1d3572d5a72beb2ee03e21203b3080794751a7f",
+      "patch_file": "patches/P11.patch",
+      "patch_sha256": "685234b2d70b8f907594095e4a7bbe9ef664fee71f724149dfbb5cd8abd69c83",
+      "source_count": 12,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10458",
+        "https://github.com/omacom/omarchy/pull/11625",
+        "https://github.com/omacom/omarchy/pull/12286",
+        "https://github.com/omacom/omarchy/pull/6921",
+        "https://github.com/omacom/omarchy/pull/7140",
+        "https://github.com/omacom/omarchy/pull/8285",
+        "https://github.com/omacom/omarchy/pull/9516",
+        "https://github.com/omacom/omarchy-pkgs/pull/153",
+        "https://github.com/omacom/omarchy-pkgs/pull/155",
+        "https://github.com/omacom/omarchy-pkgs/pull/249",
+        "https://github.com/sunoxen-lab/omarchy/pull/1",
+        "https://github.com/leifliddy/macbook12-audio-driver/pull/60"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p11-cirrus-audio",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Review P11/packages first; publish the appropriate package before its model-specific installer/migration trial. Do not install both conflicting audio packages together. The iMac in-tree track has no package prerequisite.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P11-packages",
+      "plan_id": "P11",
+      "repository": "omacom/omarchy-pkgs",
+      "fork": "andrew-boyd/omarchy-pkgs",
+      "base_branch": "master",
+      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "branch": "intel-mac/p11-cirrus-audio",
+      "commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
+      "tree_sha": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+      "title": "[Intel Mac P11/packages] Consolidate model-specific Cirrus audio packages",
+      "draft": true,
+      "body_file": "bodies/P11-packages.md",
+      "body_sha256": "fdc91345362e76a84ea57d1507f00ed9f5835df3c6c137b214f1947d3e628bfb",
+      "patch_file": "patches/P11-packages.patch",
+      "patch_sha256": "f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050",
+      "source_count": 12,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10458",
+        "https://github.com/omacom/omarchy/pull/11625",
+        "https://github.com/omacom/omarchy/pull/12286",
+        "https://github.com/omacom/omarchy/pull/6921",
+        "https://github.com/omacom/omarchy/pull/7140",
+        "https://github.com/omacom/omarchy/pull/8285",
+        "https://github.com/omacom/omarchy/pull/9516",
+        "https://github.com/omacom/omarchy-pkgs/pull/153",
+        "https://github.com/omacom/omarchy-pkgs/pull/155",
+        "https://github.com/omacom/omarchy-pkgs/pull/249",
+        "https://github.com/sunoxen-lab/omarchy/pull/1",
+        "https://github.com/leifliddy/macbook12-audio-driver/pull/60"
+      ],
+      "followup_repository": "andrew-boyd/omarchy-pkgs",
+      "followup_base": "intel-mac/p11-cirrus-audio",
+      "recommended_labels": [],
+      "dependency_note": "Review P11/packages first; publish the appropriate package before its model-specific installer/migration trial. Do not install both conflicting audio packages together. The iMac in-tree track has no package prerequisite.",
+      "checks": {
+        "kind": "package-self-tests",
+        "passed_commands": 10,
+        "total_commands": 10,
+        "full_ci_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P12",
+      "plan_id": "P12",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p12-t1bridge",
+      "commit": "208e69e960ec5793167e09f908396acff6ecd6f0",
+      "tree_sha": "8d0ea0341f561c202638f6ee76b256de8d5ee34d",
+      "title": "[Intel Mac P12] Consolidate T1Bridge support and fingerprint UI",
+      "draft": true,
+      "body_file": "bodies/P12.md",
+      "body_sha256": "61c253dec256bae3ec56b43914157bfae61bd4bd442b52026669b4c7d82f08dd",
+      "patch_file": "patches/P12.patch",
+      "patch_sha256": "8833274aed255ca804b2e8e66341c7be0dbc5f520e6d4fa66f2febf48100979b",
+      "source_count": 14,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10331",
+        "https://github.com/omacom/omarchy/pull/10582",
+        "https://github.com/omacom/omarchy/pull/11273",
+        "https://github.com/omacom/omarchy/pull/11952",
+        "https://github.com/omacom/omarchy/pull/12201",
+        "https://github.com/omacom/omarchy/pull/12420",
+        "https://github.com/omacom/omarchy/pull/12426",
+        "https://github.com/omacom/omarchy/pull/7064",
+        "https://github.com/omacom/omarchy/pull/7950",
+        "https://github.com/omacom/omarchy-pkgs/pull/152",
+        "https://github.com/omacom/omarchy-pkgs/pull/298",
+        "https://github.com/omacom/omarchy-pkgs/pull/315",
+        "https://github.com/omacom/omarchy/pull/12435",
+        "https://github.com/omacom/omarchy/pull/12502"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p12-t1bridge",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Shared fingerprint UI can be reviewed independently. T1 hardware trials require P12/packages and the released manual setup on a prepared system. This is the replacement direction for P06, not an automatic migration supplied by either PR.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P12-packages",
+      "plan_id": "P12",
+      "repository": "omacom/omarchy-pkgs",
+      "fork": "andrew-boyd/omarchy-pkgs",
+      "base_branch": "master",
+      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "branch": "intel-mac/p12-t1bridge",
+      "commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
+      "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+      "title": "[Intel Mac P12/packages] Package the existing T1Bridge stack",
+      "draft": true,
+      "body_file": "bodies/P12-packages.md",
+      "body_sha256": "1430c4199c4995af9ddd9ffbd83c91446c4eb6454644553f8cc3c2233510ae4f",
+      "patch_file": "patches/P12-packages.patch",
+      "patch_sha256": "0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363",
+      "source_count": 14,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10331",
+        "https://github.com/omacom/omarchy/pull/10582",
+        "https://github.com/omacom/omarchy/pull/11273",
+        "https://github.com/omacom/omarchy/pull/11952",
+        "https://github.com/omacom/omarchy/pull/12201",
+        "https://github.com/omacom/omarchy/pull/12420",
+        "https://github.com/omacom/omarchy/pull/12426",
+        "https://github.com/omacom/omarchy/pull/7064",
+        "https://github.com/omacom/omarchy/pull/7950",
+        "https://github.com/omacom/omarchy-pkgs/pull/152",
+        "https://github.com/omacom/omarchy-pkgs/pull/298",
+        "https://github.com/omacom/omarchy-pkgs/pull/315",
+        "https://github.com/omacom/omarchy/pull/12435",
+        "https://github.com/omacom/omarchy/pull/12502"
+      ],
+      "followup_repository": "andrew-boyd/omarchy-pkgs",
+      "followup_base": "intel-mac/p12-t1bridge",
+      "recommended_labels": [],
+      "dependency_note": "Shared fingerprint UI can be reviewed independently. T1 hardware trials require P12/packages and the released manual setup on a prepared system. This is the replacement direction for P06, not an automatic migration supplied by either PR.",
+      "checks": {
+        "kind": "package-self-tests",
+        "passed_commands": 10,
+        "total_commands": 10,
+        "full_ci_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P13",
+      "plan_id": "P13",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p13-kernel-policy",
+      "commit": "f2be26a2195c35205baed9159facf0a312ebb2ae",
+      "tree_sha": "932100df6584207c8a0de68877e8cdb2d44776be",
+      "title": "[Intel Mac P13] Consolidate the Intel Mac kernel migration policy",
+      "draft": true,
+      "body_file": "bodies/P13.md",
+      "body_sha256": "667cef782e5c878ea39db2656ebd915fd24d89366a344ec862bfee51b1f926d0",
+      "patch_file": "patches/P13.patch",
+      "patch_sha256": "06a7ddc25ac90156fb9c48d71a415253da5a446770a9f117104a6bc1018148c8",
+      "source_count": 2,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12328",
+        "https://github.com/omacom/omarchy-iso/pull/182"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p13-kernel-policy",
+      "recommended_labels": [
+        "mac",
+        "compatibility"
+      ],
+      "dependency_note": "Maintainers must evaluate the broad Apple upgrade exception. P02 header repair is separate; the merged ISO kernel policy remains unchanged.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": true,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    },
+    {
+      "id": "P14",
+      "plan_id": "P14",
+      "repository": "omacom/omarchy",
+      "fork": "andrew-boyd/omarchy",
+      "base_branch": "quattro",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "branch": "intel-mac/p14-suspend-diagnostics",
+      "commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
+      "tree_sha": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
+      "title": "[Intel Mac P14] Consolidate suspend diagnostics",
+      "draft": true,
+      "body_file": "bodies/P14.md",
+      "body_sha256": "9d23ef39bc5c156c309154efece1b8011993c78c6a1c4b01eb130c312e260714",
+      "patch_file": "patches/P14.patch",
+      "patch_sha256": "03dd3da10e306d6ba17c0fe3b43dde5f9ca7d1b98c1f937c04fada827cfc7818",
+      "source_count": 1,
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11904"
+      ],
+      "followup_repository": "andrew-boyd/omarchy",
+      "followup_base": "intel-mac/p14-suspend-diagnostics",
+      "recommended_labels": [
+        "mac",
+        "compatibility",
+        "sleep"
+      ],
+      "dependency_note": "Standalone command, no package companion or automatic hook. Its active operations need a separately prepared attended trial; other sleep-related groups do not depend on running it.",
+      "checks": {
+        "kind": "test/all",
+        "exit_code": 1,
+        "explicit_failures": [
+          "not ok - bin commands use command helpers",
+          "not ok - the superseded migration must not install the PTL variant first",
+          "not ok - the root-authorized development checkout can publish Plymouth assets"
+        ],
+        "failed_files": [
+          "test/shell.d/bin-style-test.sh",
+          "test/shell.d/locate-test.sh",
+          "test/shell.d/network-qr-test.sh",
+          "test/shell.d/omarchy-kernel-migration-test.sh",
+          "test/shell.d/plymouth-set-test.sh"
+        ],
+        "matches_baseline_failures": false,
+        "skip_notices": 17,
+        "full_suite_passed": false
+      },
+      "remote_pushed": false,
+      "pr_created": false
+    }
+  ],
+  "publication_order": [
+    "P08-packages",
+    "P11-packages",
+    "P12-packages",
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06",
+    "P07",
+    "P08",
+    "P09",
+    "P10",
+    "P11",
+    "P12",
+    "P13",
+    "P14"
+  ],
+  "readiness_definition": "Complete local packet for draft review/opening later. Known source defects, failing/skipped checks and unavailable hardware/CI remain disclosed; not merge/release readiness.",
+  "upstream_actions": "None. Publication requires a separate instruction; do not push, create forks/PRs or contact maintainers from this packet.",
+  "target_checked_at": "2026-09-20T16:05:46.778344+00:00",
+  "target_preflight": {
+    "omacom/omarchy": {
+      "branch": "quattro",
+      "sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "expected_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7"
+    },
+    "omacom/omarchy-pkgs": {
+      "branch": "master",
+      "sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "expected_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345"
+    },
+    "omacom/omarchy-iso": {
+      "branch": "quattro",
+      "sha": "7cfb7111a06873d61c45d37034577d4ba08d3f4f",
+      "expected_sha": "7cfb7111a06873d61c45d37034577d4ba08d3f4f"
+    }
+  }
+}

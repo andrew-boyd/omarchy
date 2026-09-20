@@ -1,0 +1,74 @@
+diff --git a/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json b/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json
+index d49dd703a..e11bf32b5 100644
+--- a/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json
++++ b/pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json
+@@ -1,4 +1,5 @@
+ {
+   "source": "aur",
++  "sync": false,
+   "upstream_commit": "38f085c6470eee409c22a4753eaf58d58b4759fd"
+ }
+diff --git a/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD b/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD
+index 3254326cd..4fd59538b 100644
+--- a/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD
++++ b/pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD
+@@ -2,24 +2,24 @@
+ # Maintainer: Andrey Melentyev <andrey.melentyev@protonmail.com>
+ _pkgbase=macbook12-spi-driver
+ pkgname=(${_pkgbase}-dkms)
+-pkgver=0+git.315
++# 316 = last AUR git-count plus the kernel 6.12+ build fix. Do not let
++# pkgver() recount Heratiki's history or the package goes backwards from 315.
++pkgver=0+git.316
+ pkgrel=1
+ pkgdesc="Driver for the keyboard, touchpad and touchbar found in newer MacBook (Pro) models"
+ arch=('i686' 'x86_64')
+-url="https://github.com/marc-git/macbook12-spi-driver"
++url="https://github.com/Heratiki/macbook12-spi-driver"
+ license=('GPL2')
+ depends=('dkms')
+ makedepends=('git')
+ optdepends=()
+-source=(git+https://github.com/marc-git/macbook12-spi-driver.git#branch=touchbar-driver-hid-driver
++# marc-git's touchbar-driver-hid-driver does not build on kernel 6.11+:
++# platform .remove became void, hid report_fixup is const, acpi_driver.owner
++# is gone. Heratiki's fork is that branch plus those fixes.
++source=(git+https://github.com/Heratiki/macbook12-spi-driver.git#branch=touchbar-driver-hid-driver
+         dkms.conf)
+ sha256sums=('SKIP'
+-            'e42243352d015a78e5d13260361d3052d0b84c4105bcb89191a319f2249cc47b')
+-
+-pkgver() {
+-    cd $_pkgbase
+-    echo "0+git.$(git rev-list HEAD --count)"
+-}
++            'd1ebfc3b20ea6cc0454301e02d63eed32f808ff2d3f1ce1dcb60cf182cb92172')
+ 
+ package() {
+     install -dm755 "${pkgdir}"/usr/src/${_pkgbase}-${pkgver}
+diff --git a/pkgbuilds/macbook12-spi-driver-dkms/dkms.conf b/pkgbuilds/macbook12-spi-driver-dkms/dkms.conf
+index 8bdece0b1..3a20f6687 100644
+--- a/pkgbuilds/macbook12-spi-driver-dkms/dkms.conf
++++ b/pkgbuilds/macbook12-spi-driver-dkms/dkms.conf
+@@ -3,15 +3,14 @@ PACKAGE_VERSION="@PKGVER@"
+ AUTOINSTALL="yes"
+ CLEAN="make clean"
+ 
+-BUILT_MODULE_NAME[0]="applespi"
+-BUILT_MODULE_NAME[1]="apple-ibridge"
+-BUILT_MODULE_NAME[2]="apple-ib-tb"
+-BUILT_MODULE_NAME[3]="apple-ib-als"
++# applespi is in-tree since 5.3; the Heratiki Makefile only builds it on older
++# kernels, so listing it here makes DKMS fail on every current Omarchy kernel.
++BUILT_MODULE_NAME[0]="apple-ibridge"
++BUILT_MODULE_NAME[1]="apple-ib-tb"
++BUILT_MODULE_NAME[2]="apple-ib-als"
+ MAKE[0]="make KDIR=/usr/lib/modules/$kernelver/build"
+ MAKE[1]="make KDIR=/usr/lib/modules/$kernelver/build"
+ MAKE[2]="make KDIR=/usr/lib/modules/$kernelver/build"
+-MAKE[3]="make KDIR=/usr/lib/modules/$kernelver/build"
+-DEST_MODULE_LOCATION[0]="/kernel/drivers/spi"
++DEST_MODULE_LOCATION[0]="/kernel/drivers/misc"
+ DEST_MODULE_LOCATION[1]="/kernel/drivers/misc"
+ DEST_MODULE_LOCATION[2]="/kernel/drivers/misc"
+-DEST_MODULE_LOCATION[3]="/kernel/drivers/misc"

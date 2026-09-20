@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lid-close-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - undocked lid close locks before anything else\nok - undocked lid close still reconciles displays\nok - docked lid close does not lock the session\nok - docked lid close reconciles displays\nok - an open lid never locks the session\nok - a failing lock still reconciles displays\nok - a connected DRM device outside Hyprland does not suppress locking\n"
+    },
+    {
+      "test": "test/shell.d/lid-active-display-integration-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 6,
+      "output": "ok - raw Touch Bar DRM without a compositor external display does not suppress locking\nok - disabled external display does not suppress locking\nok - active external display preserves clamshell use\nok - a genuine compositor USB output preserves clamshell use\nok - open lid never triggers locking\nok - failed compositor query errs toward locking a closed laptop\n"
+    }
+  ]
+}

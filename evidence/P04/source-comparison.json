@@ -1,0 +1,6 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "9bb1fb0cd95cb5ed565ae553343a21351dc0d4db",
+  "patch_sha256": "8462a866b03db57b9ddafe9ff63e4bb83b6fd40db2d82018d6c8d238255441e8",
+  "software_evidence": "13 focused assertions for the recommended lock component. Separate source/observation results and failures for competing implementations are preserved. The later three wake/display reviews have 49 assertions and one syntax check; those checks do not certify this component's wider hardware behavior."
+}

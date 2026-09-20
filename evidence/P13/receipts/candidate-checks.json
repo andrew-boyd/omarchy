@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": false,
+  "results": [
+    {
+      "test": "test/shell.d/omarchy-kernel-migration-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 10,
+      "output": "ok - linux systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-lts systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-zen systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-ptl systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-omarchy-ptl-novrr-mm systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-t2 systems are skipped even with other kernels installed\nok - a running T2 kernel is excluded even if its package is no longer installed\nok - ARM systems cannot receive an x86_64 kernel\nok - T1 and older Macs keep their kernel even without a T2 package or kernel\nok - machines without DMI vendor information still receive the generic kernel\nnot ok - the superseded migration must not install the PTL variant first\n"
+    },
+    {
+      "test": "test/shell.d/intel-mac-kernel-policy-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 13,
+      "output": "ok - source Apple-prefix policy skips Apple Inc. without changing boot order\nok - source Apple-prefix policy skips Apple Computer, Inc. without changing boot order\nok - source Apple-prefix policy skips Apple without changing boot order\nok - source Apple-prefix policy skips Appleish without changing boot order\nok - source non-Apple policy migrates Dell Inc.\nok - source non-Apple policy migrates apple Inc.\nok - source non-Apple policy migrates \nok - source policy treats missing DMI as non-Apple\nok - source policy treats unreadable DMI as non-Apple\nok - source policy treats directory DMI as non-Apple\nok - Apple exemption does not roll back an already migrated system\nok - source migration is reached for a user with no completion marker\nok - completed user migration is not automatically revisited\n"
+    }
+  ]
+}

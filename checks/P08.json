@@ -1,0 +1,47 @@
+{
+  "id": "P08",
+  "command": "./test/all",
+  "commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
+  "tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+  "package_input": "1e67c884154c830dac79418e81aa028351b5a4ca",
+  "exit_code": 1,
+  "timeout": false,
+  "elapsed_seconds": 285.3,
+  "passed": false,
+  "assertions_passed": 3429,
+  "explicit_failures": [
+    "not ok - the superseded migration must not install the PTL variant first",
+    "not ok - the root-authorized development checkout can publish Plymouth assets"
+  ],
+  "skip_lines": [
+    "ok - no Wayland compositor; skipping bar icon geometry test",
+    "ok - no Wayland compositor; skipping bar widget contract test",
+    "ok - no /dev/hiddev* character device present; skipping the valid-cache case",
+    "ok - no Wayland compositor; skipping Button hover geometry runtime test",
+    "ok - no Wayland compositor; skipping QML contract test",
+    "ok - Kitty not installed; skipping native config parser checks",
+    "ok - no Wayland compositor; skipping lock fingerprint indicator test",
+    "ok - no Wayland compositor; skipping lock password overflow test",
+    "ok - no Wayland compositor; skipping manifest entrypoint load test",
+    "ok - no Wayland compositor; skipping network captive-portal runtime test",
+    "ok - no Wayland compositor; skipping plugin authentication boundary runtime test",
+    "ok - no Wayland compositor; skipping plugin registry contract test",
+    "ok - no Wayland compositor; skipping pointer movement gate runtime test",
+    "ok - no Wayland compositor; skipping shell runtime smoke test",
+    "ok - no Wayland compositor; skipping screenshot sanity test",
+    "ok - no Wayland compositor; skipping tray menu activation test",
+    "ok - automatic subordinate-id namespace unavailable; skipping root Windows VM boundary probe"
+  ],
+  "log": "P08.log",
+  "log_sha256": "295d17296e25f5d1b7d1abc11e35a7ef42cbe03f8d7e9a5942a66a5874588399",
+  "isolation": "Disconnected bubblewrap; writable disposable copy of candidate; read-only source/packages/ISO/root; private home/tmp/run/sys/proc/dev; cleared environment; umask 022; no host compositor or service sockets.",
+  "isolation_version": 2,
+  "hardware_verified": false,
+  "failed_files": [
+    "test/shell.d/locate-test.sh",
+    "test/shell.d/network-qr-test.sh",
+    "test/shell.d/omarchy-kernel-migration-test.sh",
+    "test/shell.d/plymouth-set-test.sh"
+  ],
+  "original_log_sha256": "c8d18c4e199d274526e4439180476aeb32a953f45ac9fe007b8fbf50d9606102"
+}

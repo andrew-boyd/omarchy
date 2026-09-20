@@ -1,0 +1,803 @@
+diff --git a/bin/omarchy-hw-apple-t1 b/bin/omarchy-hw-apple-t1
+new file mode 100755
+index 00000000000..3b9a694ee66
+--- /dev/null
++++ b/bin/omarchy-hw-apple-t1
+@@ -0,0 +1,9 @@
++#!/bin/bash
++
++# omarchy:summary=Detect whether the computer is a T1 Touch Bar MacBook Pro
++# omarchy:hidden=true
++
++# T1 lives only in the first-generation Touch Bar MacBook Pros (2016–2017).
++# 13,1 and 14,1 are the two-port 13" models and have no Touch Bar.
++product_name=$(cat "${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}" 2>/dev/null)
++[[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]]
+diff --git a/bin/omarchy-hw-apple-t1-bind b/bin/omarchy-hw-apple-t1-bind
+new file mode 100755
+index 00000000000..90797665280
+--- /dev/null
++++ b/bin/omarchy-hw-apple-t1-bind
+@@ -0,0 +1,20 @@
++#!/bin/bash
++
++# omarchy:summary=Rebind T1 iBridge HID interfaces to apple-ibridge
++# omarchy:hidden=true
++
++# hid-generic is built in and claims 05ac:8600 before the out-of-tree
++# apple-ibridge driver loads. The udev rule runs this once apple_ib_tb appears.
++hid_root=${OMARCHY_T1_HID_ROOT:-/sys/bus/hid}
++
++for d in "$hid_root"/devices/0003:05AC:8600.*; do
++  [[ -d $d ]] || continue
++  name=$(basename "$d")
++  drv=""
++  if [[ -e $d/driver ]]; then
++    drv=$(basename "$(readlink -f "$d/driver")")
++  fi
++  [[ $drv == "apple-ibridge-hid" ]] && continue
++  [[ -n $drv ]] && echo -n "$name" >"$hid_root/drivers/$drv/unbind"
++  echo -n "$name" >"$hid_root/drivers/apple-ibridge-hid/bind"
++done
+diff --git a/bin/omarchy-setup-apple-touchbar b/bin/omarchy-setup-apple-touchbar
+new file mode 100755
+index 00000000000..aea7322f62d
+--- /dev/null
++++ b/bin/omarchy-setup-apple-touchbar
+@@ -0,0 +1,78 @@
++#!/bin/bash
++
++# omarchy:summary=Install T1 Touch Bar firmware from a USB stick onto the EFI partition
++# omarchy:requires-sudo=true
++
++set -euo pipefail
++
++if (( $(id -u) != 0 )); then
++  echo "Need root to write the EFI System Partition and udev rules."
++  exec sudo --preserve-env=OMARCHY_PATH /bin/bash "$0" "$@"
++fi
++
++OMARCHY_PATH=${OMARCHY_PATH:-/usr/share/omarchy}
++# shellcheck source=../../install/hardware/apple/t1-touchbar.sh
++source "$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh"
++
++if ! omarchy-hw-apple-t1; then
++  echo "This machine is not a T1 Touch Bar MacBook Pro (MacBookPro13,2/13,3 or 14,2/14,3)."
++  exit 1
++fi
++
++echo "T1 Touch Bar setup"
++echo
++
++t1_install_wiring
++echo "Installed apple-ib-tb udev rule and module load list."
++
++if t1_firmware_present; then
++  echo "EFI already has APPLE/EMBEDDEDOS/combined.memboot."
++  echo "Reboot if the Touch Bar is still dark so Apple's firmware can memboot the T1."
++  exit 0
++fi
++
++if src=$(t1_find_firmware); then
++  echo "Found firmware: $src"
++  esp=$(t1_esp_mount) || {
++    echo "No mounted VFAT EFI System Partition found (/boot, /boot/efi, or /efi)."
++    exit 1
++  }
++  echo "Copying to $esp/EFI/APPLE"
++  if ! t1_copy_firmware "$src" "$esp"; then
++    echo "Found T1 firmware but could not copy it to the EFI partition."
++    echo "Wiring is installed; later run: omarchy setup apple touchbar"
++    exit 1
++  fi
++  echo
++  echo "OK. Reboot so Apple's EFI can memboot the T1:"
++  echo "  sudo reboot"
++  exit 0
++fi
++
++# USB is present but has no firmware: drop the macOS collector onto it.
++wrote=""
++while IFS= read -r vol; do
++  t1_write_collector "$vol"
++  wrote=$vol
++  break
++done < <(t1_media_roots)
++
++if [[ -n $wrote ]]; then
++  echo "No APPLE/EMBEDDEDOS on the USB yet."
++  echo "Wrote copy-t1-firmware.command to:"
++  echo "  $wrote"
++  echo
++  echo "Boot this Mac into macOS, wait until the Touch Bar lights up,"
++  echo "double-click that script in Finder, then come back here and re-run:"
++  echo "  omarchy setup apple touchbar"
++  exit 0
++fi
++
++echo "Plug in the USB that ran copy-t1-firmware.command on macOS,"
++echo "wait for it to mount, then re-run:"
++echo "  omarchy setup apple touchbar"
++echo
++echo "To collect firmware on macOS first, copy this file onto a stick and"
++echo "double-click it in Finder after the Touch Bar is on:"
++echo "  $(t1_collector_path)"
++exit 1
+diff --git a/default/omarchy/omarchy-menu.jsonc b/default/omarchy/omarchy-menu.jsonc
+index eb538c70688..2d3c961587b 100644
+--- a/default/omarchy/omarchy-menu.jsonc
++++ b/default/omarchy/omarchy-menu.jsonc
+@@ -182,6 +182,7 @@
+   "setup.config.hyprsunset": {"icon":"","label":"Hyprsunset","action":"omarchy-launch-config-editor ~/.config/hypr/hyprsunset.conf && omarchy-restart-hyprsunset"},
+   "setup.config.xcompose": {"icon":"󰞅","label":"XCompose","action":"omarchy-launch-config-editor ~/.XCompose && omarchy-restart-xcompose"},
+   "setup.direct-boot": {"icon":"","label":"Direct Boot","action":"omarchy-launch-floating-terminal-with-presentation omarchy-setup-direct-boot"},
++  "setup.apple-touchbar": {"icon":"󰌌","label":"Touch Bar Firmware","when":"omarchy-hw-apple-t1","action":"omarchy-launch-floating-terminal-with-presentation omarchy-setup-apple-touchbar"},
+   "setup.reset": {"icon":"󰑓","label":"Reset Computer","when":"[[ $(findmnt -no FSTYPE /) == btrfs ]]","action":"omarchy-launch-floating-terminal-with-presentation omarchy-system-factory-reset"},
+ 
+   // Install
+diff --git a/default/udev/apple-t1-touchbar.rules b/default/udev/apple-t1-touchbar.rules
+new file mode 100644
+index 00000000000..6bc42a8bc1f
+--- /dev/null
++++ b/default/udev/apple-t1-touchbar.rules
+@@ -0,0 +1,3 @@
++# apple-ib-tb is out of tree, so hid-generic (builtin) claims 05ac:8600 first.
++# Rebind once the T1 Touch Bar driver is actually loaded.
++ACTION=="add", SUBSYSTEM=="module", KERNEL=="apple_ib_tb", RUN+="/usr/bin/omarchy-hw-apple-t1-bind"
+diff --git a/install/hardware/all.sh b/install/hardware/all.sh
+index 6adcff9c8a4..3e5d7b9e437 100644
+--- a/install/hardware/all.sh
++++ b/install/hardware/all.sh
+@@ -33,6 +33,7 @@ run_logged "$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t1-touchbar.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
+diff --git a/install/hardware/apple/copy-t1-firmware.command b/install/hardware/apple/copy-t1-firmware.command
+new file mode 100755
+index 00000000000..4f9b64c8f7b
+--- /dev/null
++++ b/install/hardware/apple/copy-t1-firmware.command
+@@ -0,0 +1,180 @@
++#!/bin/bash
++# Copy this Mac's T1 Touch Bar firmware (EFI/APPLE) to an external USB.
++# Run ON THIS Mac, in macOS, AFTER first boot when the Touch Bar is on.
++# Double-click in Finder or: bash copy-t1-firmware.command
++#
++# Compatible with stock /bin/bash 3.2 (High Sierra through Sequoia).
++# Do not "modernize" this file for bash 5; it has to run on macOS.
++
++set -e
++
++need_root() {
++  if [ "$(id -u)" -ne 0 ]; then
++    echo "This needs admin to mount the EFI partition."
++    exec sudo /bin/bash "$0" "$@"
++  fi
++}
++
++is_efi_slice() {
++  _info=$(diskutil info "$1" 2>/dev/null) || return 1
++  echo "$_info" | grep -q "Partition Type: *EFI" && return 0
++  echo "$_info" | grep -q "Content: *EFI" && return 0
++  echo "$_info" | grep -q "Volume Name: *EFI" && return 0
++  return 1
++}
++
++mount_efi() {
++  _dev="$1"
++  _out=$(diskutil mount "$_dev" 2>&1) || {
++    echo "Could not mount $_dev:"
++    echo "$_out"
++    return 1
++  }
++  _mp=$(diskutil info "$_dev" | awk -F': *' '/Mount Point:/ {print $2; exit}')
++  if [ -z "$_mp" ] || [ "$_mp" = "Not applicable" ]; then
++    echo "$_dev has no mount point"
++    return 1
++  fi
++  echo "$_mp"
++}
++
++is_external_vol() {
++  _vol="$1"
++  _info=$(diskutil info "$_vol" 2>/dev/null) || return 1
++  echo "$_info" | grep -qi "Internal: *Yes" && return 1
++  echo "$_info" | grep -qiE "Protocol: *USB|Device Location: *External|Removable Media: *Removable|Internal: *No"
++}
++
++list_efi_devs() {
++  diskutil list | awk '/disk[0-9]+s[0-9]+$/ {print $NF}' | while read -r _id; do
++    is_efi_slice "$_id" && echo "$_id"
++  done
++}
++
++list_usb_vols() {
++  for _v in /Volumes/*; do
++    [ -d "$_v" ] || continue
++    _base=$(basename "$_v")
++    case "$_base" in
++      EFI|Macintosh\ HD|Macintosh\ HD\ -\ Data|Recovery|com.apple.recovery.boot) continue ;;
++    esac
++    is_external_vol "$_v" && echo "$_v"
++  done
++}
++
++find_apple_tree() {
++  _root="$1"
++  if [ -f "$_root/EFI/APPLE/EMBEDDEDOS/combined.memboot" ]; then
++    echo "$_root/EFI/APPLE"
++    return 0
++  fi
++  if [ -f "$_root/APPLE/EMBEDDEDOS/combined.memboot" ]; then
++    echo "$_root/APPLE"
++    return 0
++  fi
++  return 1
++}
++
++echo "T1 Touch Bar firmware copy"
++echo "Only copies firmware THIS Mac already wrote to its EFI partition."
++echo
++
++need_root "$@"
++
++echo "Looking for EFI/APPLE/EMBEDDEDOS/combined.memboot ..."
++echo "(If macOS just finished installing, wait until the Touch Bar lights up, then re-run.)"
++echo
++
++SRC=""
++
++for dev in $(list_efi_devs); do
++  echo "Checking $dev ..."
++  mp=$(mount_efi "$dev") || continue
++  apple=$(find_apple_tree "$mp" || true)
++  if [ -n "$apple" ]; then
++    SRC="$apple"
++    echo "Found: $SRC"
++    ls -la "$SRC/EMBEDDEDOS" || ls -la "$SRC"
++    break
++  fi
++  echo "  no EMBEDDEDOS on $dev"
++done
++
++if [ -z "$SRC" ]; then
++  echo
++  echo "No combined.memboot on any EFI partition yet."
++  echo "Boot this Mac into macOS until the Touch Bar works, stay on Wi-Fi,"
++  echo "wait out any 'critical software update', then run this again."
++  exit 1
++fi
++
++echo
++echo "External volumes:"
++USB_LIST=$(list_usb_vols || true)
++if [ -z "$USB_LIST" ]; then
++  echo "  (none found)"
++  echo
++  echo "Plug in a USB stick, wait for it to appear in Finder, then re-run."
++  echo "FAT32, ExFAT, or APFS is fine. Do not pick the EFI partition."
++  exit 1
++fi
++
++OLDIFS=$IFS
++IFS='
++'
++set -- $USB_LIST
++IFS=$OLDIFS
++n=$#
++i=1
++for vol; do
++  echo "  $i) $vol"
++  i=$((i + 1))
++done
++
++DEST=""
++if [ "$n" -eq 1 ]; then
++  DEST="$1"
++  echo
++  echo "Using the only external volume: $DEST"
++else
++  echo
++  printf "Number of the USB to copy onto: "
++  read -r choice
++  case "$choice" in
++    ''|*[!0-9]*) echo "Not a number."; exit 1 ;;
++  esac
++  if [ "$choice" -lt 1 ] || [ "$choice" -gt "$n" ]; then
++    echo "Out of range."
++    exit 1
++  fi
++  eval DEST=\$$choice
++fi
++
++if [ ! -d "$DEST" ]; then
++  echo "Destination vanished: $DEST"
++  exit 1
++fi
++
++TARGET="$DEST/APPLE"
++echo
++echo "Copying:"
++echo "  $SRC"
++echo "  -> $TARGET"
++rm -rf "$TARGET"
++mkdir -p "$DEST"
++cp -R "$SRC" "$TARGET"
++
++if [ ! -f "$TARGET/EMBEDDEDOS/combined.memboot" ]; then
++  echo "Copy finished but combined.memboot is missing. Source was incomplete."
++  exit 1
++fi
++
++echo
++echo "OK. On the USB:"
++ls -la "$TARGET/EMBEDDEDOS"
++
++echo
++echo "Eject the USB in Finder before unplugging."
++echo "On Omarchy later:"
++echo "  omarchy setup apple touchbar"
++echo "then reboot so Apple's EFI can memboot the T1."
+diff --git a/install/hardware/apple/fix-t1-touchbar.sh b/install/hardware/apple/fix-t1-touchbar.sh
+new file mode 100644
+index 00000000000..addf5d46b50
+--- /dev/null
++++ b/install/hardware/apple/fix-t1-touchbar.sh
+@@ -0,0 +1,25 @@
++# Detect first-generation Touch Bar MacBook Pros (T1) and install the
++# wiring the bar needs. Firmware is machine-specific and is not shipped;
++# copy it from a USB that ran copy-t1-firmware.command on macOS.
++
++if omarchy-hw-apple-t1; then
++  echo "Detected MacBook with T1 Touch Bar"
++
++  omarchy-pkg-add linux-headers
++
++  # shellcheck source=t1-touchbar.sh
++  source "$OMARCHY_INSTALL/hardware/apple/t1-touchbar.sh"
++
++  t1_install_wiring
++
++  if src=$(t1_find_firmware); then
++    if esp=$(t1_esp_mount) && t1_copy_firmware "$src" "$esp"; then
++      echo "Installed T1 Touch Bar firmware on the EFI partition"
++    else
++      echo "Found T1 firmware on USB but could not copy it to the EFI partition"
++    fi
++  else
++    echo "No T1 firmware on a mounted USB. After install, plug in the stick from"
++    echo "macOS and run:  omarchy setup apple touchbar"
++  fi
++fi
+diff --git a/install/hardware/apple/t1-touchbar.sh b/install/hardware/apple/t1-touchbar.sh
+new file mode 100644
+index 00000000000..47c857f23b4
+--- /dev/null
++++ b/install/hardware/apple/t1-touchbar.sh
+@@ -0,0 +1,106 @@
++# Shared T1 Touch Bar helpers. Sourced; no shebang, no work on source.
++# Firmware is Apple's machine-specific T1 memboot image (EFI/APPLE/EMBEDDEDOS).
++# It cannot be redistributed; a USB stick is the handoff from macOS.
++
++t1_marker=EMBEDDEDOS/combined.memboot
++
++t1_collector_path() {
++  printf '%s\n' "${OMARCHY_T1_COLLECTOR:-$OMARCHY_PATH/install/hardware/apple/copy-t1-firmware.command}"
++}
++
++t1_udev_rule_src() {
++  printf '%s\n' "${OMARCHY_T1_UDEV_SRC:-$OMARCHY_PATH/default/udev/apple-t1-touchbar.rules}"
++}
++
++t1_udev_rule_dest() {
++  printf '%s\n' "${OMARCHY_T1_UDEV_DEST:-/etc/udev/rules.d/90-apple-t1-touchbar.rules}"
++}
++
++t1_modules_load_dest() {
++  printf '%s\n' "${OMARCHY_T1_MODULES_LOAD:-/etc/modules-load.d/apple-t1-touchbar.conf}"
++}
++
++t1_media_roots() {
++  local dir
++  if [[ -n ${OMARCHY_T1_MEDIA_ROOTS:-} ]]; then
++    local IFS=$'\n'
++    for dir in $OMARCHY_T1_MEDIA_ROOTS; do
++      [[ -d $dir ]] && printf '%s\n' "$dir"
++    done
++    return
++  fi
++  for dir in /run/media/*/* /media/*/* /mnt/*; do
++    [[ -d $dir ]] && printf '%s\n' "$dir"
++  done
++}
++
++t1_find_firmware() {
++  local dir
++  while IFS= read -r dir; do
++    if [[ -f $dir/APPLE/$t1_marker ]]; then
++      printf '%s\n' "$dir/APPLE"
++      return 0
++    fi
++    if [[ -f $dir/$t1_marker ]]; then
++      printf '%s\n' "$dir"
++      return 0
++    fi
++  done < <(t1_media_roots)
++  return 1
++}
++
++t1_esp_mount() {
++  local mp fstype
++  if [[ -n ${OMARCHY_T1_ESP:-} ]]; then
++    printf '%s\n' "$OMARCHY_T1_ESP"
++    return 0
++  fi
++  for mp in /boot /boot/efi /efi; do
++    findmnt -n "$mp" >/dev/null 2>&1 || continue
++    fstype=$(findmnt -n -o FSTYPE "$mp")
++    case "$fstype" in
++      vfat|fat|msdos)
++        printf '%s\n' "$mp"
++        return 0
++        ;;
++    esac
++  done
++  return 1
++}
++
++t1_firmware_present() {
++  local esp
++  esp=$(t1_esp_mount) || return 1
++  [[ -s $esp/EFI/APPLE/$t1_marker ]]
++}
++
++t1_copy_firmware() {
++  local src=$1 dest_root=$2 dest
++  dest="$dest_root/EFI/APPLE"
++  mkdir -p "$dest_root/EFI" || return 1
++  rm -rf "$dest" || return 1
++  # VFAT cannot store Unix ownership; -r not -a so a failed chown does not abort.
++  cp -r "$src" "$dest" || return 1
++  sync || true
++  [[ -s $dest/$t1_marker ]]
++}
++
++t1_write_collector() {
++  local dest=$1
++  cp "$(t1_collector_path)" "$dest/copy-t1-firmware.command"
++  chmod +x "$dest/copy-t1-firmware.command"
++}
++
++t1_install_wiring() {
++  local dest
++  dest=$(t1_udev_rule_dest)
++  mkdir -p "$(dirname "$dest")"
++  cp -f "$(t1_udev_rule_src)" "$dest"
++  dest=$(t1_modules_load_dest)
++  mkdir -p "$(dirname "$dest")"
++  cat >"$dest" <<'EOF'
++apple-ibridge
++apple-ib-tb
++apple-ib-als
++EOF
++}
+diff --git a/manual/44-mac-support.md b/manual/44-mac-support.md
+index e86fdd064d8..0158b73fdc7 100644
+--- a/manual/44-mac-support.md
++++ b/manual/44-mac-support.md
+@@ -35,7 +35,25 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB
+ 3. Select the orange EFI Boot device
+ 4. Proceed with the [install as normal](02-getting-started.md)
+ 
+-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.
++The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, T1 Touch Bar wiring when the firmware is already on the USB, and an NVMe suspend fix for those same models.
++
++#### T1 Touch Bar firmware (do this before wiping macOS)
++
++The T1 coprocessor loads `EFI/APPLE/EMBEDDEDOS` from the EFI System Partition at boot. That tree is written by macOS, is unique to this machine (`FDRData`), and cannot be shipped in Omarchy. Collect it while macOS still works, then let Omarchy copy it back after the install.
++
++1. On macOS, wait until the Touch Bar lights up (and any "critical software update" finishes).
++2. Copy the collector off the Omarchy ISO at `install/hardware/apple/copy-t1-firmware.command` onto a USB stick. If you do not have the ISO handy, download the same file:
++
++```bash
++curl -fsSL https://github.com/basecamp/omarchy/raw/HEAD/install/hardware/apple/copy-t1-firmware.command -o copy-t1-firmware.command
++chmod +x copy-t1-firmware.command
++```
++
++   Double-click it in Finder, or run `bash copy-t1-firmware.command`. It copies `APPLE/EMBEDDEDOS` onto a USB stick.
++3. Leave that USB plugged in during the Omarchy install. The installer copies the firmware onto the EFI partition when it sees it.
++4. If you install first and copy firmware later: plug the stick in and run `omarchy setup apple touchbar`, then reboot.
++
++Without that reboot, the T1 stays in recovery mode and the bar stays dark. After Apple's EFI memboots it, `apple-ib-tb` draws the icon row (Fn for F1–F12).
+ 
+ ### Known Limitations
+ 
+@@ -43,15 +61,20 @@ Members of the community are constantly working on solutions to these challenges
+ 
+ #### Devices with T1 Chip
+ 
+-The Apple T1 chip was introduced in late 2016 and used exclusively in the first-generation MacBook Pro models with Touch Bar.
+-- MacBook Pro 13-inch (2016, two Thunderbolt 3 ports) – Model: A1706
+-- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) – Model: A1708
++The Apple T1 chip was introduced in late 2016 and used exclusively in the first-generation MacBook Pro models with Touch Bar (DMI `MacBookPro13,2` / `13,3` / `14,2` / `14,3`):
++- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) – Model: A1706
+ - MacBook Pro 15-inch (2016) – Model: A1707
++- MacBook Pro 13-inch (2017, four Thunderbolt 3 ports) – Model: A1706
++- MacBook Pro 15-inch (2017) – Model: A1707
++
++The two-port 13-inch models (`MacBookPro13,1` / `14,1`, A1708) have no Touch Bar and no T1.
++
++Collect the Touch Bar firmware on macOS before installing — see above. After that, `omarchy setup apple touchbar` is the post-install command.
+ 
+ #### Known Issues
+ 
+-- Touch Bar is non-functional
+ - Sound is not functioning
++- The Touch Bar needs the firmware USB step above; it will not light up from a clean wipe alone
+ 
+ #### Devices with T2 Chip
+ 
+diff --git a/migrations/1786820569.sh b/migrations/1786820569.sh
+new file mode 100644
+index 00000000000..3dd2a2e8527
+--- /dev/null
++++ b/migrations/1786820569.sh
+@@ -0,0 +1,30 @@
++echo "Install T1 Touch Bar wiring and copy firmware from a USB stick if present"
++
++# First-generation Touch Bar MacBook Pros only. Other Apple hardware is
++# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.
++if ! omarchy-hw-apple-t1; then
++  exit 0
++fi
++
++# shellcheck source=../install/hardware/apple/t1-touchbar.sh
++source "$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh"
++
++# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a
++# writable tmp tree and skip the privilege hop.
++if (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then
++  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \
++    /bin/bash -euo pipefail "$OMARCHY_PATH/migrations/1786820569.sh"
++fi
++
++omarchy-pkg-add linux-headers
++
++t1_install_wiring
++
++if src=$(t1_find_firmware); then
++  if esp=$(t1_esp_mount); then
++    if ! t1_copy_firmware "$src" "$esp"; then
++      echo "Found T1 firmware on USB but could not copy it to the EFI partition."
++      echo "Wiring is installed; later run: omarchy setup apple touchbar"
++    fi
++  fi
++fi
+diff --git a/test/shell.d/t1-touchbar-test.sh b/test/shell.d/t1-touchbar-test.sh
+new file mode 100755
+index 00000000000..fd328e55147
+--- /dev/null
++++ b/test/shell.d/t1-touchbar-test.sh
+@@ -0,0 +1,218 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++hw="$ROOT/bin/omarchy-hw-apple-t1"
++helpers="$ROOT/install/hardware/apple/t1-touchbar.sh"
++fix="$ROOT/install/hardware/apple/fix-t1-touchbar.sh"
++collector="$ROOT/install/hardware/apple/copy-t1-firmware.command"
++udev_src="$ROOT/default/udev/apple-t1-touchbar.rules"
++setup="$ROOT/bin/omarchy-setup-apple-touchbar"
++migration="$ROOT/migrations/1786820569.sh"
++menu="$ROOT/default/omarchy/omarchy-menu.jsonc"
++manual="$ROOT/manual/44-mac-support.md"
++
++assert_hw() {
++  local model=$1 expect=$2 description=$3
++  local tmp
++  tmp=$(mktemp)
++  printf '%s\n' "$model" >"$tmp"
++  if OMARCHY_DMI_PRODUCT_NAME="$tmp" "$hw"; then
++    [[ $expect == yes ]] || fail "$description"
++  else
++    [[ $expect == no ]] || fail "$description"
++  fi
++  rm -f "$tmp"
++  pass "$description"
++}
++
++assert_hw MacBookPro14,3 yes "MacBookPro14,3 is a T1 Touch Bar"
++assert_hw MacBookPro13,2 yes "MacBookPro13,2 is a T1 Touch Bar"
++assert_hw MacBookPro13,3 yes "MacBookPro13,3 is a T1 Touch Bar"
++assert_hw MacBookPro14,2 yes "MacBookPro14,2 is a T1 Touch Bar"
++assert_hw MacBookPro13,1 no "MacBookPro13,1 has no Touch Bar"
++assert_hw MacBookPro14,1 no "MacBookPro14,1 has no Touch Bar"
++assert_hw MacBookPro15,1 no "MacBookPro15,1 is T2, not T1"
++assert_hw MacBook8,1 no "MacBook8,1 is SPI-only"
++
++[[ -f $collector ]] || fail "macOS collector is in the tree"
++head -1 "$collector" | grep -qx '#!/bin/bash' || fail "macOS collector uses /bin/bash"
++! grep -qE 'mapfile|declare -A|\[\[.*-v |&\>' "$collector" ||
++  fail "macOS collector stays on bash 3.2"
++grep -Fq 'omarchy setup apple touchbar' "$collector" ||
++  fail "macOS collector points at the Linux setup command"
++pass "macOS collector is Finder-runnable and bash 3.2 safe"
++
++grep -Fq 'omarchy-hw-apple-t1-bind' "$udev_src" ||
++  fail "udev rule runs the packaged bind command"
++pass "udev rule rebinds when apple_ib_tb loads"
++
++grep -Fq 'fix-t1-touchbar.sh' "$ROOT/install/hardware/all.sh" ||
++  fail "hardware install runs the T1 hook after the SPI keyboard hook"
++pass "T1 install hook is wired"
++
++grep -Fq 'omarchy-setup-apple-touchbar' "$menu" ||
++  fail "Setup menu offers Touch Bar firmware on T1 hardware"
++grep -Fq 'omarchy-hw-apple-t1' "$menu" ||
++  fail "Touch Bar menu row is gated on T1 detection"
++pass "Setup menu exposes the firmware wizard on T1 machines"
++
++grep -Fq 'omarchy setup apple touchbar' "$manual" ||
++  fail "Mac support chapter documents the setup command"
++! grep -q 'Touch Bar is non-functional' "$manual" ||
++  fail "Mac support chapter no longer lists the bar as unsupported"
++grep -Fq 'install/hardware/apple/copy-t1-firmware.command' "$manual" ||
++  fail "Mac support chapter names the ISO collector path"
++! grep -q '/raw/quattro/' "$manual" ||
++  fail "Mac support chapter does not pin the collector to the quattro branch"
++grep -Fq 'https://github.com/basecamp/omarchy/raw/HEAD/install/hardware/apple/copy-t1-firmware.command' "$manual" ||
++  fail "Mac support chapter uses a durable GitHub HEAD URL"
++pass "Mac support chapter documents the USB handoff"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++# shellcheck source=../../install/hardware/apple/t1-touchbar.sh
++OMARCHY_PATH="$ROOT" source "$helpers"
++
++usb="$test_tmp/usb"
++esp="$test_tmp/esp"
++etc="$test_tmp/etc"
++mkdir -p "$usb/APPLE/EMBEDDEDOS" "$esp" "$etc/udev/rules.d" "$etc/modules-load.d"
++printf 'memboot\n' >"$usb/APPLE/EMBEDDEDOS/combined.memboot"
++printf 'fdr\n' >"$usb/APPLE/EMBEDDEDOS/FDRData"
++printf 'plist\n' >"$usb/APPLE/EMBEDDEDOS/version.plist"
++
++OMARCHY_PATH="$ROOT"
++OMARCHY_T1_MEDIA_ROOTS="$usb"
++OMARCHY_T1_ESP="$esp"
++OMARCHY_T1_UDEV_SRC="$udev_src"
++OMARCHY_T1_UDEV_DEST="$etc/udev/rules.d/90-apple-t1-touchbar.rules"
++OMARCHY_T1_MODULES_LOAD="$etc/modules-load.d/apple-t1-touchbar.conf"
++OMARCHY_T1_COLLECTOR="$collector"
++
++src=$(t1_find_firmware) || fail "firmware is found on a mounted USB"
++[[ $src == "$usb/APPLE" ]] || fail "firmware path is the APPLE tree"
++pass "firmware lookup finds APPLE/EMBEDDEDOS on USB"
++
++t1_copy_firmware "$src" "$esp" || fail "firmware copy succeeds"
++[[ -s $esp/EFI/APPLE/EMBEDDEDOS/combined.memboot ]] || fail "combined.memboot landed on the ESP"
++[[ $(cat "$esp/EFI/APPLE/EMBEDDEDOS/FDRData") == fdr ]] || fail "FDRData is copied with the tree"
++t1_firmware_present || fail "firmware presence check sees the ESP copy"
++pass "firmware copy lands on the ESP without preserving Unix ownership"
++
++empty_usb="$test_tmp/empty"
++mkdir -p "$empty_usb"
++OMARCHY_T1_MEDIA_ROOTS="$empty_usb"
++t1_write_collector "$empty_usb"
++[[ -x $empty_usb/copy-t1-firmware.command ]] || fail "collector is executable on the USB"
++grep -Fq 'diskutil' "$empty_usb/copy-t1-firmware.command" ||
++  fail "collector written to USB is the macOS script"
++pass "a firmware-less USB receives the macOS collector"
++
++t1_install_wiring
++grep -Fq 'omarchy-hw-apple-t1-bind' "$OMARCHY_T1_UDEV_DEST" ||
++  fail "wiring installs the udev rule"
++grep -Fxq 'apple-ib-tb' "$OMARCHY_T1_MODULES_LOAD" ||
++  fail "wiring loads apple-ib-tb"
++pass "wiring installs the udev rule and module list"
++
++dmi="$test_tmp/dmi"
++printf 'MacBookPro14,1\n' >"$dmi"
++PATH="$ROOT/bin:$PATH" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  bash -c 'source "$1"' _ "$fix"
++pass "install hook no-ops on non-T1 hardware"
++
++stub_bin="$test_tmp/bin"
++mkdir -p "$stub_bin"
++cat >"$stub_bin/omarchy-pkg-add" <<'SH'
++#!/bin/bash
++printf 'omarchy-pkg-add' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++cat >"$stub_bin/omarchy-hw-apple-t1" <<'SH'
++#!/bin/bash
++exit 0
++SH
++chmod +x "$stub_bin"/*
++
++printf 'MacBookPro14,3\n' >"$dmi"
++install_etc="$test_tmp/install-etc"
++mkdir -p "$install_etc/udev/rules.d" "$install_etc/modules-load.d"
++calls="$test_tmp/calls.log"
++: >"$calls"
++PATH="$stub_bin:$ROOT/bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  OMARCHY_T1_UDEV_SRC="$udev_src" \
++  OMARCHY_T1_UDEV_DEST="$install_etc/udev/rules.d/90-apple-t1-touchbar.rules" \
++  OMARCHY_T1_MODULES_LOAD="$install_etc/modules-load.d/apple-t1-touchbar.conf" \
++  OMARCHY_T1_ESP="$esp" \
++  OMARCHY_T1_MEDIA_ROOTS="$usb" \
++  bash -c 'source "$1"' _ "$fix"
++grep -Fq $'omarchy-pkg-add\tlinux-headers' "$calls" ||
++  fail "T1 install hook installs linux-headers"
++[[ -f $install_etc/udev/rules.d/90-apple-t1-touchbar.rules ]] ||
++  fail "T1 install hook writes udev wiring"
++[[ -s $esp/EFI/APPLE/EMBEDDEDOS/combined.memboot ]] ||
++  fail "T1 install hook copies firmware when the USB is mounted"
++pass "install hook copies firmware and wiring on T1 hardware"
++
++calls="$test_tmp/calls.log"
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_UDEV_SRC="$udev_src" \
++  OMARCHY_T1_UDEV_DEST="$etc/udev/rules.d/90-apple-t1-touchbar.rules" \
++  OMARCHY_T1_MODULES_LOAD="$etc/modules-load.d/apple-t1-touchbar.conf" \
++  OMARCHY_T1_ESP="$esp" \
++  OMARCHY_T1_MEDIA_ROOTS="$empty_usb" \
++  bash -euo pipefail "$migration"
++
++grep -Fq $'omarchy-pkg-add\tlinux-headers' "$calls" ||
++  fail "T1 migration installs linux-headers"
++[[ -f $OMARCHY_T1_UDEV_DEST ]] || fail "T1 migration writes the udev rule"
++pass "T1 migration installs wiring on T1 hardware"
++
++fail_esp="$test_tmp/fail-esp"
++printf 'not-a-dir\n' >"$fail_esp"
++copy_log="$test_tmp/copy-fail.log"
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_UDEV_SRC="$udev_src" \
++  OMARCHY_T1_UDEV_DEST="$etc/udev/rules.d/90-apple-t1-touchbar.rules" \
++  OMARCHY_T1_MODULES_LOAD="$etc/modules-load.d/apple-t1-touchbar.conf" \
++  OMARCHY_T1_ESP="$fail_esp" \
++  OMARCHY_T1_MEDIA_ROOTS="$usb" \
++  bash -euo pipefail "$migration" >"$copy_log" 2>&1
++[[ -f $OMARCHY_T1_UDEV_DEST ]] || fail "T1 migration keeps wiring after a firmware copy failure"
++grep -Fq 'could not copy it to the EFI partition' "$copy_log" ||
++  fail "T1 migration reports a firmware copy failure" "$(cat "$copy_log")"
++grep -Fq 'omarchy setup apple touchbar' "$copy_log" ||
++  fail "T1 migration points at the setup command after a copy failure" "$(cat "$copy_log")"
++pass "T1 migration reports a firmware copy failure without aborting"
++
++cat >"$stub_bin/omarchy-hw-apple-t1" <<'SH'
++#!/bin/bash
++exit 1
++SH
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  bash -euo pipefail "$migration"
++[[ ! -s $calls ]] || fail "non-T1 migration is a no-op" "$(cat "$calls")"
++pass "T1 migration skips unrelated hardware"

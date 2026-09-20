@@ -1,0 +1,34 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 11273,
+  "url": "https://github.com/omacom/omarchy/pull/11273",
+  "head_sha": "277ea6f6b4ad5555ddca88c8fec92098c684991a",
+  "base_sha": "b5589faaf80c6f87c07d4560fca37c4a81722f28",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "b5589faaf80c6f87c07d4560fca37c4a81722f28",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "31e2d8be3914c6ce62ca3452d860b3a9aa421217d7a5ce522daca7496de1f324",
+  "applied": true,
+  "apply_output": "",
+  "files": [
+    {
+      "path": "shell/plugins/lock/Service.qml",
+      "status": "modified",
+      "source_sha256": "02ce98721c4a9d76779eb91e83e3f7b271cd0c4b0ce93d27cd192c87ada2c964",
+      "candidate_sha256": "02ce98721c4a9d76779eb91e83e3f7b271cd0c4b0ce93d27cd192c87ada2c964",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/lock-blank-fingerprint-test.sh",
+      "status": "modified",
+      "source_sha256": "d204e0b7243770d0e83f979d95bdcf7532307a065f49365bd246d8fc2feb4318",
+      "candidate_sha256": "d204e0b7243770d0e83f979d95bdcf7532307a065f49365bd246d8fc2feb4318",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "6f4d34929ce3795b9688d67dc34fae80e172bfba",
+  "reconciled_patch_sha256": "31e2d8be3914c6ce62ca3452d860b3a9aa421217d7a5ce522daca7496de1f324"
+}

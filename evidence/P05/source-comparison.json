@@ -1,0 +1,36 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "40a1c0dcac181830688141bdc956b54c013ea307",
+  "patch_sha256": "367c0a170e394f5a409339d699f921c84366635ac44098364831e386c843e5b8",
+  "production_provenance": [
+    {
+      "path": "bin/omarchy-hyprland-monitor-disable-ghosts",
+      "source_pr": 10198,
+      "identical": true,
+      "head_sha": "35f3354ed122decab94b0507d6c633b45cd9d0a0",
+      "sha256": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73"
+    },
+    {
+      "path": "bin/omarchy-hyprland-monitor-watch",
+      "source_pr": 10198,
+      "identical": true,
+      "head_sha": "35f3354ed122decab94b0507d6c633b45cd9d0a0",
+      "sha256": "254439820dbb959ca439b5f4833bbc6c8725025baab058ae97c899fca7c42ab0"
+    },
+    {
+      "path": "bin/omarchy-monitor-state",
+      "source_pr": 12072,
+      "identical": true,
+      "head_sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "sha256": "f807549eacfd6079d513a2cf54f896eb9695fb34415e9f696853bd6d0e0dc32e"
+    }
+  ],
+  "retained_target_files": [
+    "shell/plugins/panels/monitor/Model.js",
+    "test/shell.d/monitor-test.sh"
+  ],
+  "excluded_source_hunks": [
+    "#12072 shell/plugins/panels/monitor/Model.js",
+    "#12072 test/shell.d/monitor-test.sh"
+  ]
+}

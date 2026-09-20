@@ -1,0 +1,2 @@
+PASS: x86_64 scheduler and explicit/unscoped plans skip retained archives, allow new versions and releases
+PASS: aarch64 scheduler and explicit/unscoped plans skip retained archives, allow new versions and releases

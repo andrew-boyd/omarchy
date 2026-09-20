@@ -1,0 +1,56 @@
+{
+  "number": 12314,
+  "head_sha": "84e001d85936f8f15b5a65bd41f90e4f8ca29984",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "original_apply_passed": true,
+  "hardware_verified": false,
+  "rebase_notes": [],
+  "tree": "baf60f6030803a43d436e0f48facd3f8bcef791f",
+  "patch_sha256": "a8ad52b9058194123367abb60c95028203948bc9c971ecb343d4381ebeb647f7",
+  "files": [
+    {
+      "path": "default/systemd/system-sleep/rebind-brcmfmac",
+      "identical_to_source": true,
+      "source_sha256": "0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1",
+      "target_sha256": "0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1"
+    },
+    {
+      "path": "docs/file-layout.md",
+      "identical_to_source": true,
+      "source_sha256": "b22480ed05d1904c552431490c28c84ed5afa3bb756e4536d8418139ec05910f",
+      "target_sha256": "b22480ed05d1904c552431490c28c84ed5afa3bb756e4536d8418139ec05910f"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "identical_to_source": true,
+      "source_sha256": "076e6ea152c84d980d6a174ab5ace18d671000c096cdb038582f89392b892011",
+      "target_sha256": "076e6ea152c84d980d6a174ab5ace18d671000c096cdb038582f89392b892011"
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "identical_to_source": true,
+      "source_sha256": "3bf4b6bc0e73850b97e2298dd50123ade08984369186e3d347aca6aaab4c67ce",
+      "target_sha256": "3bf4b6bc0e73850b97e2298dd50123ade08984369186e3d347aca6aaab4c67ce"
+    },
+    {
+      "path": "migrations/1789668939.sh",
+      "identical_to_source": true,
+      "source_sha256": "31784502362914ea232d7fad536dc95cd607927b2c9786e3071c30acccee835e",
+      "target_sha256": "31784502362914ea232d7fad536dc95cd607927b2c9786e3071c30acccee835e"
+    },
+    {
+      "path": "test/shell.d/brcmfmac-suspend-test.sh",
+      "identical_to_source": true,
+      "source_sha256": "6084036dd2d290e1ae4a857d6ad19e2e3388d658a5aa86822656512bf614aba5",
+      "target_sha256": "6084036dd2d290e1ae4a857d6ad19e2e3388d658a5aa86822656512bf614aba5"
+    }
+  ],
+  "all_sh_retains_target_exactly": true,
+  "whitespace": {
+    "passed": true,
+    "output": ""
+  },
+  "source_checks_passed": true,
+  "source_assertions": 13,
+  "target_tree": "baf60f6030803a43d436e0f48facd3f8bcef791f"
+}

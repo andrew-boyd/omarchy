@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12090",
+  "repository": "omacom/omarchy",
+  "number": 12090,
+  "title": "Install matching kernel headers before broadcom-wl-dkms",
+  "author": "paulogeyer",
+  "head_sha": "40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+  "state": "open",
+  "updated_at": "2026-09-16T10:28:25Z",
+  "body": "Closes https://github.com/omacom/omarchy/issues/10975\n\n## Summary\n\nThe 4.0.3 upgrade swapped `broadcom-wl` for `broadcom-wl-dkms` without headers on stock `linux` (older MacBooks). The module never built, so Wi-Fi died after reboot.\n\nInstall matching headers in `fix-bcm43xx.sh`, and repair existing DKMS installs with a migration that covers `linux` / `linux-lts` as well as Omarchy/T2 kernels.\n\n## Test plan\n\n```bash\nbash test/shell.d/bcm43xx-headers-test.sh\n```",
+  "original_source_changed": false
+}

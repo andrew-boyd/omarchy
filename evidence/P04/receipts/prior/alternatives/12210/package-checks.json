@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lid-package-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 6,
+      "output": "ok - observed package policy: settings stages the new global logind drop-in\nok - wake-session template is present in the shared defaults\nok - observed integration gap: settings does not install wake-session in the live system-sleep directory\nok - observed package policy: the new logind drop-in is absent from backup metadata\nok - runtime package stages both new session helpers\nok - observed integration gap: runtime also does not install the root wake-session hook\n"
+    }
+  ]
+}

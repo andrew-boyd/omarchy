@@ -1,0 +1,11 @@
+ok - locate drop-in replaces the command and preserves upstream service restrictions
+ok - locate service runs updatedb directly with fixed Btrfs options
+ok - scheduled locate indexing keeps its AC-power condition
+ok - the retired locate configuration helper and migration are absent
+ok - runtime and installation no longer reference the configuration rewrite
+ok - install/post-install/localdb.sh passes the scheduled service options directly
+ok - bin/omarchy-pkg-aur-install passes the scheduled service options directly
+ok - real updatedb overrides bind-mount pruning and adds root snapshots to exclusions
+ok - real locate indexes current files and preserves literal administrator exclusions
+ok - indexing preserves configuration bytes, permissions, ownership, and modification time
+ok - repeated indexing retains the same results and exclusions

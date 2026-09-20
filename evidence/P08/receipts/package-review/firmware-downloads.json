@@ -1,0 +1,32 @@
+[
+  {
+    "url": "https://updates.cdn-apple.com/2019/cert/041-88431-20191011-e7ee7d98-2878-4cd9-bc0a-d98b3a1e24b1/OSXUpd10.11.5.dmg",
+    "name": "facetimehd-firmware-apple-dmg-range.bin",
+    "range": "bytes=204909802-207733123",
+    "expected_size": 2823322,
+    "expected_sha256": null,
+    "started_at": "2026-09-20T00:34:57+00:00",
+    "http_status": 206,
+    "content_range": "bytes 204909802-207733123/758703479",
+    "sha256": "61b60ba96202f8be0e78ecc25e2ae07528005984e3131ee6b7eaee8c20cd0c69",
+    "bytes": 2823322,
+    "cache_path": ".state/source-cache/facetimehd-firmware-apple-dmg-range.bin",
+    "finished_at": "2026-09-20T00:34:59+00:00",
+    "matched_recipe_checksum": false
+  },
+  {
+    "url": "https://download.info.apple.com/Mac_OS_X/031-30890-20150812-ea191174-4130-11e5-a125-930911ba098f/bootcamp5.1.5769.zip",
+    "name": "bootcamp5.1.5769.zip",
+    "range": null,
+    "expected_size": 542286415,
+    "expected_sha256": "4ede2c8ef240708c850237a3e5911094ed6adae1734258e4639bc9069a814b1e",
+    "started_at": "2026-09-20T00:34:57+00:00",
+    "http_status": 200,
+    "content_range": null,
+    "sha256": "4ede2c8ef240708c850237a3e5911094ed6adae1734258e4639bc9069a814b1e",
+    "bytes": 542286415,
+    "cache_path": ".state/source-cache/bootcamp5.1.5769.zip",
+    "finished_at": "2026-09-20T00:35:12+00:00",
+    "matched_recipe_checksum": true
+  }
+]

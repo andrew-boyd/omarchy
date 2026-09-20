@@ -1,0 +1,6 @@
+PASS: successes publish; incomplete outputs stay out; retries skip published versions
+PASS: infrastructure failures, missing completion records, and zero successes never publish
+PASS: signing failure stops promotion and sync
+PASS: deferred release pairs cannot publish partially
+PASS: complete success publishes and clears the queue
+PASS: dry runs neither publish nor notify

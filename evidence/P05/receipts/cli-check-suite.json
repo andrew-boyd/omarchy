@@ -1,0 +1,10 @@
+{
+  "tests": [
+    "test/cli"
+  ],
+  "file_sha256": {
+    "test/cli": "e916dd246c52d0f1849b2ec7b8b5b5cae16fb0b9bdd130acf91f90705993a004",
+    "bin/omarchy": "7d7aadc63988dd150bd568a907417a59289f852ef2da0eb332aaf21fc9b7f594",
+    "bin/omarchy-hyprland-monitor-disable-ghosts": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73"
+  }
+}

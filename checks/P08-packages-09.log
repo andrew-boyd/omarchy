@@ -1,0 +1,10 @@
+PASS: idle: nothing queued, nothing to reap
+PASS: two queued, none live: create two
+PASS: one queued, one live but busy: create one
+PASS: one queued, one live and idle: it will take it
+PASS: powered-off droplet reaped
+PASS: over-age droplet reaped even if active
+PASS: at cap: no creates
+PASS: cap limits creates to remaining room
+PASS: off droplet is not capacity: reaped and replaced
+PASS: create body carries tag, size, substituted user-data

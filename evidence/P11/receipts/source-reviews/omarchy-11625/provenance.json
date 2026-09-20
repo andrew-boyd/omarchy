@@ -1,0 +1,43 @@
+{
+  "repository": "omacom/omarchy",
+  "number": 11625,
+  "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+  "source_ancestor": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "32edb469a4ff6a45719844a08d81ec8292c37299852527becf592ef17d6682ee",
+  "files": [
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "ea40cd32282115e845edfe729106d4bd7f3ddbb9ba8f33ddee66bb4f7c8dd070",
+      "identical_to_source": true,
+      "candidate_sha256": "ea40cd32282115e845edfe729106d4bd7f3ddbb9ba8f33ddee66bb4f7c8dd070"
+    },
+    {
+      "path": "install/hardware/apple/fix-snd-hda-macbookpro.sh",
+      "source_sha256": "610866d5504d6c0b00d67606f38f26ada0bb71d9928784a4d25b91beaf7e9fb0",
+      "identical_to_source": true,
+      "candidate_sha256": "610866d5504d6c0b00d67606f38f26ada0bb71d9928784a4d25b91beaf7e9fb0"
+    },
+    {
+      "path": "migrations/1786391102.sh",
+      "source_sha256": "2b9d9213a7d6c53891a71c27cc7a95aea99dbfd11190692561d18535f55e2fc7",
+      "identical_to_source": true,
+      "candidate_sha256": "2b9d9213a7d6c53891a71c27cc7a95aea99dbfd11190692561d18535f55e2fc7"
+    },
+    {
+      "path": "test/shell.d/snd-hda-macbookpro-test.sh",
+      "source_sha256": "93abab70ba37fb5e6abcf4b69c525295628e695e822bb990bcf9d019191d5b45",
+      "identical_to_source": true,
+      "candidate_sha256": "93abab70ba37fb5e6abcf4b69c525295628e695e822bb990bcf9d019191d5b45"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": true,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "c02ad7cff5a37ecbcbe74aee9b8264e02e7cd311",
+  "reconciled_patch_sha256": "f0dc4e7844bed0126b200da832d9e7df71c19c8ea5666ee3faa7be07e35da79f",
+  "software_checks_passed": true
+}

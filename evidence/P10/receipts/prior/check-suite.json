@@ -1,0 +1,18 @@
+{
+  "tests": [
+    "test/shell.d/apple-bcm43602-nvram-test.sh",
+    "test/shell.d/brcmfmac-5ghz-test.sh",
+    "test/shell.d/broadcom-calibration-integration-test.sh"
+  ],
+  "file_sha256": {
+    "default/firmware/apple/brcmfmac43602-pcie.txt": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+    "install/hardware/apple/brcmfmac-43602.sh": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+    "install/hardware/apple/fix-bcm43602-nvram.sh": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+    "install/hardware/apple/fix-brcmfmac-5ghz.sh": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+    "migrations/1787312531.sh": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+    "test/shell.d/apple-bcm43602-nvram-test.sh": "af93217ff1279d37b211bcce5e89dfbb837587bf40175744cbe43d2e144c69a6",
+    "test/shell.d/brcmfmac-5ghz-test.sh": "2041faebf77b254304494bdf431684742fc7ce4d17d78b90afd7620c9b39639a",
+    "test/shell.d/broadcom-calibration-integration-test.sh": "16f25506cb5df427a0966f4098a029cf8c0d89d13036c49644f6fc2fe02c76b4",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

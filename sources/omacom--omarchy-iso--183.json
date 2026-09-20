@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-iso/pull/183",
+  "repository": "omacom/omarchy-iso",
+  "number": 183,
+  "title": "Install matching kernel headers before hardware setup",
+  "author": "spencerbull",
+  "head_sha": "f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+  "state": "open",
+  "updated_at": "2026-09-15T02:37:39Z",
+  "body": "Fresh installs with `linux-omarchy` omitted its matching headers. On an XPS 14 installation, `linux-omarchy 7.2.5-3` was paired with stock `linux-headers 7.2.3.arch1-3`, so the camera package's DKMS hook skipped its modules and the camera failed after boot.\n\nInstall `<kernel>-headers` for each configured target kernel immediately after the base system, before hardware packages trigger DKMS. This also covers T2 and multiple-kernel configurations, in both full-disk and pre-mounted installs. The camera package is unchanged.\n\nAll fast shell checks and 66 Python tests passed. The regression test rejects the original behavior in all six kernel/layout cases. A local RC ISO was built and its embedded installer, package hashes, and checksum verified. In a disposable offline container, the matching `7.2.5-3` kernel/header pair allowed the existing `intel-ipu7-camera 1.0.6-1` package to install `intel-cvs`, IPU7 including PSYS, and `v4l2loopback` successfully.\n\nHardware camera/audio testing on the XPS with the locally built RC ISO is pending. The existing camera package still pulls unused stock Arch headers and logs missing-stock-kernel-tree errors; the required modules for the Omarchy kernel installed successfully in the container.\n",
+  "original_source_changed": false
+}

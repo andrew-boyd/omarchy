@@ -1,0 +1,27 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 11904,
+  "url": "https://github.com/omacom/omarchy/pull/11904",
+  "head_sha": "2f27ee35051e043f2dd46da0ce7c7e5450444fe3",
+  "base_sha": "d237995b3be03df3a7bb855e4a23b6fb7204e969",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "d237995b3be03df3a7bb855e4a23b6fb7204e969",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "03dd3da10e306d6ba17c0fe3b43dde5f9ca7d1b98c1f937c04fada827cfc7818",
+  "applied": true,
+  "apply_output": "",
+  "files": [
+    {
+      "path": "bin/omarchy-diagnose-suspend-wake",
+      "status": "added",
+      "source_sha256": "a1e30ddbb2b2c3650f37f0970d0bae8e8c8f371d7c42ba2a04d44ab58234d109",
+      "candidate_sha256": "a1e30ddbb2b2c3650f37f0970d0bae8e8c8f371d7c42ba2a04d44ab58234d109",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
+  "reconciled_patch_sha256": "03dd3da10e306d6ba17c0fe3b43dde5f9ca7d1b98c1f937c04fada827cfc7818"
+}

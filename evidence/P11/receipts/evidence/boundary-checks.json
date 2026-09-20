@@ -1,0 +1,107 @@
+{
+  "sources": [
+    {
+      "number": 9516,
+      "result": {
+        "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+        "hardware_verified": false,
+        "passed": true,
+        "results": [
+          {
+            "test": "test/shell.d/audio-source-boundaries-test.sh",
+            "exit_code": 0,
+            "passed": true,
+            "assertions": 5,
+            "output": "ok - observation: source CS8409 detector accepts MacBookPro14,10 by substring\nok - observation: source CS8409 detector accepts a containing string\nok - observation: missing DMI does not match\nok - observation: source CS8409 leaf propagates package failure\nok - observation: source CS8409 migration propagates package failure\n"
+          }
+        ]
+      }
+    },
+    {
+      "number": 7140,
+      "result": {
+        "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+        "hardware_verified": false,
+        "passed": true,
+        "results": [
+          {
+            "test": "test/shell.d/audio-source-boundaries-test.sh",
+            "exit_code": 0,
+            "passed": true,
+            "assertions": 5,
+            "output": "ok - observation: source CS8409 detector accepts MacBookPro14,10 by substring\nok - observation: source CS8409 detector accepts a containing string\nok - observation: missing DMI does not match\nok - observation: source CS8409 leaf propagates package failure\nok - observation: source CS8409 migration propagates package failure\n"
+          }
+        ]
+      }
+    },
+    {
+      "number": 6921,
+      "result": {
+        "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+        "hardware_verified": false,
+        "passed": true,
+        "results": [
+          {
+            "test": "test/shell.d/audio-source-boundaries-test.sh",
+            "exit_code": 0,
+            "passed": true,
+            "assertions": 4,
+            "output": "ok - observation: original CS4208 migration skips an added-only DKMS entry\nok - observation: original CS4208 migration skips an old-kernel-only DKMS entry\nok - observation: package presence alone bypasses original CS4208 repair\nok - observation: original CS4208 package failure propagates before reboot state\n"
+          }
+        ]
+      }
+    },
+    {
+      "number": 10458,
+      "result": {
+        "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+        "hardware_verified": false,
+        "passed": true,
+        "results": [
+          {
+            "test": "test/shell.d/audio-source-boundaries-test.sh",
+            "exit_code": 0,
+            "passed": true,
+            "assertions": 4,
+            "output": "ok - observation: iMac migration replaces a custom same-name rule and removes routes\nok - observation: direct iMac migration rerun resets routes and reissues mixer commands\nok - observation: iMac migration tolerates failed hardware mixer commands\nok - observation: absent matching aplay line fails iMac migration after config changes\n"
+          }
+        ]
+      }
+    },
+    {
+      "number": 12286,
+      "result": {
+        "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+        "hardware_verified": false,
+        "passed": true,
+        "results": [
+          {
+            "test": "test/shell.d/audio-source-boundaries-test.sh",
+            "exit_code": 0,
+            "passed": true,
+            "assertions": 5,
+            "output": "ok - observation: #12286 fresh setup replaces same-name mixer and sleep files\nok - observation: #12286 added-only DKMS entry skips the driver build\nok - observation: #12286 clears the fixture chime bit and writes fixed attribute bytes\nok - observation: #12286 migration preserves existing same-name drop-ins\nok - observation: #12286 migration disables and removes a custom same-name legacy service\n"
+          }
+        ]
+      }
+    },
+    {
+      "number": 11625,
+      "result": {
+        "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+        "hardware_verified": false,
+        "passed": true,
+        "results": [
+          {
+            "test": "test/shell.d/audio-source-boundaries-test.sh",
+            "exit_code": 0,
+            "passed": true,
+            "assertions": 4,
+            "output": "ok - observation: #11625 fresh setup takes the CS8409 codec path without an Apple DMI gate\nok - observation: #11625 migration rejects the same non-Apple fixture\nok - observation: #11625 migration skips an Apple CS8409 fixture lacking its PCI substring\nok - observation: #11625 migration treats added-only DKMS as already installed\n"
+          }
+        ]
+      }
+    }
+  ],
+  "hardware_verified": false
+}

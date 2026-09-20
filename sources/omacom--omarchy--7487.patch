@@ -1,0 +1,647 @@
+diff --git a/default/firmware/apple/brcmfmac43602-pcie.txt b/default/firmware/apple/brcmfmac43602-pcie.txt
+new file mode 100644
+index 00000000000..a72a5cc2524
+--- /dev/null
++++ b/default/firmware/apple/brcmfmac43602-pcie.txt
+@@ -0,0 +1,268 @@
++# NVRAM for the Broadcom BCM43602 (PCI 14e4:43ba/43bb/43bc) in 2015-2017 Apple
++# Macs, extracted from Apple's Windows/Boot Camp driver package and surfaced via
++# kernel bug 193121, where it is attached as
++# https://bugzilla.kernel.org/attachment.cgi?id=285753. linux-firmware ships
++# only the .bin for this part, so without this file the firmware's country
++# detection never completes: scans come back 2.4GHz-only at crippled power and
++# the WPA four-way handshake times out.
++#
++# ccode=0/regrev=1 bypass that broken country detection by pinning the "world"
++# regulatory domain instead of asking the AP. The values below are otherwise the
++# board's own calibration data; do not edit them.
++#
++# Lines starting with # are comments to humans only; the brcmfmac NVRAM parser
++# ignores them.
++#
++# macaddr= below is the firmware's built-in fallback default (00:90:4c is the Epigram/Broadcom OUI, not a real
++# device MAC); the install leaf and migration always substitute the machine's live MAC or strip the line, so it is never used verbatim.
++boardrev=0x1101
++
++sromrev=11
++boardtype=0x073e
++vendid=0x14e4
++devid=0x43ba
++
++macaddr=00:90:4c:0d:f4:3e
++
++ccode=0
++regrev=1
++
++
++# Board flags:
++# X BFL_BTCOEXIST          = 0x00000001   This board implements Bluetooth coexistence
++#   BFL_EXTLNA             = 0x00001000   This board has an external LNA (2G)
++#   BFL_FEM_BT             = 0x00400000   This board has shared antenna w/ BT
++# X BFL_PALDO              = 0x02000000   Power topology uses PALDO ? - CHECK
++#   BFL_EXTLNA_5GHz        = 0x10000000   Board has an external LNA in 5GHz band
++boardflags=0x02000001
++
++# Board flags 2:
++#   BFL2_BT_SHARE_ANT0     = 0x00800000   share core0 antenna with BT
++# X BFL2_LNA1BYPFORTR2G    = 0x40000000   acphy, enable lna1 bypass for 2G clip lo
++# X BFL2_LNA1BYPFORTR5G    = 0x80000000   acphy, enable lna1 bypass for 5G clip lo
++# X BFL2_SPUR_WAR          = 0x00000200   Board has a WAR for clock-harmonic spurs
++#   BFL2_2G_SPUR_WAR       = 0x00002000   Board has a WAR to reduce and avoid clock-harmonic spurs in 2G band
++boardflags2=0xC0000000
++
++# Board flags 3:
++# X BFL3_RCAL_WAR          = 0x00000008   acphy rcal war active on this board (mainly for 4335a0)
++# X BFL3_FEMTBL_FROM_NVRAM = 0x00000100   acphy, femctrl table is read from nvram
++boardflags3=0x40000108
++
++#btc_mode=0
++
++#### added rx de-sense
++
++btcdyn_flags=0x7
++# Media profile
++btcdyn_profile_type=0x2  
++btcdyn_dflt_dsns_level=0
++btcdyn_low_dsns_level=0
++btcdyn_mid_dsns_level=21
++btcdyn_high_dsns_level=22
++btcdyn_default_btc_mode=4
++# --- number of rows in the array vars below ---
++btcdyn_msw_rows=1
++btcdyn_dsns_rows=1
++# --- mode switch data rows (max is 4) ---
++btcdyn_msw_row0=1,-16,-95,-100
++# --- desense switching data rows (max is 4) ---
++btcdyn_dsns_row0=4,-16,-63,-95
++
++#### end of rx de-sense
++
++
++xtalfreq=40000
++otpimagesize=484
++nocrc=1
++muxenab=0x1
++btc_params82=0x60
++
++
++
++########################################################
++# RF Control Definitions
++
++antswitch=0
++rxchain=3
++txchain=3
++aa2g=3
++aa5g=3
++femctrl=10
++
++# antenna gain per core g-band
++agbg0=2
++agbg1=2
++
++# antenna gain per core a-band
++aga0=2
++aga1=2
++
++# RFSWCTRL 2G and 5G iLNA
++#            WL_TX,     WL_RX,     WL_RX_ATTN, BT_TX_RX, WL_MASK
++swctrlmap_2g=0x04010401,0x08080808,0x04010401,0x00000000,0x000000ff
++swctrlmap_5g=0x08080808,0x04010401,0x08080808,0x00000000,0x000000ff
++
++swctrlmapext_2g=0x00000000,0x00000000,0x00000000,0x000000,0x003
++swctrlmapext_5g=0x00000000,0x00000000,0x00000000,0x000000,0x003
++########################################################
++
++# Bypass offsetting PAPD_EPS_TABLE_PER_TX_INDEX feature
++epsdelta2g0=0,-1,0,0,0,0,0,0
++epsdelta2g1=0,-1,0,0,0,0,0,0
++
++########################################################
++# Rx gain and RSSI parameters
++#
++# Default so do not set:
++# rxgaincal_rssical=0
++# rssi_cal_rev=0
++# rxgains[25]gtrisoa[01]
++# rxgains[25]g[mh]trelnabypa[01]=0
++
++# BW20,BW40
++rssicorrnorm_c0=4,4
++rssicorrnorm_c1=4,4
++
++# subband5gver=4 =>
++# BW20,BW40,BW80  <5250|<5500|<5745|>=5745
++#                  <70m| <100| <149|>=149
++rssicorrnorm5g_c0=1,2,3,1,2,3,1,2,3,1,2,3
++rssicorrnorm5g_c1=1,2,3,1,2,3,1,2,3,1,2,3
++
++########################################################
++
++
++########################################################
++# 20 MHz in 40 MHz Power Offsets and Duplicate Modes
++# 2G and 5G bands
++
++sb20in40hrpo=0x0
++sb20in40lrpo=0x0
++
++dot11agduphrpo=0x0
++dot11agduplrpo=0x0
++########################################################
++
++
++########################################################
++# PAPD parameters
++fastpapdgainctrl=0
++
++########################################################
++# 2G TSSI / PA Parameters
++
++tworangetssi2g=1
++tssipos2g=1
++extpagain2g=2
++pdgain2g=2
++
++# 2G Max Power
++maxp2ga0=74
++maxp2ga1=74
++
++# 2G PA Parameters
++# Order is A1,B0,B1
++#pa2ga0=-125,6514,-739  used for p113 and p115
++#pa2ga1=-141,6391,-738  used for p113 and p115
++#pa2ga0=-169,6473,-759
++#pa2ga1=-174,6462,-759
++pa2ga0=-162,6368,-735
++pa2ga1=-170,6349,-742
++
++
++
++# 2G Power Offsets
++cckbw202gpo=0x0000
++cckbw20ul2gpo=0x0000
++mcsbw202gpo=0x99644422
++mcsbw402gpo=0x99644422
++dot11agofdmhrbw202gpo=0x6666
++ofdmlrbw202gpo=0x0022
++
++########################################################
++
++#AvVmid_c0=2,140,2,145,2,145,2,145,2,145
++#AvVmid_c1=2,140,2,145,2,145,2,145,2,145
++#AvVmid_c2=0,0,0,0,0,0,0,0,0,0
++
++# AvVmid 2GHz and 5GHz LabNotebook 43569A2_012 data from pcieir
++AvVmid_c0=2,140,2,125,2,125,2,135,2,135
++AvVmid_c1=2,140,3,100,3,100,3,100,3,100
++AvVmid_c2=0,0,0,0,0,0,0,0,0,0
++
++########################################################
++# 5G TSSI / PA Parameters
++
++tworangetssi5g=0
++tssipos5g=1
++extpagain5g=2
++subband5gver=0x4
++pdgain5g=2
++
++# 5G Max Powers
++maxp5ga0=74,74,74,74
++maxp5ga1=74,74,74,74
++
++# 5G PA Parameters initial
++#pa5ga0=152,5462,658,150,5547,663,150,5950,697,170,5782,688
++#pa5ga1=177,5661,685,178,5712,691,166,6161,725,195,5811,706
++
++# 5G PA Parameters *** from LabNotebook 43569A0_099 TSSI opt for 8::18:
++#pa5ga0=-181,5835,-709,-183,5842,-712,-186,5832,-710,-187,5744,-703
++#pa5ga1=-198,5767,-710,-190,5915,-721,-185,6067,-732,-186,6024,-731
++
++# Updated with LabNotebook 43569A2_012
++pa5ga0=-194,5833,-713,-186,6042,-730,-181,5927,-714,-197,5562,-687
++pa5ga1=-186,6139,-737,-196,5988,-726,-203,5852,-713,-204,5836,-713
++
++
++
++# 5G Power Offsets
++mcsbw205glpo=0x88766663
++mcsbw405glpo=0x88666663
++mcsbw805glpo=0xbb666665
++mcsbw205gmpo=0xd8666663
++mcsbw405gmpo=0x88666663
++mcsbw805gmpo=0xcc666665
++mcsbw205ghpo=0xdc666663
++mcsbw405ghpo=0xaa666663
++mcsbw805ghpo=0xdd666665
++mcslr5glpo=0x0000
++mcslr5gmpo=0x0000
++mcslr5ghpo=0x0000
++sb20in40hrpo=0x0
++sb20in80and160hr5glpo=0x0
++sb40and80hr5glpo=0x0
++sb20in80and160hr5gmpo=0x0
++sb40and80hr5gmpo=0x0
++sb20in80and160hr5ghpo=0x0
++sb40and80hr5ghpo=0x0
++sb20in40lrpo=0x0
++sb20in80and160lr5glpo=0x0
++sb40and80lr5glpo=0x0
++sb20in80and160lr5gmpo=0x0
++sb40and80lr5gmpo=0x0
++sb20in80and160lr5ghpo=0x0
++sb40and80lr5ghpo=0x0
++
++pdoffset40ma0=0x0000
++pdoffset80ma0=0x0000
++pdoffset40ma1=0x0000
++pdoffset80ma1=0x0000
++
++########################################################
++
++
++########################################################
++# Temperature Values
++
++tempthresh=120
++tempoffset=255
++rawtempsense=0x1ff
++
++phycal_tempdelta=255
++temps_period=15
++temps_hysteresis=15
++
++########################################################
+\ No newline at end of file
+diff --git a/install/hardware/all.sh b/install/hardware/all.sh
+index 6adcff9c8a4..d141ad84479 100644
+--- a/install/hardware/all.sh
++++ b/install/hardware/all.sh
+@@ -36,6 +36,7 @@ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-nvram.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+ 
+diff --git a/install/hardware/apple/fix-brcmfmac-nvram.sh b/install/hardware/apple/fix-brcmfmac-nvram.sh
+new file mode 100644
+index 00000000000..cb792d569b5
+--- /dev/null
++++ b/install/hardware/apple/fix-brcmfmac-nvram.sh
+@@ -0,0 +1,56 @@
++# 2015-2017 Apple Macs ship the Broadcom BCM43602, which brcmfmac drives. The
++# linux-firmware package provides only the .bin for this part and no NVRAM, and
++# without one the firmware's country-code detection never completes (kernel bug
++# 193121): scans come back 2.4GHz-only at a fraction of the real signal, and
++# the WPA four-way handshake times out, which NetworkManager reports as a
++# rejected password. Shipping the board's NVRAM with ccode=0/regrev=1 pins the
++# "world" regulatory domain around the broken detection and lets the handshake
++# complete. This pairs with fix-brcmfmac-supplicant.sh, which fixes a different
++# firmware defect on the same machines; neither replaces the other.
++#
++# The gate is deliberately narrower than the supplicant quirk's: the NVRAM
++# holds this board's calibration data, so it only applies to the BCM43602
++# family -- 14e4:43ba/43bb/43bc, the IDs brcmfmac's brcm_hw_ids.h lists for
++# BCM43602 and its single-band variants. BCM4360 (14e4:43a0) runs the
++# out-of-tree wl driver, which never reads brcmfmac NVRAM, and is excluded.
++#
++# A file already at the destination wins: user-placed or shipped by a future
++# linux-firmware, both outrank this copy, and the skip is silent because it is
++# the common case on reruns.
++#
++# The asset lives under default/, a sibling of the install tree, so it resolves
++# from $OMARCHY_PATH (exported by the install entry point and always present at
++# runtime) rather than from $OMARCHY_INSTALL, which points at install/ itself.
++dest=/usr/lib/firmware/brcm/brcmfmac43602-pcie.txt
++sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
++
++if [[ ! -e $dest ]] && [[ $sys_vendor == Apple* ]] &&
++  lspci -nn | grep -E "14e4:(43ba|43bb|43bc)" >/dev/null; then
++  echo "Detected a Mac with BCM43602 Wi-Fi; installing its missing NVRAM"
++
++  # The NVRAM's macaddr= line carries the donor board's address, so substitute
++  # this NIC's own, found under the matching PCI device. lspci -D prints the
++  # domain form /sys uses. awk reads the whole stream instead of exiting on the
++  # first match, so the pipe stays safe under pipefail (#6608).
++  bdf="$(lspci -Dnn | awk '/14e4:(43ba|43bb|43bc)/ { if (!found) { print $1; found=1 } }')"
++  mac=""
++  if [[ -n $bdf ]]; then
++    net_addrs=(/sys/bus/pci/devices/"$bdf"/net/*/address)
++    mac="$(cat "${net_addrs[0]}" 2>/dev/null || true)"
++  fi
++
++  work="$(mktemp)"
++  if [[ -n $mac ]]; then
++    sed "s/^macaddr=.*/macaddr=$mac/" \
++      "$OMARCHY_PATH/default/firmware/apple/brcmfmac43602-pcie.txt" >"$work"
++  else
++    # No MAC discoverable: drop the line entirely and let the firmware fall
++    # back to the OTP address, which is how these NICs already run with no
++    # NVRAM at all.
++    sed '/^macaddr=/d' \
++      "$OMARCHY_PATH/default/firmware/apple/brcmfmac43602-pcie.txt" >"$work"
++  fi
++
++  install -Dm644 "$work" "$dest"
++  rm -f "$work"
++fi
+diff --git a/migrations/1786961462.sh b/migrations/1786961462.sh
+new file mode 100644
+index 00000000000..a68f2450925
+--- /dev/null
++++ b/migrations/1786961462.sh
+@@ -0,0 +1,51 @@
++echo "Install the missing NVRAM for Broadcom BCM43602 Wi-Fi on Apple Macs"
++
++# The install-time leaf only reaches machines set up after it shipped, so an
++# existing install on a 2015-2017 Mac still has no NVRAM for its BCM43602:
++# 2.4GHz-only scans, crippled signal, and WPA handshakes that time out. See
++# install/hardware/apple/fix-brcmfmac-nvram.sh for the failure this fixes and
++# for why the gate is limited to 14e4:43ba/43bb/43bc.
++dmi_vendor="${OMARCHY_BRCMFMAC_NVRAM_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
++pci_devices="${OMARCHY_BRCMFMAC_NVRAM_PCI_DEVICES:-/sys/bus/pci/devices}"
++dest="${OMARCHY_BRCMFMAC_NVRAM_DEST:-/usr/lib/firmware/brcm/brcmfmac43602-pcie.txt}"
++src="${OMARCHY_BRCMFMAC_NVRAM_SRC:-$OMARCHY_PATH/default/firmware/apple/brcmfmac43602-pcie.txt}"
++
++sys_vendor="$(cat "$dmi_vendor" 2>/dev/null || true)"
++
++if ! [[ $sys_vendor == Apple* ]] ||
++  ! lspci -nn | grep -E "14e4:(43ba|43bb|43bc)" >/dev/null; then
++  exit 0
++fi
++
++# A file already there wins: user-placed or package-shipped, both outrank this
++# copy. The same check keeps the migration idempotent for the next user on a
++# machine already repaired.
++if [[ -e $dest ]]; then
++  exit 0
++fi
++
++# Substitute the NIC's live MAC for the donor board's placeholder, the same way
++# the install-time leaf does. awk reads the whole lspci stream instead of
++# exiting on the first match, so the pipe stays safe under pipefail (#6608).
++bdf="$(lspci -Dnn | awk '/14e4:(43ba|43bb|43bc)/ { if (!found) { print $1; found=1 } }')"
++mac=""
++if [[ -n $bdf ]]; then
++  net_addrs=("$pci_devices/$bdf"/net/*/address)
++  mac="$(cat "${net_addrs[0]}" 2>/dev/null || true)"
++fi
++
++work="$(mktemp)"
++if [[ -n $mac ]]; then
++  sed "s/^macaddr=.*/macaddr=$mac/" "$src" >"$work"
++else
++  # No MAC discoverable: drop the line and let the firmware use the OTP
++  # address, which is how these NICs already run with no NVRAM at all.
++  sed '/^macaddr=/d' "$src" >"$work"
++fi
++
++sudo install -Dm644 "$work" "$dest"
++rm -f "$work"
++
++# brcmfmac reads the NVRAM when the module loads. Reloading it here would drop
++# the user's live Wi-Fi connection, possibly the one carrying this update.
++omarchy-state set reboot-required
+diff --git a/test/shell.d/brcmfmac-nvram-test.sh b/test/shell.d/brcmfmac-nvram-test.sh
+new file mode 100755
+index 00000000000..d017136c389
+--- /dev/null
++++ b/test/shell.d/brcmfmac-nvram-test.sh
+@@ -0,0 +1,235 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++leaf="$ROOT/install/hardware/apple/fix-brcmfmac-nvram.sh"
++all="$ROOT/install/hardware/all.sh"
++asset="$ROOT/default/firmware/apple/brcmfmac43602-pcie.txt"
++migration="$ROOT/migrations/1786961462.sh"
++
++grep -q 'apple/fix-brcmfmac-nvram.sh' "$all" ||
++  fail "the BCM43602 NVRAM leaf runs during hardware setup"
++pass "the BCM43602 NVRAM leaf runs during hardware setup"
++
++# The vendored NVRAM is the fix: ccode=0/regrev=1 pin the "world" regulatory
++# domain around the firmware's broken country detection (kernel bug 193121).
++grep -qx 'ccode=0' "$asset" || fail "the vendored NVRAM keeps ccode=0"
++grep -qx 'regrev=1' "$asset" || fail "the vendored NVRAM keeps regrev=1"
++grep -q '^macaddr=' "$asset" ||
++  fail "the vendored NVRAM carries a macaddr placeholder to substitute"
++grep -q '193121' "$asset" || fail "the vendored NVRAM documents its provenance"
++grep -qF 'https://bugzilla.kernel.org/attachment.cgi?id=285753' "$asset" ||
++  fail "the vendored NVRAM names the exact attachment it was vendored from"
++pass "the vendored NVRAM keeps ccode=0/regrev=1 and documents its provenance"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++stub_bin="$test_tmp/bin"
++calls="$test_tmp/calls.log"
++dest="$test_tmp/firmware/brcm/brcmfmac43602-pcie.txt"
++pci_devices="$test_tmp/sys-pci"
++mkdir -p "$stub_bin" "$test_tmp/dmi"
++
++cat >"$stub_bin/lspci" <<'SH'
++#!/bin/bash
++
++# Real lspci prints the domain in the BDF only when -D is passed, and /sys uses
++# the domain form, so a consumer regressed to parsing plain lspci -nn output
++# finds no MAC here and the tests that expect one fail loudly.
++domain=0
++for arg in "$@"; do
++  if [[ $arg == -*D* ]]; then
++    domain=1
++  fi
++done
++
++if (( domain == 1 )); then
++  wifi_bdf=0000:03:00.0
++  filler_bdf=0000:02:00.0
++else
++  wifi_bdf=03:00.0
++  filler_bdf=02:00.0
++fi
++
++# Chatty like real lspci: keep writing well past the pipe buffer after the
++# match, so a partially-read pipe would kill this stub with SIGPIPE and
++# pipefail would read that as "no such hardware" (#6608).
++if [[ -n ${WIFI_ID:-} ]]; then
++  echo "$wifi_bdf Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]"
++fi
++for _ in {1..4096}; do
++  echo "$filler_bdf Host bridge [0600]: Filler Device [ffff:0000]"
++done
++SH
++
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++"$@"
++SH
++
++# Stubbed rather than run: the real one would write the running user's state.
++cat >"$stub_bin/omarchy-state" <<'SH'
++#!/bin/bash
++
++printf 'omarchy-state' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++
++chmod +x "$stub_bin"/*
++
++# The NIC's live address, exposed the way /sys does: under the PCI device's
++# net/ directory, named for the bdf the lspci stub reports.
++provide_mac() {
++  mkdir -p "$pci_devices/0000:03:00.0/net/wlp3s0"
++  printf 'aa:bb:cc:dd:ee:ff\n' >"$pci_devices/0000:03:00.0/net/wlp3s0/address"
++}
++
++# The leaf reads absolute paths, so redirect them into the sandbox with sed and
++# point OMARCHY_PATH at the real tree for the vendored asset. pipefail is on,
++# so a partially-read lspci pipe would go silent here the way #6608 did.
++run_leaf() {
++  local vendor="$1" wifi_id="${2:-}"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++
++  local script="$test_tmp/leaf.sh"
++  sed -e "s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g" \
++      -e "s|/usr/lib/firmware/brcm|$test_tmp/firmware/brcm|g" \
++      -e "s|/sys/bus/pci/devices|$pci_devices|g" \
++      "$leaf" >"$script"
++
++  WIFI_ID="$wifi_id" PATH="$stub_bin:$PATH" OMARCHY_PATH="$ROOT" \
++    bash -eE -o pipefail -c 'source "$1"' bash "$script" </dev/null
++}
++
++# BCM43602 and its single-band variants, on a Mac with no T2 to detect.
++for wifi_id in 43ba 43bb 43bc; do
++  rm -rf "$test_tmp/firmware" "$pci_devices"
++  provide_mac
++  run_leaf "Apple Inc." "$wifi_id" >/dev/null
++  [[ -f $dest ]] || fail "a Mac with 14e4:$wifi_id gets the NVRAM"
++  [[ $(stat -c %a "$dest") == "644" ]] ||
++    fail "the NVRAM installs world-readable" "14e4:$wifi_id: $(stat -c %a "$dest")"
++  grep -qx 'ccode=0' "$dest" || fail "the installed NVRAM keeps ccode=0" "14e4:$wifi_id"
++  grep -qx 'regrev=1' "$dest" || fail "the installed NVRAM keeps regrev=1" "14e4:$wifi_id"
++  grep -qx 'macaddr=aa:bb:cc:dd:ee:ff' "$dest" ||
++    fail "the installed NVRAM carries the NIC's live MAC" "14e4:$wifi_id: $(grep '^macaddr' "$dest")"
++done
++pass "every BCM43602 part gets the NVRAM with its live MAC substituted"
++
++# Older Macs report the vendor differently.
++rm -rf "$test_tmp/firmware" "$pci_devices"
++provide_mac
++run_leaf "Apple Computer, Inc." 43ba >/dev/null
++[[ -f $dest ]] || fail "the older Apple vendor string is recognized"
++pass "the older Apple vendor string is recognized"
++
++# With no MAC discoverable the line goes away entirely; the firmware falls back
++# to the OTP address, which is how these NICs already run with no NVRAM.
++rm -rf "$test_tmp/firmware" "$pci_devices"
++run_leaf "Apple Inc." 43ba >/dev/null
++[[ -f $dest ]] || fail "a Mac with no discoverable MAC still gets the NVRAM"
++! grep -q '^macaddr=' "$dest" ||
++  fail "the macaddr line is stripped when no MAC is discoverable" "$(grep '^macaddr' "$dest")"
++grep -qx 'ccode=0' "$dest" || fail "the installed NVRAM keeps ccode=0"
++pass "the macaddr line is stripped when no MAC is discoverable"
++
++# BCM4360 Macs run the out-of-tree wl driver, which never reads this file, so
++# installing it would only look like the machine had been dealt with.
++rm -rf "$test_tmp/firmware" "$pci_devices"
++run_leaf "Apple Inc." 43a0 >/dev/null
++[[ ! -e $dest ]] || fail "a Mac whose Wi-Fi the wl driver drives is left alone"
++pass "a Mac whose Wi-Fi the wl driver drives is left alone"
++
++# Plenty of non-Apple hardware uses brcmfmac and does not share this bug.
++rm -rf "$test_tmp/firmware"
++run_leaf "LENOVO" 43ba >/dev/null
++[[ ! -e $dest ]] || fail "non-Apple hardware is left alone"
++pass "non-Apple hardware is left alone"
++
++# An iMac on Ethernet alone has no 14e4 device for the gate to match at all.
++run_leaf "Apple Inc." "" >/dev/null
++[[ ! -e $dest ]] || fail "a Mac with no wireless device is left alone"
++pass "a Mac with no wireless device is left alone"
++
++# An existing file wins, user-placed or package-shipped.
++rm -rf "$test_tmp/firmware" "$pci_devices"
++provide_mac
++mkdir -p "$(dirname "$dest")"
++printf 'user-owned\n' >"$dest"
++run_leaf "Apple Inc." 43ba >/dev/null
++grep -qx 'user-owned' "$dest" ||
++  fail "an existing NVRAM is never clobbered" "$(cat "$dest")"
++pass "an existing NVRAM is never clobbered"
++
++# Installs that predate the leaf never ran it, so the migration has to reach
++# them. It runs as the user under pipefail, the context #6608 was about.
++run_migration() {
++  local vendor="$1" wifi_id="${2:-}"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  : >"$calls"
++
++  WIFI_ID="$wifi_id" PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
++    OMARCHY_BRCMFMAC_NVRAM_DMI_VENDOR="$test_tmp/dmi/sys_vendor" \
++    OMARCHY_BRCMFMAC_NVRAM_PCI_DEVICES="$pci_devices" \
++    OMARCHY_BRCMFMAC_NVRAM_DEST="$dest" \
++    bash -euo pipefail "$migration" >/dev/null
++}
++
++# The machine this was written for: a Mac with a BCM43602 and no NVRAM.
++rm -rf "$test_tmp/firmware" "$pci_devices"
++provide_mac
++run_migration "Apple Inc." 43ba
++grep -qx 'ccode=0' "$dest" 2>/dev/null ||
++  fail "the migration installs the NVRAM" "$(ls -R "$test_tmp/firmware" 2>&1)"
++grep -qx 'macaddr=aa:bb:cc:dd:ee:ff' "$dest" ||
++  fail "the migration substitutes the live MAC" "$(grep '^macaddr' "$dest")"
++# The NVRAM only reaches the firmware when brcmfmac next loads.
++grep -Fq $'omarchy-state\tset\treboot-required' "$calls" ||
++  fail "the migration asks for the reboot that applies it" "$(cat "$calls")"
++pass "the migration installs the NVRAM and asks for a reboot"
++
++run_migration "Apple Inc." 43ba
++[[ ! -s $calls ]] || fail "a repaired install is left untouched" "$(cat "$calls")"
++pass "the migration is idempotent"
++
++# No sysfs address for the NIC: the macaddr line is stripped rather than left
++# as the donor board's, and the reboot is still requested.
++rm -rf "$test_tmp/firmware" "$pci_devices"
++run_migration "Apple Inc." 43ba
++[[ -f $dest ]] ||
++  fail "the migration installs the NVRAM without a discoverable MAC" "$(ls -R "$test_tmp/firmware" 2>&1)"
++! grep -q '^macaddr=' "$dest" ||
++  fail "the migration strips macaddr when no MAC is discoverable" "$(grep '^macaddr' "$dest")"
++grep -Fq $'omarchy-state\tset\treboot-required' "$calls" ||
++  fail "the migration still asks for the reboot that applies it" "$(cat "$calls")"
++pass "the migration strips macaddr when no MAC is discoverable and still asks for a reboot"
++
++# A file that appeared between leaf and migration -- package update or user --
++# outranks the vendored copy.
++rm -rf "$test_tmp/firmware"
++mkdir -p "$(dirname "$dest")"
++printf 'package-shipped\n' >"$dest"
++run_migration "Apple Inc." 43ba
++grep -qx 'package-shipped' "$dest" ||
++  fail "the migration never overwrites an existing NVRAM" "$(cat "$dest")"
++[[ ! -s $calls ]] || fail "the migration escalates nothing when the file already exists" "$(cat "$calls")"
++pass "the migration never overwrites an existing NVRAM"
++
++rm -rf "$test_tmp/firmware"
++run_migration "Apple Inc." 43a0
++[[ ! -e $dest ]] || fail "the migration skips a Mac the wl driver drives"
++[[ ! -s $calls ]] || fail "the migration escalates nothing on unaffected Macs" "$(cat "$calls")"
++pass "the migration skips hardware the NVRAM does not describe"
++
++run_migration "LENOVO" 43ba
++[[ ! -e $dest ]] || fail "the migration skips non-Apple hardware"
++[[ ! -s $calls ]] || fail "the migration escalates nothing on non-Apple hardware" "$(cat "$calls")"
++pass "the migration skips non-Apple hardware"

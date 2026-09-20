@@ -1,0 +1,22 @@
+{
+  "exit_code": 0,
+  "passed": true,
+  "assertions": 4,
+  "candidate_tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+  "script_sha256": "ff0ecc2f71a832f445da2b549fd7650d11c8552ac02390b1f62eb7554f5e6500",
+  "helper_inputs": {
+    "bin/omarchy-pkg-add": "76bf74a1e4e65d07a29c06ebc5a621bf36662efc0a175ffc53b723bd80339a3e",
+    "bin/omarchy-pkg-missing": "c4f92a3341fc894614ca93a6134d284742ceff8c01e1712c8d484f74207a1473",
+    "bin/omarchy-hw-facetimehd": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+    "install/hardware/apple/fix-facetimehd.sh": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891"
+  },
+  "package_inputs": {
+    "facetimehd-dkms-0.7.2-1-any.pkg.tar.zst": "9354c0f3f6c2fe54c433a5328ff5eeb4aa4949f6d8b186b9ef6e1ab4ccc6279f",
+    "facetimehd-firmware-1:1.43_5-2-any.pkg.tar.zst": "bf8df26d1f54a34581b3d05d8ba125d96c32f3cfc2866066e2178bbcb8f638b1",
+    "facetimehd-data-5.1.5769-2-any.pkg.tar.zst": "b8c9228021d4851d882f86ea0a640bfe14eb4a4d0838c39a59b66b0a39cb8eb1"
+  },
+  "host_installed": false,
+  "hardware_verified": false,
+  "isolation": "Unprivileged bubblewrap root namespace; read-only host, private pacman database, root and cache, disconnected network.",
+  "limits": "The positive fixture assumes DKMS as a base dependency and disables signatures in its private file repository. It checks actual package resolution/payload/cache/rerun behavior, not real ISO boot, signing or package DKMS hooks. Real private DKMS build evidence is separate."
+}

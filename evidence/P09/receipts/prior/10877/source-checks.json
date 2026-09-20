@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/apple-nvme-suspend-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "ok - Apple NVMe suspend fix follows the actual NVMe controller PCI address\nok - Apple NVMe suspend fix rejects non-PCI controller paths\nok - Apple NVMe suspend fix requires a d3cold_allowed target\nok - Apple NVMe suspend unit targets the discovered controller\nok - Apple NVMe suspend fix gates legacy D3cold restoration on the old unit\n"
+    }
+  ]
+}

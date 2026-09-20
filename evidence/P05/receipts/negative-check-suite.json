@@ -1,0 +1,23 @@
+{
+  "tests": [
+    "test/shell.d/display-source-panel-negative-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hyprland-monitor-disable-ghosts": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73",
+    "bin/omarchy-hyprland-monitor-modeless": "81e5c83170ebc87a1e6af2974168c3e463a6fba096023dfc85164101089577d8",
+    "bin/omarchy-hyprland-monitor-watch": "254439820dbb959ca439b5f4833bbc6c8725025baab058ae97c899fca7c42ab0",
+    "bin/omarchy-monitor-state": "f807549eacfd6079d513a2cf54f896eb9695fb34415e9f696853bd6d0e0dc32e",
+    "shell/plugins/panels/monitor/Model.js": "9dd9cb7f7dc11f16e571a48bf2a7c51be75ddaef3d4d5f35c511be8f91ecd2ec",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/monitor-modeless-test.sh": "fd9440cf1eebad32e373aa8a35e630ba794e09ec4735c47158d5a581eb649871",
+    "test/shell.d/monitor-panel-pipeline-test.sh": "2a2c15b6763dae6a1e6f246bb45e6b678a23bf47912ff6d7f197b4d4450cbebf",
+    "test/shell.d/monitor-state-test.sh": "90237d23388db4d6b9e8307be2ad330668af7da782e13db9674d9fdafea813db",
+    "test/shell.d/monitor-test.sh": "1e5ad6b7476d2bce30064aaa673a1a980c786ebafa0d71d4e9fa287307613b48",
+    "test/shell.d/display-guard-observations-test.sh": "b505a0d578741dc28b0a2f15bd79736fafd5228f9a6dd33226609d7439f23ca3",
+    "test/fixtures/p05/source-Model.js": "2919c7279842c6cacd2ff1dd131d8ba65f3456902c9f33e0d776d203f5221946",
+    "test/fixtures/p05/target-Model.js": "9dd9cb7f7dc11f16e571a48bf2a7c51be75ddaef3d4d5f35c511be8f91ecd2ec",
+    "test/fixtures/p05/target-monitor-state": "a45baaef96920b37bf7dda77146ea49cf49d9e374e636a72523cc07ed767d55f",
+    "shell/plugins/panels/monitor/Panel.qml": "2f3f95e5fc75af2af1f1af418a65469c37714b2bec38cfd2206bdd3f1f1b0e69",
+    "test/shell.d/display-source-panel-negative-test.sh": "445e1b50c0b3f8cf295ee775e5bf03363b8cb7ba86895f35b078da41681209d6"
+  }
+}

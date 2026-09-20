@@ -1,0 +1,17 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
+  "tests": [
+    "test/shell.d/broadcom-wl-headers-migration-test.sh",
+    "test/shell.d/kernel-headers-migration-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-pkg-add": "76bf74a1e4e65d07a29c06ebc5a621bf36662efc0a175ffc53b723bd80339a3e",
+    "bin/omarchy-pkg-missing": "c4f92a3341fc894614ca93a6134d284742ceff8c01e1712c8d484f74207a1473",
+    "migrations/1789444024.sh": "774584d820d0e4ac2940fb4d465b84ac4facf0a296438c9f2681b9efccc6f11e",
+    "migrations/1789546355.sh": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/broadcom-wl-headers-migration-test.sh": "5bf51cc3b4921891caa087c81c67eb147f7d08e7855d6c7a80c1538e63e661fc",
+    "test/shell.d/kernel-headers-migration-test.sh": "d15caeb2cc16ff17c02187d8d178d4e0ed2e212d19e62bfa2ac70d773cadd4a8"
+  }
+}

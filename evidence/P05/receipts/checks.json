@@ -1,0 +1,35 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/monitor-modeless-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 22,
+      "output": "ok - a monitor brought up with no mode is detected\nok - one modeless monitor among working ones is detected\nok - a modeless mirrored monitor is detected\nok - a working monitor is not reported as modeless\nok - a deliberately disabled monitor is not reported as modeless\nok - a session with no monitors is not reported as modeless\nok - an empty duplicate internal connector is disabled\nok - a modeless external monitor remains eligible for recovery\nok - the only internal connector is never disabled\nok - an already disabled duplicate internal connector is left alone\nok - the empty connector is detected independently of eDP numbering\nok - an unsafe connector name is never evaluated as Lua\nok - an unreadable monitor payload cannot say\nok - an unreachable compositor cannot say\nok - a ghost internal connector is disabled without a reload loop\nok - recovery reloads until the monitor comes back, then stops on its own\nok - a monitor left at 0x0 by a reload is recovered\nok - an echoed configreloaded does not stack a second recovery loop\nok - recovery holds off while the reload guard is paused\nok - recovery keeps asking after the compositor could not answer\nok - a trigger contending with the recovery lock is not dropped\nok - a healthy machine is never reloaded\n"
+    },
+    {
+      "test": "test/shell.d/monitor-state-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 8,
+      "output": "ok - monitor state keeps its lines aligned when nothing is mirrored\nok - monitor state reports the external monitor when it mirrors the internal\nok - monitor state reports the external monitor when the internal mirrors it\nok - monitor state separates a disabled internal monitor from a missing one\nok - monitor state lists every display with its enabled and focused state\nok - monitor state omits an empty duplicate internal connector\nok - monitor state omits a disabled empty internal connector\nok - monitor state omits an empty duplicate regardless of eDP numbering\n"
+    },
+    {
+      "test": "test/shell.d/monitor-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 21,
+      "output": "ok - monitor clamps minimum brightness\nok - monitor clamps maximum brightness\nok - monitor rounds brightness\nok - monitor rejects invalid brightness\nok - monitor normalizes fractional scale\nok - monitor rejects invalid scale\nok - monitor matches clean VM scale\nok - monitor preserves an already clean scale\nok - monitor matches clean physical display scale\nok - monitor rejects a missing display mode\nok - monitor selects an approximated VM scale\nok - monitor selects an exact preset\nok - monitor keeps distinct approximated VM scales\nok - monitor keeps distinct approximated physical display scales\nok - monitor collapses presets with duplicate effective scales\nok - monitor hides presets the current mode cannot reach\nok - monitor keeps presets until display dimensions are known\nok - monitor names very bright displays\nok - monitor names dim displays\nok - monitor parses display state\nok - monitor handles invalid display JSON\n"
+    },
+    {
+      "test": "test/shell.d/monitor-panel-pipeline-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 10,
+      "output": "ok - panel protocol retains eight lines\nok - real external monitor awaiting mode recovery remains available in the panel\nok - enabled display count includes the recoverable real monitor\nok - panel protocol retains eight lines\nok - disabled real panel remains listed while a disabled identityless ghost is omitted\nok - disabled panels do not count as enabled\nok - panel protocol retains eight lines\nok - advertised modes suffice while identity and geometry are temporarily missing\nok - panel protocol retains eight lines\nok - empty duplicate does not reappear after model parsing\n"
+    }
+  ]
+}

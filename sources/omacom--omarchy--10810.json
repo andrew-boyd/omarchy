@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10810",
+  "repository": "omacom/omarchy",
+  "number": 10810,
+  "title": "Detect BCM4360/BCM4331 from sysfs instead of lspci",
+  "author": "Chessing234",
+  "head_sha": "88cdd1508ad0a031602e56ab814948e56445c1d6",
+  "state": "closed",
+  "updated_at": "2026-09-16T08:24:36Z",
+  "body": "## Summary\n- `fix-bcm43xx.sh` dumped `lspci -nn` then grepped the same snapshot twice.\n- `omarchy-hw-bcm43xx` matches 14e4:43a0/4331 from sysfs. Newer Broadcom parts stay on brcmfmac.\n\n## Test plan\n- [x] `test/shell.d/hw-bcm43xx-test.sh`\n- [ ] A 2013\u20132015 MacBook still gets broadcom-wl-dkms\n",
+  "original_source_changed": false
+}

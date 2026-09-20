@@ -1,0 +1,114 @@
+{
+  "repository": "omacom/omarchy-pkgs",
+  "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+  "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+  "patch_sha256": "0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363",
+  "packages": [
+    "fprintd-t1bridge",
+    "libfprint-t1bridge",
+    "t1bridge",
+    "t1bridge-dkms",
+    "t1bridge-omarchy"
+  ],
+  "files": [
+    {
+      "path": "pkgbuilds/t1bridge/PKGBUILD",
+      "source": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge.PKGBUILD",
+      "source_sha256": "5b97cc119c3b6d3ab1389bac393b080463af35a71f1d3382dcde6adb7882e598",
+      "sha256": "a86db89024fd94ff82dc4e2f4da8f68246b246727e0ef1beceeed618b8a36e89",
+      "identical_to_source": false,
+      "adaptation": "Resolve the original local archive name at its published URL; keep version, checksum, functions and hardware/package policy unchanged."
+    },
+    {
+      "path": "pkgbuilds/t1bridge-dkms/PKGBUILD",
+      "source": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-dkms.PKGBUILD",
+      "source_sha256": "6fe71e5fe04dbfb9ba5e3ceaaea58dfa8c3d18fa8140159d8da85f2d28f6f7d9",
+      "sha256": "f7d6797df16c444153a6399460ddcce7daf19e139aada15c83d3aafbc435beab",
+      "identical_to_source": false,
+      "adaptation": "Resolve the original local archive name at its published URL; keep version, checksum, functions and hardware/package policy unchanged."
+    },
+    {
+      "path": "pkgbuilds/t1bridge-omarchy/PKGBUILD",
+      "source": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-omarchy.PKGBUILD",
+      "source_sha256": "02b98aa899d598052c844fd1d63e0d693e9eaf1c692a99ef4d31de866009defa",
+      "sha256": "f3987d391e9a0bc9946e77c63426a426b51f6a16d4487a7457c86f4a5d11e918",
+      "identical_to_source": false,
+      "adaptation": "Resolve the original local archive name at its published URL; keep version, checksum, functions and hardware/package policy unchanged."
+    },
+    {
+      "path": "pkgbuilds/libfprint-t1bridge/0001-Add-T1Bridge-fingerprint-driver.patch",
+      "source": "t1bridge-0.1.9.tar.gz:packaging/arch/libfprint-t1bridge/0001-Add-T1Bridge-fingerprint-driver.patch",
+      "source_sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+      "sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+      "identical_to_source": true,
+      "adaptation": null
+    },
+    {
+      "path": "pkgbuilds/libfprint-t1bridge/0002-Use-relative-test-helper-path.patch",
+      "source": "t1bridge-0.1.9.tar.gz:packaging/arch/libfprint-t1bridge/0002-Use-relative-test-helper-path.patch",
+      "source_sha256": "43a10082d4909eb0ba161679537dae9ab23835f69f20d414c671251aae5424ed",
+      "sha256": "43a10082d4909eb0ba161679537dae9ab23835f69f20d414c671251aae5424ed",
+      "identical_to_source": true,
+      "adaptation": null
+    },
+    {
+      "path": "pkgbuilds/libfprint-t1bridge/PKGBUILD",
+      "source": "t1bridge-0.1.9.tar.gz:packaging/arch/libfprint-t1bridge/PKGBUILD",
+      "source_sha256": "012b08ca156de71ec93603990c811393748abeb4bba5c1434f7862a7b03b2b75",
+      "sha256": "225789c5ce2bd696abce859292d4652e9d3224281aed53000c885577c3a46e58",
+      "identical_to_source": false,
+      "adaptation": "Relocate the unchanged MIT license for the package-repository directory layout. No compiler, dependency or runtime change."
+    },
+    {
+      "path": "pkgbuilds/libfprint-t1bridge/T1Bridge-MIT.txt",
+      "source": "t1bridge-0.1.9.tar.gz:LICENSE",
+      "source_sha256": "a59f489b7cb0fb2df6b806e687e17a3f52df1d63c599a96d86eef895324f9bf1",
+      "sha256": "a59f489b7cb0fb2df6b806e687e17a3f52df1d63c599a96d86eef895324f9bf1",
+      "identical_to_source": true,
+      "adaptation": null
+    },
+    {
+      "path": "pkgbuilds/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch",
+      "source": "t1bridge-0.1.9.tar.gz:packaging/arch/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch",
+      "source_sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+      "sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+      "identical_to_source": true,
+      "adaptation": null
+    },
+    {
+      "path": "pkgbuilds/fprintd-t1bridge/0002-Fix-tests-for-current-GLib.patch",
+      "source": "t1bridge-0.1.9.tar.gz:packaging/arch/fprintd-t1bridge/0002-Fix-tests-for-current-GLib.patch",
+      "source_sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+      "sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+      "identical_to_source": true,
+      "adaptation": null
+    },
+    {
+      "path": "pkgbuilds/fprintd-t1bridge/PKGBUILD",
+      "source": "t1bridge-0.1.9.tar.gz:packaging/arch/fprintd-t1bridge/PKGBUILD",
+      "source_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+      "sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+      "identical_to_source": true,
+      "adaptation": null
+    }
+  ],
+  "public_release_archives": {
+    "t1bridge-0.1.9.tar.gz": "5938c25b710271b78ddc1fef59d6af078ade835e0b5124bc65bcf0777285f166",
+    "t1bridge-omarchy-0.2.1.tar.gz": "bbd4b4a6f923cc308fbdeb6703c0fb71858d68140fa44e10cec217611c1b0e90"
+  },
+  "recipe_metadata": "source:local with release origin; no new updater/release-ring policy",
+  "runtime_source_changed": false,
+  "new_hardware_policy": false,
+  "known_limits": [
+    "Original driver recipe does not declare conflicts with the old SPI/T1 package or require headers for every installed kernel.",
+    "Original optional ALS controller accepts a DPMS-off internal panel in the recorded negative control. The historical repair is excluded.",
+    "Official setup is manual and assumes a prepared system with no competing T1 owner; no new Omarchy installer or migration is supplied.",
+    "The official download endpoints returned 403 during this refresh; cached public archives are checksum-verified, not claimed freshly downloadable.",
+    "The fingerprint libraries are a matched system-wide replacement. No PAM change or real authentication check is performed here."
+  ],
+  "hardware_verified": false,
+  "published": false,
+  "previous_base_sha": "49c44db179b37fc188c698eb90d5e705947d2def",
+  "previous_tree_sha": "76d39635f1ff22a4a3214fb4e3dfff1cc082bba0",
+  "target_rebase_changed_recipe_files": false
+}

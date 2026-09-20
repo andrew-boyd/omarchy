@@ -1,0 +1,8 @@
+[
+  "Record Apple model, PCI 14e4:1570, kernel/header versions and current camera driver/firmware providers. USB/iBridge cameras are outside this candidate.",
+  "Keep a recovery boot entry and record how to restore previous driver, firmware and calibration packages. Review conflicts with existing AUR/Git providers before changing a hardware test system.",
+  "On an agreed candidate and tested kernel, capture the actual package transaction and DKMS logs, module binding and video-device enumeration.",
+  "Capture real frames, reporting resolution, frame rate, orientation, color and low-light behavior. Package checksums and fixture results do not establish image quality or correct calibration.",
+  "Check reboot, repeated setup and suspend/resume with frame capture afterward. Keep existing-install and fresh-install/offline-cache results distinct.",
+  "Restore the prior packages and boot entry through the recorded recovery procedure and confirm prior behavior. No physical trial or rollback was performed here."
+]

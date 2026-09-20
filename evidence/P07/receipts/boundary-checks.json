@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/pio-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 15,
+      "output": "ok - default repair rebuilds once and is idempotent before reboot\nok - exact migration DMI scope excludes MacBook8,10\nok - exact migration DMI scope excludes MacBook9,1\nok - exact migration DMI scope excludes MacBook10,1\nok - exact migration DMI scope excludes MacBookPro13,3\nok - exact migration DMI scope excludes MacBookPro14,2\nok - exact migration DMI scope excludes ThinkPad\nok - exact migration DMI scope excludes \nok - observed defect: a custom boot drop-in without the matched substring is overwritten\nok - observed defect: a comment-only match survives and gets a completion marker\nok - observed defect: missing s2idle is not repaired before recording completion\nok - observed defect: an old marker plus a comment-only match skips all work\nok - a reported rebuild failure stays retryable\nok - successful retry completes after the reported failure\nok - unavailable running command line triggers the source rebuild\n"
+    }
+  ]
+}

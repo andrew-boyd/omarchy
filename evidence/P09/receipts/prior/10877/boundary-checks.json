@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/nvme-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - observed applicability limit: first discovered Samsung controller wins over later Apple controller\nok - installing the new unit alone does not execute its NVMe power write\nok - observed ownership conflict: custom-comment is overwritten; legacy power becomes 1\nok - observed ownership conflict: custom-escaped-comment is overwritten; legacy power becomes 1\nok - observed ownership conflict: custom-no-reference is overwritten; legacy power becomes 0\nok - absence of discoverable NVMe leaves existing unit and GPU power unchanged\nok - a discovered controller at the legacy address does not receive the restore-to-one write\n"
+    }
+  ]
+}

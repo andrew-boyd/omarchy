@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lid-connector-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 3,
+      "output": "ok - observed policy: USB-1 is ignored without consulting device or seat identity\nok - observed policy: the exclusion also covers USB-2 on another card\nok - a connected DP companion remains an external display\n"
+    }
+  ]
+}

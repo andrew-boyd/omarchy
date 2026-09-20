@@ -1,0 +1,149 @@
+diff --git a/install/hardware/apple/fix-spi-keyboard.sh b/install/hardware/apple/fix-spi-keyboard.sh
+index 330081b7631..19e5254224b 100644
+--- a/install/hardware/apple/fix-spi-keyboard.sh
++++ b/install/hardware/apple/fix-spi-keyboard.sh
+@@ -3,7 +3,11 @@ product_name="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"
+ if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123] ]]; then
+   echo "Detected MacBook with SPI keyboard"
+ 
+-  omarchy-pkg-add macbook12-spi-driver-dkms
++  # macbook12-spi-driver-dkms is obsolete: applespi is mainlined (it ships in
++  # the linux package, and its header that the out-of-tree copy needs was
++  # removed in 6.12), so the DKMS build fails on every kernel update once
++  # linux-headers is present. Only the initramfs drop-in below is needed to
++  # get the in-tree module into the initramfs (load-bearing for LUKS roots).
+   sudo mkdir -p /etc/mkinitcpio.conf.d
+   if [[ $product_name == "MacBook8,1" ]]; then
+     echo "MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)" | \
+diff --git a/install/omarchy-other.packages b/install/omarchy-other.packages
+index e5d56d566fe..b78d9ad6c4e 100644
+--- a/install/omarchy-other.packages
++++ b/install/omarchy-other.packages
+@@ -25,7 +25,6 @@ linux-firmware
+ linux-headers
+ linux-ptl
+ linux-ptl-headers
+-macbook12-spi-driver-dkms
+ nvidia-580xx-dkms
+ nvidia-dkms
+ nvidia-open-dkms
+diff --git a/migrations/1788476400.sh b/migrations/1788476400.sh
+new file mode 100644
+index 00000000000..77dc0f0799f
+--- /dev/null
++++ b/migrations/1788476400.sh
+@@ -0,0 +1,12 @@
++echo "Remove the obsolete MacBook SPI keyboard DKMS package"
++
++# applespi is mainlined (it ships with the linux package), so the out-of-tree
++# driver cannot build on current kernels: its include was removed in kernel
++# 6.12 and the DKMS build fails on every kernel update once linux-headers is
++# present. The initramfs drop-in written by
++# install/hardware/apple/fix-spi-keyboard.sh loads the in-tree module instead,
++# so the package is pure failure surface. Idempotent: nothing happens when the
++# package is not installed.
++if omarchy-pkg-present macbook12-spi-driver-dkms; then
++  omarchy-pkg-drop macbook12-spi-driver-dkms
++fi
+diff --git a/test/shell.d/spi-keyboard-test.sh b/test/shell.d/spi-keyboard-test.sh
+new file mode 100755
+index 00000000000..750aff120eb
+--- /dev/null
++++ b/test/shell.d/spi-keyboard-test.sh
+@@ -0,0 +1,96 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp_dir=$(mktemp -d)
++trap 'rm -rf "$tmp_dir"' EXIT
++
++# The leaf reads /sys/class/dmi/id/product_name and writes under
++# /etc/mkinitcpio.conf.d, so a sandboxed copy with those paths rewritten is
++# used, like the other install/hardware tests.
++leaf="$tmp_dir/leaf.sh"
++sed -e "s|/sys/class/dmi/id/product_name|$tmp_dir/product_name|g" \
++  -e "s|/etc/mkinitcpio.conf.d|$tmp_dir/mkinitcpio.conf.d|g" \
++  "$ROOT/install/hardware/apple/fix-spi-keyboard.sh" >"$leaf"
++chmod +x "$leaf"
++
++mkdir -p "$tmp_dir/bin"
++cat >"$tmp_dir/bin/omarchy-pkg-add" <<'EOF'
++#!/bin/bash
++printf '%s\n' "$*" >>"$PKG_ADD_LOG"
++EOF
++cat >"$tmp_dir/bin/sudo" <<'EOF'
++#!/bin/bash
++exec "$@"
++EOF
++chmod +x "$tmp_dir/bin"/*
++
++run_leaf() {
++  printf '%s\n' "$1" >"$tmp_dir/product_name"
++  : >"$tmp_dir/pkg-add.log"
++  PKG_ADD_LOG="$tmp_dir/pkg-add.log" \
++    PATH="$tmp_dir/bin:$PATH" \
++    bash "$leaf"
++}
++
++# A matched MacBook: the initramfs drop-in has to keep the SPI modules (this
++# is what makes the keyboard work at the LUKS prompt), but the DKMS package is
++# obsolete — applespi is in-tree and the out-of-tree copy cannot build on
++# modern kernels — so it must not be installed anymore.
++run_leaf "MacBookPro14,1"
++[[ -s $tmp_dir/pkg-add.log ]] &&
++  fail "a matched MacBook no longer installs the obsolete DKMS package" \
++    "$(cat "$tmp_dir/pkg-add.log")"
++grep -q '^MODULES=(applespi intel_lpss_pci spi_pxa2xx_platform)$' \
++  "$tmp_dir/mkinitcpio.conf.d/macbook_spi_modules.conf" ||
++  fail "the SPI initramfs drop-in is still written" \
++    "$(cat "$tmp_dir/mkinitcpio.conf.d/macbook_spi_modules.conf" 2>/dev/null || echo missing)"
++pass "matched MacBook keeps the initramfs drop-in and skips the DKMS package"
++
++# An unmatched machine must be left completely alone.
++rm -rf "$tmp_dir/mkinitcpio.conf.d"
++run_leaf "MacBookPro15,2"
++[[ -s $tmp_dir/pkg-add.log ]] &&
++  fail "an unmatched machine does not install the DKMS package"
++[[ -e $tmp_dir/mkinitcpio.conf.d ]] &&
++  fail "an unmatched machine does not write the drop-in"
++pass "unmatched hardware is untouched"
++
++# Nothing installs the package now, so the ISO has no reason to cache it.
++! grep -qx 'macbook12-spi-driver-dkms' "$ROOT/install/omarchy-other.packages" ||
++  fail "the ISO no longer caches macbook12-spi-driver-dkms"
++pass "the obsolete DKMS package is gone from the ISO package cache list"
++
++# The install script no longer adds the package, but machines that ran the
++# old installer still carry one that fails to build on every kernel update
++# once linux-headers is present. The migration drops it idempotently,
++# following the tiny-dfr precedent.
++cat >"$tmp_dir/bin/omarchy-pkg-present" <<'EOF'
++#!/bin/bash
++[[ -e $PKG_STATE ]] && [[ ${1:-} == macbook12-spi-driver-dkms ]]
++EOF
++cat >"$tmp_dir/bin/omarchy-pkg-drop" <<'EOF'
++#!/bin/bash
++printf '%s\n' "$*" >>"$PKG_DROP_LOG"
++rm -f "$PKG_STATE"
++EOF
++chmod +x "$tmp_dir/bin/omarchy-pkg-present" "$tmp_dir/bin/omarchy-pkg-drop"
++
++migration="$ROOT/migrations/1788476400.sh"
++: >"$tmp_dir/pkg.installed"
++: >"$tmp_dir/pkg-drop.log"
++PKG_STATE="$tmp_dir/pkg.installed" PKG_DROP_LOG="$tmp_dir/pkg-drop.log" \
++  PATH="$tmp_dir/bin:$PATH" HOME="$tmp_dir" bash "$migration"
++grep -qx macbook12-spi-driver-dkms "$tmp_dir/pkg-drop.log" ||
++  fail "the migration drops the obsolete DKMS package" \
++    "$(cat "$tmp_dir/pkg-drop.log")"
++drops_before=$(wc -l <"$tmp_dir/pkg-drop.log")
++PKG_STATE="$tmp_dir/pkg.installed" PKG_DROP_LOG="$tmp_dir/pkg-drop.log" \
++  PATH="$tmp_dir/bin:$PATH" HOME="$tmp_dir" bash "$migration"
++(( $(wc -l <"$tmp_dir/pkg-drop.log") == drops_before )) ||
++  fail "the migration only drops the package once" "$(cat "$tmp_dir/pkg-drop.log")"
++pass "installed machines get the obsolete DKMS package removed once"
++
++pass "SPI keyboard detection writes only the needed initramfs drop-in"

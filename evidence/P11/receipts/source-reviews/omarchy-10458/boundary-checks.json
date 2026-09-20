@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/audio-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 4,
+      "output": "ok - observation: iMac migration replaces a custom same-name rule and removes routes\nok - observation: direct iMac migration rerun resets routes and reissues mixer commands\nok - observation: iMac migration tolerates failed hardware mixer commands\nok - observation: absent matching aplay line fails iMac migration after config changes\n"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "number": 10877,
+  "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+  "source_ancestor": "a73bcbfc0a9570ba7072791639dc97eb567b6f41",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "800881b18d7e18ab0b3a033659c0a9903c7249eddd7c93144dbbdfebde1c0a04",
+  "files": [
+    {
+      "path": "install/hardware/apple/fix-suspend-nvme.sh",
+      "source_sha256": "cf9c468974eae88911fb67eb76930adbc01af74bc74448e23497d480a8faab43",
+      "identical_to_source": true,
+      "candidate_sha256": "cf9c468974eae88911fb67eb76930adbc01af74bc74448e23497d480a8faab43"
+    },
+    {
+      "path": "test/shell.d/apple-nvme-suspend-test.sh",
+      "source_sha256": "9f5fa3e8a8e2ae56c2423e9a573f94665e6a1884c97324f2b420d2402e8807d8",
+      "identical_to_source": true,
+      "candidate_sha256": "9f5fa3e8a8e2ae56c2423e9a573f94665e6a1884c97324f2b420d2402e8807d8"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "15d2080a662782af15e6e7a63c6a243ed1a14807"
+}

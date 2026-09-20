@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/apple-suspend-nvme-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 8,
+      "output": "ok - every Mac with Apple's NVMe controller gets the fix\nok - the unit has no escape sequences systemd ignores\nok - 15-inch MacBook Pros, whose 01:00.0 is the GPU, are left alone\nok - a device at 01:00.0 that is not Apple's controller is left alone\nok - the migration removes the service where 01:00.0 is not Apple's controller\nok - the migration is idempotent\nok - the migration keeps the service on Macs with Apple's NVMe controller\nok - the migration skips machines that never had the service\n"
+    }
+  ]
+}

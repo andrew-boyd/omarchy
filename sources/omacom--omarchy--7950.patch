@@ -1,0 +1,326 @@
+diff --git a/bin/omarchy-hw-apple-t1-touchbar-disp-bind b/bin/omarchy-hw-apple-t1-touchbar-disp-bind
+new file mode 100755
+index 00000000000..54d2fde2a1f
+--- /dev/null
++++ b/bin/omarchy-hw-apple-t1-touchbar-disp-bind
+@@ -0,0 +1,30 @@
++#!/bin/bash
++
++# omarchy:summary=Force-bind the T1 Touch Bar's virtual display sub-device
++# omarchy:hidden=true
++
++# apple-ib-tb spawns a virtual HID sub-device (1D6B:0301) once the iBridge's
++# real 05AC:8600 interfaces are bound to apple-ibridge-hid. That sub-device
++# carries the "display on" field, but it does not reliably win its own
++# auto-bind race — the bar then shows icons but stays dark, with nothing
++# logged anywhere. It appears asynchronously right after the parent bind, so
++# this retries briefly rather than assuming it's already there.
++hid_root=${OMARCHY_T1_HID_ROOT:-/sys/bus/hid}
++
++for _ in $(seq 1 15); do
++  found=0
++  for dev in "$hid_root"/devices/0003:1D6B:0301.*; do
++    [[ -d $dev ]] || continue
++    found=1
++    name=$(basename "$dev")
++    drv=""
++    [[ -e $dev/driver ]] && drv=$(basename "$(readlink -f "$dev/driver")")
++    [[ $drv == apple-ib-touchbar ]] && continue
++    [[ -n $drv && -e "$hid_root/drivers/$drv/unbind" ]] &&
++      echo -n "$name" >"$hid_root/drivers/$drv/unbind"
++    [[ -e "$hid_root/drivers/apple-ib-touchbar/bind" ]] &&
++      echo -n "$name" >"$hid_root/drivers/apple-ib-touchbar/bind"
++  done
++  ((found)) && break
++  sleep 0.2
++done
+diff --git a/default/udev/apple-t1-touchbar-disp.rules b/default/udev/apple-t1-touchbar-disp.rules
+new file mode 100644
+index 00000000000..8906835bbab
+--- /dev/null
++++ b/default/udev/apple-t1-touchbar-disp.rules
+@@ -0,0 +1,5 @@
++# The T1 iBridge (05AC:8600) re-enumerates on every resume, and the virtual
++# Touch Bar display sub-device it spawns (1D6B:0301) does not reliably win
++# its own bind race when it reappears. See
++# bin/omarchy-hw-apple-t1-touchbar-disp-bind.
++ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="8600", RUN+="/usr/bin/omarchy-hw-apple-t1-touchbar-disp-bind"
+diff --git a/install/hardware/all.sh b/install/hardware/all.sh
+index 6adcff9c8a4..e17f762ff5e 100644
+--- a/install/hardware/all.sh
++++ b/install/hardware/all.sh
+@@ -33,6 +33,7 @@ run_logged "$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t1-touchbar-disp-bind.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
+diff --git a/install/hardware/apple/fix-t1-touchbar-disp-bind.sh b/install/hardware/apple/fix-t1-touchbar-disp-bind.sh
+new file mode 100644
+index 00000000000..acc54446e8f
+--- /dev/null
++++ b/install/hardware/apple/fix-t1-touchbar-disp-bind.sh
+@@ -0,0 +1,19 @@
++# The T1 Touch Bar's virtual display sub-device (1D6B:0301) does not
++# reliably win its own auto-bind race even once the driver stack is
++# loaded — the bar shows icons but stays dark. See
++# t1-touchbar-disp-bind.sh for the mechanism.
++
++: "${OMARCHY_PATH:=/usr/share/omarchy}"
++: "${OMARCHY_INSTALL:=$OMARCHY_PATH/install}"
++# shellcheck source=t1-touchbar-disp-bind.sh
++source "$OMARCHY_INSTALL/hardware/apple/t1-touchbar-disp-bind.sh"
++
++if ! t1_touchbar_disp_needed; then
++  return 0
++fi
++if t1_touchbar_disp_installed; then
++  return 0
++fi
++
++echo "Wiring up the T1 Touch Bar display-bind fix"
++t1_touchbar_disp_install
+diff --git a/install/hardware/apple/t1-touchbar-disp-bind.sh b/install/hardware/apple/t1-touchbar-disp-bind.sh
+new file mode 100644
+index 00000000000..35fda984cae
+--- /dev/null
++++ b/install/hardware/apple/t1-touchbar-disp-bind.sh
+@@ -0,0 +1,35 @@
++# Shared helpers for the T1 Touch Bar display-bind fix (install leaf + migration).
++#
++# apple-ib-tb spawns a virtual Touch Bar sub-device (1D6B:0301) once the
++# iBridge's 05AC:8600 HID interfaces are on apple-ibridge-hid. That
++# sub-device carries the "display on" field, but it does not reliably win
++# its own auto-bind race, so the bar can show icons and still stay dark.
++# See bin/omarchy-hw-apple-t1-touchbar-disp-bind for the rebind itself and
++# https://github.com/csk-grit42/OmarchyOnMacBookPro14.2-2017---A1706-/blob/main/HOWTO.md
++# (Part 2) for how this was diagnosed on a MacBookPro14,2.
++#
++# This only rebinds the sub-device; it needs a T1 Touch Bar driver already
++# on the system (apple-ib-tb / apple-ibridge — see #7064) to have anything
++# to act on.
++
++t1_touchbar_disp_rule_dest() {
++  printf '%s\n' "${OMARCHY_T1_DISP_RULE_DEST:-/etc/udev/rules.d/91-apple-t1-touchbar-disp.rules}"
++}
++
++t1_touchbar_disp_needed() {
++  local product_name
++  product_name=$(cat "${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}" 2>/dev/null)
++  [[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]]
++}
++
++t1_touchbar_disp_installed() {
++  [[ -f "$(t1_touchbar_disp_rule_dest)" ]]
++}
++
++t1_touchbar_disp_install() {
++  local dest
++  dest=$(t1_touchbar_disp_rule_dest)
++  sudo mkdir -p "$(dirname "$dest")"
++  sudo cp -f "${OMARCHY_PATH:-/usr/share/omarchy}/default/udev/apple-t1-touchbar-disp.rules" "$dest"
++  sudo udevadm control --reload
++}
+diff --git a/migrations/1787508990.sh b/migrations/1787508990.sh
+new file mode 100644
+index 00000000000..7c946320151
+--- /dev/null
++++ b/migrations/1787508990.sh
+@@ -0,0 +1,15 @@
++echo "Wire up the T1 Touch Bar display-bind fix for existing installs"
++
++: "${OMARCHY_PATH:=/usr/share/omarchy}"
++: "${OMARCHY_INSTALL:=$OMARCHY_PATH/install}"
++# shellcheck source=../install/hardware/apple/t1-touchbar-disp-bind.sh
++source "$OMARCHY_INSTALL/hardware/apple/t1-touchbar-disp-bind.sh"
++
++if ! t1_touchbar_disp_needed; then
++  exit 0
++fi
++if t1_touchbar_disp_installed; then
++  exit 0
++fi
++
++t1_touchbar_disp_install
+diff --git a/test/shell.d/apple-t1-touchbar-disp-bind-test.sh b/test/shell.d/apple-t1-touchbar-disp-bind-test.sh
+new file mode 100755
+index 00000000000..7f72fd950a3
+--- /dev/null
++++ b/test/shell.d/apple-t1-touchbar-disp-bind-test.sh
+@@ -0,0 +1,174 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++bind="$ROOT/bin/omarchy-hw-apple-t1-touchbar-disp-bind"
++helpers="$ROOT/install/hardware/apple/t1-touchbar-disp-bind.sh"
++fix="$ROOT/install/hardware/apple/fix-t1-touchbar-disp-bind.sh"
++rule="$ROOT/default/udev/apple-t1-touchbar-disp.rules"
++migration="$ROOT/migrations/1787508990.sh"
++
++[[ -x $bind ]] || fail "the rebind script is executable"
++
++grep -Fq 'omarchy-hw-apple-t1-touchbar-disp-bind' "$rule" ||
++  fail "udev rule runs the rebind script"
++grep -Fq 'idProduct}=="8600"' "$rule" ||
++  fail "udev rule fires on the iBridge USB device, not just module load"
++pass "udev rule rebinds on every iBridge (re)enumeration, including resume"
++
++grep -Fq 'fix-t1-touchbar-disp-bind.sh' "$ROOT/install/hardware/all.sh" ||
++  fail "hardware install runs the display-bind hook"
++pass "display-bind hook is wired into the installer"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++# --- hardware gate ---
++# shellcheck source=../../install/hardware/apple/t1-touchbar-disp-bind.sh
++source "$helpers"
++
++assert_needed() {
++  local model=$1 expect=$2 description=$3
++  local tmp
++  tmp=$(mktemp)
++  printf '%s\n' "$model" >"$tmp"
++  if OMARCHY_DMI_PRODUCT_NAME="$tmp" t1_touchbar_disp_needed; then
++    [[ $expect == yes ]] || fail "$description"
++  else
++    [[ $expect == no ]] || fail "$description"
++  fi
++  rm -f "$tmp"
++  pass "$description"
++}
++
++assert_needed MacBookPro14,3 yes "MacBookPro14,3 is a T1 Touch Bar"
++assert_needed MacBookPro13,2 yes "MacBookPro13,2 is a T1 Touch Bar"
++assert_needed MacBookPro14,2 yes "MacBookPro14,2 is a T1 Touch Bar"
++assert_needed MacBookPro13,1 no "MacBookPro13,1 has no Touch Bar"
++assert_needed MacBookPro15,1 no "MacBookPro15,1 is T2, not T1"
++
++# --- rebind script against a faked /sys/bus/hid tree ---
++# The real unbind/bind sysfs files are write-only actions the kernel consumes
++# to move a driver symlink; a plain tmp file can't reproduce that, so these
++# assert on which files the script writes to rather than the resulting link.
++hid_root="$test_tmp/hid"
++mkdir -p "$hid_root/devices" "$hid_root/drivers/hid-sensor-hub" "$hid_root/drivers/apple-ib-touchbar"
++: >"$hid_root/drivers/hid-sensor-hub/unbind"
++: >"$hid_root/drivers/apple-ib-touchbar/bind"
++
++dev="$hid_root/devices/0003:1D6B:0301.0042"
++mkdir -p "$dev"
++ln -s "../../drivers/hid-sensor-hub" "$dev/driver"
++
++OMARCHY_T1_HID_ROOT="$hid_root" "$bind"
++[[ -s $hid_root/drivers/hid-sensor-hub/unbind ]] ||
++  fail "rebind script unbinds the sub-device from whatever driver holds it"
++[[ -s $hid_root/drivers/apple-ib-touchbar/bind ]] ||
++  fail "rebind script binds the sub-device to apple-ib-touchbar"
++pass "rebind script moves the virtual sub-device onto apple-ib-touchbar"
++
++# Already on the right driver: no unbind attempted.
++already_root="$test_tmp/hid-already"
++mkdir -p "$already_root/devices" "$already_root/drivers/apple-ib-touchbar"
++already_dev="$already_root/devices/0003:1D6B:0301.0042"
++mkdir -p "$already_dev"
++ln -s "../../drivers/apple-ib-touchbar" "$already_dev/driver"
++OMARCHY_T1_HID_ROOT="$already_root" "$bind"
++[[ -L $already_dev/driver ]] || fail "already-bound sub-device keeps its driver link"
++pass "rebind script is a no-op once the sub-device is already on apple-ib-touchbar"
++
++# No sub-device present yet: give up after the retry budget instead of hanging.
++empty_root="$test_tmp/hid-empty"
++mkdir -p "$empty_root/devices"
++time_start=$SECONDS
++OMARCHY_T1_HID_ROOT="$empty_root" "$bind"
++(( SECONDS - time_start < 10 )) ||
++  fail "rebind script does not hang when the sub-device never appears"
++pass "rebind script gives up after its retry budget with no sub-device present"
++
++# --- install hook + migration wiring ---
++stub_bin="$test_tmp/bin"
++calls="$test_tmp/calls.log"
++mkdir -p "$stub_bin"
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++"$@"
++SH
++cat >"$stub_bin/udevadm" <<'SH'
++#!/bin/bash
++printf 'udevadm' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++chmod +x "$stub_bin"/*
++
++dmi="$test_tmp/dmi"
++rule_dest="$test_tmp/etc/udev/rules.d/91-apple-t1-touchbar-disp.rules"
++
++printf 'MacBookPro14,1\n' >"$dmi"
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_DISP_RULE_DEST="$rule_dest" \
++  bash -c 'source "$1"' _ "$fix"
++[[ ! -f $rule_dest ]] || fail "install hook no-ops on non-T1 hardware"
++pass "install hook no-ops on non-T1 hardware"
++
++printf 'MacBookPro14,2\n' >"$dmi"
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_DISP_RULE_DEST="$rule_dest" \
++  bash -c 'source "$1"' _ "$fix"
++[[ -f $rule_dest ]] || fail "install hook writes the udev rule on T1 hardware"
++grep -Fq $'udevadm\tcontrol\t--reload' "$calls" ||
++  fail "install hook reloads udev after writing the rule"
++pass "install hook wires the display-bind fix on T1 hardware"
++
++rm -f "$rule_dest"
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_DISP_RULE_DEST="$rule_dest" \
++  bash -euo pipefail "$migration"
++[[ -f $rule_dest ]] || fail "migration writes the udev rule on existing T1 installs"
++pass "migration wires the display-bind fix on existing T1 installs"
++
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_DISP_RULE_DEST="$rule_dest" \
++  bash -euo pipefail "$migration"
++[[ ! -s $calls ]] || fail "migration is idempotent once already wired" "$(cat "$calls")"
++pass "migration is a no-op on a machine already wired up"
++
++printf 'MacBookPro16,1\n' >"$dmi"
++rm -f "$rule_dest"
++: >"$calls"
++PATH="$stub_bin:$PATH" \
++  TEST_LOG="$calls" \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_INSTALL="$ROOT/install" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_T1_DISP_RULE_DEST="$rule_dest" \
++  bash -euo pipefail "$migration"
++[[ ! -f $rule_dest ]] || fail "migration skips unrelated hardware"
++[[ ! -s $calls ]] || fail "migration skips unrelated hardware" "$(cat "$calls")"
++pass "migration skips unrelated hardware"

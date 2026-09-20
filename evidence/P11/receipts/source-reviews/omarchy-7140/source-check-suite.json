@@ -1,0 +1,14 @@
+{
+  "tests": [
+    "test/shell.d/cs8409-audio-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hw-apple-cs8409": "c9c08621d79fa0ef254fea9353d6a48f6c63967e60e5c98a76f5518ba3fda2b3",
+    "install/hardware/all.sh": "111d735a158618761d1ccd4eaab2dcb343d7148a722f5f72c8cdb3e66651df90",
+    "install/hardware/apple/fix-cs8409-audio.sh": "39f3d39c730b45982ad0c7a7c6a9cf63a94c2b56c9da2897e4fd2277814969dc",
+    "manual/44-mac-support.md": "3b80dc51842b321f9a2977fe124ee3fba899d7249dd341f532eb0ab8b142e898",
+    "migrations/1786889011.sh": "11680b6c555a4cf0d52710a9f7df2ca8762ee1fb079df6db296550afb87e8ebf",
+    "test/shell.d/cs8409-audio-test.sh": "a488c742b2fec1a3b295b6d38d051f96de9db4cd1923b5ee802023ffa20d978e",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

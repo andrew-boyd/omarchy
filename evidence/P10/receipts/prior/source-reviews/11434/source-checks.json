@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": false,
+  "results": [
+    {
+      "test": "test/shell.d/brcmfmac-resume-fix-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 6,
+      "output": "ok - the brcmfmac resume fix runs during hardware setup\nok - the resume unit is wired to every sleep target and the reload helper\nok - a T2 Mac gets the resume unit\nok - every affected Broadcom part on a Mac without a T2 gets the resume unit\nok - a Mac whose Wi-Fi brcmfmac does not drive is left alone\nok - non-Apple hardware is left alone\n/tmp/tmp.Uvf4WJRqfz/etc:\nsystemd\n\n/tmp/tmp.Uvf4WJRqfz/etc/systemd:\nsystem\n\n/tmp/tmp.Uvf4WJRqfz/etc/systemd/system:\nnot ok - the migration installs the resume unit on an existing Mac\n"
+    }
+  ]
+}

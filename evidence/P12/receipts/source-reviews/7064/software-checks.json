@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/t1-touchbar-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 22,
+      "output": "ok - MacBookPro14,3 is a T1 Touch Bar\nok - MacBookPro13,2 is a T1 Touch Bar\nok - MacBookPro13,3 is a T1 Touch Bar\nok - MacBookPro14,2 is a T1 Touch Bar\nok - MacBookPro13,1 has no Touch Bar\nok - MacBookPro14,1 has no Touch Bar\nok - MacBookPro15,1 is T2, not T1\nok - MacBook8,1 is SPI-only\nok - macOS collector is Finder-runnable and bash 3.2 safe\nok - udev rule rebinds when apple_ib_tb loads\nok - T1 install hook is wired\nok - Setup menu exposes the firmware wizard on T1 machines\nok - Mac support chapter documents the USB handoff\nok - firmware lookup finds APPLE/EMBEDDEDOS on USB\nok - firmware copy lands on the ESP without preserving Unix ownership\nok - a firmware-less USB receives the macOS collector\nok - wiring installs the udev rule and module list\nok - install hook no-ops on non-T1 hardware\nDetected MacBook with T1 Touch Bar\nInstalled T1 Touch Bar firmware on the EFI partition\nok - install hook copies firmware and wiring on T1 hardware\nInstall T1 Touch Bar wiring and copy firmware from a USB stick if present\nok - T1 migration installs wiring on T1 hardware\nok - T1 migration reports a firmware copy failure without aborting\nInstall T1 Touch Bar wiring and copy firmware from a USB stick if present\nok - T1 migration skips unrelated hardware\n"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+ok - linux systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-lts systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-zen systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-ptl systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-omarchy-ptl-novrr-mm systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-t2 systems are skipped even with other kernels installed
+ok - a running T2 kernel is excluded even if its package is no longer installed
+ok - ARM systems cannot receive an x86_64 kernel
+not ok - the superseded migration must not install the PTL variant first

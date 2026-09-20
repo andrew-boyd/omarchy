@@ -1,0 +1,9 @@
+[
+  "Review all four inherited configuration defects below before a trial. Use a disposable or independently recoverable installation, inspect the exact drop-in and markers, and do not rely on a completion marker as evidence of effective boot parameters.",
+  "Use a confirmed MacBook8,1 with an external USB keyboard and recovery boot media. Record DMI, kernel, installed SPI provider, boot entry and effective kernel command line; do not extrapolate to later MacBooks or T1.",
+  "Preserve the exact prior Limine drop-in, SPI initramfs configuration and boot artifacts, including whether each file was absent. Record the machine repair marker and each test user migration marker. Test rollback on recoverable media before relying on internal input.",
+  "On an agreed test candidate, verify both parameters reach the actual selected boot entry and /proc/cmdline after reboot; writing a drop-in or completing a rebuild alone does not establish that.",
+  "Check internal keyboard and trackpad at encrypted-disk unlock, login and the desktop. Record failures as well as successful cases and keep the external keyboard available.",
+  "Repeat lid-close and manual suspend/resume cycles, checking input each time. Record the selected sleep mode, elapsed sleep time, kernel messages and any recovery needed. Source reports do not establish power-use or resume behavior on another kernel.",
+  "For rollback, restore the captured prior configuration and boot artifacts through the known recovery route; a rebuild must use the restored configuration. Restore prior marker state deliberately so a pending migration cannot silently reapply the trial. Verify the previous boot entry and input behavior. This checklist has not been exercised on hardware."
+]

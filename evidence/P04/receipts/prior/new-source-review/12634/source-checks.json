@@ -1,0 +1,23 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/monitor-recovery-test.sh",
+      "mode": "fixture",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 18,
+      "output": "ok - monitor watcher retries internal monitor recovery after removal\nok - monitor watcher disables the internal monitor after closed-lid external hotplug\nok - monitor watcher reconciles clamshell state on startup\nok - clamshell poll only runs on a docked laptop, not desktops or undocked laptops\nok - modeless monitor recovery runs one backing-off loop while a monitor has no mode\nok - modeless recovery retries unanswered queries without waiting on a dead compositor\nok - modeless recovery also runs after a config reload\nok - modeless recovery does not reload into a package transaction\nok - modeless helper sees mirrors and ignores monitors disabled on purpose\nok - clamshell helper detects closed-lid external monitor state\nok - active external monitor helper sees mirrors and ignores monitors disabled on purpose\nok - clamshell monitor sync disables laptop output and force-recovers it\nok - internal monitor helper can re-enable disabled laptop displays\nok - internal monitor recovery only wakes displays when it re-enables one\nok - internal mirror helper recovers when no active external display remains\nok - lid switch bindings lock on close and reconcile clamshell display state\nok - system wake resyncs clamshell display state\nok - lock service waits for stable real screens before session lock\n"
+    },
+    {
+      "test": "bin/omarchy-system-wake",
+      "mode": "syntax",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 0,
+      "output": ""
+    }
+  ]
+}

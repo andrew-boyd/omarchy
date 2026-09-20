@@ -1,0 +1,15 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/monitor-external-active-test.sh",
+      "mode": "fixture",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 11,
+      "output": "ok - active external monitor helper ignores Hyprland's FALLBACK output\nok - active external monitor helper ignores headless outputs\nok - active external monitor helper finds a connected external monitor\nok - active external monitor helper sees mirrored externals\nok - active external monitor helper counts connectors that report unknown\nok - active external monitor helper follows the kernel on a just-unplugged output\nok - active external monitor helper ignores monitors disabled on purpose\nok - active external monitor helper ignores common internal panel connectors\nok - active external monitor helper still supports external-only systems\nok - active external monitor helper treats an unanswered query as no external monitor\nok - active external monitor helper reports nothing on an internal-only session\n"
+    }
+  ]
+}

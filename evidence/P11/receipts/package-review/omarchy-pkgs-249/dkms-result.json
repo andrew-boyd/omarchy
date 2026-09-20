@@ -1,0 +1,32 @@
+{
+  "number": 249,
+  "exit_code": 0,
+  "passed": true,
+  "inputs": {
+    "package_sha256": "cda506ec6649c8131abffa6afc68672251d8c2235c3ef1fec907c5d0f5cc699c",
+    "kernel_source": {
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.3.tar.xz",
+      "name": "linux-7.2.3.tar.xz",
+      "sha256": "8ba259e8e7b13ec6ef0941c8a39ad90b24bd4a4d6c0010ba6bafb794550ecd03",
+      "bytes": 160060344
+    },
+    "kernel": "7.2.3-arch1-3",
+    "script_sha256": "9c6025a30510ad448a3a4681de96e34f8ce0fd9f0dbc4bb0b459e1da92f6510c",
+    "headers": {
+      "Makefile": "4b88b396c76d889d03542666fc6ecc6e5a6dd3b052c616daea25d1c628ccebe0",
+      ".config": "6017403a3877866fc30c603dea9587824cfa6b61ea5468b5fdbbd468d12d93ad",
+      "Module.symvers": "188b2385fe61bdda0ee966bdb244a56b4e652d2e3e6684740b3b9d2fc01410ff",
+      "include/generated/utsrelease.h": "4eece18ad309dbf5b27f89a1e4b5a02ccd63080233a86927903971e14db2e360"
+    },
+    "retrieval": "Strict wget fixture supplies exact hash-verified archive",
+    "limits": "No host install/module loading, target 7.2.5 headers, pacman hooks, signing or hardware validation."
+  },
+  "artifacts": {
+    "log-make.log": "a4643fa3efa6dbe8473263dd14c85b5f71e4aaf0073213fab8373f35fec83c21",
+    "dkms-status.txt": "6b9486148162ff272aa12bc91957718955a3c62e6140daa46706e37be53bbf1d",
+    "module-info.txt": "cef7dd64cf7cafa619baf722e1d2ae913755ef7aa160765a940820aff8151dcd",
+    "snd-hda-codec-cs8409.ko": "2be5ed8f91f686539cba2f02c859d42592f4886840c8ff301f6e8e25a781d66e"
+  },
+  "hardware_verified": false,
+  "host_installed": false
+}

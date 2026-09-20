@@ -1,0 +1,41 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 12007,
+  "url": "https://github.com/omacom/omarchy/pull/12007",
+  "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "4b4d7db8f990a37cd2036d8436850ca4b91821f789d3631538d744427d060df4",
+  "applied": true,
+  "apply_output": "",
+  "files": [
+    {
+      "path": "install/hardware/apple/fix-spi-keyboard.sh",
+      "status": "modified",
+      "source_sha256": "48fa39ad590c298c90f42862ef9a8827b4cfdac7a24433bde4dfb5a0250849b9",
+      "candidate_sha256": "48fa39ad590c298c90f42862ef9a8827b4cfdac7a24433bde4dfb5a0250849b9",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/omarchy-other.packages",
+      "status": "modified",
+      "source_sha256": "53440af1c7a3510db792a9418202f01f6ec70d349717ff47e87615ecdb1de9ff",
+      "candidate_sha256": "53440af1c7a3510db792a9418202f01f6ec70d349717ff47e87615ecdb1de9ff",
+      "identical_to_source": true
+    },
+    {
+      "path": "migrations/1789490499.sh",
+      "status": "added",
+      "source_sha256": "c847f2499c69544b8330612f06b8e2eeb9d715e130581eb8f41f4aaa1be9d271",
+      "candidate_sha256": "c847f2499c69544b8330612f06b8e2eeb9d715e130581eb8f41f4aaa1be9d271",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "41a74b348e8befd355a287a8d84c3179d000420f",
+  "reconciled_patch_sha256": "4b4d7db8f990a37cd2036d8436850ca4b91821f789d3631538d744427d060df4"
+}

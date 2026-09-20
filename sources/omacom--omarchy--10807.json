@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10807",
+  "repository": "omacom/omarchy",
+  "number": 10807,
+  "title": "Pick Vulkan ICDs from sysfs instead of three lspci greps",
+  "author": "Chessing234",
+  "head_sha": "eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+  "state": "closed",
+  "updated_at": "2026-09-16T08:24:43Z",
+  "body": "## Summary\n- `vulkan.sh` ran `lspci` once per vendor (Intel/AMD/Apple). That reads PCI config space and can resume a runtime-suspended GPU.\n- One sysfs walk over display-class devices now, same override `OMARCHY_PCI_DEVICES_PATH` as `omarchy-hw-nvidia`. NVIDIA Vulkan stays with `nvidia.sh`.\n\n## Test plan\n- [x] `test/shell.d/vulkan-sysfs-test.sh`\n- [ ] Intel-only machine still gets vulkan-intel\n- [ ] Hybrid AMD+NVIDIA does not add nvidia-utils here\n",
+  "original_source_changed": false
+}

@@ -1,0 +1,42 @@
+{
+  "repository": "omacom/omarchy-pkgs",
+  "number": "combined-249-153",
+  "base_sha": "49c44db179b37fc188c698eb90d5e705947d2def",
+  "tree_sha": "49339069dbf2da4254585bed530acd8b16d18eba",
+  "patch": "packages.patch",
+  "patch_sha256": "f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050",
+  "source_files": [
+    {
+      "path": "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+      "sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "source_pr": 249
+    },
+    {
+      "path": "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD",
+      "sha256": "5ea9b3fef2605fd9e27561acfc093db42251dcc7e1d962bd21720bbc27be3ee2",
+      "source_pr": 249
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+      "sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "source_pr": 153
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+      "sha256": "f20dd3f9dd412ffc50e75b14a2006237dd3b8671895d2ddfe8bda4531a1fd59e",
+      "source_pr": 153
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf",
+      "sha256": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268",
+      "source_pr": 153
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh",
+      "sha256": "a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1",
+      "source_pr": 153
+    }
+  ],
+  "disposition": "Selected companion repository roll-up: unchanged #249 CS8409 and #153 MacBook CS4208 recipes. Separate model paths; packages conflict and must not be installed together on one machine.",
+  "qualification": "Existing package assembly/private DKMS receipts reused with exact recipe/input hashes. No package recipe or hardware behavior changed."
+}

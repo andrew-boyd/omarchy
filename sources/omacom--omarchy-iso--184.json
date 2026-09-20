@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-iso/pull/184",
+  "repository": "omacom/omarchy-iso",
+  "number": 184,
+  "title": "Install and validate matching kernel headers in the ISO",
+  "author": "ryanrhughes",
+  "head_sha": "1daf1202d49147223341c8e88ed2cb5a65b75bed",
+  "state": "merged",
+  "updated_at": "2026-09-15T05:35:33Z",
+  "body": "Install the selected kernel's headers immediately after the base system, before any DKMS packages, and refuse to finish an installation with missing or mismatched headers. Generic installs now get linux-omarchy-headers even when no hardware driver happens to request them; T2 installs get linux-t2-headers.\n\nAutoinstall configurations with missing or empty kernels now use the same Omarchy/T2 hardware defaults as the interactive configurator. Explicit selections remain respected, including storage-only configurations. The integration fixture also selects linux-omarchy.\n\nValidation: ./test/all passes (shell checks and 69 Python tests), including unattended defaults, both T2 PCI IDs, package ordering/failure cleanup, and header mismatch rejection. A fresh ISO from commit 1daf1202d49147223341c8e88ed2cb5a65b75bed with the simplified omacom/omarchy#11901 at 8f3ab025 passed installation, reboot, and the full acceptance suite on KVM. The guest runs 7.2.5-3-omarchy with both kernel/header packages at 7.2.5-3, with no stock linux/linux-headers installed. Both real Omarchy and T2 header archives were checked for the validated release-file layout; physical T2 hardware was not tested.\n\nCompanion runtime fixes: omacom/omarchy#11900 and release backport omacom/omarchy#11901. Package dependency cleanup: omacom/omarchy-pkgs#454. Matching headers are a base-install guarantee; downstream driver installers and DKMS packages assume they exist. The validation image uses the currently published IPU7 package; rebuild/publish the corrected camera package and updated runtime before releasing a new ISO. The existing public RC ISO has not been replaced.\n",
+  "original_source_changed": false
+}

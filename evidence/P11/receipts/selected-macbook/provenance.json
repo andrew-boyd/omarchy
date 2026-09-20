@@ -1,0 +1,88 @@
+{
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "target_tree": "72350b0c9f6fa74b16cb2474a177827d2a0a728f",
+  "reconciled_patch_sha256": "203ee90646a1de88db7274c8868d1ec87bc1d78258ea167fc068e271431bd0b7",
+  "source": "https://github.com/sunoxen-lab/omarchy/pull/1",
+  "source_head": "579cef09d0de94caf0d2ead147344483aed3f161",
+  "removed_exact_source_blocks": {
+    "install/hardware/apple/fix-cs4208-audio.sh": [
+      "  sleep_config_dir=\"${OMARCHY_SLEEP_CONFIG_DIR:-/etc/systemd/sleep.conf.d}\"\n  install -Dm644 \\\n    \"$OMARCHY_INSTALL/hardware/apple/60-cs4208-s2idle.conf\" \\\n    \"$sleep_config_dir/60-cs4208-s2idle.conf\"\n\n"
+    ],
+    "migrations/1789869577.sh": [
+      "sleep_config_dir=\"${OMARCHY_SLEEP_CONFIG_DIR:-/etc/systemd/sleep.conf.d}\"\n",
+      "sleep_config_source=\"$OMARCHY_PATH/install/hardware/apple/60-cs4208-s2idle.conf\"\nsleep_config_target=\"$sleep_config_dir/60-cs4208-s2idle.conf\"\nif ! cmp -s \"$sleep_config_source\" \"$sleep_config_target\"; then\n  sudo install -Dm644 \"$sleep_config_source\" \"$sleep_config_target\"\nfi\n\n"
+    ],
+    "manual/44-mac-support.md": [
+      "The CS4208 speaker amplifier does not recover after deep S3 suspend, even when the codec is fully reinitialized. Omarchy therefore uses suspend-to-idle on these two models so audio keeps working after resume. This consumes more battery while suspended than deep S3.\n\n"
+    ],
+    "test/shell.d/cs4208-audio-test.sh": [
+      "if ! grep -Fxq 'SuspendState=mem' \"$sleep_config\" ||\n  ! grep -Fxq 'MemorySleepMode=s2idle' \"$sleep_config\"; then\n  fail \"the CS4208 suspend override selects s2idle\"\nfi\n"
+    ]
+  },
+  "excluded_file": "install/hardware/apple/60-cs4208-s2idle.conf",
+  "test_replacements": [
+    {
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "before": "[[ -f $test_tmp/leaf-sleep-MacBook10,1/60-cs4208-s2idle.conf ]] ||\n  fail \"hardware setup selects s2idle for reliable speaker resume\"",
+      "after": "[[ ! -e $test_tmp/leaf-sleep-MacBook10,1/60-cs4208-s2idle.conf ]] ||\n  fail \"audio aggregation leaves hardware sleep policy untouched\""
+    },
+    {
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "before": "[[ -f $last_migration_dir/sleep/60-cs4208-s2idle.conf ]] ||\n  fail \"the migration selects s2idle for reliable speaker resume\"",
+      "after": "[[ ! -e $last_migration_dir/sleep/60-cs4208-s2idle.conf ]] ||\n  fail \"audio aggregation leaves migration sleep policy untouched\""
+    }
+  ],
+  "files": [
+    {
+      "path": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+      "source_identical": true,
+      "sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "source_identical": true,
+      "sha256": "5abe1d99dc25bbd2cc0a629282da2c0be38ded8d6a3b939a7d8c63a1ca52ddec"
+    },
+    {
+      "path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "source_identical": false,
+      "sha256": "1de8949038dbec5782c3ecd18deecc2f420892978c6857c16cdcbae0c0e26d62"
+    },
+    {
+      "path": "install/hardware/apple/omarchy-cs4208-audio.service",
+      "source_identical": true,
+      "sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898"
+    },
+    {
+      "path": "install/omarchy-other.packages",
+      "source_identical": true,
+      "sha256": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc"
+    },
+    {
+      "path": "install/user/all.sh",
+      "source_identical": true,
+      "sha256": "f0bdc0638f09c3f87ad3ade6464da97fddba411d1df1c8cc274327409318961c"
+    },
+    {
+      "path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+      "source_identical": true,
+      "sha256": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4"
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "source_identical": false,
+      "sha256": "f2943a333efb31ae3440459fa6e5992750810a59e7a0f05a323c7330a78958a2"
+    },
+    {
+      "path": "migrations/1789869577.sh",
+      "source_identical": false,
+      "sha256": "7f8b53ff488bc390f813a791440c57a4e01d9ccf59662cca392f37d0395397fa"
+    },
+    {
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "source_identical": false,
+      "sha256": "a7964169e7df3ca1183c124559c11188f0aabe220f30a938fdbe4d3e001b1d5c"
+    }
+  ],
+  "qualification": "Select existing mixer, service and current-kernel upgrade implementation. Exclude s2idle policy and its claim; neither freeze nor EFI policy is added. All original audio assertions remain; two sleep assertions now check exclusion. The full original suite is preserved separately."
+}

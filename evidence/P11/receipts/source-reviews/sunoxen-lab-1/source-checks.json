@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/cs4208-audio-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 12,
+      "output": "ok - the complete CS4208 audio fix is wired into setup\nok - a 2017 12-inch MacBook gets the complete system audio setup\nok - a 2016 12-inch MacBook gets the CS4208 driver\nok - unsupported and non-Apple hardware is left alone\nok - user setup installs the CS4208 software mixer\nok - user setup leaves unsupported MacBooks alone\nok - the migration installs the complete CS4208 audio setup\nok - the migration supports the 2016 12-inch MacBook\nok - the migration preserves a hand-installed DKMS driver\nok - the migration repairs a missing current-kernel DKMS build\nok - the migration skips unrelated hardware\nok - the migration is idempotent\n"
+    }
+  ]
+}

@@ -1,0 +1,508 @@
+diff --git a/bin/omarchy-als-brightness b/bin/omarchy-als-brightness
+new file mode 100755
+index 00000000000..8aa5fdf73b7
+--- /dev/null
++++ b/bin/omarchy-als-brightness
+@@ -0,0 +1,126 @@
++#!/bin/bash
++
++# omarchy:summary=Drive panel and keyboard backlight from the T1 ambient light sensor
++# omarchy:hidden=true
++
++# macOS uses the T1 ALS for auto-brightness. Omarchy only had keypress
++# brightnessctl. Follow illuminance while the lid is open; lid-close overlays
++# own the panel.
++
++set -euo pipefail
++
++als_path() {
++  if [[ -n ${OMARCHY_ALS:-} ]]; then
++    printf '%s\n' "$OMARCHY_ALS"
++    return 0
++  fi
++  local d
++  for d in /sys/bus/iio/devices/iio:device*; do
++    if [[ -r $d/in_illuminance_input ]]; then
++      printf '%s\n' "$d/in_illuminance_input"
++      return 0
++    fi
++  done
++  return 1
++}
++
++panel_dev() {
++  if [[ -n ${OMARCHY_ALS_PANEL:-} ]]; then
++    printf '%s\n' "$OMARCHY_ALS_PANEL"
++    return 0
++  fi
++  omarchy-hw-display
++}
++
++kbd_dev() {
++  if [[ -n ${OMARCHY_ALS_KBD:-} ]]; then
++    printf '%s\n' "$OMARCHY_ALS_KBD"
++    return 0
++  fi
++  local c
++  for c in /sys/class/leds/*kbd_backlight*; do
++    if [[ -e $c ]]; then
++      printf '%s\n' "${c##*/}"
++      return 0
++    fi
++  done
++  return 1
++}
++
++lid_closed() {
++  local s
++  if [[ -n ${OMARCHY_ALS_LID:-} ]]; then
++    s=$(cat "$OMARCHY_ALS_LID" 2>/dev/null || true)
++  else
++    s=$(cat /proc/acpi/button/lid/*/state 2>/dev/null || true)
++  fi
++  [[ $s == *closed* ]]
++}
++
++# The T1 ALS is in the camera cluster. A blanked panel drops lux, so following
++# it while DPMS is off writes a dimmer target and that is what you see on wake.
++internal_dpms_off() {
++  local s
++  if [[ -n ${OMARCHY_ALS_DPMS:-} ]]; then
++    [[ $OMARCHY_ALS_DPMS == off || $OMARCHY_ALS_DPMS == 0 || $OMARCHY_ALS_DPMS == false ]]
++    return
++  fi
++  s=$(hyprctl monitors -j 2>/dev/null | jq -r '[.[] | select(.name | test("^(eDP|LVDS|DSI)-"))][0].dpmsStatus // empty')
++  [[ $s == false ]]
++}
++
++# macOS Displays > Automatically adjust brightness. Flag present = off.
++auto_brightness_off() {
++  local flag=${OMARCHY_ALS_TOGGLE:-$HOME/.local/state/omarchy/toggles/auto-brightness-off}
++  [[ -f $flag ]]
++}
++
++als=$(als_path) || exit 0
++panel=$(panel_dev) || exit 0
++kbd=$(kbd_dev) || kbd=""
++
++last_panel=-1
++last_kbd=-1
++
++while true; do
++  if lid_closed || internal_dpms_off || auto_brightness_off; then
++    last_panel=-1
++    last_kbd=-1
++    sleep 1
++    [[ ${OMARCHY_ALS_ONCE:-} == 1 ]] && exit 0
++    continue
++  fi
++
++  lux=$(cat "$als")
++  if [[ ! $lux =~ ^[0-9]+$ ]]; then
++    sleep 1
++    [[ ${OMARCHY_ALS_ONCE:-} == 1 ]] && exit 0
++    continue
++  fi
++
++  (( panel_pct = 8 + 92 * lux / (lux + 280) ))
++  (( panel_pct > 100 )) && panel_pct=100
++  (( panel_pct < 8 )) && panel_pct=8
++
++  if (( lux >= 250 )); then
++    kbd_val=0
++  else
++    (( kbd_val = 255 * (250 - lux) / 250 ))
++  fi
++  (( kbd_val < 0 )) && kbd_val=0
++  (( kbd_val > 255 )) && kbd_val=255
++
++  if (( last_panel < 0 || panel_pct - last_panel >= 2 || last_panel - panel_pct >= 2 )); then
++    brightnessctl -d "$panel" set "$panel_pct%" >/dev/null
++    last_panel=$panel_pct
++  fi
++  if [[ -n $kbd ]]; then
++    if (( last_kbd < 0 || kbd_val - last_kbd >= 8 || last_kbd - kbd_val >= 8 )); then
++      brightnessctl -d "$kbd" set "$kbd_val" >/dev/null
++      last_kbd=$kbd_val
++    fi
++  fi
++
++  [[ ${OMARCHY_ALS_ONCE:-} == 1 ]] && exit 0
++  sleep 1
++done
+diff --git a/bin/omarchy-hw-apple-t1-als b/bin/omarchy-hw-apple-t1-als
+new file mode 100755
+index 00000000000..8c983132efc
+--- /dev/null
++++ b/bin/omarchy-hw-apple-t1-als
+@@ -0,0 +1,19 @@
++#!/bin/bash
++
++# omarchy:summary=Detect a T1 Touch Bar Mac with a live ambient light sensor
++# omarchy:hidden=true
++
++# Same DMI set as the T1 Touch Bar. 13,1 / 14,1 have no T1. The IIO node is
++# what apple_ib_als actually exports; without it there is nothing to follow.
++product_name=$(cat "${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}" 2>/dev/null)
++[[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]] || exit 1
++
++if [[ -n ${OMARCHY_ALS:-} ]]; then
++  [[ -r $OMARCHY_ALS ]]
++  exit
++fi
++
++for d in /sys/bus/iio/devices/iio:device*; do
++  [[ -r $d/in_illuminance_input ]] && exit 0
++done
++exit 1
+diff --git a/bin/omarchy-toggle-als-brightness b/bin/omarchy-toggle-als-brightness
+new file mode 100755
+index 00000000000..d1e7f7c49f3
+--- /dev/null
++++ b/bin/omarchy-toggle-als-brightness
+@@ -0,0 +1,33 @@
++#!/bin/bash
++
++# omarchy:summary=Toggle T1 auto-brightness from the ambient light sensor
++# omarchy:args=[on|off|toggle]
++# omarchy:examples=omarchy toggle als brightness | omarchy toggle als brightness off
++
++# Presence of auto-brightness-off means the ALS loop is not writing, matching
++# macOS Displays > Automatically adjust brightness. Default is on.
++
++flag=auto-brightness-off
++action=${1:-toggle}
++
++case "$action" in
++  on)
++    omarchy-toggle "$flag" off
++    ;;
++  off)
++    omarchy-toggle "$flag" on
++    ;;
++  toggle|"")
++    omarchy-toggle "$flag"
++    ;;
++  *)
++    printf 'Usage: omarchy-toggle-als-brightness [on|off|toggle]\n' >&2
++    exit 1
++    ;;
++esac
++
++if omarchy-toggle-enabled "$flag"; then
++  omarchy-notification-send -g 󰃠 "Auto brightness off"
++else
++  omarchy-notification-send -g 󰃠 "Auto brightness on"
++fi
+diff --git a/default/omarchy/omarchy-menu.jsonc b/default/omarchy/omarchy-menu.jsonc
+index a82254c6b7c..2cf4ffe6373 100644
+--- a/default/omarchy/omarchy-menu.jsonc
++++ b/default/omarchy/omarchy-menu.jsonc
+@@ -72,6 +72,7 @@
+   "trigger.hardware": {"icon":"","label":"Hardware","aliases":["hardware","hw"]},
+   "trigger.tests": {"icon":"󰓅","label":"Speed Test"},
+   "trigger.hardware.laptop-display": {"icon":"󰛧","label":"Laptop Display","when":"omarchy-hw-laptop","action":"omarchy-hyprland-monitor-internal toggle"},
++  "trigger.hardware.auto-brightness": {"icon":"󰃠","label":"Auto Brightness","when":"omarchy-hw-apple-t1-als","checked":"! omarchy-toggle-enabled auto-brightness-off","action":"omarchy-toggle-als-brightness"},
+   "trigger.hardware.mirror-display": {"icon":"󰍹","label":"Mirror Display","when":"omarchy-hw-laptop","action":"omarchy-hyprland-monitor-internal-mirror toggle"},
+   "trigger.hardware.hybrid-gpu": {"icon":"","label":"Hybrid GPU","when":"omarchy-hw-hybrid-gpu","action":"omarchy-launch-floating-terminal-with-presentation omarchy-toggle-hybrid-gpu"},
+   "trigger.hardware.touchpad": {"icon":"󰟸","label":"Touchpad","when":"omarchy-hw-touchpad","action":"omarchy-toggle-touchpad"},
+diff --git a/default/systemd/user/omarchy-als-brightness.service b/default/systemd/user/omarchy-als-brightness.service
+new file mode 100644
+index 00000000000..8dff0f4e6bf
+--- /dev/null
++++ b/default/systemd/user/omarchy-als-brightness.service
+@@ -0,0 +1,16 @@
++[Unit]
++Description=Follow the T1 ambient light sensor for panel and keyboard backlight
++After=graphical-session.target
++PartOf=graphical-session.target
++ConditionEnvironment=WAYLAND_DISPLAY
++ConditionPathExistsGlob=/sys/bus/iio/devices/iio:device*/in_illuminance_input
++
++[Service]
++Type=simple
++ExecCondition=/usr/bin/omarchy-hw-apple-t1-als
++ExecStart=/usr/bin/omarchy-als-brightness
++Restart=on-failure
++RestartSec=2
++
++[Install]
++WantedBy=graphical-session.target
+diff --git a/install/hardware/all.sh b/install/hardware/all.sh
+index 7b806ce8ea4..d884edf854b 100644
+--- a/install/hardware/all.sh
++++ b/install/hardware/all.sh
+@@ -39,6 +39,7 @@ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t1-als-brightness.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+ 
+diff --git a/install/hardware/apple/fix-t1-als-brightness.sh b/install/hardware/apple/fix-t1-als-brightness.sh
+new file mode 100644
+index 00000000000..71965284707
+--- /dev/null
++++ b/install/hardware/apple/fix-t1-als-brightness.sh
+@@ -0,0 +1,8 @@
++# T1 Touch Bar Macs export an IIO ALS via apple_ib_als. Session auto-brightness
++# is the user unit omarchy-als-brightness.service (enabled at first-run / migrate).
++# This leaf only records the hardware so the installer log shows why.
++
++product_name="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"
++if [[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]]; then
++  echo "Detected T1 MacBook Pro; ambient-light brightness follows the ALS when it is bound"
++fi
+diff --git a/install/user/first-run/enable-user-units.sh b/install/user/first-run/enable-user-units.sh
+index 9865fc207e4..537693a522e 100755
+--- a/install/user/first-run/enable-user-units.sh
++++ b/install/user/first-run/enable-user-units.sh
+@@ -18,4 +18,5 @@ systemctl --user enable --now \
+   omarchy-sleep-lock.service \
+   omarchy-migrate-notify.service \
+   omarchy-fcitx5.service \
+-  omarchy-crash-watch.service
++  omarchy-crash-watch.service \
++  omarchy-als-brightness.service
+diff --git a/manual/44-mac-support.md b/manual/44-mac-support.md
+index e86fdd064d8..20649e954e2 100644
+--- a/manual/44-mac-support.md
++++ b/manual/44-mac-support.md
+@@ -52,6 +52,7 @@ The Apple T1 chip was introduced in late 2016 and used exclusively in the first-
+ 
+ - Touch Bar is non-functional
+ - Sound is not functioning
++- When `apple_ib_als` is bound, panel and keyboard backlight follow the T1 ambient light sensor (`omarchy-als-brightness`). Toggle with Trigger > Hardware > Auto Brightness, or `omarchy toggle als brightness` (macOS: Displays > Automatically adjust brightness).
+ 
+ #### Devices with T2 Chip
+ 
+diff --git a/migrations/1788621849.sh b/migrations/1788621849.sh
+new file mode 100644
+index 00000000000..eae888035d2
+--- /dev/null
++++ b/migrations/1788621849.sh
+@@ -0,0 +1,17 @@
++echo "Follow the T1 ambient light sensor for panel and keyboard backlight"
++
++product_name=$(cat "${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}" 2>/dev/null)
++[[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]] || exit 0
++
++systemctl --user daemon-reload >/dev/null 2>&1 || true
++
++if ! systemctl --user enable omarchy-als-brightness.service >/dev/null 2>&1; then
++  wants_dir="$HOME/.config/systemd/user/graphical-session.target.wants"
++  mkdir -p "$wants_dir"
++  ln -sfn /usr/lib/systemd/user/omarchy-als-brightness.service \
++    "$wants_dir/omarchy-als-brightness.service"
++fi
++
++if systemctl --user is-active --quiet graphical-session.target; then
++  systemctl --user start omarchy-als-brightness.service >/dev/null 2>&1 || true
++fi
+diff --git a/test/shell.d/config-test.sh b/test/shell.d/config-test.sh
+index 3add6e30020..014254ea73e 100755
+--- a/test/shell.d/config-test.sh
++++ b/test/shell.d/config-test.sh
+@@ -141,6 +141,7 @@ package_defaults = [
+   ("default/systemd/user/omarchy-tailscale-receive.service", "/usr/lib/systemd/user/omarchy-tailscale-receive.service", "systemd/user/omarchy-tailscale-receive.service"),
+   ("default/systemd/user/omarchy-fcitx5.service", "/usr/lib/systemd/user/omarchy-fcitx5.service", "systemd/user/omarchy-fcitx5.service"),
+   ("default/systemd/user/omarchy-crash-watch.service", "/usr/lib/systemd/user/omarchy-crash-watch.service", "systemd/user/omarchy-crash-watch.service"),
++  ("default/systemd/user/omarchy-als-brightness.service", "/usr/lib/systemd/user/omarchy-als-brightness.service", "systemd/user/omarchy-als-brightness.service"),
+   ("default/systemd/zram-generator.conf.d/90-omarchy.conf", "/usr/lib/systemd/zram-generator.conf.d/90-omarchy.conf", "systemd/zram-generator.conf.d/90-omarchy.conf"),
+   ("default/fonts/omarchy/omarchy.ttf", "/usr/share/fonts/omarchy/omarchy.ttf", "omarchy.ttf"),
+   ("default/snapper/root", "/etc/snapper/config-templates/omarchy", "snapper/root"),
+diff --git a/test/shell.d/t1-als-brightness-test.sh b/test/shell.d/t1-als-brightness-test.sh
+new file mode 100644
+index 00000000000..6ad3ee5e7d2
+--- /dev/null
++++ b/test/shell.d/t1-als-brightness-test.sh
+@@ -0,0 +1,188 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++hw="$ROOT/bin/omarchy-hw-apple-t1-als"
++als="$ROOT/bin/omarchy-als-brightness"
++fix="$ROOT/install/hardware/apple/fix-t1-als-brightness.sh"
++migration="$ROOT/migrations/1788621849.sh"
++unit="$ROOT/default/systemd/user/omarchy-als-brightness.service"
++
++assert_hw() {
++  local model=$1 expect=$2 als_file=$3 description=$4
++  local tmp got
++  tmp=$(mktemp)
++  printf '%s\n' "$model" >"$tmp"
++  if OMARCHY_DMI_PRODUCT_NAME="$tmp" OMARCHY_ALS="$als_file" "$hw"; then
++    got=yes
++  else
++    got=no
++  fi
++  rm -f "$tmp"
++  [[ $got == "$expect" ]] || fail "$description"
++  pass "$description"
++}
++
++als_ok=$(mktemp)
++printf '170\n' >"$als_ok"
++
++assert_hw MacBookPro14,3 yes "$als_ok" "MacBookPro14,3 with ALS is detected"
++assert_hw MacBookPro14,2 yes "$als_ok" "MacBookPro14,2 with ALS is detected"
++assert_hw MacBookPro13,3 yes "$als_ok" "MacBookPro13,3 with ALS is detected"
++assert_hw MacBookPro13,2 yes "$als_ok" "MacBookPro13,2 with ALS is detected"
++assert_hw MacBookPro14,1 no "$als_ok" "MacBookPro14,1 is not T1"
++assert_hw MacBookPro15,1 no "$als_ok" "MacBookPro15,1 is T2"
++assert_hw MacBookPro14,3 no /no/such/als "MacBookPro14,3 without ALS is not detected"
++pass "T1 ALS detector is gated on DMI and the IIO node"
++
++grep -Fq 'fix-t1-als-brightness.sh' "$ROOT/install/hardware/all.sh" ||
++  fail "hardware install runs the T1 ALS hook"
++pass "T1 ALS hook is wired"
++
++grep -Fq 'omarchy-als-brightness.service' "$ROOT/install/user/first-run/enable-user-units.sh" ||
++  fail "first-run enables the ALS brightness unit"
++pass "first-run enables the ALS brightness unit"
++
++grep -Fq 'ExecStart=/usr/bin/omarchy-als-brightness' "$unit" ||
++  fail "user unit starts omarchy-als-brightness"
++grep -Fq 'ExecCondition=/usr/bin/omarchy-hw-apple-t1-als' "$unit" ||
++  fail "user unit is gated on the T1 ALS detector"
++grep -Fq 'ConditionPathExistsGlob=/sys/bus/iio/devices/iio:device*/in_illuminance_input' "$unit" ||
++  fail "user unit stays inert without an IIO ALS"
++pass "user unit is gated and starts the ALS helper"
++
++[[ -f $migration ]] || fail "T1 ALS migration exists"
++! head -1 "$migration" | grep -q '^#!' || fail "migration has no shebang"
++grep -Fq 'MacBookPro13,[23]|MacBookPro14,[23]' "$migration" ||
++  fail "migration is gated on T1 DMI"
++pass "migration is gated and has no shebang"
++
++grep -Fq 'omarchy-als-brightness' "$ROOT/manual/44-mac-support.md" ||
++  fail "Mac support chapter documents T1 ALS auto-brightness"
++grep -Fq 'omarchy toggle als brightness' "$ROOT/manual/44-mac-support.md" ||
++  fail "Mac support chapter documents the auto-brightness toggle"
++pass "Mac support chapter documents T1 ALS auto-brightness"
++
++grep -Fq 'omarchy-toggle-als-brightness' "$ROOT/default/omarchy/omarchy-menu.jsonc" ||
++  fail "Hardware menu exposes the auto-brightness toggle"
++grep -Fq 'omarchy-hw-apple-t1-als' "$ROOT/default/omarchy/omarchy-menu.jsonc" ||
++  fail "auto-brightness menu entry is gated on the T1 ALS detector"
++pass "Hardware menu exposes the auto-brightness toggle"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp" "$als_ok"' EXIT
++
++mkdir -p "$test_tmp/stub"
++printf '818\n' >"$test_tmp/panel"
++printf '50\n' >"$test_tmp/kbd"
++cat >"$test_tmp/stub/brightnessctl" <<SH
++#!/bin/bash
++dev=""
++while (( \$# > 0 )); do
++  case \$1 in
++    -d) dev=\$2; shift 2 ;;
++    set)
++      if [[ \$dev == gmux_backlight ]]; then
++        printf '%s\n' "\$2" >"$test_tmp/panel"
++      else
++        printf '%s\n' "\$2" >"$test_tmp/kbd"
++      fi
++      exit 0
++      ;;
++    *) shift ;;
++  esac
++done
++exit 0
++SH
++cat >"$test_tmp/stub/omarchy-hw-display" <<'SH'
++#!/bin/bash
++printf 'gmux_backlight\n'
++SH
++chmod +x "$test_tmp/stub/"*
++
++printf 'open\n' >"$test_tmp/lid"
++PATH="$test_tmp/stub:$ROOT/bin:$PATH" \
++  OMARCHY_ALS="$als_ok" \
++  OMARCHY_ALS_PANEL=gmux_backlight \
++  OMARCHY_ALS_KBD=spi::kbd_backlight \
++  OMARCHY_ALS_LID="$test_tmp/lid" \
++  OMARCHY_ALS_ONCE=1 \
++  "$als"
++
++[[ $(cat "$test_tmp/panel") == 42% ]] || fail "ALS 170 maps panel to 42%" "panel=$(cat "$test_tmp/panel")"
++[[ $(cat "$test_tmp/kbd") == 81 ]] || fail "ALS 170 maps keyboard to 81" "kbd=$(cat "$test_tmp/kbd")"
++pass "ALS 170 sets panel 42% and keyboard 81"
++
++printf '0\n' >"$als_ok"
++PATH="$test_tmp/stub:$ROOT/bin:$PATH" \
++  OMARCHY_ALS="$als_ok" \
++  OMARCHY_ALS_PANEL=gmux_backlight \
++  OMARCHY_ALS_KBD=spi::kbd_backlight \
++  OMARCHY_ALS_LID="$test_tmp/lid" \
++  OMARCHY_ALS_ONCE=1 \
++  "$als"
++[[ $(cat "$test_tmp/panel") == 8% ]] || fail "dark ALS keeps an 8% panel floor" "panel=$(cat "$test_tmp/panel")"
++[[ $(cat "$test_tmp/kbd") == 255 ]] || fail "dark ALS turns the keyboard fully on" "kbd=$(cat "$test_tmp/kbd")"
++pass "dark ALS floors the panel and lights the keyboard"
++
++printf '400\n' >"$als_ok"
++PATH="$test_tmp/stub:$ROOT/bin:$PATH" \
++  OMARCHY_ALS="$als_ok" \
++  OMARCHY_ALS_PANEL=gmux_backlight \
++  OMARCHY_ALS_KBD=spi::kbd_backlight \
++  OMARCHY_ALS_LID="$test_tmp/lid" \
++  OMARCHY_ALS_ONCE=1 \
++  "$als"
++[[ $(cat "$test_tmp/kbd") == 0 ]] || fail "bright ALS turns the keyboard off" "kbd=$(cat "$test_tmp/kbd")"
++pass "bright ALS turns the keyboard off"
++
++printf 'closed\n' >"$test_tmp/lid"
++printf '818\n' >"$test_tmp/panel"
++printf '50\n' >"$test_tmp/kbd"
++printf '0\n' >"$als_ok"
++PATH="$test_tmp/stub:$ROOT/bin:$PATH" \
++  OMARCHY_ALS="$als_ok" \
++  OMARCHY_ALS_PANEL=gmux_backlight \
++  OMARCHY_ALS_KBD=spi::kbd_backlight \
++  OMARCHY_ALS_LID="$test_tmp/lid" \
++  OMARCHY_ALS_ONCE=1 \
++  "$als"
++[[ $(cat "$test_tmp/panel") == 818 ]] || fail "closed lid must not change the panel" "panel=$(cat "$test_tmp/panel")"
++[[ $(cat "$test_tmp/kbd") == 50 ]] || fail "closed lid must not change the keyboard" "kbd=$(cat "$test_tmp/kbd")"
++pass "closed lid leaves brightness alone"
++
++printf 'open\n' >"$test_tmp/lid"
++printf '818\n' >"$test_tmp/panel"
++printf '50\n' >"$test_tmp/kbd"
++printf '0\n' >"$als_ok"
++PATH="$test_tmp/stub:$ROOT/bin:$PATH" \
++  OMARCHY_ALS="$als_ok" \
++  OMARCHY_ALS_PANEL=gmux_backlight \
++  OMARCHY_ALS_KBD=spi::kbd_backlight \
++  OMARCHY_ALS_LID="$test_tmp/lid" \
++  OMARCHY_ALS_DPMS=off \
++  OMARCHY_ALS_ONCE=1 \
++  "$als"
++[[ $(cat "$test_tmp/panel") == 818 ]] || fail "DPMS-off must not change the panel" "panel=$(cat "$test_tmp/panel")"
++[[ $(cat "$test_tmp/kbd") == 50 ]] || fail "DPMS-off must not change the keyboard" "kbd=$(cat "$test_tmp/kbd")"
++pass "DPMS-off leaves brightness alone"
++
++printf 'open\n' >"$test_tmp/lid"
++printf '818\n' >"$test_tmp/panel"
++printf '50\n' >"$test_tmp/kbd"
++printf '170\n' >"$als_ok"
++mkdir -p "$test_tmp/toggles"
++touch "$test_tmp/toggles/auto-brightness-off"
++PATH="$test_tmp/stub:$ROOT/bin:$PATH" \
++  OMARCHY_ALS="$als_ok" \
++  OMARCHY_ALS_PANEL=gmux_backlight \
++  OMARCHY_ALS_KBD=spi::kbd_backlight \
++  OMARCHY_ALS_LID="$test_tmp/lid" \
++  OMARCHY_ALS_TOGGLE="$test_tmp/toggles/auto-brightness-off" \
++  OMARCHY_ALS_ONCE=1 \
++  "$als"
++[[ $(cat "$test_tmp/panel") == 818 ]] || fail "auto-brightness off must not change the panel" "panel=$(cat "$test_tmp/panel")"
++[[ $(cat "$test_tmp/kbd") == 50 ]] || fail "auto-brightness off must not change the keyboard" "kbd=$(cat "$test_tmp/kbd")"
++pass "auto-brightness off leaves brightness alone"

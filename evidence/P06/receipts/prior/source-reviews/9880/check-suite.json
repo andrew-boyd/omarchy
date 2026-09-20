@@ -1,0 +1,12 @@
+{
+  "tests": [
+    "test/shell.d/spi-keyboard-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/apple/fix-spi-keyboard.sh": "923f99127c00bb9a23c8e516abe917024dc229fddaa8a0a6a747090a7a702bc7",
+    "install/omarchy-other.packages": "53440af1c7a3510db792a9418202f01f6ec70d349717ff47e87615ecdb1de9ff",
+    "migrations/1788476400.sh": "5f2515a3a0d62a673faea3afe574971bc0844c33151b6d04fe4ee61cece806dc",
+    "test/shell.d/spi-keyboard-test.sh": "249826b7447b1fa1f434df3132d97742e80e34834f3e3e18e931247a8679e4ad",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

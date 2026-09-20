@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11516",
+  "repository": "omacom/omarchy",
+  "number": 11516,
+  "title": "Ignore USB Touch Bar DRM when detecting external displays",
+  "author": "hanscnelson",
+  "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+  "state": "open",
+  "updated_at": "2026-09-12T16:52:46Z",
+  "body": "## Summary\n\n`omarchy-hw-external-monitors` walks `/sys/class/drm/card*-*/status` and treats every connected connector that is not `eDP`/`LVDS`/`DSI` as a desktop display.\n\nOn a T1 MacBook the Touch Bar is a real DRM device (`card0-USB-1`, always `connected`, `ID_SEAT=seat-touchbar`). Hyprland does not list it as a monitor. The helper still returned true with **no HDMI/DP attached**, so:\n\n- `omarchy-system-lid-close` skipped the lock (`lid closed && ! external`)\n- `omarchy-hw-clamshell` was true whenever the lid was shut\n- logind never took the undocked suspend path (`HandleLidSwitchDocked=ignore`)\n\nReproduced on MacBookPro14,2 (Omarchy 4.0.3, T1Bridge Touch Bar). With a local override of this helper, undocked lid-close locks immediately. A real DP/HDMI dock still counts.\n\nThis does **not** change lid-open bindings or suspend/resume backlight. A long lid-close that actually reaches S3 can still take a while to light the panel; that is separate.\n\n## Test plan\n\n- [x] `bash test/shell.d/hw-external-monitors-test.sh` (existing cases plus USB-1 alone, split-card eDP+USB, DP still found with Touch Bar, HDMI still found)\n- [x] `bash test/shell.d/lid-close-test.sh`\n- [x] Live undocked lid-close on MacBookPro14,2: lock starts as soon as the lid shuts\n- [ ] Reviewer: USB-C DP-alt / DisplayLink still show up as `DP-*` / `HDMI-*` / `DVI-*`, not `USB-*`\n",
+  "original_source_changed": false
+}

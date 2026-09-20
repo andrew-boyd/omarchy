@@ -1,0 +1,56 @@
+{
+  "repository": "omacom/omarchy",
+  "number": 7140,
+  "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+  "source_ancestor": "30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "e2cf82b25089949a5a8412bc3f7e618742a721ef96a0fd846ec316bd59775720",
+  "files": [
+    {
+      "path": "bin/omarchy-hw-apple-cs8409",
+      "source_sha256": "c9c08621d79fa0ef254fea9353d6a48f6c63967e60e5c98a76f5518ba3fda2b3",
+      "identical_to_source": true,
+      "candidate_sha256": "c9c08621d79fa0ef254fea9353d6a48f6c63967e60e5c98a76f5518ba3fda2b3"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "247edf5ed4a0237ff61bfdc2bedb1623cda0d00efcee3d01e6d4e747189cf374",
+      "identical_to_source": false,
+      "candidate_sha256": "111d735a158618761d1ccd4eaab2dcb343d7148a722f5f72c8cdb3e66651df90",
+      "difference_reason": "Current target preserved exactly plus the source-only inserted lines."
+    },
+    {
+      "path": "install/hardware/apple/fix-cs8409-audio.sh",
+      "source_sha256": "39f3d39c730b45982ad0c7a7c6a9cf63a94c2b56c9da2897e4fd2277814969dc",
+      "identical_to_source": true,
+      "candidate_sha256": "39f3d39c730b45982ad0c7a7c6a9cf63a94c2b56c9da2897e4fd2277814969dc"
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "source_sha256": "3b80dc51842b321f9a2977fe124ee3fba899d7249dd341f532eb0ab8b142e898",
+      "identical_to_source": true,
+      "candidate_sha256": "3b80dc51842b321f9a2977fe124ee3fba899d7249dd341f532eb0ab8b142e898"
+    },
+    {
+      "path": "migrations/1786889011.sh",
+      "source_sha256": "11680b6c555a4cf0d52710a9f7df2ca8762ee1fb079df6db296550afb87e8ebf",
+      "identical_to_source": true,
+      "candidate_sha256": "11680b6c555a4cf0d52710a9f7df2ca8762ee1fb079df6db296550afb87e8ebf"
+    },
+    {
+      "path": "test/shell.d/cs8409-audio-test.sh",
+      "source_sha256": "a488c742b2fec1a3b295b6d38d051f96de9db4cd1923b5ee802023ffa20d978e",
+      "identical_to_source": true,
+      "candidate_sha256": "a488c742b2fec1a3b295b6d38d051f96de9db4cd1923b5ee802023ffa20d978e"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": true,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "dffdb25d74ceceb460b3c7dc2d8af1bdd5e35acf",
+  "reconciled_patch_sha256": "94b44650878f5d21c6d4cac20918dd9b71b5b1156c0f0edd98ff81a42dc536bc",
+  "software_checks_passed": true
+}

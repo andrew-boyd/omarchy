@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/imac-cs4208-speakers-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 17,
+      "output": "ok - the detector is executable\nok - the CS4208 speaker workaround runs during user setup\nok - a migration enables the workaround on existing installs\nok - the WirePlumber drop-in selects 4.0 output and software volume on CS4208\nok - the detector matches iMac16,2\nok - the detector matches iMac16,1\nok - the detector matches iMac16,2 case-insensitively\nok - the detector rejects iMac17,1\nok - the detector rejects later CS8409 iMacs\nok - the detector rejects other Apple machines\nok - the detector rejects a longer product name\nok - the detector fails closed on an empty product name\nok - the detector fails closed when the DMI attribute is missing\nok - the leaf installs the WirePlumber drop-in on the target machine\nok - the leaf no-ops on other hardware\nok - the migration installs the workaround on the target machine\nok - the migration no-ops on other hardware\n"
+    }
+  ]
+}

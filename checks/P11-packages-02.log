@@ -1,0 +1,31 @@
+test_current_version_does_not_download_assets (__main__.T3CodeHookTest.test_current_version_does_not_download_assets) ... ok
+test_hashes_both_architectures_from_one_release (__main__.T3CodeHookTest.test_hashes_both_architectures_from_one_release) ... ok
+test_incomplete_or_mismatched_arm_release_reports_no_update (__main__.T3CodeHookTest.test_incomplete_or_mismatched_arm_release_reports_no_update) ... ok
+test_missing_arm_asset_reports_no_update (__main__.T3CodeHookTest.test_missing_arm_asset_reports_no_update) ... ok
+test_array_writer_handles_comments_and_quoted_parentheses (__main__.WatchTest.test_array_writer_handles_comments_and_quoted_parentheses) ... ok
+test_aur_import_is_once_only_and_records_local_ownership (__main__.WatchTest.test_aur_import_is_once_only_and_records_local_ownership) ... ok
+test_changed_checksum_override_is_detected_and_rolled_back (__main__.WatchTest.test_changed_checksum_override_is_detected_and_rolled_back) ... ok
+test_cli_continues_after_one_package_fails (__main__.WatchTest.test_cli_continues_after_one_package_fails) ... ok
+test_conditional_arm_source_cannot_use_x86_hash (__main__.WatchTest.test_conditional_arm_source_cannot_use_x86_hash) ... ok
+test_cursor_same_day_hash_uses_counter_not_hash_order (__main__.WatchTest.test_cursor_same_day_hash_uses_counter_not_hash_order) ... ok
+test_epoch_change_in_recipe_cannot_mask_downgrade (__main__.WatchTest.test_epoch_change_in_recipe_cannot_mask_downgrade) ... ok
+test_existing_signed_metadata_skips_are_retained (__main__.WatchTest.test_existing_signed_metadata_skips_are_retained) ... ok
+test_git_hash_matches_makepkg (__main__.WatchTest.test_git_hash_matches_makepkg) ... ok
+test_github_selects_stable_matching_tag_and_resolves_gitlinks (__main__.WatchTest.test_github_selects_stable_matching_tag_and_resolves_gitlinks) ... ok
+test_hostile_release_values_do_not_reach_shell (__main__.WatchTest.test_hostile_release_values_do_not_reach_shell) ... ok
+test_invalid_optional_metadata_fails_validation (__main__.WatchTest.test_invalid_optional_metadata_fails_validation) ... ok
+test_manual_hold_prevents_release_discovery (__main__.WatchTest.test_manual_hold_prevents_release_discovery) ... ok
+test_missing_arm_payload_preserves_original_recipe (__main__.WatchTest.test_missing_arm_payload_preserves_original_recipe) ... ok
+test_mutable_sources_are_rehashed_when_version_changes (__main__.WatchTest.test_mutable_sources_are_rehashed_when_version_changes) ... ok
+test_old_or_equal_versions_do_not_download_sources (__main__.WatchTest.test_old_or_equal_versions_do_not_download_sources) ... ok
+test_registry_releases_and_archive_filenames (__main__.WatchTest.test_registry_releases_and_archive_filenames) ... ok
+test_release_selection_and_age (__main__.WatchTest.test_release_selection_and_age) ... ok
+test_same_version_build_revision_advances_downstream_pkgrel (__main__.WatchTest.test_same_version_build_revision_advances_downstream_pkgrel) ... ok
+test_sha512_blake2_and_local_hashes_are_preserved (__main__.WatchTest.test_sha512_blake2_and_local_hashes_are_preserved) ... ok
+test_updates_both_arches_without_running_build_functions (__main__.WatchTest.test_updates_both_arches_without_running_build_functions) ... ok
+test_vendor_feeds_preserve_version_schemes (__main__.WatchTest.test_vendor_feeds_preserve_version_schemes) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.910s
+
+OK

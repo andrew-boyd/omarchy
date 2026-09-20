@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lock-blank-fingerprint-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 25,
+      "output": "ok - only a password check in flight stops the blank timer from blanking\nok - the blank timer never gates on the combined authenticating state\nok - the blank timer is held off by password entry and re-armed when it finishes\nok - the combined authenticating state no longer drives the blank timer\nok - blanking the display suspends the fingerprint\nok - suspending stops the retry timer and aborts the fingerprint PAM\nok - the fingerprint prompt does not start again while suspended\nok - an aborted conversation does not re-arm the retry timer while suspended\nok - waking the display resumes the fingerprint\nok - resuming only re-arms a lock that still wants a fingerprint\nok - the display drives the fingerprint through one suspend and one resume\nok - suspending and resuming never touch a password in flight\nok - a fresh lock starts with the fingerprint unsuspended\nok - every unsuccessful fingerprint conversation reschedules through the backoff\nok - nothing re-arms the retry timer behind the backoff\nok - the retry timer takes its interval from the backoff\nok - the retry delay is derived from the failure streak\nok - a fingerprint that took a real touch to fail is retried at the base interval\nok - instant failures back off exponentially up to the cap\nok - the base retry interval is unchanged\nok - a failing reader is left alone for at least a couple of seconds\nok - the backoff is capped at 30s\nok - an attempt is only instant if it ended sooner than a finger could reach the reader\nok - the display waking clears the backoff even when the fingerprint was never suspended\nok - a fresh lock starts with no backoff\n"
+    },
+    {
+      "test": "test/shell.d/lock-fingerprint-message-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - fingerprint PAM exposes a message handler\nok - empty, error, and response prompts do not wake the screen\nok - PAM placement message reaches the lock view state\nok - first informational prompt wakes the screen\nok - retry prompts do not repeatedly wake an unattended screen\nok - late prompts after unlock do not wake the screen\nok - authentication reset clears the previous reader message\n"
+    }
+  ]
+}

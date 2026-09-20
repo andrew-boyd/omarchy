@@ -1,0 +1,6 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "aa0e2108412410f11a0077878769c42533b08d48",
+  "patch_sha256": "a4c4c7bf27fea00c1b3a342e7cabe162e836179b928865f020eef8e74e6a4db0",
+  "software_evidence": "63 aggregation assertions for the complete calibration/recovery patch; exact source file/mode identity except the union of original installer calls. The alternative's recorded failing assertion and boundary observations remain in the evidence archive."
+}

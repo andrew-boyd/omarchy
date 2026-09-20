@@ -1,0 +1,351 @@
+diff --git c/bin/omarchy-hyprland-monitor-disable-ghosts i/bin/omarchy-hyprland-monitor-disable-ghosts
+new file mode 100755
+index 00000000..788f8331
+--- /dev/null
++++ i/bin/omarchy-hyprland-monitor-disable-ghosts
+@@ -0,0 +1,39 @@
++#!/bin/bash
++
++# omarchy:summary=Disable empty duplicate internal display connectors
++# omarchy:hidden=true
++
++# Dual-GPU laptops can expose a second eDP connector that has no identity or
++# modes because the panel is wired to the other GPU. A generic monitor rule can
++# still enable it at 0x0, where it captures workspaces and can never recover on
++# reload. Only disable one while a separate, healthy internal panel is active.
++monitors=$(hyprctl monitors all -j 2>/dev/null) || exit 0
++
++healthy_internal=$(jq 'any(.[];
++  (.name | startswith("eDP-")) and
++  .disabled != true and
++  .description != "" and
++  .width > 0 and
++  .height > 0 and
++  (.availableModes | length) > 0
++)' <<<"$monitors" 2>/dev/null)
++
++[[ $healthy_internal == "true" ]] || exit 0
++
++while read -r output; do
++  [[ -n $output ]] || continue
++  [[ $output =~ ^eDP-[A-Za-z0-9._-]+$ ]] || continue
++  hyprctl eval "hl.monitor({ output = \"$output\", disabled = true })" >/dev/null 2>&1 || true
++done < <(jq -r '.[] |
++  select(
++    (.name | startswith("eDP-")) and
++    .disabled != true and
++    .description == "" and
++    .make == "" and
++    .model == "" and
++    .width == 0 and
++    .height == 0 and
++    (.availableModes | length) == 0
++  ) |
++  .name
++' <<<"$monitors" 2>/dev/null)
+diff --git c/bin/omarchy-hyprland-monitor-watch i/bin/omarchy-hyprland-monitor-watch
+index 33e8f2c5..f8b947b5 100755
+--- c/bin/omarchy-hyprland-monitor-watch
++++ i/bin/omarchy-hyprland-monitor-watch
+@@ -60,6 +60,14 @@ recover_modeless() {
+   ) 9>"$MODELESS_LOCK" &
+ }
+ 
++recover_monitors() {
++  # A duplicate internal connector with no identity or modes is permanent, not
++  # a powered-off display that a reload can recover. Disable it first so it
++  # cannot capture workspaces or keep the modeless recovery loop alive.
++  omarchy-hyprland-monitor-disable-ghosts
++  recover_modeless
++}
++
+ poll_clamshell_state() {
+   while true; do
+     sleep 2
+@@ -88,7 +96,7 @@ sync_poll_state() {
+ 
+ sync_clamshell_after_monitor_change
+ sync_poll_state
+-recover_modeless
++recover_monitors
+ 
+ # Process substitution (not a pipe) keeps this loop in the main shell, so
+ # sync_poll_state can start and stop the background poll as monitors come and go.
+@@ -97,18 +105,18 @@ while read -r event; do
+     monitoradded\>\>*|monitoraddedv2\>\>*)
+       sync_clamshell_after_monitor_change
+       sync_poll_state
+-      recover_modeless
++      recover_monitors
+       ;;
+     monitorremoved\>\>*|monitorremovedv2\>\>*)
+       sync_clamshell_after_monitor_change
+       sync_poll_state
+-      recover_modeless
++      recover_monitors
+       ;;
+     # A reload while the monitor is unpowered leaves it at 0x0 with no hotplug
+     # to notice, same as at boot. Our own recovery reload lands here too, and is
+     # a no-op while its loop still holds the pid.
+     configreloaded\>\>*)
+-      recover_modeless
++      recover_monitors
+       ;;
+   esac
+ done < <(socat -U - "UNIX-CONNECT:$SOCKET")
+diff --git c/bin/omarchy-monitor-state i/bin/omarchy-monitor-state
+index fe0e72f4..0be189ad 100755
+--- c/bin/omarchy-monitor-state
++++ i/bin/omarchy-monitor-state
+@@ -19,5 +19,13 @@ printf '%s\n' "$monitors_json" | jq -r '
+ printf '%s\n' "$focused_monitor"
+ omarchy-hyprland-monitor-scaling 2>/dev/null || echo
+ 
+-printf '%s\n' "$monitors_json" | jq -c \
+-  '[.[] | {name, enabled:(.disabled != true), focused:(.focused == true), width, height}]'
++printf '%s\n' "$monitors_json" | jq -c '
++  def present: . != null and . != "";
++  def listable:
++    ((.width // 0) > 0 and (.height // 0) > 0)
++    or ((.availableModes // []) | length) > 0
++    or (.description | present)
++    or (.make | present)
++    or (.model | present);
++  [.[] | select(listable) | {name, enabled:(.disabled != true), focused:(.focused == true), width, height}]
++'
+diff --git c/test/shell.d/monitor-modeless-test.sh i/test/shell.d/monitor-modeless-test.sh
+index decee06c..fd44f938 100755
+--- c/test/shell.d/monitor-modeless-test.sh
++++ i/test/shell.d/monitor-modeless-test.sh
+@@ -52,6 +52,7 @@ mkdir -p "$fake_bin"
+ 
+ monitors_file="$test_tmp/monitors.json"
+ reload_log="$test_tmp/reload.log"
++eval_log="$test_tmp/eval.log"
+ recovered="$test_tmp/recovered.json"
+ events="$test_tmp/events"
+ modeless_lock="$test_tmp/omarchy-monitor-modeless.lock"
+@@ -69,6 +70,16 @@ elif [[ ${1:-} == "reload" ]]; then
+   printf 'reload\n' >>"$OMARCHY_TEST_RELOAD_LOG"
+   [[ -f $OMARCHY_TEST_RECOVERED_MONITORS ]] &&
+     cp "$OMARCHY_TEST_RECOVERED_MONITORS" "$OMARCHY_TEST_MONITORS_FILE"
++elif [[ ${1:-} == "eval" ]]; then
++  printf '%s\n' "${2:-}" >>"$OMARCHY_TEST_EVAL_LOG"
++
++  output=$(sed -n 's/.*output = "\([^"]*\)".*/\1/p' <<<"${2:-}")
++  if [[ -n $output ]]; then
++    jq --arg output "$output" \
++      'map(if .name == $output then .disabled = true else . end)' \
++      "$OMARCHY_TEST_MONITORS_FILE" >"$OMARCHY_TEST_MONITORS_FILE.next"
++    mv "$OMARCHY_TEST_MONITORS_FILE.next" "$OMARCHY_TEST_MONITORS_FILE"
++  fi
+ fi
+ SH
+ 
+@@ -99,6 +110,8 @@ SH
+ 
+ chmod +x "$fake_bin"/*
+ ln -s "$ROOT/bin/omarchy-hyprland-monitor-modeless" "$fake_bin/omarchy-hyprland-monitor-modeless"
++ln -s "$ROOT/bin/omarchy-hyprland-monitor-disable-ghosts" \
++  "$fake_bin/omarchy-hyprland-monitor-disable-ghosts"
+ 
+ MODELESS=0
+ WORKING=1
+@@ -144,6 +157,47 @@ assert_state $WORKING '[{"name":"DP-1","width":0,"height":0,"disabled":true}]' \
+ 
+ assert_state $WORKING '[]' "a session with no monitors is not reported as modeless"
+ 
++assert_ghosts_disabled() {
++  local expected="$1" monitors="$2" actual
++
++  : >"$eval_log"
++  printf '%s' "$monitors" >"$monitors_file"
++  PATH="$fake_bin:$PATH" OMARCHY_TEST_MONITORS_FILE="$monitors_file" \
++  OMARCHY_TEST_HYPRCTL_FAIL_FLAG="$hyprctl_fail" \
++  OMARCHY_TEST_EVAL_LOG="$eval_log" \
++    "$ROOT/bin/omarchy-hyprland-monitor-disable-ghosts"
++  actual=$(<"$eval_log")
++
++  [[ $actual == "$expected" ]] || fail "$3" "expected '$expected', got '$actual'"
++  pass "$3"
++}
++
++healthy_edp='{"name":"eDP-1","description":"Apple panel","make":"Apple","model":"Color LCD","width":3072,"height":1920,"disabled":false,"availableModes":["3072x1920@60"]}'
++ghost_edp='{"name":"eDP-2","description":"","make":"","model":"","width":0,"height":0,"disabled":false,"availableModes":[]}'
++
++assert_ghosts_disabled 'hl.monitor({ output = "eDP-2", disabled = true })' \
++  "[$healthy_edp,$ghost_edp]" \
++  "an empty duplicate internal connector is disabled"
++
++assert_ghosts_disabled '' \
++  "[$healthy_edp,{\"name\":\"DP-1\",\"description\":\"Dell\",\"make\":\"Dell\",\"model\":\"U2720Q\",\"width\":0,\"height\":0,\"disabled\":false,\"availableModes\":[]}]" \
++  "a modeless external monitor remains eligible for recovery"
++
++assert_ghosts_disabled '' "[$ghost_edp]" \
++  "the only internal connector is never disabled"
++
++assert_ghosts_disabled '' \
++  "[$healthy_edp,{\"name\":\"eDP-2\",\"description\":\"\",\"make\":\"\",\"model\":\"\",\"width\":0,\"height\":0,\"disabled\":true,\"availableModes\":[]}]" \
++  "an already disabled duplicate internal connector is left alone"
++
++assert_ghosts_disabled 'hl.monitor({ output = "eDP-1", disabled = true })' \
++  "[{\"name\":\"eDP-2\",\"description\":\"Apple panel\",\"make\":\"Apple\",\"model\":\"Color LCD\",\"width\":3072,\"height\":1920,\"disabled\":false,\"availableModes\":[\"3072x1920@60\"]},{\"name\":\"eDP-1\",\"description\":\"\",\"make\":\"\",\"model\":\"\",\"width\":0,\"height\":0,\"disabled\":false,\"availableModes\":[]}]" \
++  "the empty connector is detected independently of eDP numbering"
++
++assert_ghosts_disabled '' \
++  "[$healthy_edp,{\"name\":\"eDP-2\\\" })os.execute(\\\"calc\\\")--\",\"description\":\"\",\"make\":\"\",\"model\":\"\",\"width\":0,\"height\":0,\"disabled\":false,\"availableModes\":[]}]" \
++  "an unsafe connector name is never evaluated as Lua"
++
+ # Nothing fires an event for this state, so taking an unanswered query for a
+ # healthy monitor would leave the screen black for good.
+ assert_state $UNDETERMINED 'not json' "an unreadable monitor payload cannot say"
+@@ -169,6 +223,7 @@ start_watcher() {
+   OMARCHY_TEST_EVENTS="$events" \
+   OMARCHY_TEST_MONITORS_FILE="$monitors_file" \
+   OMARCHY_TEST_RELOAD_LOG="$reload_log" \
++  OMARCHY_TEST_EVAL_LOG="$eval_log" \
+   OMARCHY_TEST_RECOVERED_MONITORS="$recovered" \
+   OMARCHY_TEST_GUARD_PAUSED="${1:-0}" \
+   OMARCHY_TEST_HYPRCTL_FAIL_FLAG="$hyprctl_fail" \
+@@ -178,6 +233,18 @@ start_watcher() {
+   exec {events_fd}>"$events"
+ }
+ 
++await_evals() {
++  local waited lines
++
++  for (( waited = 0; waited < 100; waited++ )); do
++    lines=$(wc -l <"$eval_log" | tr -d ' ')
++    (( lines >= $1 )) && return 0
++    sleep 0.05
++  done
++
++  return 1
++}
++
+ await_reloads() {
+   local waited
+ 
+@@ -189,6 +256,21 @@ await_reloads() {
+   return 1
+ }
+ 
++# A dual-GPU laptop can expose an empty duplicate eDP connector permanently.
++# Disable it before modeless recovery, otherwise every reload re-enables it and
++# starts another reload cycle while the ghost output captures workspaces.
++: >"$eval_log"
++printf '%s' "[$healthy_edp,$ghost_edp]" >"$monitors_file"
++rm -f "$recovered"
++start_watcher
++
++await_evals 1 || fail "a ghost internal connector is disabled at startup"
++sleep 1
++[[ ! -s $reload_log ]] || fail "a ghost internal connector does not start recovery" "$(<"$reload_log")"
++pass "a ghost internal connector is disabled without a reload loop"
++
++stop_watcher
++
+ # The watcher reloads until the monitor reports a mode, then stops. It has to
+ # stop on its own: powering the monitor on fires no event to stop it.
+ printf '%s' '[{"name":"DP-1","width":0,"height":0,"disabled":false}]' >"$monitors_file"
+diff --git c/test/shell.d/monitor-panel-pipeline-test.sh i/test/shell.d/monitor-panel-pipeline-test.sh
+new file mode 100755
+index 00000000..c21619ed
+--- /dev/null
++++ i/test/shell.d/monitor-panel-pipeline-test.sh
+@@ -0,0 +1,43 @@
++#!/bin/bash
++set -euo pipefail
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++task_tmp=$(mktemp -d)
++trap 'rm -rf "$task_tmp"' EXIT
++mkdir -p "$task_tmp/bin"
++export MONITOR_PIPELINE_FIXTURE="$task_tmp/monitors.json"
++cat > "$task_tmp/bin/hyprctl" <<'STUB'
++#!/bin/bash
++[[ $* == 'monitors all -j' ]] || exit 1
++cat "$MONITOR_PIPELINE_FIXTURE"
++STUB
++for helper in omarchy-brightness-display omarchy-hyprland-monitor-scaling; do
++  printf '#!/bin/bash\necho 1\n' > "$task_tmp/bin/$helper"
++done
++chmod +x "$task_tmp/bin/"*
++export PATH="$task_tmp/bin:$PATH"
++
++run_node_test <<'JS'
++const fs = require('fs')
++const { execFileSync } = require('child_process')
++const model = require(process.env.MONITOR_PIPELINE_MODEL || path.join(root, 'shell/plugins/panels/monitor/Model.js'))
++const internal = { name: 'eDP-2', disabled: false, width: 2880, height: 1800, description: 'Apple Color LCD', availableModes: ['2880x1800@60'], mirrorOf: 'none' }
++const ghost = { name: 'eDP-1', disabled: false, width: 0, height: 0, description: '', make: '', model: '', availableModes: [], mirrorOf: 'none' }
++function roundTrip(displays) {
++  fs.writeFileSync(process.env.MONITOR_PIPELINE_FIXTURE, JSON.stringify(displays))
++  const output = execFileSync('bash', [path.join(root, 'bin/omarchy-monitor-state')], { encoding: 'utf8' })
++  const lines = output.trimEnd().split('\n')
++  assertEqual(lines.length, 8, 'panel protocol retains eight lines')
++  return model.parseDisplays(lines[7])
++}
++let actual = roundTrip([ghost, internal, { name: 'DP-1', disabled: false, width: 0, height: 0, description: 'Real external monitor', availableModes: ['2560x1440@60'], mirrorOf: 'none' }])
++assertDeepEqual(actual.displays.map(d => d.name), ['eDP-2', 'DP-1'], 'real external monitor awaiting mode recovery remains available in the panel')
++assertEqual(actual.enabledDisplayCount, 2, 'enabled display count includes the recoverable real monitor')
++actual = roundTrip([{ ...ghost, disabled: true }, { ...internal, disabled: true, width: 0, height: 0 }])
++assertDeepEqual(actual.displays.map(d => d.name), ['eDP-2'], 'disabled real panel remains listed while a disabled identityless ghost is omitted')
++assertEqual(actual.enabledDisplayCount, 0, 'disabled panels do not count as enabled')
++actual = roundTrip([{ name: 'DP-2', disabled: false, width: 0, height: 0, availableModes: ['1920x1080@60'], mirrorOf: 'none' }])
++assertEqual(actual.displays.length, 1, 'advertised modes suffice while identity and geometry are temporarily missing')
++actual = roundTrip([ghost, internal])
++assertDeepEqual(actual.displays.map(d => d.name), ['eDP-2'], 'empty duplicate does not reappear after model parsing')
++JS
+diff --git c/test/shell.d/monitor-state-test.sh i/test/shell.d/monitor-state-test.sh
+index b568172f..f16cd260 100755
+--- c/test/shell.d/monitor-state-test.sh
++++ i/test/shell.d/monitor-state-test.sh
+@@ -75,8 +75,23 @@ reverse_mirrored='[
+ ]'
+ 
+ clamshell='[
+-  { "name": "eDP-1", "mirrorOf": "none", "disabled": true, "focused": false, "width": 0, "height": 0 },
+-  { "name": "DP-1", "mirrorOf": "none", "disabled": false, "focused": true, "width": 2560, "height": 1440 }
++  { "name": "eDP-1", "description": "AU Optronics 0x1234", "make": "AU Optronics", "model": "0x1234", "availableModes": ["1920x1080@60.00Hz"], "mirrorOf": "none", "disabled": true, "focused": false, "width": 0, "height": 0 },
++  { "name": "DP-1", "description": "Dell Inc. DELL U2720Q", "make": "Dell Inc.", "model": "DELL U2720Q", "availableModes": ["2560x1440@60.00Hz"], "mirrorOf": "none", "disabled": false, "focused": true, "width": 2560, "height": 1440 }
++]'
++
++ghost='[
++  { "name": "eDP-1", "description": "", "make": "", "model": "", "availableModes": [], "mirrorOf": "none", "disabled": false, "focused": false, "width": 0, "height": 0 },
++  { "name": "eDP-2", "description": "Apple Computer Inc Color LCD", "make": "Apple Computer Inc", "model": "Color LCD", "availableModes": ["2880x1800@60.00Hz"], "mirrorOf": "none", "disabled": false, "focused": true, "width": 2880, "height": 1800 }
++]'
++
++disabled_ghost='[
++  { "name": "eDP-1", "description": "", "make": "", "model": "", "availableModes": [], "mirrorOf": "none", "disabled": true, "focused": false, "width": 0, "height": 0 },
++  { "name": "eDP-2", "description": "Apple Computer Inc Color LCD", "make": "Apple Computer Inc", "model": "Color LCD", "availableModes": ["2880x1800@60.00Hz"], "mirrorOf": "none", "disabled": false, "focused": true, "width": 2880, "height": 1800 }
++]'
++
++swapped_ghost='[
++  { "name": "eDP-1", "description": "Apple Computer Inc Color LCD", "make": "Apple Computer Inc", "model": "Color LCD", "availableModes": ["2880x1800@60.00Hz"], "mirrorOf": "none", "disabled": false, "focused": true, "width": 2880, "height": 1800 },
++  { "name": "eDP-2", "description": "", "make": "", "model": "", "availableModes": [], "mirrorOf": "none", "disabled": false, "focused": false, "width": 0, "height": 0 }
+ ]'
+ 
+ monitor_state "$extended"
+@@ -115,3 +130,21 @@ monitor_state "$clamshell"
+ [[ ${state_lines[7]-} == '[{"name":"eDP-1","enabled":false,"focused":false,"width":0,"height":0},{"name":"DP-1","enabled":true,"focused":true,"width":2560,"height":1440}]' ]] ||
+   fail "monitor state lists every display for the panel" "actual: ${state_lines[7]-<missing>}"
+ pass "monitor state lists every display with its enabled and focused state"
++
++monitor_state "$ghost"
++assert_line_count "monitor state answers every line with a ghost internal connector"
++[[ ${state_lines[7]-} == '[{"name":"eDP-2","enabled":true,"focused":true,"width":2880,"height":1800}]' ]] ||
++  fail "monitor state omits an empty duplicate internal connector" "actual: ${state_lines[7]-<missing>}"
++pass "monitor state omits an empty duplicate internal connector"
++
++monitor_state "$disabled_ghost"
++assert_line_count "monitor state answers every line with a disabled ghost connector"
++[[ ${state_lines[7]-} == '[{"name":"eDP-2","enabled":true,"focused":true,"width":2880,"height":1800}]' ]] ||
++  fail "monitor state omits a disabled empty internal connector" "actual: ${state_lines[7]-<missing>}"
++pass "monitor state omits a disabled empty internal connector"
++
++monitor_state "$swapped_ghost"
++assert_line_count "monitor state answers every line when the ghost is eDP-2"
++[[ ${state_lines[7]-} == '[{"name":"eDP-1","enabled":true,"focused":true,"width":2880,"height":1800}]' ]] ||
++  fail "monitor state omits an empty duplicate regardless of eDP numbering" "actual: ${state_lines[7]-<missing>}"
++pass "monitor state omits an empty duplicate regardless of eDP numbering"

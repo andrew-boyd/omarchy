@@ -1,0 +1,50 @@
+{
+  "number": 11434,
+  "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "original_apply_passed": true,
+  "hardware_verified": false,
+  "rebase_notes": [],
+  "tree": "b84ad89fa543fd3791f029feadd2a7278d31cbc3",
+  "patch_sha256": "b4af55df3d2686b44bdc5f9aca11294d3c2ef32ddbff8b248350f45f54552b61",
+  "files": [
+    {
+      "path": "bin/omarchy-brcmfmac-resume-fix",
+      "identical_to_source": true,
+      "source_sha256": "df8bc81f9d4fcb2f5b03f0f30af0c8aaef35c5945a95df0050e13d080db7e69a",
+      "target_sha256": "df8bc81f9d4fcb2f5b03f0f30af0c8aaef35c5945a95df0050e13d080db7e69a"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "identical_to_source": false,
+      "source_sha256": "bc02fd3e6d54dc65839bec2ae79e8f5907a21926b1359c39e0c3f77aace83f01",
+      "target_sha256": "6c0c0e040dc35391a94ee4bfed2debf575cc7e4a166fc40d187d1ae358237b8e"
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-resume.sh",
+      "identical_to_source": true,
+      "source_sha256": "f65db53a6297853183a4e801bb5a99921d6ff5a371bc971b5acf1fc62ac00565",
+      "target_sha256": "f65db53a6297853183a4e801bb5a99921d6ff5a371bc971b5acf1fc62ac00565"
+    },
+    {
+      "path": "migrations/1789203245.sh",
+      "identical_to_source": true,
+      "source_sha256": "18d4cac70ff563c038f7d0e62a3955417c116ffee95bfb8f46bb364ffd268b1c",
+      "target_sha256": "18d4cac70ff563c038f7d0e62a3955417c116ffee95bfb8f46bb364ffd268b1c"
+    },
+    {
+      "path": "test/shell.d/brcmfmac-resume-fix-test.sh",
+      "identical_to_source": true,
+      "source_sha256": "e625d65c999e9bdd7f5cf16ed46f72df5eb1eac8394712748b041ee9c08d18dc",
+      "target_sha256": "e625d65c999e9bdd7f5cf16ed46f72df5eb1eac8394712748b041ee9c08d18dc"
+    }
+  ],
+  "all_sh_retains_target_exactly": true,
+  "whitespace": {
+    "passed": true,
+    "output": ""
+  },
+  "source_checks_passed": false,
+  "source_assertions": 6,
+  "target_tree": "b84ad89fa543fd3791f029feadd2a7278d31cbc3"
+}

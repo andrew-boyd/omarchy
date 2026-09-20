@@ -1,0 +1,27 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
+  "tests": [
+    "test/shell.d/hw-bcm43xx-test.sh",
+    "test/shell.d/hw-t2-test.sh",
+    "test/shell.d/nvidia-hw-detect-test.sh",
+    "test/shell.d/pci-detection-integration-test.sh",
+    "test/shell.d/vulkan-sysfs-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hw-bcm43xx": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866",
+    "bin/omarchy-hw-nvidia": "ba31a52afa37149fced22fd7db7cfea907d62b1aa26b2bb2390c2f6324a51a35",
+    "bin/omarchy-hw-t2": "72dc8a79c15459116b4b301dca292ef730240c6dc845b04ebc10e6846dd558fb",
+    "install/hardware/apple/fix-t2.sh": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9",
+    "install/hardware/fix-bcm43xx.sh": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d",
+    "install/hardware/nvidia.sh": "25417ff6340279486d937a3f68670b28a5cbf829e85961443db431a32a074718",
+    "install/hardware/pacman.sh": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2",
+    "install/hardware/vulkan.sh": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/hw-bcm43xx-test.sh": "8677e67fa13d3a69898d65dba63977868ed75eb763255080c641515eac80a9d9",
+    "test/shell.d/hw-t2-test.sh": "ce8b59966ebb04a103048ab5e0b0378302c23a4e64c47890c3e8947540880bff",
+    "test/shell.d/nvidia-hw-detect-test.sh": "5a31111ef939a44b878fb323baf90f997b305c100101bdaf125f912fa4368561",
+    "test/shell.d/pci-detection-integration-test.sh": "9f53b9649cd18b85af8484917b32d81c08df3b7c23b34f8bb634c027166eae1a",
+    "test/shell.d/vulkan-sysfs-test.sh": "1c7005340f8ceba6140307ec7b5560fb238ebbf26f0fe77c89831f8993be85fb"
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "c6371253a6e0e7b5b81afac5dd8da3d541bd53f4",
+  "patch_sha256": "436dbcae496a613ebd324e2b07b1dcd8eab7843869d5cc4ce5a02f5b6c839f90",
+  "files": [
+    {
+      "path": "default/firmware/apple/brcmfmac43602-pcie.txt",
+      "sha256": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": true,
+          "source_sha256": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "sha256": "e9df862fa432c336ead33f1ceedbc1b71e00e79b951056d7ffd2c8f76715a892",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": false,
+          "source_sha256": "4f3e9ad156860e3eb6b553fb2aebb81719eb7ad30e2e4a6bbd75b7485a10304c"
+        },
+        {
+          "number": 11017,
+          "identical_to_source": false,
+          "source_sha256": "38c77452ee278c56f1c5fab61afa65d54b08b19dcba192e89f857b1c02a2e4a0"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/apple/brcmfmac-43602.sh",
+      "sha256": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": true,
+          "source_sha256": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/apple/fix-bcm43602-nvram.sh",
+      "sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+      "sources": [
+        {
+          "number": 11017,
+          "identical_to_source": true,
+          "source_sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+      "sha256": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": true,
+          "source_sha256": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2"
+        }
+      ]
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "sha256": "bcc032ca6edefc9021832d676dcb4e8fd39b059412fb96525316dba0418f2899",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": true,
+          "source_sha256": "bcc032ca6edefc9021832d676dcb4e8fd39b059412fb96525316dba0418f2899"
+        }
+      ]
+    },
+    {
+      "path": "migrations/1787312531.sh",
+      "sha256": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": true,
+          "source_sha256": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb"
+        }
+      ]
+    },
+    {
+      "path": "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "sha256": "af93217ff1279d37b211bcce5e89dfbb837587bf40175744cbe43d2e144c69a6",
+      "sources": [
+        {
+          "number": 11017,
+          "identical_to_source": true,
+          "source_sha256": "af93217ff1279d37b211bcce5e89dfbb837587bf40175744cbe43d2e144c69a6"
+        }
+      ]
+    },
+    {
+      "path": "test/shell.d/brcmfmac-5ghz-test.sh",
+      "sha256": "2041faebf77b254304494bdf431684742fc7ce4d17d78b90afd7620c9b39639a",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": true,
+          "source_sha256": "2041faebf77b254304494bdf431684742fc7ce4d17d78b90afd7620c9b39639a"
+        }
+      ]
+    },
+    {
+      "path": "test/shell.d/broadcom-calibration-integration-test.sh",
+      "sha256": "16f25506cb5df427a0966f4098a029cf8c0d89d13036c49644f6fc2fe02c76b4",
+      "sources": []
+    },
+    {
+      "path": "test/shell.d/unowned-system-paths-test.sh",
+      "sha256": "a934da6e2673031d5fadcdd6b7feab988d9d1374db31ca21bee0450b8b86999a",
+      "sources": [
+        {
+          "number": 7671,
+          "identical_to_source": false,
+          "source_sha256": "44394cbfb32fbf397292bcfcd5a4047668cdb16d9d74c31bae565bccde575e2b"
+        }
+      ]
+    }
+  ],
+  "selected_sources": [
+    7671,
+    11017
+  ],
+  "plan_complete": false,
+  "hardware_verified": false,
+  "integration": "Production leaves, helper, migration, data and manual match their source exactly. all.sh retains target content plus both existing leaf calls. The ownership-test rebase retains current target allowances plus the four source lines. Only the integration fixture is newly authored."
+}

@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": false,
+  "results": [
+    {
+      "test": "test/shell.d/lid-active-display-integration-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 0,
+      "output": "not ok - raw Touch Bar DRM without a compositor external display does not suppress locking\n"
+    }
+  ]
+}

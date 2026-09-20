@@ -1,0 +1,804 @@
+diff --git a/bin/omarchy-hw-hybrid-gpu b/bin/omarchy-hw-hybrid-gpu
+index 42f3c19dfe4..8d9dfc87fac 100755
+--- a/bin/omarchy-hw-hybrid-gpu
++++ b/bin/omarchy-hw-hybrid-gpu
+@@ -2,8 +2,10 @@
+ 
+ # omarchy:summary=Detect whether the system has an active hybrid GPU configuration
+ 
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ multiple_gpus() {
+-  (($(lspci | grep -cE 'VGA|3D|Display') >= 2))
++  (( $(omarchy-pci-class-count 0x03) >= 2 ))
+ }
+ 
+ if omarchy-cmd-present supergfxctl; then
+diff --git a/bin/omarchy-hw-intel-sof b/bin/omarchy-hw-intel-sof
+index 0055dc69d9b..ac30701ce4c 100755
+--- a/bin/omarchy-hw-intel-sof
++++ b/bin/omarchy-hw-intel-sof
+@@ -2,4 +2,6 @@
+ 
+ # omarchy:summary=Detect an Intel SOF-capable audio DSP
+ 
+-lspci | grep -qiE '(Multimedia audio controller|Audio device).*Intel'
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
++omarchy-pci-class-vendor 0x04 0x8086
+diff --git a/bin/omarchy-hw-nvidia b/bin/omarchy-hw-nvidia
+index 7d180593544..c9a9bb140fd 100755
+--- a/bin/omarchy-hw-nvidia
++++ b/bin/omarchy-hw-nvidia
+@@ -2,15 +2,6 @@
+ 
+ # omarchy:summary=Detect whether the computer has an NVIDIA GPU.
+ 
+-# Read the cached sysfs IDs rather than lspci, which reads PCI config space and
+-# resumes runtime-suspended GPUs.
+-pci_devices_path="${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}"
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
+ 
+-shopt -s nullglob
+-
+-for device in "$pci_devices_path"/*; do
+-  [[ $(< "$device/vendor") == "0x10de" ]] || continue
+-  [[ $(< "$device/class") == 0x03* ]] && exit 0
+-done
+-
+-exit 1
++omarchy-pci-class-vendor 0x03 0x10de
+diff --git a/bin/omarchy-install-gaming-gpu-lib32 b/bin/omarchy-install-gaming-gpu-lib32
+index 2e4e3533fe7..684dfd6b1f2 100755
+--- a/bin/omarchy-install-gaming-gpu-lib32
++++ b/bin/omarchy-install-gaming-gpu-lib32
+@@ -7,16 +7,18 @@
+ 
+ set -e
+ 
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ echo "Installing lib32 graphics drivers..."
+ 
+ PACKAGES=()
+ 
+ declare -A VULKAN_DRIVERS=(
+-  [Intel]=lib32-vulkan-intel
+-  [AMD]=lib32-vulkan-radeon
++  [0x8086]=lib32-vulkan-intel
++  [0x1002]=lib32-vulkan-radeon
+ )
+ for vendor in "${!VULKAN_DRIVERS[@]}"; do
+-  if lspci | grep -iE "(VGA|Display).*$vendor" >/dev/null; then
++  if omarchy-pci-class-vendor 0x03 "$vendor"; then
+     PACKAGES+=("${VULKAN_DRIVERS[$vendor]}")
+   fi
+ done
+diff --git a/install/hardware/apple/fix-brcmfmac-supplicant.sh b/install/hardware/apple/fix-brcmfmac-supplicant.sh
+index 33238c9cf37..038fdad1d62 100644
+--- a/install/hardware/apple/fix-brcmfmac-supplicant.sh
++++ b/install/hardware/apple/fix-brcmfmac-supplicant.sh
+@@ -18,11 +18,13 @@
+ # machines including the T2-less iMac19,1 and iMac19,2, and BCM4377/4378/4387
+ # from the T2 era on. The BCM4360 in 2013-2015 Macs is deliberately absent: it
+ # runs the out-of-tree wl driver, which never reads a brcmfmac option.
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+ 
+-if lspci -nn | grep "106b:180[12]" >/dev/null ||
++if omarchy-pci-id 0x106b 0x1801 0x1802 ||
+   { [[ $sys_vendor == Apple* ]] &&
+-    lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
++    omarchy-pci-id 0x14e4 0x43ba 0x43bb 0x43bc 0x43a3 0x43dc 0x4464 0x4488 0x4425 0x4433; }; then
+   echo "Detected a Mac with Broadcom Wi-Fi; running the WPA handshake in software"
+ 
+   mkdir -p /etc/modprobe.d
+diff --git a/install/hardware/apple/fix-t2.sh b/install/hardware/apple/fix-t2.sh
+index 948828d4d41..4a8601d7ac8 100644
+--- a/install/hardware/apple/fix-t2.sh
++++ b/install/hardware/apple/fix-t2.sh
+@@ -1,6 +1,8 @@
+ # Detect T2 MacBook models using PCI IDs
+ # Vendor: 106b (Apple), Device IDs: 1801 or 1802 (T2 Security Chip)
+-if lspci -nn | grep "106b:180[12]" >/dev/null; then
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
++if omarchy-pci-id 0x106b 0x1801 0x1802; then
+   echo "Detected MacBook with T2 chip. Installing support items..."
+ 
+   omarchy-pkg-add \
+diff --git a/install/hardware/fix-bcm43xx.sh b/install/hardware/fix-bcm43xx.sh
+index 0f9cf474a5b..e3fddad52a5 100644
+--- a/install/hardware/fix-bcm43xx.sh
++++ b/install/hardware/fix-bcm43xx.sh
+@@ -2,9 +2,9 @@
+ # - BCM4360 (2013–2015 MacBooks)
+ # - BCM4331 (2012, early 2013 MacBooks)
+ 
+-pci_info=$(lspci -nn)
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
+ 
+-if (echo "$pci_info" | grep -q "14e4:43a0" || echo "$pci_info" | grep -q "14e4:4331"); then
++if omarchy-pci-id 0x14e4 0x43a0 0x4331; then
+   echo "BCM4360 / BCM4331 detected"
+   omarchy-pkg-add broadcom-wl-dkms
+ fi
+diff --git a/install/hardware/fix-yt6801-ethernet-adapter.sh b/install/hardware/fix-yt6801-ethernet-adapter.sh
+index f88a9cec624..35e50aefcba 100644
+--- a/install/hardware/fix-yt6801-ethernet-adapter.sh
++++ b/install/hardware/fix-yt6801-ethernet-adapter.sh
+@@ -1,4 +1,6 @@
+ # Install drivers for Motorcomm YT6801 ethernet adapter used by the Slimbook Executive
+-if lspci | grep -i "YT6801\|Motorcomm.*Ethernet"; then
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
++if omarchy-pci-id 0x1f0a 0x6801; then
+   omarchy-pkg-add yt6801-dkms
+ fi
+diff --git a/install/hardware/intel/fix-wifi7-eht.sh b/install/hardware/intel/fix-wifi7-eht.sh
+index 8d73095c29d..87a7c5a04a1 100644
+--- a/install/hardware/intel/fix-wifi7-eht.sh
++++ b/install/hardware/intel/fix-wifi7-eht.sh
+@@ -5,7 +5,9 @@
+ # back to WiFi 6 (HE/802.11ax) which works at full speed.
+ # This should be removed when Intel fixes the firmware/driver.
+ 
+-if lspci -nn | grep -qE '\[8086:(e440|272b)\]'; then
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
++if omarchy-pci-id 0x8086 0xe440 0x272b; then
+   mkdir -p /etc/modprobe.d
+   cat > /etc/modprobe.d/iwlwifi-disable-eht.conf <<'EOF'
+ # Temporary fix Dell XPS 14/16 on Panther lake
+diff --git a/install/hardware/nvidia.sh b/install/hardware/nvidia.sh
+index 1c36787b770..b51f43ccb21 100644
+--- a/install/hardware/nvidia.sh
++++ b/install/hardware/nvidia.sh
+@@ -1,4 +1,4 @@
+-if lspci | grep -qi 'nvidia'; then
++if omarchy-hw-nvidia; then
+   if omarchy-hw-nvidia-gsp; then
+     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)
+   elif omarchy-hw-nvidia-without-gsp; then
+diff --git a/install/hardware/pacman.sh b/install/hardware/pacman.sh
+index 7533d3f378c..9cc6cc84f24 100644
+--- a/install/hardware/pacman.sh
++++ b/install/hardware/pacman.sh
+@@ -1,6 +1,8 @@
+ # Hardware-specific pacman repository extensions that must survive the final
+ # pacman.conf restore.
+-if lspci -nn | grep "106b:180[12]" >/dev/null; then
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
++if omarchy-pci-id 0x106b 0x1801 0x1802; then
+   if ! grep -q '^\[arch-mact2\]' /etc/pacman.conf; then
+     cat >> /etc/pacman.conf <<'EOF'
+ 
+diff --git a/install/hardware/vulkan.sh b/install/hardware/vulkan.sh
+index a2447d46ffa..3f81cfb8f58 100644
+--- a/install/hardware/vulkan.sh
++++ b/install/hardware/vulkan.sh
+@@ -1,16 +1,18 @@
+ # Install Vulkan drivers matching detected GPU hardware
+ # (NVIDIA Vulkan is handled by nvidia.sh via nvidia-utils)
+ 
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ declare -A VULKAN_DRIVERS=(
+-  [Intel]=vulkan-intel
+-  [AMD]=vulkan-radeon
+-  [Apple]=vulkan-asahi
++  [0x8086]=vulkan-intel
++  [0x1002]=vulkan-radeon
++  [0x106b]=vulkan-asahi
+ )
+ 
+ PACKAGES=()
+ 
+ for vendor in "${!VULKAN_DRIVERS[@]}"; do
+-  if lspci | grep -iE "(VGA|Display).*$vendor" > /dev/null; then
++  if omarchy-pci-class-vendor 0x03 "$vendor"; then
+     PACKAGES+=("${VULKAN_DRIVERS[$vendor]}")
+   fi
+ done
+diff --git a/install/helpers/pci-sysfs.sh b/install/helpers/pci-sysfs.sh
+new file mode 100644
+index 00000000000..1fdf636bc2f
+--- /dev/null
++++ b/install/helpers/pci-sysfs.sh
+@@ -0,0 +1,69 @@
++# Detect PCI devices from cached sysfs fields instead of lspci.
++#
++# lspci reads PCI config space, and the kernel resumes a runtime-suspended
++# device to serve that read. On a hybrid laptop the discrete GPU idles in
++# D3cold, so a bare lspci can take over a second waking it. The vendor, device,
++# class, and subsystem IDs are served from cached sysfs fields that never touch
++# config space, so nothing wakes.
++#
++# Each matcher walks /sys/bus/pci/devices once and returns 0 on the first match.
++# Tests point OMARCHY_PCI_DEVICES_PATH at a fixture tree of the same layout.
++
++# Point the helpers at a fixture tree instead of the real sysfs in tests.
++: "${OMARCHY_PCI_DEVICES_PATH:=/sys/bus/pci/devices}"
++
++# Each matcher walks the devices dir once and returns 0 on the first match.
++shopt -s nullglob
++
++# First argument is a vendor ID; the remaining arguments are device IDs for that
++# vendor to accept. Returns 0 if any device carries both.
++omarchy-pci-id() {
++  local vendor="$1"
++  shift
++  local device id
++  for device in "$OMARCHY_PCI_DEVICES_PATH"/*; do
++    [[ $(<"$device/vendor") == "$vendor" ]] || continue
++    for id in "$@"; do
++      [[ $(<"$device/device") == "$id" ]] && return 0
++    done
++  done
++  return 1
++}
++
++# First argument is a class prefix (e.g. 0x03 for a display controller); the
++# second is a vendor ID. Returns 0 if any device's class begins with the prefix
++# and its vendor matches.
++omarchy-pci-class-vendor() {
++  local class="$1" vendor="$2"
++  local device
++  for device in "$OMARCHY_PCI_DEVICES_PATH"/*; do
++    [[ $(<"$device/class") == "${class}"* && $(<"$device/vendor") == "$vendor" ]] && return 0
++  done
++  return 1
++}
++
++# First argument is a class prefix. Prints how many devices have a class that
++# begins with it, regardless of vendor; for aggregation and count checks where
++# a boolean matcher is not enough.
++omarchy-pci-class-count() {
++  local class="$1"
++  local device
++  local count=0
++  for device in "$OMARCHY_PCI_DEVICES_PATH"/*; do
++    [[ $(<"$device/class") == "${class}"* ]] && count=$((count + 1))
++  done
++  printf '%s\n' "$count"
++}
++
++# Returns 0 if any device is bound to the named driver, read from the bound
++# driver symlink.
++omarchy-pci-driver() {
++  local driver="$1"
++  local device bound
++  for device in "$OMARCHY_PCI_DEVICES_PATH"/*; do
++    [[ -L $device/driver ]] || continue
++    bound="$(readlink "$device/driver")"
++    [[ ${bound##*/} == "$driver" ]] && return 0
++  done
++  return 1
++}
+diff --git a/install/user/hardware/fix-nouveau-cursor.sh b/install/user/hardware/fix-nouveau-cursor.sh
+index 3b819432db2..ff599bedf47 100644
+--- a/install/user/hardware/fix-nouveau-cursor.sh
++++ b/install/user/hardware/fix-nouveau-cursor.sh
+@@ -4,11 +4,11 @@
+ # older NVIDIA GPUs, leaving the mouse pointer invisible under Hyprland.
+ # Skip the fix when the proprietary driver was configured: supported GPUs can
+ # still use nouveau during installation before switching drivers on reboot.
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ nvidia_config="${OMARCHY_NVIDIA_MODPROBE_CONFIG:-/etc/modprobe.d/nvidia.conf}"
+ 
+-if [[ ! -f $nvidia_config ]] &&
+-  omarchy-cmd-present lspci &&
+-  LC_ALL=C lspci -k | grep -qi 'Kernel driver in use: nouveau'; then
++if [[ ! -f $nvidia_config ]] && omarchy-pci-driver nouveau; then
+   looknfeel="$HOME/.config/hypr/looknfeel.lua"
+ 
+   if [[ -f $looknfeel ]] && ! grep -q 'no_hardware_cursors' "$looknfeel"; then
+diff --git a/migrations/1784401744.sh b/migrations/1784401744.sh
+index 91bd6065b0c..626f1e56cfe 100644
+--- a/migrations/1784401744.sh
++++ b/migrations/1784401744.sh
+@@ -1,5 +1,7 @@
+ echo "Backfill hardware support and tmux settings added before Omarchy quattro"
+ 
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ tmux_config="$HOME/.config/tmux/tmux.conf"
+ if [[ -f $tmux_config ]]; then
+   sed -i 's/^set -g terminal-features\[3\] "xterm-kitty:extkeys"$/set -ag terminal-features "xterm-kitty:extkeys"/' "$tmux_config"
+@@ -12,16 +14,16 @@ if [[ -f $tmux_config ]]; then
+ fi
+ 
+ hardware_packages=()
+-if lspci | grep -iE '(Multimedia audio controller|Audio device).*Intel' >/dev/null && omarchy-pkg-missing sof-firmware; then
++if omarchy-pci-class-vendor 0x04 0x8086 && omarchy-pkg-missing sof-firmware; then
+   hardware_packages+=(sof-firmware)
+ fi
+-if lspci | grep -iE '(VGA|Display).*Intel' >/dev/null && omarchy-pkg-missing vulkan-intel; then
++if omarchy-pci-class-vendor 0x03 0x8086 && omarchy-pkg-missing vulkan-intel; then
+   hardware_packages+=(vulkan-intel)
+ fi
+-if lspci | grep -iE '(VGA|Display).*AMD' >/dev/null && omarchy-pkg-missing vulkan-radeon; then
++if omarchy-pci-class-vendor 0x03 0x1002 && omarchy-pkg-missing vulkan-radeon; then
+   hardware_packages+=(vulkan-radeon)
+ fi
+-if lspci | grep -iE '(VGA|Display).*Apple' >/dev/null && omarchy-pkg-missing vulkan-asahi; then
++if omarchy-pci-class-vendor 0x03 0x106b && omarchy-pkg-missing vulkan-asahi; then
+   hardware_packages+=(vulkan-asahi)
+ fi
+ 
+diff --git a/migrations/1785944594.sh b/migrations/1785944594.sh
+index 823fe952425..3c576ae8371 100644
+--- a/migrations/1785944594.sh
++++ b/migrations/1785944594.sh
+@@ -1,6 +1,10 @@
+ echo "Update T2 Mac suspend, Touch Bar, and fan defaults"
+ 
+-if ! lspci -nn | grep "106b:180[12]" >/dev/null; then
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
++# Detect the Apple T2 security chip from its cached sysfs PCI IDs rather than
++# lspci, which reads config space and resumes runtime-suspended devices.
++if ! omarchy-pci-id 0x106b 0x1801 0x1802; then
+   exit 0
+ fi
+ 
+diff --git a/migrations/1786391100.sh b/migrations/1786391100.sh
+index b67ecf82089..2f0df5e3c31 100644
+--- a/migrations/1786391100.sh
++++ b/migrations/1786391100.sh
+@@ -8,11 +8,15 @@ echo "Run the WPA handshake in software on Macs with Broadcom Wi-Fi"
+ dmi_vendor="${OMARCHY_BRCMFMAC_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
+ conf="${OMARCHY_BRCMFMAC_CONF:-/etc/modprobe.d/brcmfmac.conf}"
+ 
++source "$OMARCHY_PATH/install/helpers/pci-sysfs.sh"
++
+ sys_vendor="$(cat "$dmi_vendor" 2>/dev/null || true)"
+ 
+-if ! lspci -nn | grep "106b:180[12]" >/dev/null &&
++# Detect the PCI IDs from cached sysfs fields rather than lspci, which reads
++# config space and resumes runtime-suspended devices.
++if ! omarchy-pci-id 0x106b 0x1801 0x1802 &&
+   ! { [[ $sys_vendor == Apple* ]] &&
+-    lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
++    omarchy-pci-id 0x14e4 0x43ba 0x43bb 0x43bc 0x43a3 0x43dc 0x4464 0x4488 0x4425 0x4433; }; then
+   exit 0
+ fi
+ 
+diff --git a/test/shell.d/base-test.sh b/test/shell.d/base-test.sh
+index 9de42cf3b10..35725b7dade 100644
+--- a/test/shell.d/base-test.sh
++++ b/test/shell.d/base-test.sh
+@@ -76,9 +76,39 @@ require_compositor() {
+   exit 0
+ }
+ 
++# Build a /sys/bus/pci/devices fixture tree at $1 so scripts that read cached
++# sysfs PCI IDs (instead of lspci) can be tested. Remaining arguments are PCI
++# devices as "vendor:device:class", in sysfs's own 0x-prefixed format.
++write_pci_devices() {
++  local dir="$1"
++  shift
++  rm -rf "$dir"
++  mkdir -p "$dir"
++
++  local index=0
++  local spec
++  for spec in "$@"; do
++    local slot
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$dir/$slot"
++    printf '%s\n' "${spec%%:*}" >"$dir/$slot/vendor"
++    printf '%s\n' "$(cut -d: -f2 <<<"$spec")" >"$dir/$slot/device"
++    printf '%s\n' "${spec##*:}" >"$dir/$slot/class"
++    index=$((index + 1))
++  done
++}
++
++# Bind the device at the given slot to a driver, creating the driver symlink a
++# sysfs driver check reads. $1 is the fixture devices dir, $2 the slot, $3 the
++# driver name.
++bind_pci_driver() {
++  local dir="$1" slot="$2" driver="$3"
++  mkdir -p "$dir/$slot"
++  ln -s "/sys/bus/pci/drivers/$driver" "$dir/$slot/driver"
++}
++
+ run_node_test() {
+   require_command node
+-
+   {
+     cat <<'JS_PRELUDE'
+ const path = require('path')
+diff --git a/test/shell.d/brcmfmac-supplicant-test.sh b/test/shell.d/brcmfmac-supplicant-test.sh
+index 7e476d73de6..0b4d0ba0b8a 100755
+--- a/test/shell.d/brcmfmac-supplicant-test.sh
++++ b/test/shell.d/brcmfmac-supplicant-test.sh
+@@ -24,25 +24,9 @@ trap 'rm -rf "$test_tmp"' EXIT
+ stub_bin="$test_tmp/bin"
+ calls="$test_tmp/calls.log"
+ conf="$test_tmp/etc/modprobe.d/brcmfmac.conf"
++pci_dir="$test_tmp/pci-devices"
+ mkdir -p "$stub_bin" "$test_tmp/dmi"
+ 
+-cat >"$stub_bin/lspci" <<'SH'
+-#!/bin/bash
+-
+-# Chatty like real lspci: keep writing well past the pipe buffer after the
+-# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail
+-# would read that as "no such hardware" (#6608).
+-if (( ${T2_HARDWARE:-0} == 1 )); then
+-  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'
+-fi
+-if [[ -n ${WIFI_ID:-} ]]; then
+-  echo "03:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]"
+-fi
+-for _ in {1..4096}; do
+-  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'
+-done
+-SH
+-
+ cat >"$stub_bin/sudo" <<'SH'
+ #!/bin/bash
+ 
+@@ -63,14 +47,24 @@ SH
+ 
+ chmod +x "$stub_bin"/*
+ 
++# Write sysfs PCI fixtures that control what the leaf's and migration's T2 and
++# Broadcom ID checks see.
++write_pci_fixture() {
++  local t2="$1" wifi_id="$2"
++  local args=()
++  [[ $t2 == 1 ]] && args+=(0x106b:0x1801:0x068000)
++  [[ -n $wifi_id ]] && args+=(0x14e4:0x"$wifi_id":0x028000)
++  write_pci_devices "$pci_dir" "${args[@]}"
++}
++
+ # The leaf reads the vendor from an absolute path, so point it at a fixture by
+-# running with a fake root on PATH-independent state. pipefail is on, so a
+-# grep -q gate would go silent here the way #6608 did.
++# running with a fake root on PATH-independent state.
+ run_leaf() {
+   local vendor="$1" wifi_id="${2:-}" t2="${3:-0}"
+   rm -rf "$test_tmp/etc"
+   mkdir -p "$test_tmp/etc"
+   printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  write_pci_fixture "$t2" "$wifi_id"
+ 
+   # Redirect both absolute paths the leaf touches into the sandbox.
+   local script="$test_tmp/leaf.sh"
+@@ -78,7 +72,9 @@ run_leaf() {
+       -e "s|/etc/modprobe.d|$test_tmp/etc/modprobe.d|g" \
+       "$leaf" >"$script"
+ 
+-  WIFI_ID="$wifi_id" T2_HARDWARE="$t2" PATH="$stub_bin:$PATH" \
++  PATH="$stub_bin:$PATH" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+     bash -eE -o pipefail -c 'source "$1"' bash "$script" </dev/null
+ }
+ 
+@@ -122,17 +118,20 @@ pass "a Mac with no wireless device is left alone"
+ run_migration() {
+   local vendor="$1" wifi_id="${2:-}" t2="${3:-0}"
+   printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  write_pci_fixture "$t2" "$wifi_id"
+   : >"$calls"
+ 
+-  WIFI_ID="$wifi_id" T2_HARDWARE="$t2" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++  TEST_LOG="$calls" \
++    PATH="$stub_bin:$PATH" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+     OMARCHY_BRCMFMAC_DMI_VENDOR="$test_tmp/dmi/sys_vendor" \
+     OMARCHY_BRCMFMAC_CONF="$conf" \
+     bash -euo pipefail "$migration" >/dev/null
+ }
+ 
+ # A T2 install from before the quirk shipped has no config at all, so this is
+-# the case that proves the T2 gate itself still fires -- and it is the piped
+-# grep, run under pipefail, that #6608 was about.
++# the case that proves the T2 gate itself still fires.
+ rm -rf "$test_tmp/etc"
+ run_migration "Apple Inc." 4488 1
+ grep -q '^options brcmfmac feature_disable=0x82000$' "$conf" 2>/dev/null ||
+diff --git a/test/shell.d/hw-hybrid-gpu-test.sh b/test/shell.d/hw-hybrid-gpu-test.sh
+index d7b7ae777b6..ff0332d87e4 100644
+--- a/test/shell.d/hw-hybrid-gpu-test.sh
++++ b/test/shell.d/hw-hybrid-gpu-test.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ 
+-source "$(dirname "$0")/base-test.sh"
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
+ 
+ test_tmp=$(mktemp -d) || fail "test temp directory is available"
+ trap 'rm -rf "$test_tmp"' EXIT
+@@ -28,18 +28,33 @@ esac
+ printf '%s\n' "${SUPPORTED_MODES:-Integrated Hybrid}"
+ STUB
+ 
+-cat >"$fake_bin/lspci" <<'STUB'
+-#!/bin/bash
+-
+-for _ in $(seq "${GPU_COUNT:-1}"); do
+-  echo "0000:00:02.0 VGA compatible controller: Stub GPU"
+-done
+-STUB
+-
+-chmod +x "$fake_bin"/*
++chmod +x "$fake_bin/supergfxctl"
++
++devices_dir="$test_tmp/devices"
++
++# Write N PCI display controllers as sysfs device directories. The class prefix
++# 0x03 is what the detector counts and covers VGA, 3D, and Display controllers.
++write_display_devices() {
++  rm -rf "$devices_dir"
++  mkdir -p "$devices_dir"
++
++  local index=0
++  for _ in $(seq "${1:-0}"); do
++    local slot
++    slot=$(printf '0000:%02x:00.0' "$index")
++    mkdir -p "$devices_dir/$slot"
++    printf '0x0000\n' >"$devices_dir/$slot/vendor"
++    printf '0x030000\n' >"$devices_dir/$slot/class"
++    index=$((index + 1))
++  done
++}
+ 
+ hybrid_gpu() {
+-  PATH="$fake_bin:$PATH" timeout --kill-after=1s 10s bash "$ROOT/bin/omarchy-hw-hybrid-gpu"
++  write_display_devices "${GPU_COUNT:-0}"
++  PATH="$fake_bin:$PATH" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_PCI_DEVICES_PATH="$devices_dir" \
++    timeout --kill-after=1s 10s bash "$ROOT/bin/omarchy-hw-hybrid-gpu"
+ }
+ 
+ hybrid_gpu ||
+diff --git a/test/shell.d/hw-nvidia-test.sh b/test/shell.d/hw-nvidia-test.sh
+index da461ce44ce..1c385008fa6 100755
+--- a/test/shell.d/hw-nvidia-test.sh
++++ b/test/shell.d/hw-nvidia-test.sh
+@@ -26,7 +26,9 @@ write_pci_devices() {
+ }
+ 
+ hw_nvidia() {
+-  OMARCHY_PCI_DEVICES_PATH="$tmp_dir/devices" "$ROOT/bin/omarchy-hw-$1"
++  OMARCHY_PATH="$ROOT" \
++    OMARCHY_PCI_DEVICES_PATH="$tmp_dir/devices" \
++    "$ROOT/bin/omarchy-hw-$1"
+ }
+ 
+ assert_detects() {
+diff --git a/test/shell.d/nouveau-cursor-test.sh b/test/shell.d/nouveau-cursor-test.sh
+index 6f47f976557..0c8f4e4d8f9 100644
+--- a/test/shell.d/nouveau-cursor-test.sh
++++ b/test/shell.d/nouveau-cursor-test.sh
+@@ -7,21 +7,22 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
+ test_tmp=$(mktemp -d)
+ trap 'rm -rf "$test_tmp"' EXIT
+ 
+-mkdir -p "$test_tmp/bin" "$test_tmp/home/.config/hypr"
+-cat >"$test_tmp/bin/lspci" <<'SH'
+-#!/bin/bash
+-printf '%s\n' "Kernel driver in use: ${TEST_VIDEO_DRIVER:-nouveau}"
+-SH
+-chmod +x "$test_tmp/bin/lspci"
+-
+ looknfeel="$test_tmp/home/.config/hypr/looknfeel.lua"
++mkdir -p "$(dirname "$looknfeel")"
+ printf '%s\n' '-- User look and feel' >"$looknfeel"
+ 
+ run_fix() {
++  local driver="${1:-nouveau}"
++  local pci_dir="$test_tmp/pci-$driver-$RANDOM"
++  # A display controller (class 0x03) with the NVIDIA vendor ID, bound to the
++  # driver under test.
++  write_pci_devices "$pci_dir" 0x10de:0x1c03:0x030200
++  bind_pci_driver "$pci_dir" "0000:00:00.0" "$driver"
++
+   HOME="$test_tmp/home" \
+-    PATH="$test_tmp/bin:$ROOT/bin:$PATH" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+     OMARCHY_NVIDIA_MODPROBE_CONFIG="$test_tmp/nvidia.conf" \
+-    TEST_VIDEO_DRIVER="${1:-nouveau}" \
+     bash -euo pipefail -c 'source "$ROOT/install/user/hardware/fix-nouveau-cursor.sh"'
+ }
+ 
+diff --git a/test/shell.d/pci-sysfs-test.sh b/test/shell.d/pci-sysfs-test.sh
+new file mode 100644
+index 00000000000..38f65202cde
+--- /dev/null
++++ b/test/shell.d/pci-sysfs-test.sh
+@@ -0,0 +1,75 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++source "$ROOT/install/helpers/pci-sysfs.sh"
++
++pci_dir="$test_tmp/pci-devices"
++
++# A GA106 GPU (0x10de:0x2560), its audio function (0x10de:0x228e), and an
++# Intel BE200 Wi-Fi card (0x8086:0xe440).
++write_pci_devices "$pci_dir" \
++  0x10de:0x2560:0x030200 \
++  0x10de:0x228e:0x040300 \
++  0x8086:0xe440:0x028000
++
++with_pci() {
++  OMARCHY_PCI_DEVICES_PATH="$pci_dir" "$@"
++}
++
++with_pci omarchy-pci-id 0x10de 0x2560
++pass "vendor/device ID matches a present device"
++
++if with_pci omarchy-pci-id 0x18de 0x2560; then
++  fail "vendor/device ID requires the vendor to match"
++fi
++pass "vendor/device ID requires the vendor to match"
++
++with_pci omarchy-pci-id 0x10de 0x228e
++pass "vendor/device ID matches a second device for the same vendor"
++
++if with_pci omarchy-pci-id 0x10de 0x1234; then
++  fail "vendor/device ID rejects a missing device"
++fi
++pass "vendor/device ID rejects a missing device"
++
++with_pci omarchy-pci-class-vendor 0x03 0x10de
++pass "class prefix 0x03 with the NVIDIA vendor matches the display controller"
++
++with_pci omarchy-pci-class-vendor 0x04 0x10de
++pass "class prefix 0x04 with the NVIDIA vendor matches the audio function"
++
++if with_pci omarchy-pci-class-vendor 0x03 0x1002; then
++  fail "class prefix with a wrong vendor does not match"
++fi
++pass "class prefix with a wrong vendor does not match"
++
++if with_pci omarchy-pci-class-vendor 0x03 0x8086; then
++  fail "class prefix 0x03 does not match a non-display device"
++fi
++pass "class prefix 0x03 does not match a non-display device"
++
++[[ $(with_pci omarchy-pci-class-count 0x03) == 1 ]]
++pass "class count is 1 with a single display controller"
++
++[[ $(with_pci omarchy-pci-class-count 0x04) == 1 ]]
++pass "class count is 1 with a single audio function"
++
++[[ $(with_pci omarchy-pci-class-count 0x99) == 0 ]]
++pass "class count is 0 with no matching device"
++
++# A device that is not yet bound to a driver must not satisfy a driver check.
++write_pci_devices "$pci_dir" 0x14e4:0x43ba:0x028000
++if with_pci omarchy-pci-driver b43; then
++  fail "an unbound device is not reported under any driver"
++fi
++pass "an unbound device is not reported under any driver"
++
++bind_pci_driver "$pci_dir" "0000:00:00.0" b43
++with_pci omarchy-pci-driver b43
++pass "a bound device is reported under its driver"
+diff --git a/test/shell.d/t2-hardware-test.sh b/test/shell.d/t2-hardware-test.sh
+index 8b2c478bff7..2caf27a9d3c 100644
+--- a/test/shell.d/t2-hardware-test.sh
++++ b/test/shell.d/t2-hardware-test.sh
+@@ -26,23 +26,21 @@ test_tmp=$(mktemp -d)
+ trap 'rm -rf "$test_tmp"' EXIT
+ 
+ stub_bin="$test_tmp/bin"
++pci_dir="$test_tmp/pci-devices"
+ calls="$test_tmp/calls.log"
+ mkdir -p "$stub_bin"
+ : >"$calls"
+ 
+-cat >"$stub_bin/lspci" <<'SH'
+-#!/bin/bash
+-
+-# Chatty like real lspci: keep writing well past the pipe buffer after the T2
+-# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail
+-# would read that as "no T2 hardware" (#6608).
+-if (( ${T2_HARDWARE:-0} == 1 )); then
+-  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'
+-fi
+-for _ in {1..4096}; do
+-  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'
+-done
+-SH
++# Point the migration's sysfs PCI check at a fixture tree. T2 presence is
++# controlled by writing a T2 security chip device (vendor 0x106b, device 0x1801)
++# or omitting it.
++t2_fixture() {
++  if (( $1 == 1 )); then
++    write_pci_devices "$pci_dir" 0x106b:0x1801:0x068000
++  else
++    write_pci_devices "$pci_dir"
++  fi
++}
+ 
+ cat >"$stub_bin/sudo" <<'SH'
+ #!/bin/bash
+@@ -103,10 +101,13 @@ EOF
+ 
+ echo 'quiet splash intel_iommu=on iommu=pt pcie_ports=compat' >"$running_cmdline"
+ 
++t2_fixture 1
+ PATH="$stub_bin:$PATH" \
+   TEST_LOG="$calls" \
+   T2_HARDWARE=1 \
+   TINY_DFR_INSTALLED=1 \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+   OMARCHY_T2_LIMINE_CONF="$limine_conf" \
+   OMARCHY_T2_FAN_CONF="$fan_conf" \
+   OMARCHY_T2_RUNNING_CMDLINE="$running_cmdline" \
+@@ -130,10 +131,13 @@ pass "T2 migration repairs existing installs"
+ 
+ : >"$calls"
+ 
++t2_fixture 1
+ PATH="$stub_bin:$PATH" \
+   TEST_LOG="$calls" \
+   T2_HARDWARE=1 \
+   TINY_DFR_INSTALLED=0 \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+   OMARCHY_T2_LIMINE_CONF="$limine_conf" \
+   OMARCHY_T2_FAN_CONF="$fan_conf" \
+   OMARCHY_T2_RUNNING_CMDLINE="$running_cmdline" \
+@@ -148,10 +152,13 @@ pass "T2 migration is machine-idempotent before reboot"
+ rm -f "$repair_marker"
+ : >"$calls"
+ 
++t2_fixture 1
+ PATH="$stub_bin:$PATH" \
+   TEST_LOG="$calls" \
+   T2_HARDWARE=1 \
+   TINY_DFR_INSTALLED=0 \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+   OMARCHY_T2_LIMINE_CONF="$limine_conf" \
+   OMARCHY_T2_FAN_CONF="$fan_conf" \
+   OMARCHY_T2_RUNNING_CMDLINE="$running_cmdline" \
+@@ -171,10 +178,13 @@ EOF
+ printf '[Fan1]\n' >"$fan_conf"
+ : >"$calls"
+ 
++t2_fixture 0
+ PATH="$stub_bin:$PATH" \
+   TEST_LOG="$calls" \
+   T2_HARDWARE=0 \
+   TINY_DFR_INSTALLED=1 \
++  OMARCHY_PATH="$ROOT" \
++  OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+   OMARCHY_T2_LIMINE_CONF="$limine_conf" \
+   OMARCHY_T2_FAN_CONF="$fan_conf" \
+   OMARCHY_T2_RUNNING_CMDLINE="$running_cmdline" \
+@@ -193,11 +203,13 @@ rerun_migration="$ROOT/migrations/1786137597.sh"
+ rm -f "$repair_marker"
+ : >"$calls"
+ 
++t2_fixture 1
+ PATH="$stub_bin:$PATH" \
+   TEST_LOG="$calls" \
+   T2_HARDWARE=1 \
+   TINY_DFR_INSTALLED=0 \
+   OMARCHY_PATH="$ROOT" \
++  OMARCHY_PCI_DEVICES_PATH="$pci_dir" \
+   OMARCHY_T2_LIMINE_CONF="$limine_conf" \
+   OMARCHY_T2_FAN_CONF="$fan_conf" \
+   OMARCHY_T2_RUNNING_CMDLINE="$running_cmdline" \

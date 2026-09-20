@@ -1,0 +1,49 @@
+{
+  "repository": "omacom/omarchy",
+  "number": 12286,
+  "head_sha": "81860f352c58b9576ef34b48a193c62102165ec0",
+  "source_ancestor": "9c5482c58dbe4974de337450754885083c91eada",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "21e68c85518a06f5a7735e2b6c04513c6300821744c7f6aabe3b1312f4bb84c9",
+  "files": [
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "7daaa52f96a99514ff289c2677e037dfac4c36c1be412f927dbdf7254b2fa4b5",
+      "identical_to_source": true,
+      "candidate_sha256": "7daaa52f96a99514ff289c2677e037dfac4c36c1be412f927dbdf7254b2fa4b5"
+    },
+    {
+      "path": "install/hardware/apple/fix-macbook12-audio.sh",
+      "source_sha256": "c9ee480b93291cfa92e7c5a8fc3081ca5cc9e906ca7bbfb00478ad2b6d3748ac",
+      "identical_to_source": true,
+      "candidate_sha256": "c9ee480b93291cfa92e7c5a8fc3081ca5cc9e906ca7bbfb00478ad2b6d3748ac"
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "source_sha256": "c9e98f5ad03a3d8d0edd7664e91ce05fc77d2d8e454916dfaaab47205379321b",
+      "identical_to_source": true,
+      "candidate_sha256": "c9e98f5ad03a3d8d0edd7664e91ce05fc77d2d8e454916dfaaab47205379321b"
+    },
+    {
+      "path": "migrations/1789653967.sh",
+      "source_sha256": "2f4237e80e21b4179d9b6e909a7536db43570957af1892fc9959f0c420b2af94",
+      "identical_to_source": true,
+      "candidate_sha256": "2f4237e80e21b4179d9b6e909a7536db43570957af1892fc9959f0c420b2af94"
+    },
+    {
+      "path": "test/shell.d/macbook12-audio-test.sh",
+      "source_sha256": "8a46c7fc378018bfa3a4b61065ff754cce88028d116ec43bf12ee34a266bd773",
+      "identical_to_source": true,
+      "candidate_sha256": "8a46c7fc378018bfa3a4b61065ff754cce88028d116ec43bf12ee34a266bd773"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": true,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "81614aff9d92e958818d9d1978dd6d40a5fc7f2f",
+  "reconciled_patch_sha256": "13ee48af3ac3d41730e3ce5625ea161fa346576743df5d75a8ff07d326a664a4",
+  "software_checks_passed": true
+}

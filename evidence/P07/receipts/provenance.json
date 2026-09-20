@@ -1,0 +1,39 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "73a922cb3040d54a999b0b92784b2f27c330992b",
+  "source_head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+  "source_ancestor": "b71dcad96e9d0b2962b7d225828a5cb6000ad720",
+  "patch_sha256": "203312ee4cd5501d360743c3c6f8ddb5231d74cbfe588ad393271a20b269c815",
+  "files": [
+    {
+      "path": "install/hardware/apple/fix-spi-keyboard.sh",
+      "identical_to_source": true,
+      "source_sha256": "791a01c5d42a8afdb4172ece84a73dd79a6748d53868603840764cc3336698de",
+      "candidate_sha256": "791a01c5d42a8afdb4172ece84a73dd79a6748d53868603840764cc3336698de",
+      "comparison": "comparisons/install/hardware/apple/fix-spi-keyboard.sh.diff"
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "identical_to_source": true,
+      "source_sha256": "e3d3634071dad4cc0c55829dcd705ae5e32238f81400a5b5da61db44b7f7697a",
+      "candidate_sha256": "e3d3634071dad4cc0c55829dcd705ae5e32238f81400a5b5da61db44b7f7697a",
+      "comparison": "comparisons/manual/44-mac-support.md.diff"
+    },
+    {
+      "path": "migrations/1788318101.sh",
+      "identical_to_source": true,
+      "source_sha256": "c490ba8b78fb7470ff364ddef469937fc296fe2cec41c1f8d6a28472f79ff990",
+      "candidate_sha256": "c490ba8b78fb7470ff364ddef469937fc296fe2cec41c1f8d6a28472f79ff990",
+      "comparison": "comparisons/migrations/1788318101.sh.diff"
+    },
+    {
+      "path": "test/shell.d/macbook81-spi-pio-test.sh",
+      "identical_to_source": true,
+      "source_sha256": "a52b34530a33fc10b2d550152035b8d27abd41268afafdd962d489118cf6a233",
+      "candidate_sha256": "a52b34530a33fc10b2d550152035b8d27abd41268afafdd962d489118cf6a233",
+      "comparison": "comparisons/test/shell.d/macbook81-spi-pio-test.sh.diff"
+    }
+  ],
+  "historical_artifact_excluded": "spi-pio",
+  "hardware_verified": false
+}

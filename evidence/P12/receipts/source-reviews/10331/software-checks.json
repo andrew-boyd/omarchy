@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": false,
+  "results": [
+    {
+      "test": "test/shell.d/t1-als-brightness-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 20,
+      "output": "ok - MacBookPro14,3 with ALS is detected\nok - MacBookPro14,2 with ALS is detected\nok - MacBookPro13,3 with ALS is detected\nok - MacBookPro13,2 with ALS is detected\nok - MacBookPro14,1 is not T1\nok - MacBookPro15,1 is T2\nok - MacBookPro14,3 without ALS is not detected\nok - T1 ALS detector is gated on DMI and the IIO node\nok - T1 ALS hook is wired\nok - first-run enables the ALS brightness unit\nok - user unit is gated and starts the ALS helper\nok - migration is gated and has no shebang\nok - Mac support chapter documents T1 ALS auto-brightness\nok - Hardware menu exposes the auto-brightness toggle\nok - ALS 170 sets panel 42% and keyboard 81\nok - dark ALS floors the panel and lights the keyboard\nok - bright ALS turns the keyboard off\nok - closed lid leaves brightness alone\nok - DPMS-off leaves brightness alone\nok - auto-brightness off leaves brightness alone\njq: parse error: Invalid numeric literal at line 1, column 28\njq: parse error: Invalid numeric literal at line 1, column 28\njq: parse error: Invalid numeric literal at line 1, column 28\njq: parse error: Invalid numeric literal at line 1, column 28\n"
+    },
+    {
+      "test": "test/shell.d/config-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 8,
+      "output": "ok - default shell.json is valid JSON\nok - default shell.json has versioned bar layout\nok - default center layout keeps update next to weather\nok - default center anchor exists in center layout\nok - default center layout puts elsewhen immediately before the clock\nok - default clock date format has no leading zero\nok - default right layout keeps agents next to the tray\nok - default bar widget ids resolve to manifests and entry points\nnot ok - omarchy-pkgs checkout found for PKGBUILD coverage\nlooked in:\n  /tmp/omarchy-pkgs/pkgbuilds\n  /tmp/omarchy/omarchy-pkgs/pkgbuilds\n  /omarchy-pkgs/pkgbuilds\n  /tmp/omacom/omarchy-pkgs/pkgbuilds\n  /omacom/omarchy-pkgs/pkgbuilds\n  /home/reviewer/Work/omacom/omarchy-pkgs/pkgbuilds\nset OMARCHY_PKGS_PATH to the omarchy-pkgs checkout\n"
+    }
+  ]
+}

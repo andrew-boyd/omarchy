@@ -1,0 +1,104 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 7064,
+  "url": "https://github.com/omacom/omarchy/pull/7064",
+  "head_sha": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "30f7a06090dc20dd1a4a8d0c99bfb8e2370df2ec",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "e76a11b097888c3b96b95a8d8eed2d2f9c5938758ae12a1d608c268dbc03973c",
+  "applied": true,
+  "apply_output": "",
+  "files": [
+    {
+      "path": "bin/omarchy-hw-apple-t1",
+      "status": "added",
+      "source_sha256": "99611ff558338c58af7560ce6f5f79b498bc834306b49ee995f0226c669e5888",
+      "candidate_sha256": "99611ff558338c58af7560ce6f5f79b498bc834306b49ee995f0226c669e5888",
+      "identical_to_source": true
+    },
+    {
+      "path": "bin/omarchy-hw-apple-t1-bind",
+      "status": "added",
+      "source_sha256": "e22c583216a1b2ea31a1c1455b7ce6779ebcf13940ec71c16ea493b06ba43ccb",
+      "candidate_sha256": "e22c583216a1b2ea31a1c1455b7ce6779ebcf13940ec71c16ea493b06ba43ccb",
+      "identical_to_source": true
+    },
+    {
+      "path": "bin/omarchy-setup-apple-touchbar",
+      "status": "added",
+      "source_sha256": "325ed915c60327ce66a2767fce4f419eda507a3d3d663596689a3ac11d5f0299",
+      "candidate_sha256": "325ed915c60327ce66a2767fce4f419eda507a3d3d663596689a3ac11d5f0299",
+      "identical_to_source": true
+    },
+    {
+      "path": "default/omarchy/omarchy-menu.jsonc",
+      "status": "modified",
+      "source_sha256": "eaec681c49dc98857d9fa2b49173ccc5028e1a457e293823e40586fb90dcdb6f",
+      "candidate_sha256": "ee51a54245fb46a471844f1f4d33708287ef945ab89d31b4ecbf0c98f6c6f78a",
+      "identical_to_source": false
+    },
+    {
+      "path": "default/udev/apple-t1-touchbar.rules",
+      "status": "added",
+      "source_sha256": "5f98d617999bfeda22d95d3d24cdb6b9871ed9491eb28f6c093cb9c0ad198477",
+      "candidate_sha256": "5f98d617999bfeda22d95d3d24cdb6b9871ed9491eb28f6c093cb9c0ad198477",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "status": "modified",
+      "source_sha256": "5da092000cd5b934d084d131a0b8a6502469fc3c58363e1cbfce41b365160775",
+      "candidate_sha256": "5bb4869418cbc0d0cdaceb25398c52672b39c21d94f52cfe4d96e575a51461c0",
+      "identical_to_source": false
+    },
+    {
+      "path": "install/hardware/apple/copy-t1-firmware.command",
+      "status": "added",
+      "source_sha256": "ae92aa22c0f2d597e146c5d4c106f727111b4e91db993bda869285f8a503a68b",
+      "candidate_sha256": "ae92aa22c0f2d597e146c5d4c106f727111b4e91db993bda869285f8a503a68b",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/apple/fix-t1-touchbar.sh",
+      "status": "added",
+      "source_sha256": "aa98d4e0b51e7e664d79ae2fef570c7d8f95eb19f1d3049bf1263d5b2f14f19f",
+      "candidate_sha256": "aa98d4e0b51e7e664d79ae2fef570c7d8f95eb19f1d3049bf1263d5b2f14f19f",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/apple/t1-touchbar.sh",
+      "status": "added",
+      "source_sha256": "8c16eb0fb6d3f2fc7f57fba549883a9ebe1316d448fcd63bf91ebbb283a60c24",
+      "candidate_sha256": "8c16eb0fb6d3f2fc7f57fba549883a9ebe1316d448fcd63bf91ebbb283a60c24",
+      "identical_to_source": true
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "status": "modified",
+      "source_sha256": "cc83f70f42c0d1f96c1bfb1ecba2d39f3e80ae464644bb85cce0e5ff3c98a1f3",
+      "candidate_sha256": "cc83f70f42c0d1f96c1bfb1ecba2d39f3e80ae464644bb85cce0e5ff3c98a1f3",
+      "identical_to_source": true
+    },
+    {
+      "path": "migrations/1786820569.sh",
+      "status": "added",
+      "source_sha256": "d46422176652f2df64dc62e35838afe5e8860ddfc824b2d0a3be34f4bac56d8d",
+      "candidate_sha256": "d46422176652f2df64dc62e35838afe5e8860ddfc824b2d0a3be34f4bac56d8d",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/t1-touchbar-test.sh",
+      "status": "added",
+      "source_sha256": "12b89647213b38c74f26b5d05fbf8694b0a6096f6ffc4f9431768ad2fcf18b06",
+      "candidate_sha256": "12b89647213b38c74f26b5d05fbf8694b0a6096f6ffc4f9431768ad2fcf18b06",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "350e63b7ba5677922243031daf41197d7f719d47",
+  "reconciled_patch_sha256": "236c25ea727d619182f3999513a598766c1cd99fa204d313691de1a4068ac044"
+}

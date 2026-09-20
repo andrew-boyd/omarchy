@@ -1,0 +1,14 @@
+{
+  "tests": [
+    "test/shell.d/lid-close-test.sh",
+    "test/shell.d/lid-active-display-integration-test.sh"
+  ],
+  "file_sha256": {
+    "test/shell.d/lid-close-test.sh": "11dafdf7a5af2ed9ee0d926bd9b524d7239d692460b60765dd60aa281757af6c",
+    "test/shell.d/lid-active-display-integration-test.sh": "1ed60b4cf521d6be6f843827920b5e96938391e4307fa82d9c5c644ba1868e51",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "bin/omarchy-system-lid-close": "4799cadd69793424468ae79b0a442155f446d5fe6c5a54d48c34bdaae763ecd1",
+    "bin/omarchy-hyprland-monitor-external-active": "3ccc2ec167eff8122163cd809393527c5491b925195b08e075381b389b946456",
+    "bin/omarchy-hw-external-monitors": "30420de2b470149e9faaea107e758e382096b07131a5baaecc3c255e1e55257f"
+  }
+}

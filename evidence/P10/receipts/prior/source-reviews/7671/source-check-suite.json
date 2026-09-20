@@ -1,0 +1,16 @@
+{
+  "tests": [
+    "test/shell.d/brcmfmac-5ghz-test.sh"
+  ],
+  "file_sha256": {
+    "default/firmware/apple/brcmfmac43602-pcie.txt": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+    "install/hardware/all.sh": "1a7b71d3316bc6a1ff2b006cc4322044d0f8ca895b5d0a205a148d3be20cbaa7",
+    "install/hardware/apple/brcmfmac-43602.sh": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+    "install/hardware/apple/fix-brcmfmac-5ghz.sh": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+    "manual/44-mac-support.md": "bcc032ca6edefc9021832d676dcb4e8fd39b059412fb96525316dba0418f2899",
+    "migrations/1787312531.sh": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/brcmfmac-5ghz-test.sh": "2041faebf77b254304494bdf431684742fc7ce4d17d78b90afd7620c9b39639a",
+    "test/shell.d/unowned-system-paths-test.sh": "a934da6e2673031d5fadcdd6b7feab988d9d1374db31ca21bee0450b8b86999a"
+  }
+}

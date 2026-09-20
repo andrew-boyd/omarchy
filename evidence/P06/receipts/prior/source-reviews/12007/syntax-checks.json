@@ -1,0 +1,19 @@
+{
+  "kind": "bash -n only; production commands not executed",
+  "passed": true,
+  "checks": [
+    {
+      "path": "install/hardware/apple/fix-spi-keyboard.sh",
+      "sha256": "48fa39ad590c298c90f42862ef9a8827b4cfdac7a24433bde4dfb5a0250849b9",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "path": "migrations/1789490499.sh",
+      "sha256": "c847f2499c69544b8330612f06b8e2eeb9d715e130581eb8f41f4aaa1be9d271",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "hardware_verified": false
+}

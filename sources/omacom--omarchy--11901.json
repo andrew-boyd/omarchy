@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11901",
+  "repository": "omacom/omarchy",
+  "number": 11901,
+  "title": "Treat kernel headers as part of the 4.0.4 base system",
+  "author": "ryanrhughes",
+  "head_sha": "8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+  "state": "merged",
+  "updated_at": "2026-09-15T05:34:12Z",
+  "body": "Backport the base-system kernel-header guarantee to 4.0.4. The ISO always installs the selected kernel's headers, so hardware and Xbox installers only install their drivers.\n\nA small migration repairs headers omitted by earlier fresh installs, including linux-omarchy and linux-t2 systems. Acceptance tests check the running kernel and matching headers. The Cam Link feature remains absent from this release branch.\n\nValidation: migration fixtures pass for both kernel families, multiple kernels, idempotence, unrelated kernels, and package-install failure. A fresh ISO built from this branch at 8f3ab025 and omacom/omarchy-iso#184 passed installation, reboot, and the full KVM acceptance suite (88s). The guest has linux-omarchy and linux-omarchy-headers 7.2.5-3, with release 7.2.5-3-omarchy and no stock linux/linux-headers. Installed migration and NVIDIA script hashes match this source, and the removed selector is absent.\n\nUpstream runtime: #11900. ISO guarantee: omacom/omarchy-iso#184. Package dependency cleanup: omacom/omarchy-pkgs#454. The corrected packages and runtime need publication before building the next release ISO.\n",
+  "original_source_changed": false
+}

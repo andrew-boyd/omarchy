@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/spi-keyboard-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "Detected MacBook with SPI keyboard\nok - matched MacBook keeps the initramfs drop-in and skips the DKMS package\nok - unmatched hardware is untouched\nok - the obsolete DKMS package is gone from the ISO package cache list\nRemove the obsolete MacBook SPI keyboard DKMS package\nRemove the obsolete MacBook SPI keyboard DKMS package\nok - installed machines get the obsolete DKMS package removed once\nok - SPI keyboard detection writes only the needed initramfs drop-in\n"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "tests": [
+    "test/shell.d/audio-source-boundaries-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/all.sh": "7daaa52f96a99514ff289c2677e037dfac4c36c1be412f927dbdf7254b2fa4b5",
+    "install/hardware/apple/fix-macbook12-audio.sh": "c9ee480b93291cfa92e7c5a8fc3081ca5cc9e906ca7bbfb00478ad2b6d3748ac",
+    "manual/44-mac-support.md": "c9e98f5ad03a3d8d0edd7664e91ce05fc77d2d8e454916dfaaab47205379321b",
+    "migrations/1789653967.sh": "2f4237e80e21b4179d9b6e909a7536db43570957af1892fc9959f0c420b2af94",
+    "test/shell.d/macbook12-audio-test.sh": "8a46c7fc378018bfa3a4b61065ff754cce88028d116ec43bf12ee34a266bd773",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/audio-source-boundaries-test.sh": "8daa84c6d154b3d28ca9b24eb2e5a12df3ffcaf224965baf21692d32d228697c"
+  }
+}

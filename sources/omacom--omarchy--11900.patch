@@ -1,0 +1,214 @@
+diff --git a/agents/skills/install-scripts.md b/agents/skills/install-scripts.md
+index 999a6e9ca0a..aa993e5e54b 100644
+--- a/agents/skills/install-scripts.md
++++ b/agents/skills/install-scripts.md
+@@ -13,6 +13,7 @@ commands and reusable setup leaves:
+ - use `$OMARCHY_INSTALL` and `$OMARCHY_PATH` instead of hard-coded Omarchy paths.
+ - keep root-scoped hardware setup under `install/hardware/` and orchestrate it through `install/hardware/all.sh`.
+ - keep every per-user setup leaf under `install/user/` (including `install/user/hardware/` and `install/user/first-run/`) so it is clear what must run for each user.
++- The base install supplies matching kernel headers before hardware setup. DKMS installers should install their driver packages and assume the headers exist.
+ - prefer helper commands for package and command checks where available.
+ 
+ Raw `command -v`, `pacman`, and `pacman-key` are acceptable in package-helper
+diff --git a/bin/omarchy-install-gaming-xbox-controllers b/bin/omarchy-install-gaming-xbox-controllers
+index f4134f767fd..f2cda4e7c6c 100755
+--- a/bin/omarchy-install-gaming-xbox-controllers
++++ b/bin/omarchy-install-gaming-xbox-controllers
+@@ -10,7 +10,7 @@ set -e
+ echo "Installing Xbox controller Bluetooth support..."
+ 
+ # Install xpadneo to ensure controllers work out of the box
+-omarchy-pkg-add linux-headers xpadneo-dkms
++omarchy-pkg-add xpadneo-dkms
+ 
+ # Prevent xpad/xpadneo driver conflict
+ echo blacklist xpad | sudo tee /etc/modprobe.d/blacklist-xpad.conf >/dev/null
+diff --git a/install/hardware/fix-bcm43xx.sh b/install/hardware/fix-bcm43xx.sh
+index 94fd16e6e56..0f9cf474a5b 100644
+--- a/install/hardware/fix-bcm43xx.sh
++++ b/install/hardware/fix-bcm43xx.sh
+@@ -6,5 +6,5 @@ pci_info=$(lspci -nn)
+ 
+ if (echo "$pci_info" | grep -q "14e4:43a0" || echo "$pci_info" | grep -q "14e4:4331"); then
+   echo "BCM4360 / BCM4331 detected"
+-  omarchy-pkg-add broadcom-wl-dkms linux-omarchy-headers
++  omarchy-pkg-add broadcom-wl-dkms
+ fi
+diff --git a/install/hardware/fix-elgato-camlink-4k.sh b/install/hardware/fix-elgato-camlink-4k.sh
+index 274076cef57..9ae9e343d47 100644
+--- a/install/hardware/fix-elgato-camlink-4k.sh
++++ b/install/hardware/fix-elgato-camlink-4k.sh
+@@ -4,8 +4,7 @@
+ # v4l2-relayd re-exposes it at 1280x720 under the same name.
+ 
+ if omarchy-hw-elgato-camlink-4k; then
+-  mapfile -t kernel_headers < <(pacman -Qqs '^linux(-zen|-lts|-hardened|-t2|-ptl|-omarchy(-bore|-ptl-novrr-mm)?)?$' | sed 's/$/-headers/')
+-  omarchy-pkg-add "${kernel_headers[@]}" v4l2loopback-dkms v4l2loopback-utils v4l2-relayd
++  omarchy-pkg-add v4l2loopback-dkms v4l2loopback-utils v4l2-relayd
+ 
+   sudo install -Dm644 "$OMARCHY_PATH/default/udev/elgato-camlink-4k.rules" /etc/udev/rules.d/71-elgato-camlink-4k.rules
+   sudo install -Dm644 "$OMARCHY_PATH/default/v4l2-relayd/camlink.conf" /etc/v4l2-relayd.d/camlink.conf
+diff --git a/install/hardware/fix-tuxedo-backlight.sh b/install/hardware/fix-tuxedo-backlight.sh
+index a2d3b8c6145..7fb408e0d54 100644
+--- a/install/hardware/fix-tuxedo-backlight.sh
++++ b/install/hardware/fix-tuxedo-backlight.sh
+@@ -1,7 +1,7 @@
+ # Install Tuxedo drivers for keyboard backlighting on Tuxedo laptops and
+ # compatible devices like the Slimbook Executive (Clevo/Tuxedo chassis).
+ if cat /sys/class/dmi/id/sys_vendor 2>/dev/null | grep -qi "TUXEDO\|Slimbook"; then
+-  omarchy-pkg-add linux-omarchy-headers tuxedo-drivers-nocompatcheck-dkms
++  omarchy-pkg-add tuxedo-drivers-nocompatcheck-dkms
+ 
+   # Blacklist the legacy clevo_xsm_wmi module which conflicts with the tuxedo-drivers
+   # clevo_wmi module. When clevo_xsm_wmi loads first, it grabs the Clevo WMI GUIDs,
+diff --git a/install/hardware/fix-yt6801-ethernet-adapter.sh b/install/hardware/fix-yt6801-ethernet-adapter.sh
+index 7c0360e6bac..f88a9cec624 100644
+--- a/install/hardware/fix-yt6801-ethernet-adapter.sh
++++ b/install/hardware/fix-yt6801-ethernet-adapter.sh
+@@ -1,4 +1,4 @@
+ # Install drivers for Motorcomm YT6801 ethernet adapter used by the Slimbook Executive
+ if lspci | grep -i "YT6801\|Motorcomm.*Ethernet"; then
+-  omarchy-pkg-add linux-omarchy-headers yt6801-dkms
++  omarchy-pkg-add yt6801-dkms
+ fi
+diff --git a/install/hardware/nvidia.sh b/install/hardware/nvidia.sh
+index 48f62cd4b15..1c36787b770 100644
+--- a/install/hardware/nvidia.sh
++++ b/install/hardware/nvidia.sh
+@@ -1,8 +1,4 @@
+ if lspci | grep -qi 'nvidia'; then
+-  # Check which kernel is installed and set appropriate headers package
+-  KERNEL_PACKAGE=$(pacman -Qqs '^linux(-zen|-lts|-hardened|-t2|-ptl|-omarchy(-bore|-ptl-novrr-mm)?)?$' | head -1 || true)
+-  [[ -n $KERNEL_PACKAGE ]] && omarchy-pkg-add "$KERNEL_PACKAGE-headers"
+-
+   if omarchy-hw-nvidia-gsp; then
+     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)
+   elif omarchy-hw-nvidia-without-gsp; then
+diff --git a/install/omarchy-other.packages b/install/omarchy-other.packages
+index 1f325b245e0..4a8b128ff95 100644
+--- a/install/omarchy-other.packages
++++ b/install/omarchy-other.packages
+@@ -20,9 +20,7 @@ libva-nvidia-driver
+ limine
+ limine-mkinitcpio-hook
+ limine-snapper-sync
+-linux
+ linux-firmware
+-linux-headers
+ linux-omarchy
+ linux-omarchy-headers
+ macbook12-spi-driver-dkms
+diff --git a/migrations/1789444024.sh b/migrations/1789444024.sh
+new file mode 100644
+index 00000000000..b5bc9149dde
+--- /dev/null
++++ b/migrations/1789444024.sh
+@@ -0,0 +1,10 @@
++echo "Install missing headers for the Omarchy or T2 kernel"
++
++# Fresh ISO installs mark earlier migrations complete, so the kernel migration
++# cannot repair headers omitted by those installers. Package installation is
++# idempotent when another user has already applied this repair.
++for kernel in linux-omarchy linux-t2; do
++  if omarchy-pkg-present "$kernel"; then
++    omarchy-pkg-add "$kernel-headers"
++  fi
++done
+diff --git a/test/acceptance.d/system-test.sh b/test/acceptance.d/system-test.sh
+index 0d648e9c16e..af0d5204f83 100644
+--- a/test/acceptance.d/system-test.sh
++++ b/test/acceptance.d/system-test.sh
+@@ -24,6 +24,20 @@ verify_core_packages() {
+   pass "all Omarchy core packages are installed (${#missing[@]} missing)"
+ }
+ 
++verify_kernel_headers() {
++  local kernel=linux-omarchy
++  local release
++  release=$(uname -r)
++  omarchy-pkg-present linux-t2 && kernel=linux-t2
++
++  [[ $(cat "/usr/lib/modules/$release/pkgbase") == "$kernel" ]] ||
++    fail "the installed system boots the supported kernel" "$release is not $kernel"
++  omarchy-pkg-present "$kernel-headers" || fail "kernel headers are installed" "$kernel-headers is missing"
++  [[ $(cat "/usr/lib/modules/$release/build/include/config/kernel.release") == "$release" ]] ||
++    fail "headers match the running kernel" "$release has missing or mismatched headers"
++  pass "the running $kernel kernel has matching headers ($release)"
++}
++
+ verify_defaults() {
+   [[ $(omarchy-default-browser) == "chromium" ]] || fail "Chromium is the default browser"
+   pass "Chromium is the default browser"
+@@ -112,7 +126,7 @@ verify_user_setup() {
+   pass "Omarchy user state and shell configuration exist"
+ }
+ 
+-for check in verify_core_packages verify_defaults verify_services verify_runtime_tools verify_user_setup; do
++for check in verify_core_packages verify_kernel_headers verify_defaults verify_services verify_runtime_tools verify_user_setup; do
+   if ! ("$check"); then
+     status=1
+   fi
+diff --git a/test/shell.d/kernel-headers-migration-test.sh b/test/shell.d/kernel-headers-migration-test.sh
+new file mode 100755
+index 00000000000..458ea3307ec
+--- /dev/null
++++ b/test/shell.d/kernel-headers-migration-test.sh
+@@ -0,0 +1,58 @@
++#!/bin/bash
++
++set -euo pipefail
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++tmp_dir=$(mktemp -d)
++trap 'rm -rf "$tmp_dir"' EXIT
++mkdir -p "$tmp_dir/bin"
++export INSTALLED_PACKAGES="$tmp_dir/installed" CALL_LOG="$tmp_dir/calls"
++export PATH="$tmp_dir/bin:$ROOT/bin:$PATH"
++
++# Keep the real package helpers, but contain every pacman transaction here.
++cat > "$tmp_dir/bin/pacman" <<'SH'
++#!/bin/bash
++case "$1" in
++  -Q) grep -Fxq -- "$2" "$INSTALLED_PACKAGES" ;;
++  -S)
++    [[ ${FAIL_INSTALL:-0} == 0 ]] || exit 1
++    shift 3 # -S --noconfirm --needed
++    printf '%s\n' "$@" >> "$INSTALLED_PACKAGES"
++    printf '%s\n' "$@" >> "$CALL_LOG"
++    ;;
++  *) exit 1 ;;
++esac
++SH
++cat > "$tmp_dir/bin/sudo" <<'SH'
++#!/bin/bash
++[[ $1 == "pacman" ]] || exit 1
++"$@"
++SH
++chmod +x "$tmp_dir/bin/"*
++
++migration="$ROOT/migrations/1789444024.sh"
++for kernels in linux-omarchy linux-t2 'linux-omarchy linux-t2'; do
++  read -ra installed <<< "$kernels"
++  printf '%s\n' linux linux-headers "${installed[@]}" > "$INSTALLED_PACKAGES"
++  : > "$CALL_LOG"
++  bash -euo pipefail "$migration" >/dev/null
++  for kernel in "${installed[@]}"; do
++    grep -Fxq "$kernel-headers" "$INSTALLED_PACKAGES" || fail "$kernel gets its headers"
++  done
++  : > "$CALL_LOG"
++  bash -euo pipefail "$migration" >/dev/null
++  [[ ! -s $CALL_LOG ]] || fail "header repair is idempotent"
++  pass "missing headers are repaired once for $kernels"
++done
++
++printf '%s\n' linux linux-aarch64 > "$INSTALLED_PACKAGES"
++: > "$CALL_LOG"
++bash -euo pipefail "$migration" >/dev/null
++[[ ! -s $CALL_LOG ]] || fail "header repair skips unrelated kernels"
++pass "header repair skips unrelated kernels"
++
++echo linux-omarchy > "$INSTALLED_PACKAGES"
++if FAIL_INSTALL=1 bash -euo pipefail "$migration" >/dev/null; then
++  fail "a failed header installation must leave the migration pending"
++fi
++pass "header installation failure is propagated"

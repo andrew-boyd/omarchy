@@ -1,0 +1,7 @@
+[
+  "Record exact model, kernel, initramfs, installed old package and all current T1/SPI module and service owners. Keep an independent recovery boot path and prior package/initramfs.",
+  "On a T1 machine, first complete the accepted P12 manual setup on a prepared system, reboot and validate that the intended provider owns Touch Bar/ALS and that password/input access works. Do not use this migration as a way to perform the provider handoff.",
+  "Review the actual package-drop transaction and initramfs hook behavior before an attended removal trial. Preserve locally modified configuration and record dependency removals. No such transaction was run here.",
+  "Check input at encrypted-root unlock and in the desktop, then Touch Bar, camera and ALS. Any sleep trial remains separately constrained by T1Bridge's documented suspend limitation.",
+  "Test restoration using the recorded prior boot/package/configuration state. Neither these instructions nor passing source fixtures certify live removal or rollback."
+]

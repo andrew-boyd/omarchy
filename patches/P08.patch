@@ -1,0 +1,306 @@
+diff --git c/bin/omarchy-hw-facetimehd i/bin/omarchy-hw-facetimehd
+new file mode 100755
+index 00000000..d3051b5a
+--- /dev/null
++++ i/bin/omarchy-hw-facetimehd
+@@ -0,0 +1,6 @@
++#!/bin/bash
++
++# omarchy:summary=Detect a Broadcom FaceTime HD PCIe webcam (14e4:1570).
++
++# grep -q would SIGPIPE a chatty lspci under pipefail and look like "no camera".
++lspci -nn | grep "14e4:1570" >/dev/null
+diff --git c/install/hardware/all.sh i/install/hardware/all.sh
+index 12add110..71230e30 100644
+--- c/install/hardware/all.sh
++++ i/install/hardware/all.sh
+@@ -35,6 +35,7 @@ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-facetimehd.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+ 
+diff --git c/install/hardware/apple/fix-facetimehd.sh i/install/hardware/apple/fix-facetimehd.sh
+new file mode 100644
+index 00000000..a466387f
+--- /dev/null
++++ i/install/hardware/apple/fix-facetimehd.sh
+@@ -0,0 +1,13 @@
++# Broadcom 720p FaceTime HD (PCI 14e4:1570) on 2013-2015 Intel Macs. There is
++# no in-tree driver; facetimehd is the reverse-engineered module. Linux 7.2
++# removed strncpy, so the packaged facetimehd-dkms must be built from
++# patjak/facetimehd after 54fb8f2. AUR 0.7.0.2 does not compile on linux-omarchy 7.2.
++
++dmi_vendor="${OMARCHY_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
++sys_vendor="$(cat "$dmi_vendor" 2>/dev/null || true)"
++
++if [[ $sys_vendor == Apple* ]] && omarchy-hw-facetimehd; then
++  echo "Detected FaceTime HD camera"
++
++  omarchy-pkg-add facetimehd-firmware facetimehd-data facetimehd-dkms
++fi
+diff --git c/install/omarchy-other.packages i/install/omarchy-other.packages
+index 4a8b128f..d3cbd27b 100644
+--- c/install/omarchy-other.packages
++++ i/install/omarchy-other.packages
+@@ -71,5 +71,10 @@ linux-t2
+ linux-t2-headers
+ t2fanrd
+ 
++# FaceTime HD camera on 2013–2015 Intel Macs
++facetimehd-dkms
++facetimehd-firmware
++facetimehd-data
++
+ # Framework 16
+ qmk-hid
+diff --git c/manual/44-mac-support.md i/manual/44-mac-support.md
+index e86fdd06..6b6ecb5d 100644
+--- c/manual/44-mac-support.md
++++ i/manual/44-mac-support.md
+@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB
+ 3. Select the orange EFI Boot device
+ 4. Proceed with the [install as normal](02-getting-started.md)
+ 
+-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.
++The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the FaceTime HD camera driver on machines with a Broadcom 1570, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.
+ 
+ ### Known Limitations
+ 
+diff --git c/migrations/1789542390.sh i/migrations/1789542390.sh
+new file mode 100644
+index 00000000..0c16f7f2
+--- /dev/null
++++ i/migrations/1789542390.sh
+@@ -0,0 +1,7 @@
++echo "Install the FaceTime HD camera driver on Intel Macs that have one"
++
++# Fresh installs get this from install/hardware/apple/fix-facetimehd.sh. Existing
++# Macs only pick it up on omarchy update via this migration.
++if omarchy-hw-facetimehd; then
++  source "$OMARCHY_PATH/install/hardware/apple/fix-facetimehd.sh"
++fi
+diff --git c/test/shell.d/camera-consolidation-test.sh i/test/shell.d/camera-consolidation-test.sh
+new file mode 100755
+index 00000000..687554a4
+--- /dev/null
++++ i/test/shell.d/camera-consolidation-test.sh
+@@ -0,0 +1,91 @@
++#!/bin/bash
++set -euo pipefail
++# Apple vendor cases derive from @rand0mdud3's #11381 test. Delivery stays #12067.
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++camera_tmp=$(mktemp -d)
++trap 'rm -rf "$camera_tmp"' EXIT
++mkdir -p "$camera_tmp/bin"
++export CAMERA_TEST_ROOT="$camera_tmp"
++export OMARCHY_DMI_VENDOR="$camera_tmp/vendor"
++export PATH="$camera_tmp/bin:$PATH"
++cp "$ROOT/bin/omarchy-hw-facetimehd" "$camera_tmp/bin/"
++cat > "$camera_tmp/bin/lspci" <<'STUB'
++#!/bin/bash
++printf '%s\n' "05:00.0 Multimedia controller [0480]: fixture [${CAMERA_TEST_PCI:-14e4:1570}]"
++STUB
++cat > "$camera_tmp/bin/omarchy-pkg-add" <<'STUB'
++#!/bin/bash
++printf '%s\n' "$*" >> "$CAMERA_TEST_ROOT/calls"
++exit "${CAMERA_TEST_PACKAGE_EXIT:-0}"
++STUB
++for helper in omarchy-pkg-aur-add modprobe sudo; do
++  cat > "$camera_tmp/bin/$helper" <<'STUB'
++#!/bin/bash
++echo 'unexpected delivery or live-module operation' >> "$CAMERA_TEST_ROOT/unexpected"
++exit 99
++STUB
++done
++cat > "$camera_tmp/bin/omarchy-notification-dismiss" <<'STUB'
++#!/bin/bash
++exit 0
++STUB
++chmod +x "$camera_tmp/bin/"*
++run_entry() {
++  : > "$camera_tmp/calls"
++  if [[ $1 == install ]]; then
++    bash -euo pipefail -c 'source "$1"' _ "$ROOT/install/hardware/apple/fix-facetimehd.sh" > "$camera_tmp/output" 2>&1
++  else
++    OMARCHY_PATH="$ROOT" bash -euo pipefail "$ROOT/migrations/1789542390.sh" > "$camera_tmp/output" 2>&1
++  fi
++}
++for entry in install migration; do
++  for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Appleish' 'apple inc.' 'LENOVO' ''; do
++    printf '%s\n' "$vendor" > "$OMARCHY_DMI_VENDOR"
++    export CAMERA_TEST_PCI=14e4:1570
++    run_entry "$entry"
++    if [[ $vendor == Apple* ]]; then
++      [[ $(cat "$camera_tmp/calls") == 'facetimehd-firmware facetimehd-data facetimehd-dkms' ]] || fail "$entry delivery for '$vendor'"
++    else
++      [[ ! -s $camera_tmp/calls ]] || fail "$entry must exclude '$vendor'"
++    fi
++    pass "$entry retains source Apple-prefix gate for '$vendor'"
++  done
++  rm "$OMARCHY_DMI_VENDOR"
++  run_entry "$entry"
++  [[ ! -s $camera_tmp/calls ]] || fail "$entry must skip unavailable DMI"
++  pass "$entry skips unavailable DMI"
++  printf 'Apple Inc.\n' > "$OMARCHY_DMI_VENDOR"
++  export CAMERA_TEST_PCI=14e4:1571
++  run_entry "$entry"
++  [[ ! -s $camera_tmp/calls ]] || fail "$entry must skip adjacent PCI ID"
++  pass "$entry skips adjacent PCI ID"
++done
++[[ ! -e $camera_tmp/unexpected ]] || fail "no AUR, sudo or live-module operations expected"
++pass "selected delivery has no alternate package manager or live module loading"
++
++# Exercise the real migrator with one pending source migration. Relocate only
++# its pacman-lock path so host package activity cannot affect the fixture.
++mkdir -p "$camera_tmp/tree/migrations" "$camera_tmp/tree/install/hardware/apple"
++cp "$ROOT/migrations/1789542390.sh" "$camera_tmp/tree/migrations/"
++cp "$ROOT/install/hardware/apple/fix-facetimehd.sh" "$camera_tmp/tree/install/hardware/apple/"
++sed "s|local lock_file=/var/lib/pacman/db.lck|local lock_file=$camera_tmp/pacman.lock|" "$ROOT/bin/omarchy-migrate" > "$camera_tmp/migrate"
++export OMARCHY_PATH="$camera_tmp/tree"
++export OMARCHY_MIGRATION_STATE="$camera_tmp/state"
++export CAMERA_TEST_PCI=14e4:1570 CAMERA_TEST_PACKAGE_EXIT=23
++: > "$camera_tmp/calls"
++set +e
++bash "$camera_tmp/migrate" > "$camera_tmp/output" 2>&1
++result=$?
++set -e
++(( result == 23 )) || fail "failed package delivery must propagate through the real queue" "$result"
++[[ ! -e $OMARCHY_MIGRATION_STATE/1789542390.sh ]] || fail "failed delivery must remain pending"
++pass "failed package delivery leaves the real migration pending"
++export CAMERA_TEST_PACKAGE_EXIT=0
++: > "$camera_tmp/calls"
++bash "$camera_tmp/migrate" > "$camera_tmp/output" 2>&1
++[[ -f $OMARCHY_MIGRATION_STATE/1789542390.sh && -s $camera_tmp/calls ]] || fail "successful retry must complete the migration"
++pass "successful retry completes the pending migration"
++: > "$camera_tmp/calls"
++bash "$camera_tmp/migrate" > "$camera_tmp/output" 2>&1
++[[ ! -s $camera_tmp/calls ]] || fail "completed migration must not repeat package delivery"
++pass "completed migration is skipped on rerun"
+diff --git c/test/shell.d/facetimehd-test.sh i/test/shell.d/facetimehd-test.sh
+new file mode 100755
+index 00000000..707f8166
+--- /dev/null
++++ i/test/shell.d/facetimehd-test.sh
+@@ -0,0 +1,119 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++leaf="$ROOT/install/hardware/apple/fix-facetimehd.sh"
++hw="$ROOT/bin/omarchy-hw-facetimehd"
++all="$ROOT/install/hardware/all.sh"
++manual="$ROOT/manual/44-mac-support.md"
++other_packages="$ROOT/install/omarchy-other.packages"
++migration="$ROOT/migrations/1789542390.sh"
++
++grep -q 'apple/fix-facetimehd.sh' "$all" ||
++  fail "the FaceTime HD fix runs during hardware setup"
++grep -q 'omarchy-hw-facetimehd' "$leaf" ||
++  fail "the install leaf keys off the FaceTime HD detector"
++grep -q 'facetimehd-dkms' "$leaf" ||
++  fail "the install leaf installs facetimehd-dkms"
++grep -qx 'facetimehd-dkms' "$other_packages" ||
++  fail "the ISO caches facetimehd-dkms"
++grep -qx 'facetimehd-firmware' "$other_packages" ||
++  fail "the ISO caches facetimehd-firmware"
++grep -qx 'facetimehd-data' "$other_packages" ||
++  fail "the ISO caches facetimehd-data"
++grep -q '14e4:1570' "$hw" ||
++  fail "the detector matches the Broadcom 1570 PCI ID"
++grep -q 'FaceTime HD' "$manual" ||
++  fail "Mac support documents the FaceTime HD camera"
++grep -q 'fix-facetimehd.sh' "$migration" ||
++  fail "a migration applies the FaceTime HD fix on existing installs"
++pass "the FaceTime HD fix is wired into hardware setup"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++stub_bin="$test_tmp/bin"
++calls="$test_tmp/calls.log"
++mkdir -p "$stub_bin"
++: >"$calls"
++export OMARCHY_DMI_VENDOR="$test_tmp/sys_vendor"
++printf 'Apple Inc.\n' >"$OMARCHY_DMI_VENDOR"
++
++cat >"$stub_bin/lspci" <<'SH'
++#!/bin/bash
++
++# Chatty like real lspci: keep writing well past the pipe buffer after the
++# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail
++# would read that as "no such hardware" (#6608).
++if (( ${FACETIMEHD_HARDWARE:-0} == 1 )); then
++  echo '02:00.0 Multimedia controller [0480]: Broadcom Inc. 720p FaceTime HD Camera [14e4:1570]'
++fi
++for _ in {1..4096}; do
++  echo '00:00.0 Host bridge [0600]: Filler Device [ffff:0000]'
++done
++SH
++
++cat >"$stub_bin/omarchy-pkg-add" <<'SH'
++#!/bin/bash
++
++printf 'omarchy-pkg-add' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++SH
++
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++"$@"
++SH
++
++install -m0755 "$hw" "$stub_bin/omarchy-hw-facetimehd"
++chmod +x "$stub_bin"/*
++
++# Detector: present
++FACETIMEHD_HARDWARE=1 PATH="$stub_bin:$PATH" "$stub_bin/omarchy-hw-facetimehd"
++pass "detector matches PCI 14e4:1570"
++
++# Detector: absent
++if FACETIMEHD_HARDWARE=0 PATH="$stub_bin:$PATH" "$stub_bin/omarchy-hw-facetimehd"; then
++  fail "detector ignores machines without a FaceTime HD camera"
++fi
++pass "detector skips machines without a FaceTime HD camera"
++
++run_leaf() {
++  local hardware="$1"
++  : >"$calls"
++  FACETIMEHD_HARDWARE="$hardware" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    bash -euo pipefail -c 'source "$1"' _ "$leaf"
++}
++
++run_leaf 1
++grep -Fxq $'omarchy-pkg-add\tfacetimehd-firmware\tfacetimehd-data\tfacetimehd-dkms' "$calls" ||
++  fail "leaf installs firmware, calibration data, and the DKMS module" "$(cat "$calls")"
++pass "leaf installs firmware, calibration data, and the DKMS module"
++
++run_leaf 0
++[[ ! -s $calls ]] || fail "non-matching hardware is a no-op" "$(cat "$calls")"
++pass "leaf is a no-op on machines without a FaceTime HD camera"
++
++run_migration() {
++  local hardware="$1"
++  : >"$calls"
++  FACETIMEHD_HARDWARE="$hardware" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    OMARCHY_PATH="$ROOT" \
++    bash -euo pipefail "$migration" >/dev/null
++}
++
++run_migration 1
++grep -Fxq $'omarchy-pkg-add\tfacetimehd-firmware\tfacetimehd-data\tfacetimehd-dkms' "$calls" ||
++  fail "the migration installs the FaceTime HD packages" "$(cat "$calls")"
++pass "the migration installs the FaceTime HD packages"
++
++run_migration 0
++[[ ! -s $calls ]] || fail "the migration is a no-op without a FaceTime HD camera" "$(cat "$calls")"
++pass "the migration is a no-op without a FaceTime HD camera"

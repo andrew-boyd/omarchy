@@ -1,0 +1,51 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "c2bd98b8f0a904094b023973f1523bacc081b972",
+  "patch_sha256": "01e95cb7a37f4a4cf0d2c4a12d057aa9eb4cb239042a32a18fda859b37096796",
+  "production_provenance": "Source combination: #6834 supplies the headset exclusion; #12350 supplies the SMC exclusion and event predicate. Only the explanatory comment was rewritten. KeyboardLayout.qml and shared layout synchronization are unchanged.",
+  "file_provenance": [
+    {
+      "path": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "sha256": "13432a7a87a03f98158bbeedde3d80360cc4f81e2322bf6dd98451f094daf446",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12350,
+          "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+          "identical": false,
+          "diff": "provenance/keyboard-vs-12350/shell/plugins/bar/widgets/KeyboardLayoutModel.js.diff"
+        },
+        {
+          "number": 6834,
+          "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+          "identical": false,
+          "diff": "provenance/keyboard-vs-6834/shell/plugins/bar/widgets/KeyboardLayoutModel.js.diff"
+        }
+      ]
+    },
+    {
+      "path": "test/shell.d/keyboard-layout-test.sh",
+      "sha256": "bd12690999f3a6d1c81817c8251d0ffbcca46a0ed8a6f45744434595375aed38",
+      "test_only": true,
+      "source_comparisons": []
+    }
+  ],
+  "source_blobs": [
+    {
+      "number": 12350,
+      "path": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c23ff7f397dc2ba6684246046d92f99664c11c7e/shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "file": "source-files/12350/shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "sha256": "2b56a2f42450dc00c3ef055699b6b6b011249c210ee138a58f5c3850fed174ba"
+    },
+    {
+      "number": 6834,
+      "path": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/e342bd48cc1c8639192c64075c450693d8e5a3a2/shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "file": "source-files/6834/shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "sha256": "2e3528fab449071704e1932e4156d6f30a0a0e3e4681cbc8e56eb0fff8329835"
+    }
+  ]
+}

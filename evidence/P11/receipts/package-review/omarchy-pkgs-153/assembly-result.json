@@ -1,0 +1,30 @@
+{
+  "number": 153,
+  "exit_code": 0,
+  "passed": true,
+  "inputs": {
+    "recipe_files": {
+      "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD": "f20dd3f9dd412ffc50e75b14a2006237dd3b8671895d2ddfe8bda4531a1fd59e",
+      "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268",
+      "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh": "a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1"
+    },
+    "script_sha256": "0802851b8eb6b9b911c365f18df1f1542c3a97317fd29942eaf57eb875e65b09",
+    "source": {
+      "repository": "leifliddy/macbook12-audio-driver",
+      "sha": "04500a120ea685694b651c1b1d46fafcae8cff46",
+      "reason": "Driver revision pinned by packages #153.",
+      "url": "https://github.com/leifliddy/macbook12-audio-driver/tree/04500a120ea685694b651c1b1d46fafcae8cff46",
+      "fetched_at": "2026-09-20T02:03:23+00:00",
+      "code_executed": false
+    },
+    "limits": "Offline package assembly with makepkg --nodeps; not dependency installation, compilation or DKMS lifecycle validation."
+  },
+  "artifacts": {
+    "macbook12-audio-driver-dkms-0.1-1-x86_64.pkg.tar.zst": "c4f519c73ccc6536964cdd649a261b851ec071970b6662b10f422f1746f67114",
+    "packaged-dkms.conf": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268",
+    "package-files.txt": "22390cf8093d1edadb3ea3b146f04aee25e5d3083dd73f797fdb45d7e797e435"
+  },
+  "hardware_verified": false,
+  "host_installed": false
+}

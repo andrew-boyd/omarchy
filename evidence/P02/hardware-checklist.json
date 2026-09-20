@@ -1,0 +1,6 @@
+[
+  "Record installed kernels, matching header packages, broadcom-wl-dkms version and dkms status before testing.",
+  "On an affected test system with a recovery path, verify the migration installs missing stock headers while retaining Omarchy/T2 kernel coverage.",
+  "Capture actual package and DKMS build output; a successful package transaction alone is insufficient.",
+  "Verify wl loads and Wi-Fi works after reboot into each retained kernel, including the fallback; record rerun behavior and rollback procedure."
+]

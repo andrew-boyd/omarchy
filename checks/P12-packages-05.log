@@ -1,0 +1,36 @@
+[1m================================[0m
+[1momarchy-pkgs self-test[0m
+[1m================================[0m
+Tag normalization:
+  ok: v4.0.0 → 4.0.0
+  ok: v4.0.0-rc1 → 4.0.0rc1
+  ok: v4.0.0-rc.2 → 4.0.0rc2
+  ok: v4.0.0.rc3 → 4.0.0rc3
+  ok: v4.0.0_rc4 → 4.0.0rc4
+  ok: 4.1.0 → 4.1.0
+  ok: v4.0.0-rc10 → 4.0.0rc10
+  ok: v4.0 → <reject>
+  ok: v4.0.0-beta1 → 4.0.0beta1
+  ok: v4.0.0-alpha.2 → 4.0.0alpha2
+  ok: v4.0.0-preview1 → <reject>
+  ok: v4.0.0rc → <reject>
+  ok: garbage → <reject>
+  ok: v4.0.0-rc → <reject>
+Pacman ordering of normalized outputs:
+  ok: 4.0.0rc1 < 4.0.0
+  ok: 4.0.0rc1 < 4.0.0rc2
+  ok: 4.0.0rc2 < 4.0.0rc10
+  ok: 4.0.0 > 4.0.0rc99
+  ok: 4.0.1 > 4.0.0
+  ok: 4.0.0 < 4.1.0rc1
+  ok: 4.0.0alpha1 < 4.0.0beta1
+  ok: 4.0.0beta1 < 4.0.0rc1
+  ok: 4.0.0beta2 < 4.0.0
+  ok: 4.0.0beta2 < 4.0.0beta10
+Version helpers:
+  ok: version_base 4.0.0beta3 → 4.0.0
+  ok: version_base 4.0.0rc7 → 4.0.0
+  ok: 4.0.0rc1 is rc
+  ok: 4.0.0 is not rc
+
+[0;32m✓[0m Self-test passed

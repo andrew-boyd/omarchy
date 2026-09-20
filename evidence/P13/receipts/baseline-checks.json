@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": false,
+  "results": [
+    {
+      "test": "test/shell.d/omarchy-kernel-migration-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 8,
+      "output": "ok - linux systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-lts systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-zen systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-ptl systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-omarchy-ptl-novrr-mm systems receive the generic Omarchy kernel and retain their recovery kernel\nok - linux-t2 systems are skipped even with other kernels installed\nok - a running T2 kernel is excluded even if its package is no longer installed\nok - ARM systems cannot receive an x86_64 kernel\nnot ok - the superseded migration must not install the PTL variant first\n"
+    },
+    {
+      "test": "test/shell.d/intel-mac-kernel-policy-test.sh",
+      "exit_code": 1,
+      "passed": false,
+      "assertions": 0,
+      "output": "sudo pacman -S --noconfirm --needed linux-omarchy linux-omarchy-headers\npacman -S --noconfirm --needed linux-omarchy linux-omarchy-headers\nsudo mkdir -p /tmp/tmp.yWSl30lV7Z\nsudo touch /tmp/tmp.yWSl30lV7Z/limine\nsudo sed -i -E /^[[:space:]]*BOOT_ORDER[[:space:]]*=/d /tmp/tmp.yWSl30lV7Z/limine\nsudo tee -a /tmp/tmp.yWSl30lV7Z/limine\nsudo limine-mkinitcpio linux-omarchy\nsudo limine-entry-tool --tree\nstate set reboot-required\nsudo install -Dm644 /dev/null /tmp/tmp.yWSl30lV7Z/state/1789325478\nnot ok - excluded systems do not change\n"
+    }
+  ]
+}

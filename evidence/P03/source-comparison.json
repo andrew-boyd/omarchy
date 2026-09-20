@@ -1,0 +1,187 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
+  "patch_sha256": "b5be149ea524ab18ce6d5e4de39c3d4d3355e316fd1741000459549022f7e26c",
+  "production_provenance": "Retain #12076's production behavior. Six production files are byte-identical; nvidia.sh only retains the target's EOF heredoc delimiter instead of the source's NVEOF rename. Added integration fixtures do not change hardware policy.",
+  "file_provenance": [
+    {
+      "path": "bin/omarchy-hw-bcm43xx",
+      "sha256": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": true,
+          "diff": "provenance/pci-vs-12076/bin/omarchy-hw-bcm43xx.diff"
+        }
+      ]
+    },
+    {
+      "path": "bin/omarchy-hw-t2",
+      "sha256": "72dc8a79c15459116b4b301dca292ef730240c6dc845b04ebc10e6846dd558fb",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": true,
+          "diff": "provenance/pci-vs-12076/bin/omarchy-hw-t2.diff"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/apple/fix-t2.sh",
+      "sha256": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": true,
+          "diff": "provenance/pci-vs-12076/install/hardware/apple/fix-t2.sh.diff"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/fix-bcm43xx.sh",
+      "sha256": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": true,
+          "diff": "provenance/pci-vs-12076/install/hardware/fix-bcm43xx.sh.diff"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/nvidia.sh",
+      "sha256": "25417ff6340279486d937a3f68670b28a5cbf829e85961443db431a32a074718",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": false,
+          "diff": "provenance/pci-vs-12076/install/hardware/nvidia.sh.diff"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/pacman.sh",
+      "sha256": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": true,
+          "diff": "provenance/pci-vs-12076/install/hardware/pacman.sh.diff"
+        }
+      ]
+    },
+    {
+      "path": "install/hardware/vulkan.sh",
+      "sha256": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366",
+      "test_only": false,
+      "source_comparisons": [
+        {
+          "number": 12076,
+          "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "identical": true,
+          "diff": "provenance/pci-vs-12076/install/hardware/vulkan.sh.diff"
+        }
+      ]
+    },
+    {
+      "path": "test/shell.d/hw-bcm43xx-test.sh",
+      "sha256": "8677e67fa13d3a69898d65dba63977868ed75eb763255080c641515eac80a9d9",
+      "test_only": true,
+      "source_comparisons": []
+    },
+    {
+      "path": "test/shell.d/hw-t2-test.sh",
+      "sha256": "ce8b59966ebb04a103048ab5e0b0378302c23a4e64c47890c3e8947540880bff",
+      "test_only": true,
+      "source_comparisons": []
+    },
+    {
+      "path": "test/shell.d/nvidia-hw-detect-test.sh",
+      "sha256": "5a31111ef939a44b878fb323baf90f997b305c100101bdaf125f912fa4368561",
+      "test_only": true,
+      "source_comparisons": []
+    },
+    {
+      "path": "test/shell.d/pci-detection-integration-test.sh",
+      "sha256": "9f53b9649cd18b85af8484917b32d81c08df3b7c23b34f8bb634c027166eae1a",
+      "test_only": true,
+      "source_comparisons": []
+    },
+    {
+      "path": "test/shell.d/vulkan-sysfs-test.sh",
+      "sha256": "1c7005340f8ceba6140307ec7b5560fb238ebbf26f0fe77c89831f8993be85fb",
+      "test_only": true,
+      "source_comparisons": []
+    }
+  ],
+  "source_blobs": [
+    {
+      "number": 12076,
+      "path": "bin/omarchy-hw-bcm43xx",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/bin/omarchy-hw-bcm43xx",
+      "file": "source-files/12076/bin/omarchy-hw-bcm43xx",
+      "sha256": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866"
+    },
+    {
+      "number": 12076,
+      "path": "bin/omarchy-hw-t2",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/bin/omarchy-hw-t2",
+      "file": "source-files/12076/bin/omarchy-hw-t2",
+      "sha256": "72dc8a79c15459116b4b301dca292ef730240c6dc845b04ebc10e6846dd558fb"
+    },
+    {
+      "number": 12076,
+      "path": "install/hardware/apple/fix-t2.sh",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/install/hardware/apple/fix-t2.sh",
+      "file": "source-files/12076/install/hardware/apple/fix-t2.sh",
+      "sha256": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9"
+    },
+    {
+      "number": 12076,
+      "path": "install/hardware/fix-bcm43xx.sh",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/install/hardware/fix-bcm43xx.sh",
+      "file": "source-files/12076/install/hardware/fix-bcm43xx.sh",
+      "sha256": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d"
+    },
+    {
+      "number": 12076,
+      "path": "install/hardware/nvidia.sh",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/install/hardware/nvidia.sh",
+      "file": "source-files/12076/install/hardware/nvidia.sh",
+      "sha256": "3ed9599544e14890adb90b803a0a2c0c940cccc58b6ad7787e023ca1fe7fb1e7"
+    },
+    {
+      "number": 12076,
+      "path": "install/hardware/pacman.sh",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/install/hardware/pacman.sh",
+      "file": "source-files/12076/install/hardware/pacman.sh",
+      "sha256": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2"
+    },
+    {
+      "number": 12076,
+      "path": "install/hardware/vulkan.sh",
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "url": "https://raw.githubusercontent.com/omacom/omarchy/c2df703cf2a584b659af0471070f027c6e1b0e54/install/hardware/vulkan.sh",
+      "file": "source-files/12076/install/hardware/vulkan.sh",
+      "sha256": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "c2bd98b8f0a904094b023973f1523bacc081b972",
+  "tests": [
+    "test/shell.d/keyboard-layout-test.sh"
+  ],
+  "file_sha256": {
+    "shell/plugins/bar/widgets/KeyboardLayoutModel.js": "13432a7a87a03f98158bbeedde3d80360cc4f81e2322bf6dd98451f094daf446",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/keyboard-layout-test.sh": "bd12690999f3a6d1c81817c8251d0ffbcca46a0ed8a6f45744434595375aed38"
+  }
+}

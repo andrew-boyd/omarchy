@@ -1,0 +1,35 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lid-close-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - undocked lid close locks before anything else\nok - undocked lid close still reconciles displays\nok - undocked lid close asks for a debounced suspend\nok - docked lid close does not lock the session\nok - docked lid close reconciles displays\nok - an open lid never locks the session\nok - a failing lock still reconciles displays\n"
+    },
+    {
+      "test": "test/shell.d/lid-open-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 2,
+      "output": "ok - lid open forces DPMS on after a missed switch event\nok - open lid wakes displays and forces DPMS enable\n"
+    },
+    {
+      "test": "test/shell.d/lid-suspend-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 8,
+      "output": "ok - logind ignores lid close so Hyprland can debounce\nok - lid close starts a debounced suspend after locking\nok - Alpine Ridge MacBook Pros wait 20s before S3\nok - sleep hook wakes the session after thaw\nok - undocked closed lid suspends after the debounce\nok - docked lid close does not suspend\nok - opening the lid cancels a pending suspend\nok - a machine delay file overrides the Alpine Ridge default\n"
+    },
+    {
+      "test": "test/shell.d/monitor-recovery-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 18,
+      "output": "ok - monitor watcher retries internal monitor recovery after removal\nok - monitor watcher disables the internal monitor after closed-lid external hotplug\nok - monitor watcher reconciles clamshell state on startup\nok - clamshell poll only runs on a docked laptop, not desktops or undocked laptops\nok - modeless monitor recovery runs one backing-off loop while a monitor has no mode\nok - modeless recovery retries unanswered queries without waiting on a dead compositor\nok - modeless recovery also runs after a config reload\nok - modeless recovery does not reload into a package transaction\nok - modeless helper sees mirrors and ignores monitors disabled on purpose\nok - clamshell helper detects closed-lid external monitor state\nok - active external monitor helper sees mirrors and ignores monitors disabled on purpose\nok - clamshell monitor sync disables laptop output and force-recovers it\nok - internal monitor helper can re-enable disabled laptop displays\nok - internal monitor recovery only wakes displays when it re-enables one\nok - internal mirror helper recovers when no active external display remains\nok - lid switch bindings lock on close and wake the panel on open\nok - system wake resyncs clamshell display state\nok - lock service waits for stable real screens before session lock\n"
+    }
+  ]
+}

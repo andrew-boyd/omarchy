@@ -1,0 +1,24 @@
+{
+  "tests": [
+    "test/shell.d/lid-close-test.sh",
+    "test/shell.d/lid-open-test.sh",
+    "test/shell.d/lid-suspend-test.sh",
+    "test/shell.d/monitor-recovery-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-hyprland-monitor-external-active": "3ccc2ec167eff8122163cd809393527c5491b925195b08e075381b389b946456",
+    "bin/omarchy-system-lid-close": "33c032559ecd2a7bd19c4a2fd6a253b970dd5ec476c022f2b5805e4b9c45f1dd",
+    "bin/omarchy-system-lid-open": "cf5473dbb1a8fa84fd3da4f849d7e9756cae7779f7851df49a5d2c50c40dcb82",
+    "bin/omarchy-system-lid-suspend": "6522a2e696028be681355fdbea39b612f183deb9633389df4a5a045d411c9a90",
+    "default/hypr/bindings/utilities.lua": "121c2aac52097dd756c2d3b54bf7c7d155f8cb5302bafff3962405121b554d1f",
+    "default/systemd/system-sleep/wake-session": "bdf6b808c7262a68f4722a1a3bf72a39d519d81511331bb523ecea114afe60ef",
+    "etc/systemd/logind.conf.d/30-lid-ignore.conf": "f4cbb1869cff2bb4767e8a8f8deb441dcc35e16297e6fa1a71bda898b63eb618",
+    "manual/36-system-sleep.md": "873871c42188be0a57e9f8e9919b2a4b415647f7d196dec2c315c0ce5730e42b",
+    "migrations/1789604767.sh": "9fc0ba526256439c28ba52e3bdeff5f1cc701ac053cbb4662469004a5333d481",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/lid-close-test.sh": "8c82e352c8c5a9a799856bec1f46e5602db45af6a1219c99d6f8bef696744a95",
+    "test/shell.d/lid-open-test.sh": "6b5cf1adb751319b8646234df82ff8776d5bdfa604e2e68f4629484420cea9c6",
+    "test/shell.d/lid-suspend-test.sh": "a15822cef771cf135ad49b02c3cef02e1812344722b22230eb17a183daddbdc0",
+    "test/shell.d/monitor-recovery-test.sh": "81b0a6f43e0a42cfe8d40118ea21f229938b0bea6056598705b177ce15216e21"
+  }
+}

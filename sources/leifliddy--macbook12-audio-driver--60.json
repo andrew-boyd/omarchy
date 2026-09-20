@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/leifliddy/macbook12-audio-driver/pull/60",
+  "repository": "leifliddy/macbook12-audio-driver",
+  "number": 60,
+  "title": "Fix DKMS install and removal lifecycle",
+  "author": "doctor",
+  "head_sha": "c09495c66135e7c26dcd1faa9efa2666057eb3c3",
+  "state": "merged",
+  "updated_at": "2026-08-16T10:17:56Z",
+  "body": "## Summary\n\n- make DKMS `PRE_BUILD` prepare the patched CS4208 source for the requested kernel without installing anything as a side effect\n- install a stable source tree under `/usr/src/macbook12-audio-driver-0.1` and let DKMS own the add/build/install/remove lifecycle\n- honor the target kernel throughout the Makefiles and select the pre/post-6.17 codec path dynamically\n- verify downloaded kernel source, cache it under `/var/cache`, and restore the stock codec module during uninstall\n\nThis keeps the existing CS4208 patch, but makes it usable by both the standalone installer and an Arch/Omarchy DKMS package.\n\n## Validation\n\n- `bash -n` on the installer, DKMS, and preparation scripts\n- prepared the exact Linux 7.1.8 source and compiled against `7.1.8-arch1-3` headers\n- completed isolated `dkms add` and `dkms build` runs from a clean source tree\n- confirmed the built module name, `hdaudio:v10134208r*a01*` alias, and target-kernel vermagic with `modinfo`\n- validated the resulting CS4208 speaker output and stereo profile on a MacBook10,1 running Omarchy\n\nAn Omarchy package contribution using this lifecycle is being submitted separately.\n",
+  "original_source_changed": false
+}

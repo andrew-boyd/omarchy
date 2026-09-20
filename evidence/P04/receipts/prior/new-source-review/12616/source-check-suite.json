@@ -1,0 +1,11 @@
+{
+  "tests": [
+    "test/shell.d/monitor-external-active-test.sh"
+  ],
+  "syntax": [],
+  "file_sha256": {
+    "bin/omarchy-hyprland-monitor-external-active": "d9c62fbd5e8f71358b8917bb658dcf8e5f31b78bc2cfec2beeb5b553d0fdbeb7",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/monitor-external-active-test.sh": "969e971f73e34ec502be8a218354aadb1162c0863532d6c0dfc05eda0cd94284"
+  }
+}

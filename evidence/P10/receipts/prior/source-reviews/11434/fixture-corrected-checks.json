@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/brcmfmac-resume-fixture-corrected-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 11,
+      "output": "ok - the brcmfmac resume fix runs during hardware setup\nok - the resume unit is wired to every sleep target and the reload helper\nok - a T2 Mac gets the resume unit\nok - every affected Broadcom part on a Mac without a T2 gets the resume unit\nok - a Mac whose Wi-Fi brcmfmac does not drive is left alone\nok - non-Apple hardware is left alone\nok - the migration installs the resume unit on an existing Mac\nok - the migration skips hardware brcmfmac does not drive\nok - no matching Wi-Fi device is a clean no-op\nok - a device driven by something other than brcmfmac is left alone\nomarchy-brcmfmac-resume-fix: reloading brcmfmac after resume (0000:04:00.0)\nomarchy-brcmfmac-resume-fix: done, driver now bound: brcmfmac\nok - the reload cycles the device through unbind and bind and ends up bound to brcmfmac\n"
+    }
+  ]
+}

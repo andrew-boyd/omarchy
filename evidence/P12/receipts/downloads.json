@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-09-20T04:13:33.727680+00:00",
+  "rows": [
+    {
+      "url": "https://linux.standardagents.ai/arch/standardagents/x86_64/PRERELEASE.md",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge.PKGBUILD",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-dkms.PKGBUILD",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "url": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-omarchy.PKGBUILD",
+      "error": "HTTP Error 403: Forbidden"
+    }
+  ]
+}

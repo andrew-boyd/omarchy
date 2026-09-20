@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12328",
+  "repository": "omacom/omarchy",
+  "number": 12328,
+  "title": "Keep every Intel Mac on its kernel in the linux-omarchy migration",
+  "author": "nipunhsud",
+  "head_sha": "33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+  "state": "open",
+  "updated_at": "2026-09-18T08:31:26Z",
+  "body": "Fixes #12281.\n\n## Problem\n\nMigration `1789325478` exempts Macs from the `linux-omarchy` swap, but the test only recognises T2 Macs: the `linux-t2` package or a `-t2` kernel release. A T1 or pre-T2 Mac running stock `linux` matches neither, so it is switched to `linux-omarchy` and has `BOOT_ORDER` rewritten. #12097 (MacBookAir6,1 boots to an emergency shell) and #12131 (Haswell Mac HDMI audio underruns) are non-T2 Macs that took that swap.\n\n## Fix\n\nAlso skip when `/sys/class/dmi/id/sys_vendor` starts with `Apple`, the same idiom `migrations/1786391100.sh` uses. `OMARCHY_KERNEL_DMI_VENDOR` overrides the path so the test stays hermetic, matching the other `OMARCHY_KERNEL_*` overrides in the file. A missing or unreadable vendor file still migrates, so non-DMI machines and VMs are unaffected.\n\nMachines that already ran the migration are untouched; this reaches late updaters coming from 4.0.3 or earlier.\n\n## Tests\n\n`test/shell.d/omarchy-kernel-migration-test.sh` gains three cases: `Apple Inc.` and `Apple Computer, Inc.` are skipped with no calls, no config change and no marker; a missing vendor file still installs the kernel. All prior cases still pass.\n\nNote: the existing assertion \"the superseded migration must not install the PTL variant first\" fails on current `quattro` independently of this change, because a73bcbfc re-added `migrations/1789095456.sh` after ff85faf8 removed it.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "original_source_changed": false
+}

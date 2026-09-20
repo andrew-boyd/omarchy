@@ -1,0 +1,6 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "6343d43b395da10f887f755382af6d6c362a5f2d",
+  "patch_sha256": "e08e8463d9e895cfca817856ee4a286a67a4e83bd2ce8c8431ae8d062021bb51",
+  "software_evidence": "#11624 has eight original assertions and eight boundary observations; #10877 has five original assertions and seven observations. Every changed source file was verified. Passing observations reproduce defects rather than resolve them."
+}

@@ -1,0 +1,20 @@
+[1m================================[0m
+[1momarchy-release self-test[0m
+[1m================================[0m
+  ok: version_to_branch 4.0.2
+  ok: version_to_branch v4.1.0
+  ok: version_to_branch garbage rejects
+  ok: branch_to_version v4-0-2
+  ok: branch_to_version v10-2-33
+  ok: branch_to_version quattro rejects
+  ok: version_is_patch 4.0.2
+  ok: version_is_patch 4.1.0
+  ok: version_is_patch 5.0.0
+  ok: previous_patch_tag 4.0.2
+  ok: previous_patch_tag 4.0.10
+  ok: x86-only readiness
+  ok: ARM-only readiness
+  ok: mixed versions block release
+  ok: both architectures ready
+
+[0;32m✓[0m Self-test passed

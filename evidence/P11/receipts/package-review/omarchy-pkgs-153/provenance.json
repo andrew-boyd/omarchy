@@ -1,0 +1,41 @@
+{
+  "repository": "omacom/omarchy-pkgs",
+  "number": 153,
+  "head_sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+  "source_ancestor": "7e448b90313fea4fb78da9a78607287691d3b241",
+  "target_base": "49c44db179b37fc188c698eb90d5e705947d2def",
+  "patch_sha256": "0151f836a617756e587b90dbf30abfe2a428e24cef48711c2fa9594f332f47f5",
+  "files": [
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+      "source_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "identical_to_source": true,
+      "candidate_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5"
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+      "source_sha256": "f20dd3f9dd412ffc50e75b14a2006237dd3b8671895d2ddfe8bda4531a1fd59e",
+      "identical_to_source": true,
+      "candidate_sha256": "f20dd3f9dd412ffc50e75b14a2006237dd3b8671895d2ddfe8bda4531a1fd59e"
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf",
+      "source_sha256": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268",
+      "identical_to_source": true,
+      "candidate_sha256": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268"
+    },
+    {
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh",
+      "source_sha256": "a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1",
+      "identical_to_source": true,
+      "candidate_sha256": "a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "a584d233ecc83846119146f5acb64ce328b31d08"
+}

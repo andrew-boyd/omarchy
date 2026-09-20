@@ -1,0 +1,49 @@
+{
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+  "patch_sha256": "171cf52dbc34fbd6232006011e3881154d6e714ab696cf414f0010c641135703",
+  "production_provenance": [
+    {
+      "path": "bin/omarchy-hw-facetimehd",
+      "identical_to_12067": true,
+      "sha256": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+      "contribution": "#12067 unchanged."
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "identical_to_12067": true,
+      "sha256": "2e9c3b32c4dce1245e26c15169018d7f1345a42b704d36591b3253006cb5942f",
+      "contribution": "#12067 unchanged."
+    },
+    {
+      "path": "install/hardware/apple/fix-facetimehd.sh",
+      "identical_to_12067": false,
+      "sha256": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891",
+      "contribution": "Existing Apple DMI gate from #11381; delivery remains #12067."
+    },
+    {
+      "path": "install/omarchy-other.packages",
+      "identical_to_12067": true,
+      "sha256": "9c0e9b41df13db8a37e7b809ea5948b7cb3dbe8c90d3f305fc8f88e95fd38bdf",
+      "contribution": "#12067 unchanged."
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "identical_to_12067": true,
+      "sha256": "6240d79883b502025d80bcaf9c7624673d033fcc5eff2642ae559991a69c9094",
+      "contribution": "#12067 unchanged."
+    },
+    {
+      "path": "migrations/1789542390.sh",
+      "identical_to_12067": true,
+      "sha256": "98c28a28296442f5df74bb0707d34f97015b6dca2cd035ce7128a4efd7e0b01b",
+      "contribution": "#12067 unchanged."
+    },
+    {
+      "path": "test/shell.d/facetimehd-test.sh",
+      "identical_to_12067": false,
+      "sha256": "cb06996c72e4ae21efd0b75338a4d6bab9882aa3d193c8062d17725ffa8740e9",
+      "contribution": "DMI fixture input added for combined source behavior."
+    }
+  ]
+}

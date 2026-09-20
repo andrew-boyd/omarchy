@@ -1,0 +1,29 @@
+{
+  "repository": "omacom/omarchy-pkgs",
+  "number": 249,
+  "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+  "source_ancestor": "28a4cfc6626801398b5748e0793509f5a19f6aeb",
+  "target_base": "49c44db179b37fc188c698eb90d5e705947d2def",
+  "patch_sha256": "d372707991e3f9cdfdd5686d700778b0d6808a06429f9417b9d013eaa26897a6",
+  "files": [
+    {
+      "path": "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+      "source_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "identical_to_source": true,
+      "candidate_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5"
+    },
+    {
+      "path": "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD",
+      "source_sha256": "5ea9b3fef2605fd9e27561acfc093db42251dcc7e1d962bd21720bbc27be3ee2",
+      "identical_to_source": true,
+      "candidate_sha256": "5ea9b3fef2605fd9e27561acfc093db42251dcc7e1d962bd21720bbc27be3ee2"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "9b6ce8b42da9b06c1d95d793d6765b19b1df4466"
+}

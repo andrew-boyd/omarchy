@@ -1,0 +1,13 @@
+{
+  "tests": [
+    "test/shell.d/audio-source-boundaries-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/all.sh": "ea40cd32282115e845edfe729106d4bd7f3ddbb9ba8f33ddee66bb4f7c8dd070",
+    "install/hardware/apple/fix-snd-hda-macbookpro.sh": "610866d5504d6c0b00d67606f38f26ada0bb71d9928784a4d25b91beaf7e9fb0",
+    "migrations/1786391102.sh": "2b9d9213a7d6c53891a71c27cc7a95aea99dbfd11190692561d18535f55e2fc7",
+    "test/shell.d/snd-hda-macbookpro-test.sh": "93abab70ba37fb5e6abcf4b69c525295628e695e822bb990bcf9d019191d5b45",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/audio-source-boundaries-test.sh": "8daa84c6d154b3d28ca9b24eb2e5a12df3ffcaf224965baf21692d32d228697c"
+  }
+}

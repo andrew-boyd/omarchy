@@ -1,0 +1,46 @@
+diff --git a/pkgbuilds/intel-ipu7-camera/PKGBUILD b/pkgbuilds/intel-ipu7-camera/PKGBUILD
+index c2770fdd8..6683be971 100644
+--- a/pkgbuilds/intel-ipu7-camera/PKGBUILD
++++ b/pkgbuilds/intel-ipu7-camera/PKGBUILD
+@@ -2,14 +2,13 @@
+ 
+ pkgname=intel-ipu7-camera
+ pkgver=1.0.6
+-pkgrel=1
++pkgrel=2
+ pkgdesc="Intel IPU7 MIPI camera stack for Hurrican/Performance (OV08X40 + hardware ISP)"
+ arch=('x86_64')
+ url="https://github.com/TsaiGaggery/hurrican_omarchy_enabling"
+ license=('GPL-2.0-or-later')
+ depends=(
+   'dkms'
+-  'linux-headers'
+   'v4l2loopback-dkms'
+   'v4l2-relayd'
+   'gstreamer'
+diff --git a/pkgbuilds/macbook8-spi-pxa2xx-nodma-dkms/PKGBUILD b/pkgbuilds/macbook8-spi-pxa2xx-nodma-dkms/PKGBUILD
+index eb7975adb..aa9b7b8bf 100644
+--- a/pkgbuilds/macbook8-spi-pxa2xx-nodma-dkms/PKGBUILD
++++ b/pkgbuilds/macbook8-spi-pxa2xx-nodma-dkms/PKGBUILD
+@@ -2,12 +2,12 @@
+ _pkgbase=spi-pxa2xx-pci-nodma
+ pkgname=macbook8-spi-pxa2xx-nodma-dkms
+ pkgver=1.0
+-pkgrel=1
++pkgrel=2
+ pkgdesc="Patched SPI PXA2xx PCI driver forcing PIO mode for MacBook8,1 Wildcat Point GSPI (8086:9ce6)"
+ arch=('x86_64')
+ url="https://github.com/basecamp/omarchy"
+ license=('GPL-2.0-only')
+-depends=('dkms' 'linux-headers')
++depends=('dkms')
+ makedepends=()
+ conflicts=('spi_pxa2xx_pci' 'macbook12-spi-driver-dkms')
+ provides=('spi_pxa2xx_pci_nodma')
+@@ -31,4 +31,4 @@ package() {
+ 
+     # Modprobe blacklist: prevent the in-tree spi_pxa2xx_pci from claiming this device
+     install -Dm644 "${srcdir}/macbook8-spi-nodma.conf" "${pkgdir}/usr/lib/modprobe.d/macbook8-spi-nodma.conf"
+-}
+\ No newline at end of file
++}

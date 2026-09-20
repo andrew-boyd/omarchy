@@ -1,0 +1,584 @@
+diff --git a/.gitignore b/.gitignore
+index 796b96d..ae26120 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1 +1,2 @@
+ /build
++/Makefile
+diff --git a/Makefile_cirrus b/Makefile_cirrus
+index 627a211..b1fe528 100644
+--- a/Makefile_cirrus
++++ b/Makefile_cirrus
+@@ -1,19 +1,14 @@
+-ifdef KERNELRELEASE
+-	KERNELDIR := /lib/modules/$(KERNELRELEASE)
+-else
+-	KERNELDIR := /lib/modules/$(shell uname -r)
+-endif
++KERNELRELEASE ?= $(shell uname -r)
++KERNELDIR := /lib/modules/$(KERNELRELEASE)
+ 
+ KERNELBUILD := $(KERNELDIR)/build
+ 
+ all:
+-	make -C $(KERNELBUILD) M=$(shell pwd)/build/hda modules
++	$(MAKE) -C $(KERNELBUILD) M=$(shell pwd)/build/hda modules
+ 
+ clean:
+-	make -C $(KERNELBUILD) M=$(shell pwd)/build/hda clean
++	$(MAKE) -C $(KERNELBUILD) M=$(shell pwd)/build/hda clean
+ 
+-ifndef KERNELRELEASE
+ install:
+-	cp $(shell pwd)/build/hda/snd-hda-codec-cirrus.ko $(KERNELDIR)/updates
+-	depmod -a
+-endif
++	install -D -m 0644 $(shell pwd)/build/hda/snd-hda-codec-cirrus.ko $(KERNELDIR)/updates/snd-hda-codec-cirrus.ko
++	depmod -a $(KERNELRELEASE)
+diff --git a/Makefile_cs420x b/Makefile_cs420x
+index 97575e5..45bc769 100644
+--- a/Makefile_cs420x
++++ b/Makefile_cs420x
+@@ -1,19 +1,14 @@
+-ifdef KERNELRELEASE
+-	KERNELDIR := /lib/modules/$(KERNELRELEASE)
+-else
+-	KERNELDIR := /lib/modules/$(shell uname -r)
+-endif
++KERNELRELEASE ?= $(shell uname -r)
++KERNELDIR := /lib/modules/$(KERNELRELEASE)
+ 
+ KERNELBUILD := $(KERNELDIR)/build
+ 
+ all:
+-	make -C $(KERNELBUILD) M=$(shell pwd)/build/hda/codecs/cirrus modules
++	$(MAKE) -C $(KERNELBUILD) M=$(shell pwd)/build/hda/codecs/cirrus modules
+ 
+ clean:
+-	make -C $(KERNELBUILD) M=$(shell pwd)/build/hda/codecs/cirrus clean
++	$(MAKE) -C $(KERNELBUILD) M=$(shell pwd)/build/hda/codecs/cirrus clean
+ 
+-ifndef KERNELRELEASE
+ install:
+-	cp $(shell pwd)/build/hda/codecs/cirrus/snd-hda-codec-cs420x.ko $(KERNELDIR)/updates
+-	depmod -a
+-endif
++	install -D -m 0644 $(shell pwd)/build/hda/codecs/cirrus/snd-hda-codec-cs420x.ko $(KERNELDIR)/updates/snd-hda-codec-cs420x.ko
++	depmod -a $(KERNELRELEASE)
+diff --git a/README.md b/README.md
+index cc30401..e019f8b 100644
+--- a/README.md
++++ b/README.md
+@@ -9,8 +9,7 @@ the built-in speakers stay silent. This module replays the initialization the
+ codec needs (reverse-engineered from macOS) and adds proper headphone/speaker
+ routing on top.
+ 
+-Based on davidjo's [snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro)
+-and forked from leifliddy's [macbook12-audio-driver](https://github.com/leifliddy/macbook12-audio-driver).
++Based on davidjo's [snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro).
+ 
+ ## What works
+ 
+@@ -35,15 +34,15 @@ and forked from leifliddy's [macbook12-audio-driver](https://github.com/leiflidd
+ 
+ **Ubuntu / elementary / Debian**
+ ```bash
+-sudo apt install dkms gcc make git wget linux-headers-$(uname -r)
++sudo apt install curl dkms gcc make git linux-headers-$(uname -r)
+ ```
+ **Fedora**
+ ```bash
+-sudo dnf install dkms gcc make git wget kernel-devel
++sudo dnf install curl dkms gcc make git kernel-devel
+ ```
+ **Arch**
+ ```bash
+-sudo pacman -S dkms gcc make git wget linux-headers
++sudo pacman -S curl dkms gcc make git linux-headers
+ ```
+ 
+ ### 2. Build & install the module (DKMS — recommended)
+@@ -52,20 +51,21 @@ DKMS rebuilds the module automatically whenever you install a new kernel, so
+ audio keeps working across kernel updates.
+ 
+ ```bash
+-git clone https://github.com/breitburg/macbook12-audio-driver.git
++git clone https://github.com/leifliddy/macbook12-audio-driver.git
+ cd macbook12-audio-driver
+ sudo ./install.cirrus.driver.sh -i
+ sudo reboot
+ ```
+ 
+ > [!NOTE]
+-> The build downloads the matching kernel source tarball to obtain the
+-> HD-audio codec headers, so **an internet connection is required at build
+-> time** — including when DKMS rebuilds after a kernel update.
++> The first build for each upstream kernel downloads its matching source
++> tarball to obtain the HD-audio codec headers. The tarball is verified against
++> kernel.org's SHA-256 list and cached under
++> `/var/cache/macbook12-audio-driver` for later rebuilds.
+ 
+ > [!IMPORTANT]
+-> Keep the cloned directory in place. The DKMS install links to it, and removing
+-> it will break the automatic rebuild on the next kernel update.
++> DKMS receives its own source copy under `/usr/src`, so the cloned directory
++> can be removed after installation.
+ 
+ To uninstall:
+ ```bash
+@@ -76,7 +76,7 @@ sudo ./install.cirrus.driver.sh -u
+ <summary>Manual build (fallback — does <b>not</b> survive kernel updates)</summary>
+ 
+ ```bash
+-git clone https://github.com/breitburg/macbook12-audio-driver.git
++git clone https://github.com/leifliddy/macbook12-audio-driver.git
+ cd macbook12-audio-driver
+ sudo ./install.cirrus.driver.sh
+ sudo reboot
+diff --git a/dkms.conf b/dkms.conf
+index 753894f..f1118f7 100644
+--- a/dkms.conf
++++ b/dkms.conf
+@@ -1,10 +1,22 @@
+ PACKAGE_NAME="macbook12-audio-driver"
+ PACKAGE_VERSION="0.1"
+-PRE_BUILD="install.cirrus.driver.sh -k $kernelver"
+-MAKE="make"
+-BUILT_MODULE_NAME[0]="snd-hda-codec-cs420x"
+-BUILT_MODULE_LOCATION[0]="build/hda/codecs/cirrus"
+-# according to the man page this option is ignored by many distros (including Fedora and Ubuntu)
+-# but is apparently still required....why??
++
++kernel_release="${kernelver:-$(uname -r)}"
++kernel_version="${kernel_release%%-*}"
++major_version="${kernel_version%%.*}"
++version_tail="${kernel_version#*.}"
++minor_version="${version_tail%%.*}"
++
++PRE_BUILD="./prepare.cirrus.driver.sh $kernelver"
++MAKE[0]="make"
++
++if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then
++  BUILT_MODULE_NAME[0]="snd-hda-codec-cs420x"
++  BUILT_MODULE_LOCATION[0]="build/hda/codecs/cirrus"
++else
++  BUILT_MODULE_NAME[0]="snd-hda-codec-cirrus"
++  BUILT_MODULE_LOCATION[0]="build/hda"
++fi
++
+ DEST_MODULE_LOCATION[0]="/kernel/extra"
+ AUTOINSTALL="yes"
+diff --git a/dkms.sh b/dkms.sh
+old mode 100644
+new mode 100755
+index a38494f..d56aa47
+--- a/dkms.sh
++++ b/dkms.sh
+@@ -1,28 +1,52 @@
+ #!/bin/bash
+ 
+-src_dir='/usr/src/macbook12-audio-0.1'
+-dkms_name='macbook12-audio/0.1'
+-var_dkms_dir='/var/lib/dkms/macbook12-audio'
+-cur_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
+-
+-# specify uninstall with the -r or -u argument
+-while getopts :ru arg
+-do
+-    case "${arg}" in
+-        r) dkms_remove=true;;
+-        u) dkms_remove=true;;
+-    esac
+-done
+-
+-if [[ $dkms_remove = true ]]; then
+-    [[ -e $var_dkms_dir ]] && rm -rf $var_dkms_dir && echo "removed $var_dkms_dir"
+-    [[ -e $src_dir ]] && rm -f $src_dir && echo "removed $src_dir"
+-    exit 0
++set -euo pipefail
++
++module_name="macbook12-audio-driver"
++module_version="0.1"
++source_dir="/usr/src/${module_name}-${module_version}"
++cache_dir="/var/cache/macbook12-audio-driver"
++script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++action="${1:-install}"
++
++if (( EUID != 0 )); then
++  echo "Run this script as root." >&2
++  exit 1
+ fi
+ 
+-pushd $cur_dir > /dev/null
++remove_driver() {
++  dkms remove -m "$module_name" -v "$module_version" --all 2>/dev/null || true
++  rm -rf -- "$source_dir" "$cache_dir"
++  depmod -a
++}
++
++install_driver() {
++  if dkms status -m "$module_name" -v "$module_version" 2>/dev/null | grep -q .; then
++    dkms remove -m "$module_name" -v "$module_version" --all
++  fi
++
++  rm -rf -- "$source_dir"
++  install -d -m 0755 "$source_dir"
++  install -m 0644 \
++    "$script_dir/dkms.conf" \
++    "$script_dir/Makefile_cirrus" \
++    "$script_dir/Makefile_cs420x" \
++    "$source_dir"
++  install -m 0755 "$script_dir/prepare.cirrus.driver.sh" "$source_dir"
++  cp -a "$script_dir/patch_cirrus" "$source_dir"
+ 
+-[[ ! -e $src_dir ]] && ln -sfn $cur_dir $src_dir
+-dkms install -c dkms.conf --force -m $dkms_name
++  dkms install -m "$module_name" -v "$module_version" --force
++}
+ 
+-popd > /dev/null
++case "$action" in
++  install|-i|--install)
++    install_driver
++    ;;
++  remove|-r|-u|--remove|--uninstall)
++    remove_driver
++    ;;
++  *)
++    echo "Usage: $0 [install|remove]" >&2
++    exit 2
++    ;;
++esac
+diff --git a/install.cirrus.driver.sh b/install.cirrus.driver.sh
+index 1773cf9..fd0f7a6 100755
+--- a/install.cirrus.driver.sh
++++ b/install.cirrus.driver.sh
+@@ -1,106 +1,63 @@
+ #!/bin/bash
+ 
+-while [ $# -gt 0 ]
+-do
+-    case $1 in
+-    -i|--install) dkms_action='install';;
+-    -k|--kernel) dkms_kernel=$2; [[ -z $dkms_kernel ]] && echo '-k|--kernel must be followed by a kernel version' && exit 1;;
+-    -r|--remove) dkms_action='remove';;
+-    -u|--uninstall) dkms_action='remove';;
+-    (-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
+-    (*) break;;
+-    esac
+-    shift
++set -euo pipefail
++
++script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++action="manual"
++kernel_release="$(uname -r)"
++
++usage() {
++  cat <<USAGE
++Usage: $0 [--install | --uninstall] [--kernel KERNEL_RELEASE]
++
++  -i, --install             Install with DKMS (recommended)
++  -u, -r, --uninstall      Remove the DKMS installation
++  -k, --kernel RELEASE      Manually build for RELEASE (default: uname -r)
++USAGE
++}
++
++while (($#)); do
++  case "$1" in
++    -i|--install)
++      action="install"
++      shift
++      ;;
++    -r|-u|--remove|--uninstall)
++      action="remove"
++      shift
++      ;;
++    -k|--kernel)
++      [[ -n ${2:-} ]] || {
++        echo "$1 must be followed by a kernel release" >&2
++        exit 2
++      }
++      kernel_release="$2"
++      shift 2
++      ;;
++    -h|--help)
++      usage
++      exit 0
++      ;;
++    *)
++      echo "Unknown option: $1" >&2
++      usage >&2
++      exit 2
++      ;;
++  esac
+ done
+ 
+-if [[ $dkms_action == 'install' ]]; then
+-    bash dkms.sh
+-    exit
+-elif [[ $dkms_action == 'remove' ]]; then
+-    bash dkms.sh -r
+-    exit
+-fi
+-
+-[[ -n $dkms_kernel ]] && uname_r=$dkms_kernel || uname_r=$(uname -r)
+-kernel_version=$(echo $uname_r | cut -d '-' -f1 | cut -d '_' -f1) #ie 6.4.15
+-
+-major_version=$(echo $kernel_version | cut -d '.' -f1)
+-minor_version=$(echo $kernel_version | cut -d '.' -f2)
+-major_minor=${major_version}${minor_version}
+-kernel_short_version="$major_version.$minor_version" #ie 5.2
+-
+-build_dir="build"
+-patch_dir='patch_cirrus'
+-hda_dir="$build_dir/hda"
+-
+-[[ -d $hda_dir ]] && rm -rf $hda_dir
+-[[ ! -d $build_dir ]] && mkdir $build_dir
+-
+-# attempt to download linux-x.x.x.tar.xz kernel
+-wget -c https://cdn.kernel.org/pub/linux/kernel/v$major_version.x/linux-$kernel_version.tar.xz -P $build_dir
+-
+-if [[ $? -ne 0 ]]; then
+-   # if first attempt fails, attempt to download linux-x.x.tar.xz kernel
+-   kernel_version=$kernel_short_version
+-   wget -c https://cdn.kernel.org/pub/linux/kernel/v$major_version.x/linux-$kernel_version.tar.xz -P $build_dir
+-fi
+-
+-[[ $? -ne 0 ]] && echo "kernel could not be downloaded...exiting" && exit
+-
+-# remove old kernel tar.xz archives
+-find build/ -type f | grep -E linux.*.tar.xz | grep -v $kernel_version.tar.xz | xargs rm -f
+-
+-if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then
+-    makefile_name="Makefile_cs420x"
+-    tar --strip-components=2 -xvf $build_dir/linux-$kernel_version.tar.xz --directory=build/ linux-$kernel_version/sound/hda
+-    mv $hda_dir/codecs/cirrus/Makefile $hda_dir/codecs/cirrus/Makefile.orig
+-    mv $hda_dir/codecs/cirrus/cs420x.c $hda_dir/codecs/cirrus/cs420x.c.orig
+-    cp $patch_dir/cs420x.c $patch_dir/patch_cirrus_a1534_setup.h $patch_dir/patch_cirrus_a1534_pcm.h $hda_dir/codecs/cirrus
+-    cp $patch_dir/$makefile_name $hda_dir/codecs/cirrus/Makefile
+-else
+-    makefile_name="Makefile_cirrus"
+-    tar --strip-components=3 -xvf $build_dir/linux-$kernel_version.tar.xz --directory=build/ linux-$kernel_version/sound/pci/hda
+-    mv $hda_dir/Makefile $hda_dir/Makefile.orig
+-    mv $hda_dir/patch_cirrus.c $hda_dir/patch_cirrus.c.orig
+-    cp $patch_dir/patch_cirrus.c $patch_dir/patch_cirrus_a1534_setup.h $patch_dir/patch_cirrus_a1534_pcm.h $hda_dir/
+-    cp $patch_dir/$makefile_name $hda_dir/Makefile
+-fi
+-
+-# if kernel version is 6.17 and beyond, replace the .free callback with .remove
+-if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then
+-   sed -i 's/\.free/.remove/' $hda_dir/codecs/cirrus/patch_cirrus_a1534_pcm.h
+-fi
+-
+-# if kernel version is between 6.12 and 6.16 then change
+-# snd_pci_quirk to hda_quirk
+-# SND_PCI_QUIRK to HDA_CODEC_QUIRK
+-# but leave alone SND_PCI_QUIRK_VENDOR
+-
+-if (( major_version == 6 && minor_version >= 12 && minor_version < 17 )); then
+-   sed -i 's/snd_pci_quirk/hda_quirk/' $hda_dir/patch_cirrus.c
+-   sed -i 's/SND_PCI_QUIRK\b/HDA_CODEC_QUIRK/' $hda_dir/patch_cirrus.c
+-fi
+-
+-if (( major_version == 6 && minor_version <= 11 )); then
+-   sed -i 's/hda_quirk/snd_pci_quirk/' $hda_dir/patch_cirrus.c
+-fi
+-
+-# if kernel version is < 5.6 then change
+-# timespec64 to timespec
+-# ktime_get_real_ts64 to getnstimeofday
+-
+-if [ $major_minor -lt 56 ]; then
+-   sed -i 's/timespec64/timespec/' $hda_dir/patch_cirrus.c
+-   sed -i 's/timespec64/timespec/' $hda_dir/patch_cirrus_a1534_pcm.h
+-   sed -i 's/ktime_get_real_ts64/getnstimeofday/' $hda_dir/patch_cirrus_a1534_pcm.h
+-fi
+-
+-update_dir="/lib/modules/$(uname -r)/updates"
+-[[ ! -d $update_dir ]] && mkdir $update_dir
+-if ((${#dkms_kernel[@]})); then
+-    cp $makefile_name Makefile
+-fi
+-make -f $makefile_name
+-make -f $makefile_name install
+-echo -e "\ncontents of $update_dir"
+-ls -lA $update_dir
++cd "$script_dir"
++
++case "$action" in
++  install)
++    "$script_dir/dkms.sh" install
++    ;;
++  remove)
++    "$script_dir/dkms.sh" remove
++    ;;
++  manual)
++    "$script_dir/prepare.cirrus.driver.sh" "$kernel_release"
++    make KERNELRELEASE="$kernel_release"
++    make KERNELRELEASE="$kernel_release" install
++    ;;
++esac
+diff --git a/prepare.cirrus.driver.sh b/prepare.cirrus.driver.sh
+new file mode 100755
+index 0000000..3709a4a
+--- /dev/null
++++ b/prepare.cirrus.driver.sh
+@@ -0,0 +1,157 @@
++#!/bin/bash
++
++set -euo pipefail
++
++kernel_release="${1:-$(uname -r)}"
++kernel_version="${kernel_release%%-*}"
++kernel_version="${kernel_version%%_*}"
++
++if [[ ! $kernel_version =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([.-]rc[0-9]+)?$ ]]; then
++  echo "Unsupported kernel release: $kernel_release" >&2
++  exit 2
++fi
++
++major_version="${kernel_version%%.*}"
++version_tail="${kernel_version#*.}"
++minor_version="${version_tail%%.*}"
++kernel_short_version="$major_version.$minor_version"
++
++script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
++cd "$script_dir"
++
++build_dir="$script_dir/build"
++patch_dir="$script_dir/patch_cirrus"
++hda_dir="$build_dir/hda"
++base_url="https://cdn.kernel.org/pub/linux/kernel/v${major_version}.x"
++
++if [[ -n ${MACBOOK12_AUDIO_KERNEL_CACHE:-} ]]; then
++  cache_dir="$MACBOOK12_AUDIO_KERNEL_CACHE"
++elif (( EUID == 0 )); then
++  cache_dir="/var/cache/macbook12-audio-driver"
++else
++  cache_dir="$build_dir"
++fi
++
++download() {
++  local url="$1"
++  local destination="$2"
++
++  if command -v curl >/dev/null; then
++    curl --fail --location --retry 3 --silent --show-error \
++      --output "$destination" "$url"
++  elif command -v wget >/dev/null; then
++    wget --quiet --tries=3 --output-document="$destination" "$url"
++  else
++    echo "Install curl or wget to download the matching kernel source." >&2
++    return 127
++  fi
++}
++
++refresh_checksums() {
++  local partial="$checksums.part"
++  rm -f "$partial"
++  download "$base_url/sha256sums.asc" "$partial"
++  mv "$partial" "$checksums"
++}
++
++checksum_for() {
++  local archive_name="$1"
++  awk -v filename="$archive_name" '$2 == filename { print $1; exit }' "$checksums"
++}
++
++mkdir -p "$build_dir" "$cache_dir"
++rm -rf "$hda_dir"
++
++checksums="$cache_dir/sha256sums-v${major_version}.asc"
++[[ -f $checksums ]] || refresh_checksums
++
++archive=""
++for candidate_version in "$kernel_version" "$kernel_short_version"; do
++  archive_name="linux-${candidate_version}.tar.xz"
++  expected_sha256="$(checksum_for "$archive_name")"
++
++  if [[ -z $expected_sha256 ]]; then
++    refresh_checksums
++    expected_sha256="$(checksum_for "$archive_name")"
++  fi
++  [[ -n $expected_sha256 ]] || continue
++
++  candidate_archive="$cache_dir/$archive_name"
++  if [[ -f $candidate_archive ]]; then
++    actual_sha256="$(sha256sum "$candidate_archive" | awk '{ print $1 }')"
++  else
++    actual_sha256=""
++  fi
++
++  if [[ $actual_sha256 != "$expected_sha256" ]]; then
++    partial_archive="$candidate_archive.part"
++    rm -f "$partial_archive"
++    echo "Downloading $archive_name"
++    if ! download "$base_url/$archive_name" "$partial_archive"; then
++      rm -f "$partial_archive"
++      continue
++    fi
++
++    actual_sha256="$(sha256sum "$partial_archive" | awk '{ print $1 }')"
++    if [[ $actual_sha256 != "$expected_sha256" ]]; then
++      rm -f "$partial_archive"
++      echo "SHA-256 verification failed for $archive_name" >&2
++      exit 3
++    fi
++    mv "$partial_archive" "$candidate_archive"
++  fi
++
++  archive="$candidate_archive"
++  kernel_version="$candidate_version"
++  break
++done
++
++if [[ -z $archive ]]; then
++  echo "No verified kernel.org source archive found for $kernel_release" >&2
++  exit 4
++fi
++
++if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then
++  makefile_name="Makefile_cs420x"
++  tar --strip-components=2 -xf "$archive" --directory="$build_dir" \
++    "linux-${kernel_version}/sound/hda"
++  mv "$hda_dir/codecs/cirrus/Makefile" "$hda_dir/codecs/cirrus/Makefile.orig"
++  mv "$hda_dir/codecs/cirrus/cs420x.c" "$hda_dir/codecs/cirrus/cs420x.c.orig"
++  cp "$patch_dir/cs420x.c" \
++    "$patch_dir/patch_cirrus_a1534_setup.h" \
++    "$patch_dir/patch_cirrus_a1534_pcm.h" \
++    "$hda_dir/codecs/cirrus"
++  cp "$patch_dir/$makefile_name" "$hda_dir/codecs/cirrus/Makefile"
++else
++  makefile_name="Makefile_cirrus"
++  tar --strip-components=3 -xf "$archive" --directory="$build_dir" \
++    "linux-${kernel_version}/sound/pci/hda"
++  mv "$hda_dir/Makefile" "$hda_dir/Makefile.orig"
++  mv "$hda_dir/patch_cirrus.c" "$hda_dir/patch_cirrus.c.orig"
++  cp "$patch_dir/patch_cirrus.c" \
++    "$patch_dir/patch_cirrus_a1534_setup.h" \
++    "$patch_dir/patch_cirrus_a1534_pcm.h" \
++    "$hda_dir"
++  cp "$patch_dir/$makefile_name" "$hda_dir/Makefile"
++fi
++
++if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then
++  sed -i 's/\.free/.remove/' "$hda_dir/codecs/cirrus/patch_cirrus_a1534_pcm.h"
++fi
++
++if (( major_version == 6 && minor_version >= 12 && minor_version < 17 )); then
++  sed -i 's/snd_pci_quirk/hda_quirk/' "$hda_dir/patch_cirrus.c"
++  sed -i 's/SND_PCI_QUIRK\b/HDA_CODEC_QUIRK/' "$hda_dir/patch_cirrus.c"
++fi
++
++if (( major_version == 6 && minor_version <= 11 )); then
++  sed -i 's/hda_quirk/snd_pci_quirk/' "$hda_dir/patch_cirrus.c"
++fi
++
++if (( major_version < 5 || (major_version == 5 && minor_version < 6) )); then
++  sed -i 's/timespec64/timespec/' "$hda_dir/patch_cirrus.c"
++  sed -i 's/timespec64/timespec/' "$hda_dir/patch_cirrus_a1534_pcm.h"
++  sed -i 's/ktime_get_real_ts64/getnstimeofday/' "$hda_dir/patch_cirrus_a1534_pcm.h"
++fi
++
++cp "$script_dir/$makefile_name" "$script_dir/Makefile"

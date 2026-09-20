@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/audio-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 4,
+      "output": "ok - observation: original CS4208 migration skips an added-only DKMS entry\nok - observation: original CS4208 migration skips an old-kernel-only DKMS entry\nok - observation: package presence alone bypasses original CS4208 repair\nok - observation: original CS4208 package failure propagates before reboot state\n"
+    }
+  ]
+}

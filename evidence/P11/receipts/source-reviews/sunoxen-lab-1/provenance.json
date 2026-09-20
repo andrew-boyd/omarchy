@@ -1,0 +1,83 @@
+{
+  "source": "https://github.com/sunoxen-lab/omarchy/pull/1",
+  "head_sha": "579cef09d0de94caf0d2ead147344483aed3f161",
+  "base_sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+  "parent_tree": "83eb87f047f0b81053b0707e22c9f815881507f3",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "applied": true,
+  "apply_output": "",
+  "source_patch_sha256": "689590645fe1ce1538b194a1be5634aa6c2a62045b14430d1abf39ea82cc43e8",
+  "relocated_patch_sha256": "0ea0c01990644527d3f9c75555ace1316772c3167cba43ecf85e2dfe4e4bbfe2",
+  "source_migration": "1786719479.sh",
+  "target_migration": "1789869577.sh",
+  "selected": false,
+  "hardware_verified": false,
+  "target_tree": "1632a8f3f7f4128cda9a652065ef552edfc77ef6",
+  "reconciled_patch_sha256": "c933cfa41e5c50815b169f80f63d369b0ddbc581ad42ee6d2206fc142c349252",
+  "files": [
+    {
+      "path": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+      "target_path": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+      "source_sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+      "candidate_sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/apple/60-cs4208-s2idle.conf",
+      "target_path": "install/hardware/apple/60-cs4208-s2idle.conf",
+      "source_sha256": "b7fb75f1dac50729de53bfad5165aa59db70d505844ce7ebc586d74148b6e3d2",
+      "candidate_sha256": "b7fb75f1dac50729de53bfad5165aa59db70d505844ce7ebc586d74148b6e3d2",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "target_path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "source_sha256": "8c3525d77f6fdf66783e9cc341e06fa726851bd768215ef34f4a969aeedaa85c",
+      "candidate_sha256": "8c3525d77f6fdf66783e9cc341e06fa726851bd768215ef34f4a969aeedaa85c",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/hardware/apple/omarchy-cs4208-audio.service",
+      "target_path": "install/hardware/apple/omarchy-cs4208-audio.service",
+      "source_sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+      "candidate_sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/user/all.sh",
+      "target_path": "install/user/all.sh",
+      "source_sha256": "f0bdc0638f09c3f87ad3ade6464da97fddba411d1df1c8cc274327409318961c",
+      "candidate_sha256": "f0bdc0638f09c3f87ad3ade6464da97fddba411d1df1c8cc274327409318961c",
+      "identical_to_source": true
+    },
+    {
+      "path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+      "target_path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+      "source_sha256": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4",
+      "candidate_sha256": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4",
+      "identical_to_source": true
+    },
+    {
+      "path": "manual/44-mac-support.md",
+      "target_path": "manual/44-mac-support.md",
+      "source_sha256": "ee50ea68eff4e427af934c8000f33c38bb496d7b5d1cc8bcd22d4e1d1d1494b9",
+      "candidate_sha256": "ee50ea68eff4e427af934c8000f33c38bb496d7b5d1cc8bcd22d4e1d1d1494b9",
+      "identical_to_source": true
+    },
+    {
+      "path": "migrations/1786719479.sh",
+      "target_path": "migrations/1789869577.sh",
+      "source_sha256": "8d52000c1685d74dc6672aeec727c509d1ba4906e63cea34b3b4dcd731258a40",
+      "candidate_sha256": "8d52000c1685d74dc6672aeec727c509d1ba4906e63cea34b3b4dcd731258a40",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "target_path": "test/shell.d/cs4208-audio-test.sh",
+      "source_sha256": "09c5f37253c85454c37d23712d5a01d638590f70494dae2ce1a397694cdc4a93",
+      "candidate_sha256": "f8cb31fe73241eb39ed2e48ed67b59d6c3942a430f055880dcce17ec8026fa35",
+      "identical_to_source": false
+    }
+  ],
+  "existing_target_migration_unchanged": true
+}

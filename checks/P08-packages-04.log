@@ -1,0 +1,45 @@
+[1m================================[0m
+[1msync-rebuilds self-test[0m
+[1m================================[0m
+A trigger missing from the record counts as changed:
+  ok: run succeeds
+  ok: pkgrel bumped
+  ok: unrecorded trigger now recorded
+Opting a package in buys a rebuild rather than a bare record:
+  ok: run succeeds
+  ok: pkgrel bumped
+  ok: trigger recorded
+An unchanged package is left alone:
+  ok: run succeeds
+  ok: pkgrel untouched
+Metadata that does not parse fails the run instead of vanishing from it:
+  ok: run fails
+  ok: the readable package is still processed
+A bump that pacman would not order above the published package is refused:
+  ok: run fails
+  ok: pkgrel untouched
+  ok: record untouched
+An AUR-synced package is bumped as a dotted suffix that sync-aur reapplies:
+  ok: run succeeds
+  ok: pkgrel suffixed
+  ok: suffix recorded for the next AUR sync
+A dependency is tracked independently for both published architectures:
+  ok: run succeeds
+  ok: pkgrel bumped once
+  ok: x86_64 trigger recorded
+  ok: aarch64 trigger recorded
+An ARM-only run records only the ARM dependency state:
+  ok: run succeeds
+  ok: pkgrel bumped
+  ok: ARM trigger recorded
+  ok: x86_64 was not consulted
+An x86-only package ignores ARM during a dual-architecture run:
+  ok: run succeeds
+  ok: pkgrel untouched
+A PKGBUILD that branches on CARCH at file scope still reads its version:
+  ok: pkgver read for x86_64
+  ok: pkgrel read for x86_64
+  ok: arch-specific value follows CARCH
+  ok: unsupported arch reports failure
+
+[0;32m✓[0m Self-test passed

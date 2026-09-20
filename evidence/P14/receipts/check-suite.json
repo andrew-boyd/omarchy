@@ -1,0 +1,10 @@
+{
+  "tests": [],
+  "syntax": [
+    "bin/omarchy-diagnose-suspend-wake"
+  ],
+  "file_sha256": {
+    "bin/omarchy-diagnose-suspend-wake": "a1e30ddbb2b2c3650f37f0970d0bae8e8c8f371d7c42ba2a04d44ab58234d109"
+  },
+  "qualification": "The source has no automated runtime suite. Syntax-only verification executes no production subcommand and adds no behavioral assertions."
+}

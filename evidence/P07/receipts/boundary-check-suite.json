@@ -1,0 +1,14 @@
+{
+  "tests": [
+    "test/shell.d/pio-source-boundaries-test.sh"
+  ],
+  "file_sha256": {
+    "install/hardware/apple/fix-spi-keyboard.sh": "791a01c5d42a8afdb4172ece84a73dd79a6748d53868603840764cc3336698de",
+    "manual/44-mac-support.md": "e3d3634071dad4cc0c55829dcd705ae5e32238f81400a5b5da61db44b7f7697a",
+    "migrations/1788318101.sh": "c490ba8b78fb7470ff364ddef469937fc296fe2cec41c1f8d6a28472f79ff990",
+    "test/shell.d/macbook81-spi-pio-test.sh": "a52b34530a33fc10b2d550152035b8d27abd41268afafdd962d489118cf6a233",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "install/hardware/all.sh": "6c9d835847bf1d1a53ff36be7735dd5d4c3e1fc20952e18037af616f75713ee3",
+    "test/shell.d/pio-source-boundaries-test.sh": "74085d07859250f0f470a13224dc51420b74abbbd3a757744197abafda966f0e"
+  }
+}

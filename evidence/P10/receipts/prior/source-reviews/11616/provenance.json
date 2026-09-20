@@ -1,0 +1,50 @@
+{
+  "number": 11616,
+  "head_sha": "955fac3c60d3f2b37079a3730c25061ede28e79c",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "original_apply_passed": true,
+  "hardware_verified": false,
+  "rebase_notes": [],
+  "tree": "306d54383caf377730c00dabed1909a2d0956cca",
+  "patch_sha256": "b6261a494aaf45e89a2d82444ebf457ceef2f8d2082555ab42f2e1ab778729e2",
+  "files": [
+    {
+      "path": "install/hardware/all.sh",
+      "identical_to_source": true,
+      "source_sha256": "c58a43dfc08b01ff230dc8379a67ea73e2d892a2512b3b6a3cea3fc7f726dc92",
+      "target_sha256": "c58a43dfc08b01ff230dc8379a67ea73e2d892a2512b3b6a3cea3fc7f726dc92"
+    },
+    {
+      "path": "install/hardware/apple/brcmfmac43602-pcie.txt",
+      "identical_to_source": true,
+      "source_sha256": "5f1e2ec400301f02ef75a650ce06cf4ab77ef77a6f4a08259c3503fdf12c7e0d",
+      "target_sha256": "5f1e2ec400301f02ef75a650ce06cf4ab77ef77a6f4a08259c3503fdf12c7e0d"
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-nvram.sh",
+      "identical_to_source": true,
+      "source_sha256": "95d820c0fd4f56c74176e7d934d113c7336f88206c3ac1555a5f3ded91fd2295",
+      "target_sha256": "95d820c0fd4f56c74176e7d934d113c7336f88206c3ac1555a5f3ded91fd2295"
+    },
+    {
+      "path": "migrations/1786391101.sh",
+      "identical_to_source": true,
+      "source_sha256": "daeccfa7077ebdb572325be1ebd616aac5539a4d888f4be852c27f559c0f03dc",
+      "target_sha256": "daeccfa7077ebdb572325be1ebd616aac5539a4d888f4be852c27f559c0f03dc"
+    },
+    {
+      "path": "test/shell.d/brcmfmac-nvram-test.sh",
+      "identical_to_source": true,
+      "source_sha256": "274af6ef9d608228b71042ea30b2d3f583bc3fe7475e4e0fb41e91c9a536775f",
+      "target_sha256": "274af6ef9d608228b71042ea30b2d3f583bc3fe7475e4e0fb41e91c9a536775f"
+    }
+  ],
+  "all_sh_retains_target_exactly": true,
+  "whitespace": {
+    "passed": false,
+    "output": "install/hardware/apple/brcmfmac43602-pcie.txt:41: trailing whitespace.\n+btcdyn_profile_type=0x2  \n"
+  },
+  "source_checks_passed": true,
+  "source_assertions": 18,
+  "target_tree": "306d54383caf377730c00dabed1909a2d0956cca"
+}

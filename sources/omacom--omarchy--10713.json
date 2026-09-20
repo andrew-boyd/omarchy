@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10713",
+  "repository": "omacom/omarchy",
+  "number": 10713,
+  "title": "Use active external displays for the lid-close lock decision",
+  "author": "yashranaway",
+  "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+  "state": "open",
+  "updated_at": "2026-09-12T14:04:51Z",
+  "body": "## What changed\n\nUse Hyprland's active external-monitor check when deciding whether a lid close should lock the session. Keep the physical connector detector unchanged for callers that need it.\n\nOn T2 Macs, tiny-dfr exposes a permanently connected Touch Bar DRM connector that Hyprland does not manage. The physical connector check treats it as an external monitor and skips the lock even when the laptop has no usable external display. This also makes the lock decision match the active-display check used by clamshell reconciliation.\n\nFixes #10618.\n\n## Testing\n\n- `bash test/shell.d/lid-close-test.sh`, including the real monitor-query helper with the reporter's internal-only monitor list and a positive physical connector check\n- `bash -n bin/omarchy-system-lid-close`\n- `git diff --check`\n\nNo T2 hardware or graphical session was available; physical lid-close verification is still needed.\n",
+  "original_source_changed": false
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9516",
+  "repository": "omacom/omarchy",
+  "number": 9516,
+  "title": "Install CS8409 speaker driver on pre-T2 MacBook Pros and iMacs",
+  "author": "j7j7",
+  "head_sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+  "state": "open",
+  "updated_at": "2026-09-08T16:50:21Z",
+  "body": "## Summary\n- Installs `snd-hda-macbookpro-dkms` (+ `linux-headers`) on pre-T2 Macs whose speakers stay silent under in-tree `snd_hda_codec_cs8409`: **MacBookPro13,x / 14,x** and **iMac18,x / iMac19,x**.\n- Builds on @shawnyeager's work in #7140 (detector, install hook, migration, tests, manual). This PR rebases that onto current `quattro` and extends detection / docs / tests for iMacs.\n- Depends on the matching package PR: https://github.com/omacom/omarchy-pkgs/pull/155 (or the follow-up that widens its description for iMacs).\n\nIn-tree CS8409 binds the codec but never programs the external amps / CS42L83 path, so PipeWire shows a healthy unmuted sink with no output. The DKMS module replaces `snd-hda-codec-cs8409` under `updates/` after reboot.\n\nT2 Macs stay on `fix-t2.sh` / `apple-t2-audio-config` and are excluded (`iMacPro1,1`, `MacBookPro15,1`, etc.).\n\n## Hardware note\nVerified on **iMac18,3** (CS8409/CS42L83, codec subsystem `0x106b1000`) on linux 7.1.9: speakers work once the Apple CS8409 path is loaded. MacBook Pro coverage is from #7140 (MacBookPro14,3).\n\n## Test plan\n- [x] `./test/shell.d/cs8409-audio-test.sh` (MacBook + iMac match/skip cases, install hook, migration, manual wording)\n- [ ] On iMac18/19 or MacBookPro13/14: install / migrate \u2192 reboot \u2192 `lsmod | grep cs8409`, `aplay -l` shows CS8409/CS42L83, speakers play\n- [ ] T2 Mac (`MacBookPro15,1` / `iMacPro1,1`): hook and migration no-op\n\nSupersedes / can close #7140 and draft #8285 once this and the pkgs package land together.\n\nMade with [Cursor](https://cursor.com)",
+  "original_source_changed": false
+}

@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/brcmfmac-nvram-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 18,
+      "output": "ok - the NVRAM fix script exists\nok - script detects BCM43602 by PCI ID\nok - script installs the correct NVRAM file\nok - script handles MAC address substitution\nok - script rebuilds initramfs\nok - the NVRAM fix runs during hardware setup\nok - the NVRAM config source file exists\nok - NVRAM config contains MAC address placeholder\nok - NVRAM config contains boardflags\nok - NVRAM config contains 2GHz PA parameters\nok - NVRAM config contains 5GHz PA parameters\nBCM43602 detected, installing improved NVRAM config for WiFi signal fix\nSet MAC address to aa:bb:cc:dd:ee:ff for interface wlp3s0\nNVRAM config installed to /tmp/tmp.qYox5zPaTi/firmware/brcm/brcmfmac43602-pcie.txt\nWiFi signal should improve after reboot (expected: -55 to -65 dBm instead of -90 dBm)\nRebuilding initramfs with limine-mkinitcpio...\nlimine-mkinitcpio called\nok - NVRAM config was installed\nok - MAC address was substituted into NVRAM config\nok - boardflags parameter present\nok - 2GHz PA parameters present\nok - 5GHz PA parameters present\nok - boardflags2 parameter present\nok - boardflags3 parameter present\nall tests passed\n"
+    }
+  ]
+}

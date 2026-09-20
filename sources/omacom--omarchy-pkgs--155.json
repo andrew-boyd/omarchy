@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/155",
+  "repository": "omacom/omarchy-pkgs",
+  "number": 155,
+  "title": "Add snd-hda-macbookpro-dkms for 2016-2017 MacBook speakers",
+  "author": "shawnyeager",
+  "head_sha": "bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+  "state": "open",
+  "updated_at": "2026-09-18T19:18:32Z",
+  "body": "Pairs with https://github.com/basecamp/omarchy/pull/7140. That PR detects CS8409 MacBook Pros and installs this package.\n\nIn-tree `snd_hda_codec_cs8409` enumerates the CS8409 but never programs the MAX98706 / SSM3515 / TAS5764L speaker amps, so those machines show an unmuted Analog Stereo sink and play nothing. [davidjo/snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro) is the Apple path.\n\nThe AUR package (`snd-hda-macbookpro-dkms-git`) copies only a subset of the tree and does not depend on `wget`, which `PRE_BUILD` needs to fetch matching kernel sources. This package:\n\n- pins commit `6c324f6` (verified on MacBookPro14,3 / linux 7.1.8)\n- installs the full tree with executable install scripts\n- depends on `dkms`, `wget`, and `patch`\n\n`source: local` so an AUR sync does not replace it.\n\nVerified on this machine: after DKMS install + reboot, `srcversion` is the patched module, dmesg takes the APPLE path, and speakers play.",
+  "original_source_changed": false
+}

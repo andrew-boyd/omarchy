@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12007",
+  "repository": "omacom/omarchy",
+  "number": 12007,
+  "title": "Drop macbook12-spi-driver-dkms, which no longer builds on 7.x kernels",
+  "author": "karlentwistle",
+  "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+  "state": "open",
+  "updated_at": "2026-09-15T23:27:10Z",
+  "body": "`install/hardware/apple/fix-spi-keyboard.sh` installs `macbook12-spi-driver-dkms` on SPI-keyboard MacBooks, but the package no longer builds against 7.x kernels (`linux-omarchy` is 7.2.3). On 7.2.3 the DKMS build fails whenever headers are installed or the kernel updates:\n\n```\napple-ib-als.c:679:19: error: initialization of 'void (*)(struct platform_device *)' from incompatible pointer type 'int (*)(struct platform_device *)'\napple-ibridge.c:901:10: error: 'struct acpi_driver' has no member named 'owner'\n==> WARNING: `dkms install --no-depmod macbook12-spi-driver/0+git.315 -k 7.2.3-arch1-3' exited 10\n```\n\nThe keyboard and trackpad don't depend on it: `applespi` has been in mainline since 5.3, and it's what gets loaded (`/lib/modules/7.2.3-arch1-3/kernel/drivers/input/keyboard/applespi.ko.zst`). The mkinitcpio `MODULES` drop-in only names in-tree modules, so it stays as it is.\n\nChanges:\n- Stop installing the package in `fix-spi-keyboard.sh`\n- Remove it from `omarchy-other.packages`\n- Add a migration that drops it from existing installs\n\nTested on a MacBook9,1 (Omarchy 4.0.3, kernel 7.2.3-arch1-3): removed the package, the UKI rebuilt cleanly, and after a reboot the keyboard works at the LUKS prompt and in the session. The migration no-ops when the package is absent. `./test/cli` and `test/shell.d/t2-hardware-test.sh` (which reads `omarchy-other.packages`) pass.\n\nOne note for the 2016\u201317 Touch Bar MacBook Pros (MacBookPro13,2/13,3/14,2/14,3): the Touch Bar and ambient light sensor drivers came from this package. They already fail to build, so removing it doesn't take anything away that currently works, but I haven't been able to test on those models.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "original_source_changed": false
+}

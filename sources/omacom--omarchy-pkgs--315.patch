@@ -1,0 +1,24 @@
+diff --git a/pkgbuilds/omarchy-settings-dev/PKGBUILD b/pkgbuilds/omarchy-settings-dev/PKGBUILD
+index 1f9fc8767..e13535086 100644
+--- a/pkgbuilds/omarchy-settings-dev/PKGBUILD
++++ b/pkgbuilds/omarchy-settings-dev/PKGBUILD
+@@ -170,6 +170,7 @@ package() {
+   install -Dm644 default/systemd/user/omarchy-tailscale-receive.service "$pkgdir/usr/lib/systemd/user/omarchy-tailscale-receive.service"
+   install -Dm644 default/systemd/user/omarchy-fcitx5.service "$pkgdir/usr/lib/systemd/user/omarchy-fcitx5.service"
+   install -Dm644 default/systemd/user/omarchy-crash-watch.service "$pkgdir/usr/lib/systemd/user/omarchy-crash-watch.service"
++  install -Dm644 default/systemd/user/omarchy-als-brightness.service "$pkgdir/usr/lib/systemd/user/omarchy-als-brightness.service"
+   # Marks app.slice (and only app.slice) as a systemd-oomd kill candidate, so
+   # memory pressure costs one app scope instead of the compositor session.
+   # Thresholds live in etc/systemd/oomd.conf.d/10-omarchy.conf.
+diff --git a/pkgbuilds/omarchy-settings/PKGBUILD b/pkgbuilds/omarchy-settings/PKGBUILD
+index 62c441cc9..eb24bd588 100644
+--- a/pkgbuilds/omarchy-settings/PKGBUILD
++++ b/pkgbuilds/omarchy-settings/PKGBUILD
+@@ -165,6 +165,7 @@ package() {
+   install -Dm644 default/systemd/user/omarchy-tailscale-receive.service "$pkgdir/usr/lib/systemd/user/omarchy-tailscale-receive.service"
+   install -Dm644 default/systemd/user/omarchy-fcitx5.service "$pkgdir/usr/lib/systemd/user/omarchy-fcitx5.service"
+   install -Dm644 default/systemd/user/omarchy-crash-watch.service "$pkgdir/usr/lib/systemd/user/omarchy-crash-watch.service"
++  install -Dm644 default/systemd/user/omarchy-als-brightness.service "$pkgdir/usr/lib/systemd/user/omarchy-als-brightness.service"
+   # Marks app.slice (and only app.slice) as a systemd-oomd kill candidate, so
+   # memory pressure costs one app scope instead of the compositor session.
+   # Thresholds live in etc/systemd/oomd.conf.d/10-omarchy.conf.

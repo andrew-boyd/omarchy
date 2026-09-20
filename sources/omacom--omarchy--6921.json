@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6921",
+  "repository": "omacom/omarchy",
+  "number": 6921,
+  "title": "Install the CS4208 speaker driver on 12-inch MacBooks",
+  "author": "sunoxen-lab",
+  "head_sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+  "state": "open",
+  "updated_at": "2026-09-08T16:50:44Z",
+  "body": "## Summary\n\nOn the 12-inch MacBook (`MacBook9,1` / 2016 and `MacBook10,1` / 2017), mainline `snd_hda_codec_cs420x` detects the Cirrus Logic CS4208 and PipeWire plays to it, but the speaker amplifier is never enabled. The OS thinks audio is working; the speakers stay silent. Headphones can still work because they use a different path.\n\nThis is the same gap as #2101. Grok diagnosed it on a `MacBook10,1` running Omarchy 4, installed [leifliddy/macbook12-audio-driver](https://github.com/leifliddy/macbook12-audio-driver) via DKMS, and speakers came up. This PR is that fix paid forward to the next installer.\n\n## What it does\n\n- New hardware leaf `install/hardware/apple/fix-cs4208-audio.sh`, same shape as the SPI keyboard fix: detect `MacBook9,1` / `MacBook10,1`, then `omarchy-pkg-add macbook12-audio-driver-dkms`.\n- `MacBook8,1` (2015) is left alone; that model is not supported by this driver.\n- Migration `1786719479.sh` for existing installs. No-ops if the package is already present or if the same DKMS module was installed by hand.\n- Cached in `install/omarchy-other.packages` so the ISO can ship it.\n- Manual note in `manual/44-mac-support.md`.\n\nOmarchy already applies software volume globally, so the extra WirePlumber soft-mixer step from the driver README is not needed here.\n\n## Package\n\nThis needs `macbook12-audio-driver-dkms` in `pkgs.omarchy.org`, built from https://github.com/leifliddy/macbook12-audio-driver \u2014 the same source that restored speakers on the machine this was written on.\n\nIt is not in the repo yet. Land the package with this PR (or immediately before), the way `macbook12-spi-driver-dkms` already is. The DKMS `PRE_BUILD` downloads matching kernel HD-audio headers on the target, so the package only needs to ship the driver source and `dkms.conf`.\n\n## Test plan\n\n- [x] `test/shell.d/cs4208-audio-test.sh` \u2014 leaf and migration fire only on `MacBook9,1` / `MacBook10,1`, skip 2015 / Pro / non-Apple, skip when the package or a hand-installed DKMS module is already there\n- [x] Verified on a 2017 12-inch MacBook (`MacBook10,1`): after the DKMS module, speakers play; jack switch still works",
+  "original_source_changed": false
+}

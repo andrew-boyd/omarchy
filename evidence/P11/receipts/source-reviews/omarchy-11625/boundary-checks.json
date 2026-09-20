@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/audio-source-boundaries-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 4,
+      "output": "ok - observation: #11625 fresh setup takes the CS8409 codec path without an Apple DMI gate\nok - observation: #11625 migration rejects the same non-Apple fixture\nok - observation: #11625 migration skips an Apple CS8409 fixture lacking its PCI substring\nok - observation: #11625 migration treats added-only DKMS as already installed\n"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+[
+  "Record model, kernel, PCI vendor/device/class identifiers and existing driver packages on the affected Intel Mac.",
+  "Compare sysfs detection and package selection with expected BCM4331/4360 and Intel/AMD/NVIDIA display hardware; check BCM43602 remains with brcmfmac.",
+  "Check installation in a disposable system or image with a recovery path, including helper availability at each installer stage.",
+  "If claiming fewer GPU wakes or lower power use, measure those outcomes on real hardware with a repeatable before/after procedure. Fixture tests only establish tested selection behavior."
+]

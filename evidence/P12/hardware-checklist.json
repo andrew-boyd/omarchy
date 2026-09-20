@@ -1,0 +1,8 @@
+[
+  "Record exact T1 model, kernel/headers, package versions and module/service/renderer ownership. Preserve the same-machine EFI/FDR backup, password access and a recovery boot route.",
+  "Review the released core README and setup/removal documents. Use their existing manual setup on a prepared system, preserving the matched fingerprint library pair. Record hooks, DKMS/initramfs and reboot separately.",
+  "Review the optional desktop README for its session hook and independently enabled panel-brightness service. Check Touch Bar/Fn/HUDs, camera coexistence, ALS and manual brightness; explicitly record the DPMS-off defect.",
+  "With the actual reader, test blank/wake, rapid failures, retry, enrollment absent, password in flight, late callbacks and unlock/relock. Capture before/after UI behavior; no live UI result was obtained here.",
+  "Record cold boot and reboot. System suspend remains a released limitation; an attended investigation needs its own recovery plan.",
+  "Follow released removal/recovery instructions and verify restored input, camera, login and password fallback. No hardware or rollback trial occurred in this effort."
+]

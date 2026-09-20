@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/brcmfmac-nvram-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 15,
+      "output": "ok - the BCM43602 NVRAM leaf runs during hardware setup\nok - the vendored NVRAM keeps ccode=0/regrev=1 and documents its provenance\nok - every BCM43602 part gets the NVRAM with its live MAC substituted\nok - the older Apple vendor string is recognized\nok - the macaddr line is stripped when no MAC is discoverable\nok - a Mac whose Wi-Fi the wl driver drives is left alone\nok - non-Apple hardware is left alone\nok - a Mac with no wireless device is left alone\nok - an existing NVRAM is never clobbered\nok - the migration installs the NVRAM and asks for a reboot\nok - the migration is idempotent\nok - the migration strips macaddr when no MAC is discoverable and still asks for a reboot\nok - the migration never overwrites an existing NVRAM\nok - the migration skips hardware the NVRAM does not describe\nok - the migration skips non-Apple hardware\n"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11625",
+  "repository": "omacom/omarchy",
+  "number": 11625,
+  "title": "Fix audio on MacBook Pro 2015-2017 (Cirrus Logic CS8409)",
+  "author": "andyholst",
+  "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+  "state": "open",
+  "updated_at": "2026-09-15T20:03:25Z",
+  "body": "## Problem\n\nMacBook Pro 2015-2017 with Cirrus Logic CS8409 audio codec has no speaker output. The in-tree snd_hda_codec_cs8409 driver doesn't properly configure the CS8409's speaker pins.\n\n## Fix\n\nInstall the community snd_hda_macbookpro driver from https://github.com/davidjo/snd_hda_macbookpro using DKMS.\n\n## Changes\n\n| File | What it does |\n|------|-------------|\n| install/hardware/apple/fix-snd-hda-macbookpro.sh | Detects CS8409, clones driver, installs via DKMS |\n| install/hardware/all.sh | Runs the new fix during hardware setup |\n| migrations/1786391102.sh | Applies fix to existing Omarchy installs |\n| test/shell.d/snd-hda-macbookpro-test.sh | 9 tests, all passing |\n\nFixes #11619",
+  "original_source_changed": false
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12067",
+  "repository": "omacom/omarchy",
+  "number": 12067,
+  "title": "Install the FaceTime HD camera driver on Intel Macs that have one",
+  "author": "MrBazzieB",
+  "head_sha": "8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+  "state": "open",
+  "updated_at": "2026-09-20T03:43:12Z",
+  "body": "## What\n\nDetect the Broadcom FaceTime HD PCIe webcam (`14e4:1570`) and install `facetimehd-firmware`, `facetimehd-data`, and `facetimehd-dkms` during hardware setup. A migration covers existing installs.\n\nThis is the 720p camera in 2013\u20132015 Intel Macs (this machine is a MacBookPro12,1). There is no in-tree driver.\n\n## Packaging\n\n`facetimehd-dkms` is not in `[omarchy]` yet. Please add it to the ISO/repo from **current** [patjak/facetimehd](https://github.com/patjak/facetimehd) master (after `54fb8f2`), not AUR `0.7.0.2`.\n\nLinux 7.2 removed `strncpy` from the kernel API. AUR `0.7.0.2` still calls it in `fthd_v4l2.c` and DKMS fails on `linux-omarchy` 7.2 with:\n\n```\nerror: implicit declaration of function \u2018strncpy\u2019\n```\n\nUpstream already guards that call for kernels >= 4.2. I compiled `c5c7fac` against `7.2.5-3-omarchy` on this MacBook and it built cleanly.\n\nAlso cache `facetimehd-firmware` and `facetimehd-data` (already listed in `omarchy-other.packages`).\n\n## Test plan\n\n- [x] `test/shell.d/facetimehd-test.sh`\n- [x] `./test/cli`\n- [ ] ISO/package: `facetimehd-dkms` from current git is in `[omarchy]`\n- [ ] On a Mac with `14e4:1570`, `modinfo facetimehd` and `/dev/video0` after install or `omarchy update`",
+  "original_source_changed": false
+}

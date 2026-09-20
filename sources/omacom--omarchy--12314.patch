@@ -1,0 +1,297 @@
+diff --git a/default/systemd/system-sleep/rebind-brcmfmac b/default/systemd/system-sleep/rebind-brcmfmac
+new file mode 100755
+index 00000000000..f61cacb1b82
+--- /dev/null
++++ b/default/systemd/system-sleep/rebind-brcmfmac
+@@ -0,0 +1,30 @@
++#!/bin/bash
++
++# Rebind the Broadcom Wi-Fi device around system sleep. The brcmfmac firmware
++# on these parts does not reliably survive a long suspend: after wake it stops
++# answering msgbuf commands (the kernel logs "Timeout on response for query
++# command" for every request), the interface never recovers, and only a reboot
++# brings Wi-Fi back. Unbinding before sleep and rebinding after wake forces the
++# firmware to reload cleanly, so NetworkManager sees a fresh interface and
++# reconnects on its own.
++
++driver=/sys/bus/pci/drivers/brcmfmac
++state_file=${OMARCHY_BRCMFMAC_SLEEP_STATE:-/run/omarchy-brcmfmac-sleep}
++
++case "$1" in
++  pre)
++    : > "$state_file"
++    for bound in "$driver"/0000:*; do
++      [[ -L $bound ]] || continue
++      device=$(basename "$bound")
++      echo "$device" > "$driver/unbind" 2>/dev/null && echo "$device" >> "$state_file"
++    done
++    ;;
++  post)
++    [[ -f $state_file ]] || exit 0
++    while read -r device; do
++      echo "$device" > "$driver/bind" 2>/dev/null || true
++    done < "$state_file"
++    rm -f "$state_file"
++    ;;
++esac
+diff --git a/docs/file-layout.md b/docs/file-layout.md
+index f261085f0ea..0a4df3fa7ed 100644
+--- a/docs/file-layout.md
++++ b/docs/file-layout.md
+@@ -139,7 +139,7 @@ logo.{txt,svg}, icon.{txt,png}  ──► omarchy-settings    /usr/share/omarchy
+                                                         /etc/skel/.config/omarchy/branding/{about,screensaver}.txt
+ ```
+ 
+-The hardware-conditional `force-igpu` and `keyboard-backlight` sources also live under `default/systemd/system-sleep/`, but their setup commands publish root-owned copies only on machines that need them; they are not installed by `omarchy-settings`.
++The hardware-conditional `force-igpu`, `keyboard-backlight`, and `rebind-brcmfmac` sources also live under `default/systemd/system-sleep/`, but their setup commands publish root-owned copies only on machines that need them; they are not installed by `omarchy-settings`.
+ 
+ ### Why `etc-overrides/` exists
+ 
+diff --git a/install/hardware/all.sh b/install/hardware/all.sh
+index 12add110c51..5e51d81ea1c 100644
+--- a/install/hardware/all.sh
++++ b/install/hardware/all.sh
+@@ -35,6 +35,7 @@ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-t2.sh"
+ run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh"
++run_logged "$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh"
+ 
+ run_logged "$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+ 
+diff --git a/install/hardware/apple/fix-brcmfmac-suspend.sh b/install/hardware/apple/fix-brcmfmac-suspend.sh
+new file mode 100644
+index 00000000000..827f66e65f4
+--- /dev/null
++++ b/install/hardware/apple/fix-brcmfmac-suspend.sh
+@@ -0,0 +1,19 @@
++# Apple Macs with Broadcom Wi-Fi driven by brcmfmac lose Wi-Fi after a long
++# suspend: the firmware stops answering commands on wake and the interface
++# never recovers without a reboot. A system-sleep hook that rebinds the device
++# across sleep reloads the firmware cleanly.
++#
++# The hardware gate mirrors fix-brcmfmac-supplicant.sh: T2 Macs are detected by
++# the T2 PCI ID, older Macs by the brcmfmac PCI IDs from brcm_hw_ids.h. Only
++# machines whose Wi-Fi brcmfmac actually drives get the hook.
++sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
++
++if lspci -nn | grep "106b:180[12]" >/dev/null ||
++  { [[ $sys_vendor == Apple* ]] &&
++    lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
++  echo "Detected a Mac with Broadcom Wi-Fi; rebinding brcmfmac across suspend"
++
++  sudo install -Dm 0755 -o root -g root \
++    "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" \
++    /usr/lib/systemd/system-sleep/rebind-brcmfmac
++fi
+diff --git a/migrations/1789668939.sh b/migrations/1789668939.sh
+new file mode 100644
+index 00000000000..b043460b959
+--- /dev/null
++++ b/migrations/1789668939.sh
+@@ -0,0 +1,29 @@
++echo "Rebind Broadcom Wi-Fi across suspend on Macs with brcmfmac"
++
++# The install-time hook only reaches machines set up after it shipped, so an
++# existing install on one still loses Wi-Fi after a long suspend. See
++# install/hardware/apple/fix-brcmfmac-suspend.sh for the failure it fixes and
++# for where this list of brcmfmac PCI IDs comes from.
++dmi_vendor="${OMARCHY_BRCMFMAC_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
++hook="${OMARCHY_BRCMFMAC_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/rebind-brcmfmac}"
++
++sys_vendor="$(cat "$dmi_vendor" 2>/dev/null || true)"
++
++if ! lspci -nn | grep "106b:180[12]" >/dev/null &&
++  ! { [[ $sys_vendor == Apple* ]] &&
++    lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
++  exit 0
++fi
++
++# Idempotent: a hook identical to the source is already the fix.
++if [[ -f $hook ]] && /usr/bin/cmp -s "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" "$hook"; then
++  exit 0
++fi
++
++sudo /usr/bin/mkdir -p "$(dirname "$hook")"
++sudo /usr/bin/install -m 0755 -o root -g root \
++  "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" \
++  "$hook"
++
++# No reboot needed: systemd-sleep picks up every executable in system-sleep
++# the next time the machine suspends.
+diff --git a/test/shell.d/brcmfmac-suspend-test.sh b/test/shell.d/brcmfmac-suspend-test.sh
+new file mode 100755
+index 00000000000..655847237dd
+--- /dev/null
++++ b/test/shell.d/brcmfmac-suspend-test.sh
+@@ -0,0 +1,170 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++leaf="$ROOT/install/hardware/apple/fix-brcmfmac-suspend.sh"
++source_hook="$ROOT/default/systemd/system-sleep/rebind-brcmfmac"
++all="$ROOT/install/hardware/all.sh"
++migration="$ROOT/migrations/1789668939.sh"
++
++grep -q 'apple/fix-brcmfmac-suspend.sh' "$all" ||
++  fail "the brcmfmac suspend fix runs during hardware setup"
++pass "the brcmfmac suspend fix runs during hardware setup"
++
++# systemd-sleep runs every executable in system-sleep and silently skips
++# anything without the bit.
++[[ -x $source_hook ]] ||
++  fail "the hook source is executable"
++pass "the hook source is executable"
++
++test_tmp=$(mktemp -d)
++trap 'rm -rf "$test_tmp"' EXIT
++
++stub_bin="$test_tmp/bin"
++calls="$test_tmp/calls.log"
++hook="$test_tmp/usr/lib/systemd/system-sleep/rebind-brcmfmac"
++mkdir -p "$stub_bin" "$test_tmp/dmi" "$test_tmp/usr/lib/systemd/system-sleep"
++
++cat >"$stub_bin/lspci" <<'SH'
++#!/bin/bash
++
++if (( ${T2_HARDWARE:-0} == 1 )); then
++  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'
++fi
++if [[ -n ${WIFI_ID:-} ]]; then
++  echo "03:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]"
++fi
++for _ in {1..4096}; do
++  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'
++done
++SH
++
++cat >"$stub_bin/sudo" <<'SH'
++#!/bin/bash
++
++printf 'sudo' >>"$TEST_LOG"
++printf '\t%s' "$@" >>"$TEST_LOG"
++printf '\n' >>"$TEST_LOG"
++
++# install -o root -g root fails as the test user; ownership is already right
++# in the sandbox, so drop those flags before executing.
++args=()
++skip=0
++for arg in "$@"; do
++  if (( skip )); then
++    skip=0
++    continue
++  fi
++  case "$arg" in
++    -o|-g) skip=1 ;;
++    *) args+=("$arg") ;;
++  esac
++done
++"${args[@]}"
++SH
++
++chmod +x "$stub_bin"/*
++
++run_leaf() {
++  local vendor="$1" wifi_id="${2:-}" t2="${3:-0}"
++  rm -rf "$test_tmp/usr/lib/systemd/system-sleep"
++  mkdir -p "$test_tmp/usr/lib/systemd/system-sleep"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++
++  local script="$test_tmp/leaf.sh"
++  sed -e "s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g" \
++      -e "s|/usr/lib/systemd/system-sleep|$test_tmp/usr/lib/systemd/system-sleep|g" \
++      -e "s|\$OMARCHY_PATH|$ROOT|g" \
++      "$leaf" >"$script"
++
++  WIFI_ID="$wifi_id" T2_HARDWARE="$t2" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    bash -eE -o pipefail -c 'source "$1"' bash "$script" </dev/null
++}
++
++run_leaf "Apple Inc." 43a3 0 >/dev/null
++[[ -x $hook ]] ||
++  fail "a Mac with a BCM4350 gets the sleep hook" "$(ls -R "$test_tmp/usr" 2>&1)"
++cmp -s "$source_hook" "$hook" ||
++  fail "the installed hook matches the source"
++pass "a Mac with a BCM4350 gets the sleep hook"
++
++run_leaf "Apple Inc." 4488 1 >/dev/null
++[[ -x $hook ]] ||
++  fail "a T2 Mac gets the sleep hook"
++pass "a T2 Mac gets the sleep hook"
++
++run_leaf "Apple Inc." 43a0 0 >/dev/null
++[[ ! -e $hook ]] || fail "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
++pass "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
++
++run_leaf "LENOVO" 43a3 0 >/dev/null
++[[ ! -e $hook ]] || fail "non-Apple hardware is left alone"
++pass "non-Apple hardware is left alone"
++
++run_migration() {
++  local vendor="$1" wifi_id="${2:-}" t2="${3:-0}"
++  printf '%s' "$vendor" >"$test_tmp/dmi/sys_vendor"
++  : >"$calls"
++
++  WIFI_ID="$wifi_id" T2_HARDWARE="$t2" PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++    OMARCHY_PATH="$ROOT" \
++    OMARCHY_BRCMFMAC_DMI_VENDOR="$test_tmp/dmi/sys_vendor" \
++    OMARCHY_BRCMFMAC_SLEEP_HOOK="$hook" \
++    bash -euo pipefail "$migration" >/dev/null
++}
++
++rm -f "$hook"
++run_migration "Apple Inc." 43a3 0
++[[ -x $hook ]] ||
++  fail "the migration installs the hook on a Mac that predates it"
++pass "the migration installs the hook on a Mac that predates it"
++
++run_migration "Apple Inc." 43a3 0
++[[ ! -s $calls ]] || fail "a repaired install is left untouched" "$(cat "$calls")"
++pass "the migration is idempotent"
++
++printf '# local tweak\n' >> "$hook"
++run_migration "Apple Inc." 43a3 0
++cmp -s "$source_hook" "$hook" ||
++  fail "the migration refreshes a modified hook"
++pass "the migration refreshes a modified hook"
++
++rm -f "$hook"
++run_migration "LENOVO" 43a3 0
++[[ ! -e $hook ]] || fail "the migration skips non-Apple hardware"
++pass "the migration skips non-Apple hardware"
++
++# The hook itself: run it against a stub sysfs where unbind and bind are real
++# files, so the writes land and can be checked. /run is writable in tests.
++driver="$test_tmp/sys/bus/pci/drivers/brcmfmac"
++mkdir -p "$driver"
++ln -s "/sys/devices/pci0000:00/0000:02:00.0" "$driver/0000:02:00.0"
++touch "$driver/unbind" "$driver/bind"
++
++hook_script="$test_tmp/rebind-brcmfmac"
++sed "s|/sys/bus/pci/drivers/brcmfmac|$driver|g" "$source_hook" > "$hook_script"
++chmod +x "$hook_script"
++state_file="$test_tmp/state"
++export OMARCHY_BRCMFMAC_SLEEP_STATE="$state_file"
++
++"$hook_script" pre
++grep -qx '0000:02:00.0' "$driver/unbind" ||
++  fail "pre-sleep unbinds the bound device" "$(cat "$driver/unbind")"
++[[ -f $state_file ]] || fail "pre-sleep records the unbound device"
++pass "pre-sleep unbinds the bound device"
++
++"$hook_script" post
++grep -qx '0000:02:00.0' "$driver/bind" ||
++  fail "post-sleep rebinds the same device" "$(cat "$driver/bind")"
++[[ ! -f $state_file ]] ||
++  fail "post-sleep clears the state file"
++pass "post-sleep rebinds the same device and clears state"
++
++# A post with no matching pre is a no-op, the case after a fresh boot.
++rm -f "$state_file"
++: > "$driver/bind"
++"$hook_script" post
++[[ ! -s $driver/bind ]] || fail "post without pre writes nothing"
++pass "post without pre is a no-op"

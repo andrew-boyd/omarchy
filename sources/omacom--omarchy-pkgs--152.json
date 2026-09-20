@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/152",
+  "repository": "omacom/omarchy-pkgs",
+  "number": 152,
+  "title": "Build apple-ib-tb on kernel 6.12+ from Heratiki's fork",
+  "author": "shawnyeager",
+  "head_sha": "67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+  "state": "open",
+  "updated_at": "2026-09-18T19:18:36Z",
+  "body": "Pairs with [basecamp/omarchy#7064](https://github.com/basecamp/omarchy/pull/7064). That PR installs T1 firmware and the udev rebind; this package is what actually compiles `apple-ib-tb`.\n\nVerified on MacBookPro14,3 / linux 7.1.8: the packaged `0+git.315` DKMS build fails, Heratiki's `touchbar-driver-hid-driver` builds `apple-ibridge` / `apple-ib-tb` / `apple-ib-als`, and the bar lights up after the iBridge is rebound.\n\n`sync: false` so the next AUR pass does not put marc-git back.",
+  "original_source_changed": false
+}

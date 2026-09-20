@@ -1,0 +1,29 @@
+[
+  {
+    "repo": "marc-git/macbook12-spi-driver",
+    "ref": "807b65b6d9d7c29bd7ff633fbb80596a343e9eb9",
+    "sha": "807b65b6d9d7c29bd7ff633fbb80596a343e9eb9",
+    "url": "https://codeload.github.com/marc-git/macbook12-spi-driver/tar.gz/807b65b6d9d7c29bd7ff633fbb80596a343e9eb9",
+    "path": ".state/source-cache/marc-spi-807b65b6d9d7c29bd7ff633fbb80596a343e9eb9.tar.gz",
+    "size": 49178,
+    "sha256": "8e60c480826f523a8ebacb41e7dcdc41f33051c8ba102ee7a9eb1309f12dad4f"
+  },
+  {
+    "repo": "Heratiki/macbook12-spi-driver",
+    "ref": "touchbar-driver-hid-driver",
+    "sha": "1d5cd6f82c2f9ee6e2431ac51237c2a82c397b77",
+    "url": "https://codeload.github.com/Heratiki/macbook12-spi-driver/tar.gz/1d5cd6f82c2f9ee6e2431ac51237c2a82c397b77",
+    "path": ".state/source-cache/heratiki-spi-1d5cd6f82c2f9ee6e2431ac51237c2a82c397b77.tar.gz",
+    "size": 49347,
+    "sha256": "2aaf49a63196cf5fd9086920415e287c751d4338260c5d1801ef2918bdd7f89f"
+  },
+  {
+    "repo": "AJ-dev-i60/t1-touchbar",
+    "ref": "v0.3.0",
+    "sha": "f089319655853eb90af1ec620ebb6908591f0b2c",
+    "url": "https://codeload.github.com/AJ-dev-i60/t1-touchbar/tar.gz/v0.3.0",
+    "path": ".state/source-cache/t1-touchbar-f089319655853eb90af1ec620ebb6908591f0b2c.tar.gz",
+    "size": 52081,
+    "sha256": "4092c93e450578c7de61e5c0452fae59ea7e49a7902464eb981c645f15988af5"
+  }
+]

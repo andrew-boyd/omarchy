@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6834",
+  "repository": "omacom/omarchy",
+  "number": 6834,
+  "title": "Ignore T2 headset remotes when switching layouts",
+  "author": "yashranaway",
+  "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+  "state": "open",
+  "updated_at": "2026-09-12T14:05:31Z",
+  "body": "Keep the keyboard-layout widget attached to a keyboard people can type on.\n\n<<< AI wording below >>>\n\n## Problem\n\nT2 Macs expose the headphone jack's inline remote as `apple-headset`, a keyboard-shaped HID device. Hyprland gives it the seat's layout list, so when it is further through that list than the real keyboard, the widget selects and switches the headset instead. The label moves while typed input does not.\n\n## Fix\n\nClassify `apple-headset` alongside the other non-typing devices already excluded from keyboard-layout selection.\n\nThe regression test models the reported T2 seat directly: the headset is on Greek, the real `apple-spi-keyboard` is on English, and filtering must leave the real keyboard as the switch target.\n\nFixes #6833.\n\n## Verification\n\n- `bash test/shell.d/keyboard-layout-test.sh`\n- `bash -n test/shell.d/keyboard-layout-test.sh`\n- `git diff --check`\n",
+  "original_source_changed": false
+}

@@ -1,0 +1,48 @@
+{
+  "repo": "omacom/omarchy",
+  "number": 11952,
+  "url": "https://github.com/omacom/omarchy/pull/11952",
+  "head_sha": "6d88ae46fe0ac3d27ea2d66a0dfaea7fb066400b",
+  "base_sha": "f2b419d9a9d7e7821de2ddf9c42991e32cf06cdf",
+  "state": "open",
+  "head_changed": false,
+  "state_changed": false,
+  "source_ancestor": "f2b419d9a9d7e7821de2ddf9c42991e32cf06cdf",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "cc2b0aa6972f0d1b82cf9acfac718081267da953b746eb36d1da94c6dd11319e",
+  "applied": true,
+  "apply_output": "",
+  "files": [
+    {
+      "path": "shell/plugins/lock/LockView.qml",
+      "status": "modified",
+      "source_sha256": "757c6776bb9e2d18a79653adcff8c80a440c9b8dbe7ccd67a300da9142ad1812",
+      "candidate_sha256": "757c6776bb9e2d18a79653adcff8c80a440c9b8dbe7ccd67a300da9142ad1812",
+      "identical_to_source": true
+    },
+    {
+      "path": "shell/plugins/lock/Service.qml",
+      "status": "modified",
+      "source_sha256": "ec32af7faa84010f7b311efa4c7c398da53e0e6eea217ef01eb401bf8fc248b6",
+      "candidate_sha256": "ec32af7faa84010f7b311efa4c7c398da53e0e6eea217ef01eb401bf8fc248b6",
+      "identical_to_source": true
+    },
+    {
+      "path": "shell/plugins/polkit/PolkitAgent.qml",
+      "status": "modified",
+      "source_sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+      "candidate_sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+      "identical_to_source": true
+    },
+    {
+      "path": "test/shell.d/lock-fingerprint-message-test.sh",
+      "status": "added",
+      "source_sha256": "0442a3fec27279ca0a666d0918ea86b0f6503865f1f1f5d873ba51dd2faf968a",
+      "candidate_sha256": "0442a3fec27279ca0a666d0918ea86b0f6503865f1f1f5d873ba51dd2faf968a",
+      "identical_to_source": true
+    }
+  ],
+  "hardware_verified": false,
+  "target_tree": "3fce35294191348dc3a2f23cd44f40e34f1f1ded",
+  "reconciled_patch_sha256": "cc2b0aa6972f0d1b82cf9acfac718081267da953b746eb36d1da94c6dd11319e"
+}

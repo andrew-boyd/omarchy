@@ -1,0 +1,13 @@
+{
+  "kind": "bash -n only; production commands not executed",
+  "passed": true,
+  "checks": [
+    {
+      "path": "bin/omarchy-diagnose-suspend-wake",
+      "sha256": "a1e30ddbb2b2c3650f37f0970d0bae8e8c8f371d7c42ba2a04d44ab58234d109",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "hardware_verified": false
+}

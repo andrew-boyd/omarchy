@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/lock-fingerprint-message-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 7,
+      "output": "ok - fingerprint PAM exposes a message handler\nok - empty, error, and response prompts do not wake the screen\nok - PAM placement message reaches the lock view state\nok - first informational prompt wakes the screen\nok - retry prompts do not repeatedly wake an unattended screen\nok - late prompts after unlock do not wake the screen\nok - authentication reset clears the previous reader message\n"
+    }
+  ]
+}

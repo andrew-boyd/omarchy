@@ -1,0 +1,42 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/hw-bcm43xx-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "ok - BCM4360 is detected from sysfs\nok - BCM4331 is detected from sysfs\nok - newer Broadcom Wi-Fi is left to brcmfmac\nok - a machine with no PCI devices is not bcm43xx\nok - Broadcom wl install does not parse a full lspci dump\n"
+    },
+    {
+      "test": "test/shell.d/hw-t2-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 5,
+      "output": "ok - Apple T2 device 1801 is detected from sysfs\nok - Apple T2 device 1802 is detected from sysfs\nok - other Apple PCI functions are not treated as T2\nok - a machine with no PCI devices is not T2\nok - T2 install paths share one sysfs helper\n"
+    },
+    {
+      "test": "test/shell.d/nvidia-hw-detect-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 1,
+      "output": "ok - NVIDIA driver install detects the GPU the same way Hyprland does\n"
+    },
+    {
+      "test": "test/shell.d/pci-detection-integration-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 16,
+      "output": "ok - empty sysfs has no wl device\nok - empty sysfs has no T2 device\nok - empty sysfs installs no Vulkan packages\nok - matching Broadcom device ID under another vendor is rejected\nok - matching T2 device ID under another vendor is rejected\nok - incomplete and removed entries do not hide a later wl match\nok - incomplete and removed entries do not hide a later T2 match\nok - incomplete and non-display devices install no Vulkan packages\nok - BCM43602 remains on brcmfmac\nok - hybrid GPUs request each matching non-NVIDIA package once\nok - the existing NVIDIA helper recognizes a 3D-class GPU\nok - an NVIDIA audio function alone is not an NVIDIA GPU\nok - NVIDIA audio installs no Vulkan packages\nok - existing Apple display-vendor package mapping is preserved\nok - Vulkan package failure propagates under installer errexit\nok - cached detection paths do not call lspci in the exercised fixtures\n"
+    },
+    {
+      "test": "test/shell.d/vulkan-sysfs-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 4,
+      "output": "ok - Intel display installs vulkan-intel from sysfs\nok - hybrid AMD+NVIDIA only adds vulkan-radeon here\nok - non-display PCI functions do not pull Vulkan drivers\nok - Vulkan install has no executable lspci calls\n"
+    }
+  ]
+}

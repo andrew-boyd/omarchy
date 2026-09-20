@@ -1,0 +1,21 @@
+{
+  "tests": [
+    "test/shell.d/t1-als-brightness-test.sh",
+    "test/shell.d/config-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-als-brightness": "3cf8b667f684812496397865c25e9a9e59809e9e748d520f8b40a6b47bd930e3",
+    "bin/omarchy-hw-apple-t1-als": "40c0f1368b997df150eb1d52e3aab1e10d70a2800ddf3dbf94aedfd872ac1ba7",
+    "bin/omarchy-toggle-als-brightness": "4643b108a50370a85ee6478bfa9d912826619626ba9eba8749599e7e46b23aae",
+    "default/omarchy/omarchy-menu.jsonc": "7a7fe30e3ed25c097116341db3ea1c76fc1b605fada210e8689be4ac67a4e288",
+    "default/systemd/user/omarchy-als-brightness.service": "70e3f0d87aba839448c1a68a60d84a1ac201abc7768236b02d44f5cb6dc34686",
+    "install/hardware/all.sh": "87519d6944687d65b009c6a9ce201fbd2644315e2a2858d5c30d7125bd60ea55",
+    "install/hardware/apple/fix-t1-als-brightness.sh": "6102ed27fa25c9b6cb4b07c2b9f2168df287835801308f7f3383a42ed7749fb5",
+    "install/user/first-run/enable-user-units.sh": "52d8e581dcdc936a2b5981290f9bb31dd6fd89f7d6f7583a6d2f7ed4a7750330",
+    "manual/44-mac-support.md": "7ded4eb0323fd845d3e8c42485851230715f49f8de25e9eceacc237368b82970",
+    "migrations/1788621849.sh": "9249805ff3c56937288d2c55e2a98dc7539741c7769e313b2f56ea611314fc00",
+    "test/shell.d/config-test.sh": "41f892c25244c44d04994537fe9af2b572771cb9e4930862f117f2732e12633b",
+    "test/shell.d/t1-als-brightness-test.sh": "8bce52e15db184d8440dc34fce8bd39da064e209ddf8f364caa836c03e336dbb",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8"
+  }
+}

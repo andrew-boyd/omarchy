@@ -1,0 +1,14 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/macbook81-spi-pio-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 9,
+      "output": "ok - MacBook8,1 SPI PIO is part of hardware setup\nok - MacBook8,1 setup writes SPI modules and the PIO drop-in\nok - later SPI MacBooks are left on DMA\nok - MacBookPro SPI models are left on DMA\nok - non-Apple hardware is left alone\nok - the migration repairs an existing MacBook8,1\nok - the migration is machine-idempotent before reboot\nok - the migration retries an interrupted boot image rebuild\nok - the migration skips unrelated hardware\n"
+    }
+  ]
+}

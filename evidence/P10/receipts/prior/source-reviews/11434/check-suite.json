@@ -1,0 +1,13 @@
+{
+  "tests": [
+    "test/shell.d/brcmfmac-resume-fix-test.sh"
+  ],
+  "file_sha256": {
+    "bin/omarchy-brcmfmac-resume-fix": "df8bc81f9d4fcb2f5b03f0f30af0c8aaef35c5945a95df0050e13d080db7e69a",
+    "install/hardware/all.sh": "6c0c0e040dc35391a94ee4bfed2debf575cc7e4a166fc40d187d1ae358237b8e",
+    "install/hardware/apple/fix-brcmfmac-resume.sh": "f65db53a6297853183a4e801bb5a99921d6ff5a371bc971b5acf1fc62ac00565",
+    "migrations/1789203245.sh": "18d4cac70ff563c038f7d0e62a3955417c116ffee95bfb8f46bb364ffd268b1c",
+    "test/shell.d/base-test.sh": "11baacdf613dfea610f6ff37f0e3cdb05b3f5b852d099dd62ba941470e990ac8",
+    "test/shell.d/brcmfmac-resume-fix-test.sh": "e625d65c999e9bdd7f5cf16ed46f72df5eb1eac8394712748b041ee9c08d18dc"
+  }
+}

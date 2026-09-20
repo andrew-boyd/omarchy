@@ -1,0 +1,32 @@
+{
+  "number": 153,
+  "exit_code": 0,
+  "passed": true,
+  "inputs": {
+    "package_sha256": "c4f519c73ccc6536964cdd649a261b851ec071970b6662b10f422f1746f67114",
+    "kernel_source": {
+      "url": "https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.3.tar.xz",
+      "name": "linux-7.2.3.tar.xz",
+      "sha256": "8ba259e8e7b13ec6ef0941c8a39ad90b24bd4a4d6c0010ba6bafb794550ecd03",
+      "bytes": 160060344
+    },
+    "kernel": "7.2.3-arch1-3",
+    "script_sha256": "9c6025a30510ad448a3a4681de96e34f8ce0fd9f0dbc4bb0b459e1da92f6510c",
+    "headers": {
+      "Makefile": "4b88b396c76d889d03542666fc6ecc6e5a6dd3b052c616daea25d1c628ccebe0",
+      ".config": "6017403a3877866fc30c603dea9587824cfa6b61ea5468b5fdbbd468d12d93ad",
+      "Module.symvers": "188b2385fe61bdda0ee966bdb244a56b4e652d2e3e6684740b3b9d2fc01410ff",
+      "include/generated/utsrelease.h": "4eece18ad309dbf5b27f89a1e4b5a02ccd63080233a86927903971e14db2e360"
+    },
+    "retrieval": "Unchanged preparation uses its documented verified cache",
+    "limits": "No host install/module loading, target 7.2.5 headers, pacman hooks, signing or hardware validation."
+  },
+  "artifacts": {
+    "log-make.log": "eae8a4cd24a794358ddf860d73911434b4eea93e7ac9ebd9466527d00e440f46",
+    "dkms-status.txt": "21ee240b394d31feeba3c51c0bbec3e4ee6c8d6dfff27d0eb48c199c3da04652",
+    "module-info.txt": "664e24a034d924377413d38371eb1df0e3d0cd5ecd076e0c99d7986c55c8cb7c",
+    "snd-hda-codec-cs420x.ko": "f2285911cb75916df4a1e71cfd48fc13dfdddfb60fa28bd52d905b02a9413e05"
+  },
+  "hardware_verified": false,
+  "host_installed": false
+}

@@ -1,0 +1,458 @@
+diff --git a/bin/omarchy-system-lid-close b/bin/omarchy-system-lid-close
+index eb3dc097efb..1d078b1a3e9 100755
+--- a/bin/omarchy-system-lid-close
++++ b/bin/omarchy-system-lid-close
+@@ -7,14 +7,19 @@
+ # Locking here rather than waiting for PrepareForSleep is what keeps the lock
+ # off the critical path. logind's delay inhibitor is a timer that expires
+ # whether or not the session is secure, so starting the lock the moment the lid
+-# closes gives Quickshell a head start before logind even decides to suspend.
+-# omarchy-system-sleep-lock then usually finds the session already secure.
++# closes gives Quickshell a head start before omarchy-system-lid-suspend
++# actually asks systemd to sleep. omarchy-system-sleep-lock then usually finds
++# the session already secure.
+ #
+-# A docked lid close does not suspend (HandleLidSwitchDocked defaults to
+-# ignore), so it must not lock either: that is clamshell mode, still in use on
+-# the external display.
++# A docked lid close must not lock: that is clamshell mode, still in use on
++# the external display. logind is told to ignore the lid (30-lid-ignore.conf)
++# so it cannot race this path by suspending on the falling edge.
+ if omarchy-hw-laptop-closed && ! omarchy-hw-external-monitors; then
+   omarchy-system-lock >/dev/null 2>&1 || true
+ fi
+ 
+ omarchy-hyprland-monitor-clamshell
++
++# Debounced suspend: a 2s close/open must not enter S3 with the lid already
++# open. Failures here must not block display reconciliation above.
++omarchy-system-lid-suspend >/dev/null 2>&1 || true
+diff --git a/bin/omarchy-system-lid-open b/bin/omarchy-system-lid-open
+new file mode 100755
+index 00000000000..c346953d695
+--- /dev/null
++++ b/bin/omarchy-system-lid-open
+@@ -0,0 +1,33 @@
++#!/bin/bash
++
++# omarchy:summary=Cancel a pending lid suspend and turn the panel on
++# omarchy:group=system
++# omarchy:hidden=true
++
++pidfile="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/omarchy-lid-suspend.pid"
++if [[ -f $pidfile ]]; then
++  old=$(<"$pidfile")
++  if [[ $old =~ ^[0-9]+$ ]] && kill -0 "$old" 2>/dev/null; then
++    kill "$old" 2>/dev/null || true
++  fi
++  rm -f "$pidfile"
++fi
++
++if omarchy-hw-laptop-closed && ! omarchy-hw-external-monitors; then
++  exit 0
++fi
++
++export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
++
++omarchy-system-wake >/dev/null 2>&1 || true
++
++# omarchy-brightness-display on skips when Hyprland already reports dpmsStatus,
++# which is wrong after S3 if the backlight was saved at 0 while the lid was
++# closed and Hyprland missed switch:off because user.slice was frozen.
++hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })' >/dev/null 2>&1 || true
++
++device=$(omarchy-hw-display 2>/dev/null) || exit 0
++cur=$(brightnessctl -d "$device" -m 2>/dev/null | awk -F, '{ gsub("%", "", $4); print $4 }')
++if [[ $cur =~ ^[0-9]+$ ]] && (( cur == 0 )); then
++  brightnessctl -d "$device" set 40% >/dev/null 2>&1 || true
++fi
+diff --git a/bin/omarchy-system-lid-suspend b/bin/omarchy-system-lid-suspend
+new file mode 100755
+index 00000000000..d93c63f5e1b
+--- /dev/null
++++ b/bin/omarchy-system-lid-suspend
+@@ -0,0 +1,74 @@
++#!/bin/bash
++
++# omarchy:summary=Suspend after the lid has stayed closed, not on the falling edge
++# omarchy:group=system
++# omarchy:hidden=true
++
++# logind used to suspend on the same lid event Hyprland uses to lock. A quick
++# close/open then entered S3 with the lid already open, and the compositor
++# never saw switch:off because user.slice was frozen.
++#
++# Locking still happens immediately in omarchy-system-lid-close. This helper
++# waits a couple of seconds, then suspends only if the lid is still shut and
++# the machine is not in clamshell mode.
++#
++# Most laptops use 3s. 2016–2017 MacBook Pros (Alpine Ridge) take ~7s to leave
++# S3, so a short close would still dump the user into that wait — they get 20s
++# so a glance-close only locks. An admin can set /etc/omarchy/lid-suspend-delay
++# (one number, seconds) for any other slow-resume machine.
++
++delay=3
++product_name=${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}
++if [[ -r $product_name ]]; then
++  model=$(<"$product_name")
++  if [[ $model =~ MacBookPro13,[123]|MacBookPro14,[123] ]]; then
++    delay=20
++  fi
++fi
++delay_file=${OMARCHY_LID_SUSPEND_DELAY_FILE:-/etc/omarchy/lid-suspend-delay}
++if [[ -r $delay_file ]]; then
++  file_delay=$(<"$delay_file")
++  file_delay=${file_delay%%$'\n'*}
++  if [[ $file_delay =~ ^[0-9]+([.][0-9]+)?$ ]]; then
++    delay=$file_delay
++  fi
++fi
++if [[ -n ${OMARCHY_LID_SUSPEND_DELAY:-} ]]; then
++  delay=$OMARCHY_LID_SUSPEND_DELAY
++fi
++
++pidfile="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/omarchy-lid-suspend.pid"
++
++if [[ ! $delay =~ ^[0-9]+([.][0-9]+)?$ ]]; then
++  delay=3
++fi
++
++if [[ -f $pidfile ]]; then
++  old=$(<"$pidfile")
++  if [[ $old =~ ^[0-9]+$ ]] && kill -0 "$old" 2>/dev/null; then
++    kill "$old" 2>/dev/null || true
++  fi
++  rm -f "$pidfile"
++fi
++
++if omarchy-toggle-enabled suspend-off; then
++  exit 0
++fi
++
++if ! omarchy-hw-laptop-closed; then
++  exit 0
++fi
++
++if omarchy-hw-external-monitors; then
++  exit 0
++fi
++
++(
++  echo "$BASHPID" > "$pidfile"
++  trap 'rm -f "$pidfile"' EXIT
++  sleep "$delay"
++  omarchy-toggle-enabled suspend-off && exit 0
++  omarchy-hw-laptop-closed || exit 0
++  omarchy-hw-external-monitors && exit 0
++  systemctl suspend
++) &
+diff --git a/default/hypr/bindings/utilities.lua b/default/hypr/bindings/utilities.lua
+index 406b773f6b6..85667469f52 100644
+--- a/default/hypr/bindings/utilities.lua
++++ b/default/hypr/bindings/utilities.lua
+@@ -32,7 +32,7 @@ o.bind_toggle("SUPER + CTRL + N", "Toggle nightlight", "nightlight")
+ o.bind("SUPER + CTRL + Delete", "Toggle laptop display", "omarchy-hyprland-monitor-internal toggle")
+ o.bind("SUPER + CTRL + ALT + Delete", "Toggle laptop display mirroring", "omarchy-hyprland-monitor-internal-mirror toggle")
+ o.bind("switch:on:Lid Switch", nil, "omarchy-system-lid-close", { locked = true })
+-o.bind("switch:off:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
++o.bind("switch:off:Lid Switch", nil, "omarchy-system-lid-open", { locked = true })
+ 
+ o.bind("PRINT", "Screenshot", "omarchy-capture-screenshot")
+ o.bind("ALT + PRINT", "Screenrecording", "omarchy-capture-screenrecording --stop-recording || omarchy-menu toggle trigger.capture.screenrecord")
+diff --git a/default/systemd/system-sleep/wake-session b/default/systemd/system-sleep/wake-session
+new file mode 100755
+index 00000000000..107a6408044
+--- /dev/null
++++ b/default/systemd/system-sleep/wake-session
+@@ -0,0 +1,23 @@
++#!/bin/bash
++
++# After S3, Hyprland has often missed the lid-open switch because user.slice
++# was frozen. Turn the panel back on once the session can run again.
++
++if [[ $1 != post ]]; then
++  exit 0
++fi
++
++# user.slice is still frozen here; a synchronous call would block thaw.
++(
++  sleep 1
++  for uid_dir in /run/user/*; do
++    [[ -S $uid_dir/bus ]] || continue
++    uid=${uid_dir##*/}
++    [[ $uid =~ ^[0-9]+$ ]] || continue
++    sudo -u "#$uid" env \
++      XDG_RUNTIME_DIR="$uid_dir" \
++      DBUS_SESSION_BUS_ADDRESS="unix:path=$uid_dir/bus" \
++      WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}" \
++      omarchy-system-lid-open >/dev/null 2>&1 || true
++  done
++) &
+diff --git a/etc/systemd/logind.conf.d/30-lid-ignore.conf b/etc/systemd/logind.conf.d/30-lid-ignore.conf
+new file mode 100644
+index 00000000000..eca7ed8d492
+--- /dev/null
++++ b/etc/systemd/logind.conf.d/30-lid-ignore.conf
+@@ -0,0 +1,7 @@
++# Hyprland owns lid-close: lock immediately, then debounce before suspend.
++# If logind also HandleLidSwitch=suspend, a 2s close/open commits to S3 with
++# the lid already open. user.slice is frozen, so Hyprland never sees the open
++# and the panel stays dark.
++[Login]
++HandleLidSwitch=ignore
++HandleLidSwitchExternalPower=ignore
+diff --git a/manual/36-system-sleep.md b/manual/36-system-sleep.md
+index df6c8174518..36bbf6aac36 100644
+--- a/manual/36-system-sleep.md
++++ b/manual/36-system-sleep.md
+@@ -2,6 +2,8 @@
+ 
+ Omarchy enables suspend and hibernation by default, but if you're having issues with either on your machine, you can toggle them off.
+ 
++Closing a laptop lid locks immediately, then suspends a couple of seconds later if the lid is still shut. That delay is so a quick close/open does not put the machine to sleep with the lid already open. 2016–2017 MacBook Pros wait 20 seconds instead, because leaving S3 on those machines takes long enough that a short close would still feel like a hang. Any machine can set the wait in `/etc/omarchy/lid-suspend-delay` (one number, seconds). Docked (clamshell) lid close stays awake on the external display.
++
+ ### Power profiles
+ 
+ On a laptop, Omarchy remembers your power profile separately for plugged in and running on battery, and switches between the two as you plug and unplug. Out of the box that means performance on AC and balanced on battery.
+diff --git a/migrations/1789604767.sh b/migrations/1789604767.sh
+new file mode 100644
+index 00000000000..e5dd0a982ea
+--- /dev/null
++++ b/migrations/1789604767.sh
+@@ -0,0 +1,16 @@
++echo "Stop logind suspending on lid close so Hyprland can debounce"
++
++dropin=/etc/systemd/logind.conf.d/30-lid-ignore.conf
++src="$OMARCHY_PATH/etc/systemd/logind.conf.d/30-lid-ignore.conf"
++
++if [[ -f $src && ! -f $dropin ]]; then
++  sudo install -Dm644 "$src" "$dropin"
++fi
++
++[[ -f $dropin ]] || exit 0
++
++if ! grep -q '^HandleLidSwitch=ignore' "$dropin"; then
++  exit 0
++fi
++
++sudo systemctl reload systemd-logind.service
+diff --git a/test/shell.d/lid-close-test.sh b/test/shell.d/lid-close-test.sh
+index 746dcfc5381..bcf31e12d43 100755
+--- a/test/shell.d/lid-close-test.sh
++++ b/test/shell.d/lid-close-test.sh
+@@ -8,8 +8,8 @@ lid_close="$ROOT/bin/omarchy-system-lid-close"
+ tmpdir=$(mktemp -d)
+ trap 'rm -rf "$tmpdir"' EXIT
+ 
+-# closed/docked are the two facts logind uses to decide whether a lid close
+-# suspends, so each scenario pins them and records what the lid handler did.
++# closed/docked are the two facts that decide whether a lid close locks and
++# later suspends, so each scenario pins them and records what the handler did.
+ setup_scenario() {
+   scenario_dir="$tmpdir/$1"
+   mock_bin="$scenario_dir/bin"
+@@ -27,7 +27,7 @@ SH
+ #!/bin/bash
+ exit $docked
+ SH
+-  for command in omarchy-system-lock omarchy-hyprland-monitor-clamshell; do
++  for command in omarchy-system-lock omarchy-hyprland-monitor-clamshell omarchy-system-lid-suspend; do
+     cat >"$mock_bin/$command" <<SH
+ #!/bin/bash
+ echo $command >>"\$CALL_LOG"
+@@ -55,6 +55,10 @@ pass "undocked lid close locks before anything else"
+   fail "undocked lid close still reconciles displays" "calls: ${calls[*]}"
+ pass "undocked lid close still reconciles displays"
+ 
++[[ ${calls[2]} == "omarchy-system-lid-suspend" ]] ||
++  fail "undocked lid close asks for a debounced suspend" "calls: ${calls[*]}"
++pass "undocked lid close asks for a debounced suspend"
++
+ # A docked lid close is clamshell mode: logind leaves the machine awake and the
+ # session stays in use on the external display, so locking it would be wrong.
+ setup_scenario docked 0 0
+diff --git a/test/shell.d/lid-open-test.sh b/test/shell.d/lid-open-test.sh
+new file mode 100755
+index 00000000000..dbc876d7fd7
+--- /dev/null
++++ b/test/shell.d/lid-open-test.sh
+@@ -0,0 +1,50 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++lid_open="$ROOT/bin/omarchy-system-lid-open"
++
++grep -F "hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })'" "$lid_open" >/dev/null
++grep -F 'omarchy-system-wake' "$lid_open" >/dev/null
++pass "lid open forces DPMS on after a missed switch event"
++
++tmpdir=$(mktemp -d)
++trap 'rm -rf "$tmpdir"' EXIT
++runtime="$tmpdir/run"
++mkdir -p "$runtime"
++call_log="$tmpdir/calls"
++: >"$call_log"
++mock_bin="$tmpdir/bin"
++mkdir -p "$mock_bin"
++
++cat >"$mock_bin/omarchy-hw-laptop-closed" <<'SH'
++#!/bin/bash
++exit 1
++SH
++cat >"$mock_bin/omarchy-hw-external-monitors" <<'SH'
++#!/bin/bash
++exit 1
++SH
++cat >"$mock_bin/omarchy-system-wake" <<SH
++#!/bin/bash
++echo omarchy-system-wake >>"$call_log"
++SH
++cat >"$mock_bin/hyprctl" <<SH
++#!/bin/bash
++echo hyprctl "\$*" >>"$call_log"
++SH
++cat >"$mock_bin/omarchy-hw-display" <<'SH'
++#!/bin/bash
++exit 1
++SH
++chmod +x "$mock_bin"/*
++
++XDG_RUNTIME_DIR="$runtime" PATH="$mock_bin:$PATH" "$lid_open"
++mapfile -t calls <"$call_log"
++[[ ${calls[0]} == "omarchy-system-wake" ]] ||
++  fail "open lid wakes displays" "calls: ${calls[*]}"
++[[ ${calls[1]} == *"dpms"* ]] ||
++  fail "open lid forces DPMS enable" "calls: ${calls[*]}"
++pass "open lid wakes displays and forces DPMS enable"
+diff --git a/test/shell.d/lid-suspend-test.sh b/test/shell.d/lid-suspend-test.sh
+new file mode 100755
+index 00000000000..9e5cb6dcfcf
+--- /dev/null
++++ b/test/shell.d/lid-suspend-test.sh
+@@ -0,0 +1,108 @@
++#!/bin/bash
++
++set -euo pipefail
++
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++
++lid_suspend="$ROOT/bin/omarchy-system-lid-suspend"
++lid_open="$ROOT/bin/omarchy-system-lid-open"
++dropin="$ROOT/etc/systemd/logind.conf.d/30-lid-ignore.conf"
++hook="$ROOT/default/systemd/system-sleep/wake-session"
++
++grep -F 'HandleLidSwitch=ignore' "$dropin" >/dev/null
++grep -F 'HandleLidSwitchExternalPower=ignore' "$dropin" >/dev/null
++pass "logind ignores lid close so Hyprland can debounce"
++
++grep -F 'omarchy-system-lid-suspend' "$ROOT/bin/omarchy-system-lid-close" >/dev/null
++pass "lid close starts a debounced suspend after locking"
++
++grep -F 'MacBookPro13,[123]|MacBookPro14,[123]' "$lid_suspend" >/dev/null
++grep -F 'delay=20' "$lid_suspend" >/dev/null
++pass "Alpine Ridge MacBook Pros wait 20s before S3"
++
++grep -F 'omarchy-system-lid-open' "$hook" >/dev/null
++grep -F 'sleep 1' "$hook" >/dev/null
++pass "sleep hook wakes the session after thaw"
++
++tmpdir=$(mktemp -d)
++trap 'rm -rf "$tmpdir"' EXIT
++runtime="$tmpdir/run"
++mkdir -p "$runtime"
++
++setup() {
++  mock_bin="$tmpdir/bin"
++  call_log="$tmpdir/calls"
++  mkdir -p "$mock_bin"
++  : >"$call_log"
++
++  cat >"$mock_bin/omarchy-hw-laptop-closed" <<SH
++#!/bin/bash
++exit ${1:-0}
++SH
++  cat >"$mock_bin/omarchy-hw-external-monitors" <<SH
++#!/bin/bash
++exit ${2:-1}
++SH
++  cat >"$mock_bin/omarchy-toggle-enabled" <<'SH'
++#!/bin/bash
++[[ $1 == suspend-off ]] && exit 1
++exit 1
++SH
++  cat >"$mock_bin/systemctl" <<SH
++#!/bin/bash
++echo systemctl "\$*" >>"$call_log"
++SH
++  chmod +x "$mock_bin"/*
++}
++
++setup 0 1
++XDG_RUNTIME_DIR="$runtime" OMARCHY_LID_SUSPEND_DELAY=0.2 PATH="$mock_bin:$PATH" \
++  "$lid_suspend"
++sleep 0.5
++mapfile -t calls <"$call_log"
++[[ ${calls[0]} == "systemctl suspend" ]] ||
++  fail "undocked closed lid suspends after the debounce" "calls: ${calls[*]}"
++pass "undocked closed lid suspends after the debounce"
++
++: >"$call_log"
++setup 0 0
++XDG_RUNTIME_DIR="$runtime" OMARCHY_LID_SUSPEND_DELAY=0.2 PATH="$mock_bin:$PATH" \
++  "$lid_suspend"
++sleep 0.5
++mapfile -t calls <"$call_log" || true
++[[ ${#calls[@]} -eq 0 ]] ||
++  fail "docked lid close does not suspend" "calls: ${calls[*]}"
++pass "docked lid close does not suspend"
++
++: >"$call_log"
++setup 0 1
++XDG_RUNTIME_DIR="$runtime" OMARCHY_LID_SUSPEND_DELAY=1 PATH="$mock_bin:$PATH" \
++  "$lid_suspend"
++# Wait for the child to record its pid before cancelling.
++for _ in 1 2 3 4 5 6 7 8 9 10; do
++  [[ -f $runtime/omarchy-lid-suspend.pid ]] && break
++  sleep 0.05
++done
++XDG_RUNTIME_DIR="$runtime" PATH="$mock_bin:$PATH" "$lid_open"
++sleep 1.2
++mapfile -t calls <"$call_log" || true
++[[ ${#calls[@]} -eq 0 ]] ||
++  fail "opening the lid cancels a pending suspend" "calls: ${calls[*]}"
++pass "opening the lid cancels a pending suspend"
++
++: >"$call_log"
++setup 0 1
++dmi="$tmpdir/dmi"
++delay_file="$tmpdir/delay"
++printf 'MacBookPro14,2\n' >"$dmi"
++printf '0.2\n' >"$delay_file"
++XDG_RUNTIME_DIR="$runtime" \
++  OMARCHY_DMI_PRODUCT_NAME="$dmi" \
++  OMARCHY_LID_SUSPEND_DELAY_FILE="$delay_file" \
++  PATH="$mock_bin:$PATH" \
++  "$lid_suspend"
++sleep 0.5
++mapfile -t calls <"$call_log"
++[[ ${calls[0]} == "systemctl suspend" ]] ||
++  fail "a machine delay file overrides the Alpine Ridge default" "calls: ${calls[*]}"
++pass "a machine delay file overrides the Alpine Ridge default"
+diff --git a/test/shell.d/monitor-recovery-test.sh b/test/shell.d/monitor-recovery-test.sh
+index 3401abc18da..1b71d706d02 100755
+--- a/test/shell.d/monitor-recovery-test.sh
++++ b/test/shell.d/monitor-recovery-test.sh
+@@ -98,8 +98,8 @@ grep -F 'omarchy-hyprland-monitor-external-active' "$monitor_mirror" >/dev/null
+ pass "internal mirror helper recovers when no active external display remains"
+ 
+ grep -F 'switch:on:Lid Switch", nil, "omarchy-system-lid-close"' "$utilities" >/dev/null
+-grep -F 'switch:off:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell"' "$utilities" >/dev/null
+-pass "lid switch bindings lock on close and reconcile clamshell display state"
++grep -F 'switch:off:Lid Switch", nil, "omarchy-system-lid-open"' "$utilities" >/dev/null
++pass "lid switch bindings lock on close and wake the panel on open"
+ 
+ grep -F 'omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true' "$system_wake" >/dev/null
+ pass "system wake resyncs clamshell display state"

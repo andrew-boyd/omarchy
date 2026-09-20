@@ -1,0 +1,24 @@
+{
+  "number": 155,
+  "exit_code": 4,
+  "passed": false,
+  "inputs": {
+    "recipe_files": {
+      "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD": "b87fc52f7c807a8af81a61172ae681fad8476eeb510f118fe2e77ea5bb8b00c8"
+    },
+    "script_sha256": "0802851b8eb6b9b911c365f18df1f1542c3a97317fd29942eaf57eb875e65b09",
+    "source": {
+      "repository": "davidjo/snd_hda_macbookpro",
+      "sha": "6c324f6c9262faa853fdd74d798c5686937a9d0f",
+      "reason": "Driver revision pinned by packages #155/#249.",
+      "url": "https://github.com/davidjo/snd_hda_macbookpro/tree/6c324f6c9262faa853fdd74d798c5686937a9d0f",
+      "fetched_at": "2026-09-20T02:03:22+00:00",
+      "code_executed": false
+    },
+    "limits": "Offline package assembly with makepkg --nodeps; not dependency installation, compilation or DKMS lifecycle validation."
+  },
+  "artifacts": {},
+  "hardware_verified": false,
+  "host_installed": false
+}

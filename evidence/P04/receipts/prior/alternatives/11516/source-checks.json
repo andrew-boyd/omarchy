@@ -1,0 +1,21 @@
+{
+  "isolation": "bubblewrap; root and candidate read-only; private home, tmp, run, sys, proc and devices; no network",
+  "hardware_verified": false,
+  "passed": true,
+  "results": [
+    {
+      "test": "test/shell.d/hw-external-monitors-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 9,
+      "output": "ok - physical monitor detection handles an empty DRM tree\nok - physical monitor detection ignores common internal panel connectors\nok - physical monitor detection finds an external display alongside an LVDS panel\nok - physical monitor detection ignores disconnected external displays\nok - physical monitor detection still supports external-only systems\nok - physical monitor detection ignores a USB Touch Bar connector\nok - physical monitor detection ignores a USB Touch Bar alongside an internal panel\nok - physical monitor detection still finds DP when a Touch Bar is present\nok - physical monitor detection still finds HDMI when a Touch Bar is disconnected\n"
+    },
+    {
+      "test": "test/shell.d/lid-close-test.sh",
+      "exit_code": 0,
+      "passed": true,
+      "assertions": 6,
+      "output": "ok - undocked lid close locks before anything else\nok - undocked lid close still reconciles displays\nok - docked lid close does not lock the session\nok - docked lid close reconciles displays\nok - an open lid never locks the session\nok - a failing lock still reconciles displays\n"
+    }
+  ]
+}

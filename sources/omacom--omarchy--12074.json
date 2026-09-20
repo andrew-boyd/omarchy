@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12074",
+  "repository": "omacom/omarchy",
+  "number": 12074,
+  "title": "Install stock kernel headers for broadcom-wl-dkms on upgraded Macs",
+  "author": "oliverox",
+  "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+  "state": "open",
+  "updated_at": "2026-09-16T08:20:51Z",
+  "body": "Arch dropped the prebuilt `broadcom-wl` on 2026-09-02, and `broadcom-wl-dkms` carries `replaces=(broadcom-wl)`. On an upgrade, pacman swaps the package in and pulls `dkms`, but nothing pulls `linux-headers`, so the module never builds:\n\n```\nrunning '70-dkms-install.hook'...\n==> ERROR: Missing 7.2.3-arch1-3 kernel headers for module broadcom-wl/6.30.223.271.\n```\n\n2012-2015 MacBooks with a BCM4360 or BCM4331 then come back from the Quattro upgrade with no driver bound and no Wi-Fi device at all. The installer's `fix-bcm43xx.sh` never runs on those machines, and `1789444024` only covers `linux-omarchy` and `linux-t2`.\n\n`1789325478` will give `linux-omarchy` its headers, but it deliberately leaves the stock kernel installed as the boot fallback. On these Macs that fallback still has no Wi-Fi, which is usually the way back to a working system.\n\nThis migration installs headers for any installed Arch kernel (`linux`, `linux-lts`, `linux-zen`, `linux-hardened`) when `broadcom-wl-dkms` is present. The dkms pacman hook triggers on `usr/lib/modules/*/build/include/`, so installing the headers builds the module.\n\n## Testing\n\n- `test/shell.d/broadcom-wl-headers-migration-test.sh` covers the repair, idempotency, leaving `linux-omarchy` to its own migration, skipping machines without `broadcom-wl-dkms`, and propagating a failed install. It fails when the install line is removed.\n- `test/shell.d/kernel-headers-migration-test.sh` and the other migration tests still pass.\n- Verified on a MacBook (BCM4360, `14e4:43a0`) upgraded to 4.0.3 on stock `linux` 7.2.3. Installing `linux-headers` built `wl` through the hook, `modprobe wl` brought up `wlp3s0`, and NetworkManager connected.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "original_source_changed": false
+}

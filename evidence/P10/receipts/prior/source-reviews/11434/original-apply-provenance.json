@@ -1,0 +1,46 @@
+{
+  "number": 11434,
+  "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+  "source_ancestor": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "target_base": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "patch_sha256": "2a048aa5ec907cb0cee2866ccf73c46e555368d6d6d6955e11104720c2917e5f",
+  "files": [
+    {
+      "path": "bin/omarchy-brcmfmac-resume-fix",
+      "source_sha256": "df8bc81f9d4fcb2f5b03f0f30af0c8aaef35c5945a95df0050e13d080db7e69a",
+      "identical_to_source": true,
+      "candidate_sha256": "df8bc81f9d4fcb2f5b03f0f30af0c8aaef35c5945a95df0050e13d080db7e69a"
+    },
+    {
+      "path": "install/hardware/all.sh",
+      "source_sha256": "bc02fd3e6d54dc65839bec2ae79e8f5907a21926b1359c39e0c3f77aace83f01",
+      "identical_to_source": false,
+      "candidate_sha256": "6c0c0e040dc35391a94ee4bfed2debf575cc7e4a166fc40d187d1ae358237b8e"
+    },
+    {
+      "path": "install/hardware/apple/fix-brcmfmac-resume.sh",
+      "source_sha256": "f65db53a6297853183a4e801bb5a99921d6ff5a371bc971b5acf1fc62ac00565",
+      "identical_to_source": true,
+      "candidate_sha256": "f65db53a6297853183a4e801bb5a99921d6ff5a371bc971b5acf1fc62ac00565"
+    },
+    {
+      "path": "migrations/1789203245.sh",
+      "source_sha256": "18d4cac70ff563c038f7d0e62a3955417c116ffee95bfb8f46bb364ffd268b1c",
+      "identical_to_source": true,
+      "candidate_sha256": "18d4cac70ff563c038f7d0e62a3955417c116ffee95bfb8f46bb364ffd268b1c"
+    },
+    {
+      "path": "test/shell.d/brcmfmac-resume-fix-test.sh",
+      "source_sha256": "e625d65c999e9bdd7f5cf16ed46f72df5eb1eac8394712748b041ee9c08d18dc",
+      "identical_to_source": true,
+      "candidate_sha256": "e625d65c999e9bdd7f5cf16ed46f72df5eb1eac8394712748b041ee9c08d18dc"
+    }
+  ],
+  "applied": true,
+  "apply_output": "",
+  "software_tests_run": false,
+  "hardware_verified": false,
+  "whitespace_passed": true,
+  "whitespace_output": "",
+  "target_tree": "b84ad89fa543fd3791f029feadd2a7278d31cbc3"
+}

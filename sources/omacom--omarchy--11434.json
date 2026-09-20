@@ -1,0 +1,12 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11434",
+  "repository": "omacom/omarchy",
+  "number": 11434,
+  "title": "apple: reload brcmfmac after resume, some Broadcom Wi-Fi parts don't survive S3",
+  "author": "TheoAndersen",
+  "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+  "state": "open",
+  "updated_at": "2026-09-12T09:01:06Z",
+  "body": "Affects any Mac whose Wi-Fi brcmfmac drives over PCIe, but in practice mostly hits **older MacBook Pros**: BCM43602 (2015-2017 models) is the part most commonly affected. Reproduced on a **MacBookPro11,5 (15-inch MacBook Pro, Mid 2015, BCM43602)** simply by closing and reopening the lid, which is this machine's default S3 suspend/resume trigger.\n\nThe PCIe/msgbuf brcmfmac parts (BCM43602, BCM4350/4355/4364, BCM4377/4378/4387) can leave the firmware unresponsive after S3: every command times out (`brcmf_msgbuf_query_dcmd: Timeout on response for query command`) until the driver is unbound and rebound. Same signature and chipset family as Debian #849381, open since kernel 4.8, no real upstream fix.\n\nDetection reuses the exact chip allowlist from `fix-brcmfmac-supplicant.sh` (sourced from brcmfmac's own `brcm_hw_ids.h`), which deliberately excludes the BCM4360 in 2013-2015 Macs: it runs the out-of-tree `wl` driver instead of brcmfmac, so it never hits this bug. Scoping is three layers deep: the installer only runs on a T2 Mac or an Apple machine with one of these specific Broadcom IDs; the runtime helper re-scans for the same allowlist; and even then it only acts if the matched device is currently bound to `brcmfmac` \u2014 never touching anything else.\n\nUnbind/bind is used rather than `modprobe -r`/`modprobe`: something (an open NetworkManager netdev, a cfg80211 wdev reference) reliably keeps the module in use across resume, so `modprobe -r` never actually removes it, and `modprobe` afterward is then a no-op that never re-probes a device manually detached via sysfs \u2014 confirmed on hardware, the device stayed unbound and Wi-Fi never came back.\n\nA systemd unit runs the reload after every sleep target (suspend/hibernate/hybrid-sleep/suspend-then-hibernate), installed both on fresh setup and via a migration for existing installs. Covered by a shell test that simulates the sysfs unbind/bind cycle and exercises the T2/non-T2 detection matrix.",
+  "original_source_changed": false
+}
