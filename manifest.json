@@ -1,6 +1,6 @@
 {
   "status": "ready_for_draft_review",
-  "prepared_at": "2026-09-20T16:09:34.893752+00:00",
+  "prepared_at": "2026-09-20T19:22:09.459852+00:00",
   "features": 14,
   "companions": 3,
   "proposed_prs": 17,
@@ -23,12 +23,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p01-keyboard-layout",
-      "commit": "65b280d9e2a8789c36a152bbb5d1a033588971e6",
+      "commit": "6cdb1f52e0f96dde74f5805ac9bbb5ba5547c394",
       "tree_sha": "c2bd98b8f0a904094b023973f1523bacc081b972",
       "title": "[Intel Mac P01] Keep keyboard layout tracking on typing devices",
       "draft": true,
       "body_file": "bodies/P01.md",
-      "body_sha256": "a77033e3163a6b41906df38d4401d6880a609458ba0b241de44cd6c69f77ada2",
+      "body_sha256": "5b8ab61a844bf3375187b591f6240b18841b056f471246e32fd14cde1b44c2b8",
       "patch_file": "patches/P01.patch",
       "patch_sha256": "01e95cb7a37f4a4cf0d2c4a12d057aa9eb4cb239042a32a18fda859b37096796",
       "source_count": 2,
@@ -58,7 +58,40 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "65b280d9e2a8789c36a152bbb5d1a033588971e6",
+        "reused_for_commit": "6cdb1f52e0f96dde74f5805ac9bbb5ba5547c394",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "65b280d9e2a8789c36a152bbb5d1a033588971e6",
+        "author": {
+          "name": "Roman Elizarov",
+          "email": "elizarov.rr@gmail.com",
+          "date": "2026-09-18T04:44:23+03:00",
+          "github_login": "notabene00",
+          "identity_source": "omacom/omarchy#12350@c23ff7f397dc2ba6684246046d92f99664c11c7e"
+        },
+        "commit_authors": [
+          {
+            "name": "Roman Elizarov",
+            "email": "elizarov.rr@gmail.com",
+            "date": "2026-09-18T04:44:23+03:00",
+            "github_login": "notabene00",
+            "identity_source": "omacom/omarchy#12350@c23ff7f397dc2ba6684246046d92f99664c11c7e"
+          },
+          {
+            "name": "adityagarud",
+            "email": "garudaditya079@gmail.com",
+            "date": "2026-08-13T20:42:25Z",
+            "github_login": "yashranaway",
+            "identity_source": "omacom/omarchy#6834@f179938c35e4d4fdf3374361a936c1f55466559a"
+          }
+        ],
+        "co_authored_by": [
+          "adityagarud <garudaditya079@gmail.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -71,12 +104,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p02-kernel-headers",
-      "commit": "15f8b5970c1279950bc3335f474c2793189e82e0",
+      "commit": "d8acbbfbf39c27b7f238bd4867a0f9e6ad62f4fa",
       "tree_sha": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
       "title": "[Intel Mac P02] Repair headers for retained stock kernels",
       "draft": true,
       "body_file": "bodies/P02.md",
-      "body_sha256": "89784058e1e9bd4e09350fcac8d19bf16b2e386353721745ecda0f59797cc836",
+      "body_sha256": "0e4c7baa25464f8fa94e50838c5b9a497bfd7c3d06dc3df033ce676f80253668",
       "patch_file": "patches/P02.patch",
       "patch_sha256": "904a56c26c968a70159f0aeb22b0674212c597bb4e374073435914e489a84e85",
       "source_count": 9,
@@ -113,7 +146,33 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "15f8b5970c1279950bc3335f474c2793189e82e0",
+        "reused_for_commit": "d8acbbfbf39c27b7f238bd4867a0f9e6ad62f4fa",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "15f8b5970c1279950bc3335f474c2793189e82e0",
+        "author": {
+          "name": "Oliver Oxenham",
+          "email": "oliver.oxenham@gmail.com",
+          "date": "2026-09-16T12:13:17+04:00",
+          "github_login": "oliverox",
+          "identity_source": "omacom/omarchy#12074@6d9986a1704f166ea3134e0ade2148f8291ce3d8"
+        },
+        "commit_authors": [
+          {
+            "name": "Oliver Oxenham",
+            "email": "oliver.oxenham@gmail.com",
+            "date": "2026-09-16T12:13:17+04:00",
+            "github_login": "oliverox",
+            "identity_source": "omacom/omarchy#12074@6d9986a1704f166ea3134e0ade2148f8291ce3d8"
+          }
+        ],
+        "co_authored_by": [
+          "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -126,12 +185,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p03-hardware-detection",
-      "commit": "da27f6caa989360a0689ecde5433c075f51f2342",
+      "commit": "ad416ff12f1172641016de721feaecc320b1749b",
       "tree_sha": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
       "title": "[Intel Mac P03] Consolidate Apple hardware detection",
       "draft": true,
       "body_file": "bodies/P03.md",
-      "body_sha256": "b1e1a861f03f513b01c3b410121be9bc08f476393270b112608edd46c9b915c5",
+      "body_sha256": "d84059226f46729e95347b4be7e515d5db2515efafd2a223e6dfb8fd4c520837",
       "patch_file": "patches/P03.patch",
       "patch_sha256": "b5be149ea524ab18ce6d5e4de39c3d4d3355e316fd1741000459549022f7e26c",
       "source_count": 5,
@@ -164,7 +223,31 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "da27f6caa989360a0689ecde5433c075f51f2342",
+        "reused_for_commit": "ad416ff12f1172641016de721feaecc320b1749b",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "da27f6caa989360a0689ecde5433c075f51f2342",
+        "author": {
+          "name": "Taksh",
+          "email": "takshkothari09@gmail.com",
+          "date": "2026-09-08T16:48:36+05:30",
+          "github_login": "Chessing234",
+          "identity_source": "omacom/omarchy#12076@9b10b4bf0c1bcfdfe637d3bf67bebab48563d91e"
+        },
+        "commit_authors": [
+          {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30",
+            "github_login": "Chessing234",
+            "identity_source": "omacom/omarchy#12076@9b10b4bf0c1bcfdfe637d3bf67bebab48563d91e"
+          }
+        ],
+        "co_authored_by": [],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -177,12 +260,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p04-lid-handling",
-      "commit": "eb9d9c358cad7dc6ef00fb82278c39394f45c2cf",
+      "commit": "34adcf55c77e25510d25ccd4d6d7b15ec7e005ac",
       "tree_sha": "9bb1fb0cd95cb5ed565ae553343a21351dc0d4db",
       "title": "[Intel Mac P04] Consolidate lid handling and display classification",
       "draft": true,
       "body_file": "bodies/P04.md",
-      "body_sha256": "9c0b15602bff94e8b07d0c1804975bb4dab338b3958f46664f43382105118b5d",
+      "body_sha256": "1b48b34ae2e0b37e5b645c0721058e74e9321b1986e01d473a03a336df1cabbe",
       "patch_file": "patches/P04.patch",
       "patch_sha256": "8462a866b03db57b9ddafe9ff63e4bb83b6fd40db2d82018d6c8d238255441e8",
       "source_count": 8,
@@ -219,7 +302,31 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "eb9d9c358cad7dc6ef00fb82278c39394f45c2cf",
+        "reused_for_commit": "34adcf55c77e25510d25ccd4d6d7b15ec7e005ac",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "eb9d9c358cad7dc6ef00fb82278c39394f45c2cf",
+        "author": {
+          "name": "adityagarud",
+          "email": "garudaditya079@gmail.com",
+          "date": "2026-09-07T20:42:09Z",
+          "github_login": "yashranaway",
+          "identity_source": "omacom/omarchy#10713@a833373fa37f80347245f4d0cc7c4976b86e7f5e"
+        },
+        "commit_authors": [
+          {
+            "name": "adityagarud",
+            "email": "garudaditya079@gmail.com",
+            "date": "2026-09-07T20:42:09Z",
+            "github_login": "yashranaway",
+            "identity_source": "omacom/omarchy#10713@a833373fa37f80347245f4d0cc7c4976b86e7f5e"
+          }
+        ],
+        "co_authored_by": [],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -232,12 +339,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p05-ghost-displays",
-      "commit": "ebf2c823ddb26188edc15b2f3e6ff70b4044e21f",
+      "commit": "dbc2abab13c63f26266ef9420ab39c02f1134266",
       "tree_sha": "40a1c0dcac181830688141bdc956b54c013ea307",
       "title": "[Intel Mac P05] Handle ghost internal displays",
       "draft": true,
       "body_file": "bodies/P05.md",
-      "body_sha256": "7fbd9bf5860a18e9c4e91a0ad26ed1d9f44a45e74d90a17e34f1c6766df49f29",
+      "body_sha256": "3199fad4e7b8b65ba533151edb109ee4b1d36807a688d851cf0e566bbdc645a8",
       "patch_file": "patches/P05.patch",
       "patch_sha256": "367c0a170e394f5a409339d699f921c84366635ac44098364831e386c843e5b8",
       "source_count": 2,
@@ -267,7 +374,40 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "ebf2c823ddb26188edc15b2f3e6ff70b4044e21f",
+        "reused_for_commit": "dbc2abab13c63f26266ef9420ab39c02f1134266",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "ebf2c823ddb26188edc15b2f3e6ff70b4044e21f",
+        "author": {
+          "name": "Piotr Synowiec",
+          "email": "piotr@synowiec.co",
+          "date": "2026-09-04T18:19:14+02:00",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#10198@35f3354ed122decab94b0507d6c633b45cd9d0a0"
+        },
+        "commit_authors": [
+          {
+            "name": "Piotr Synowiec",
+            "email": "piotr@synowiec.co",
+            "date": "2026-09-04T18:19:14+02:00",
+            "github_login": null,
+            "identity_source": "omacom/omarchy#10198@35f3354ed122decab94b0507d6c633b45cd9d0a0"
+          },
+          {
+            "name": "Vincent Ritter",
+            "email": "git@vincentritter.com",
+            "date": "2026-09-16T09:35:22+02:00",
+            "github_login": "vincentritter",
+            "identity_source": "omacom/omarchy#12072@1c5764a206145647d34567da97e99846fdbc567c"
+          }
+        ],
+        "co_authored_by": [
+          "Vincent Ritter <git@vincentritter.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -280,12 +420,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p06-spi-retirement",
-      "commit": "b569a71fce64d8f9522d8293f3c168274608b1b1",
+      "commit": "fe0928850d125db300d8a91ffa4809d5ef0558ce",
       "tree_sha": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
       "title": "[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge",
       "draft": true,
       "body_file": "bodies/P06.md",
-      "body_sha256": "67757b8d2d17ca90af10717707d764f0d6cc681a5b570ddab86403d3e237f238",
+      "body_sha256": "5a2fa0b92d655d41909d77072e47e6c1669d46db8b2843d5f5ba1ccbb4323d65",
       "patch_file": "patches/P06.patch",
       "patch_sha256": "c96a2377d62e32b5cd344ce93cb10cc3ad4deb69bdf85956aeabc7c81931f1ee",
       "source_count": 3,
@@ -316,7 +456,41 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "b569a71fce64d8f9522d8293f3c168274608b1b1",
+        "reused_for_commit": "fe0928850d125db300d8a91ffa4809d5ef0558ce",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "b569a71fce64d8f9522d8293f3c168274608b1b1",
+        "author": {
+          "name": "Josh Hudson",
+          "email": "313875020+hudsonwa@users.noreply.github.com",
+          "date": "2026-09-03T03:30:26+08:00",
+          "github_login": "hudsonwa",
+          "identity_source": "omacom/omarchy#9880@fb6cc648f382171388f374c0d364cc037cdfa076"
+        },
+        "commit_authors": [
+          {
+            "name": "Josh Hudson",
+            "email": "313875020+hudsonwa@users.noreply.github.com",
+            "date": "2026-09-03T03:30:26+08:00",
+            "github_login": "hudsonwa",
+            "identity_source": "omacom/omarchy#9880@fb6cc648f382171388f374c0d364cc037cdfa076"
+          },
+          {
+            "name": "omarchybot",
+            "email": "omarchybot@users.noreply.github.com",
+            "date": "2026-09-03T05:26:44-07:00",
+            "github_login": "omarchybot",
+            "identity_source": "omacom/omarchy#9880@9605c7a134aab0f27ebcfc55b4782d185cdfe09d"
+          }
+        ],
+        "co_authored_by": [
+          "omarchybot <omarchybot@users.noreply.github.com>",
+          "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -329,12 +503,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p07-spi-pio",
-      "commit": "0df69f595201dda4666138a86387edb5df9fee62",
+      "commit": "14f9a8fc232f55bc4798795a7b0962f3e0364752",
       "tree_sha": "73a922cb3040d54a999b0b92784b2f27c330992b",
       "title": "[Intel Mac P07] Preserve the MacBook8,1 SPI PIO workaround",
       "draft": true,
       "body_file": "bodies/P07.md",
-      "body_sha256": "bc7e1ec0f40c11a12aaffcd3cce53a09862f7bee1774dbe44697531a43746bfb",
+      "body_sha256": "cbe7a17946d48064d6f9198a0d37531be8945d2b17470b1961260211ba4d24b7",
       "patch_file": "patches/P07.patch",
       "patch_sha256": "203312ee4cd5501d360743c3c6f8ddb5231d74cbfe588ad393271a20b269c815",
       "source_count": 1,
@@ -364,7 +538,31 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "0df69f595201dda4666138a86387edb5df9fee62",
+        "reused_for_commit": "14f9a8fc232f55bc4798795a7b0962f3e0364752",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "0df69f595201dda4666138a86387edb5df9fee62",
+        "author": {
+          "name": "jeissonneira",
+          "email": "12259586+jeissonneira@users.noreply.github.com",
+          "date": "2026-09-01T22:23:38-05:00",
+          "github_login": "jeissonneira",
+          "identity_source": "omacom/omarchy#9735@abba2c44f500717fe1e28f9efd7e3873c94c9b73"
+        },
+        "commit_authors": [
+          {
+            "name": "jeissonneira",
+            "email": "12259586+jeissonneira@users.noreply.github.com",
+            "date": "2026-09-01T22:23:38-05:00",
+            "github_login": "jeissonneira",
+            "identity_source": "omacom/omarchy#9735@abba2c44f500717fe1e28f9efd7e3873c94c9b73"
+          }
+        ],
+        "co_authored_by": [],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -377,12 +575,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p08-facetime-camera",
-      "commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
+      "commit": "68d5af69a2126af5856445ba9916772f7b0f9f33",
       "tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
       "title": "[Intel Mac P08] Consolidate FaceTime PCIe camera support",
       "draft": true,
       "body_file": "bodies/P08.md",
-      "body_sha256": "8b02ec81b54ac8f1823f1cfba5f680f2771c8edd8e4a12b638f5e41aad45974a",
+      "body_sha256": "e13974a5d292ead3ff2344650890615cd6bbea121916fbd378218f8b068267bc",
       "patch_file": "patches/P08.patch",
       "patch_sha256": "171cf52dbc34fbd6232006011e3881154d6e714ab696cf414f0010c641135703",
       "source_count": 2,
@@ -412,7 +610,40 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
+        "reused_for_commit": "68d5af69a2126af5856445ba9916772f7b0f9f33",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
+        "author": {
+          "name": "Bradley Marks",
+          "email": "bazzieb@gmail.com",
+          "date": "2026-09-16T09:10:41+02:00",
+          "github_login": "MrBazzieB",
+          "identity_source": "omacom/omarchy#12067@8bb9e8e663e5decc4bae299f8ba0177adb3fe256"
+        },
+        "commit_authors": [
+          {
+            "name": "Bradley Marks",
+            "email": "bazzieb@gmail.com",
+            "date": "2026-09-16T09:10:41+02:00",
+            "github_login": "MrBazzieB",
+            "identity_source": "omacom/omarchy#12067@8bb9e8e663e5decc4bae299f8ba0177adb3fe256"
+          },
+          {
+            "name": "rand0mdud3",
+            "email": "rand0mdud31@gmail.com",
+            "date": "2026-09-11T15:26:31-07:00",
+            "github_login": "rand0mdud3",
+            "identity_source": "omacom/omarchy#11381@24760fca3dc9a78ad00c12fadd89c413d937f91b"
+          }
+        ],
+        "co_authored_by": [
+          "rand0mdud3 <rand0mdud31@gmail.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -425,12 +656,12 @@
       "base_branch": "master",
       "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
       "branch": "intel-mac/p08-facetime-camera",
-      "commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
+      "commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
       "tree_sha": "1e67c884154c830dac79418e81aa028351b5a4ca",
       "title": "[Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages",
       "draft": true,
       "body_file": "bodies/P08-packages.md",
-      "body_sha256": "304fe9b151af71227245ec5e06aa7ef311d74b1bdf30c863894e34637915bf06",
+      "body_sha256": "bb1ac507314a77cb3a8743245c9fec49e3c3bf8d735b38f1995feaae29a51f3e",
       "patch_file": "patches/P08-packages.patch",
       "patch_sha256": "ac24d299ba8e87d641b71ec57cd715b3dd33608d3eec07d431ac89dd67f0a354",
       "source_count": 2,
@@ -446,7 +677,48 @@
         "kind": "package-self-tests",
         "passed_commands": 10,
         "total_commands": 10,
-        "full_ci_passed": false
+        "full_ci_passed": false,
+        "tested_commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
+        "reused_for_commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
+        "author": {
+          "name": "xiota",
+          "email": "aur@mentalfossa.com",
+          "date": "2026-09-18T00:56:35Z",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-dkms.git@ca34f817216017b9d51e3bde6f7c5af281766a35"
+        },
+        "commit_authors": [
+          {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2026-09-18T00:56:35Z",
+            "github_login": null,
+            "identity_source": "https://aur.archlinux.org/facetimehd-dkms.git@ca34f817216017b9d51e3bde6f7c5af281766a35"
+          },
+          {
+            "name": "Harrison",
+            "email": "contact@htv04.com",
+            "date": "2024-07-07T22:48:35-04:00",
+            "github_login": null,
+            "identity_source": "https://aur.archlinux.org/facetimehd-data.git@4a3276adda43939bffaf0168d272760336a1230f"
+          },
+          {
+            "name": "Hugo Osvaldo Barrera",
+            "email": "hugo@barrera.io",
+            "date": "2017-05-24T16:43:38-03:00",
+            "github_login": null,
+            "identity_source": "https://aur.archlinux.org/facetimehd-firmware.git@7b9e6c71c6229a88ce1908e5d5692045a095a6da"
+          }
+        ],
+        "co_authored_by": [
+          "Harrison <contact@htv04.com>",
+          "Hugo Osvaldo Barrera <hugo@barrera.io>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -459,12 +731,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p09-nvme-suspend",
-      "commit": "83242e08651c458ae2e87a0f8d146ca459f74af5",
+      "commit": "55c22ce34ac42f91e95f78633465096d4aebd8c0",
       "tree_sha": "6343d43b395da10f887f755382af6d6c362a5f2d",
       "title": "[Intel Mac P09] Consolidate NVMe suspend applicability",
       "draft": true,
       "body_file": "bodies/P09.md",
-      "body_sha256": "98f5c365996a22ca8112da4f900db38abbae81748d78f9043fa658dbc40aa759",
+      "body_sha256": "08b097152b9021e7b4ef70c419925823697d96d3c1dfcc43976e7933a7bd9110",
       "patch_file": "patches/P09.patch",
       "patch_sha256": "e08e8463d9e895cfca817856ee4a286a67a4e83bd2ce8c8431ae8d062021bb51",
       "source_count": 2,
@@ -495,7 +767,33 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "83242e08651c458ae2e87a0f8d146ca459f74af5",
+        "reused_for_commit": "55c22ce34ac42f91e95f78633465096d4aebd8c0",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "83242e08651c458ae2e87a0f8d146ca459f74af5",
+        "author": {
+          "name": "Nicolas Nistal",
+          "email": "nistal.nicolas@gmail.com",
+          "date": "2026-09-13T00:44:42-04:00",
+          "github_login": "niconistal",
+          "identity_source": "omacom/omarchy#11624@e9ee03c9ab10c3c64c44518a030a09abe2c2a73d"
+        },
+        "commit_authors": [
+          {
+            "name": "Nicolas Nistal",
+            "email": "nistal.nicolas@gmail.com",
+            "date": "2026-09-13T00:44:42-04:00",
+            "github_login": "niconistal",
+            "identity_source": "omacom/omarchy#11624@e9ee03c9ab10c3c64c44518a030a09abe2c2a73d"
+          }
+        ],
+        "co_authored_by": [
+          "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -508,12 +806,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p10-broadcom-wifi",
-      "commit": "c85a3e400a950e2867b0069aeb9a6eacdda2fa15",
+      "commit": "740945dc13a101597ba361f62ec4b6e5e2e4168c",
       "tree_sha": "aa0e2108412410f11a0077878769c42533b08d48",
       "title": "[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery",
       "draft": true,
       "body_file": "bodies/P10.md",
-      "body_sha256": "17e0dce5ada20e06cfdf1e98294356c520dbd666eb254fa65394ba12dfb2b57e",
+      "body_sha256": "9100a2e8c8c1b5f675e0f8e3e1741bf80f1537eeba1bf04889a1588bace441d5",
       "patch_file": "patches/P10.patch",
       "patch_sha256": "a4c4c7bf27fea00c1b3a342e7cabe162e836179b928865f020eef8e74e6a4db0",
       "source_count": 6,
@@ -548,7 +846,59 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "c85a3e400a950e2867b0069aeb9a6eacdda2fa15",
+        "reused_for_commit": "740945dc13a101597ba361f62ec4b6e5e2e4168c",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "c85a3e400a950e2867b0069aeb9a6eacdda2fa15",
+        "author": {
+          "name": "Justin Schroeder",
+          "email": "justin@formkit.com",
+          "date": "2026-09-09T10:36:13-04:00",
+          "github_login": "justin-schroeder",
+          "identity_source": "omacom/omarchy#11017@a49800201b8d99aa55062338d29cceada694acc2"
+        },
+        "commit_authors": [
+          {
+            "name": "Justin Schroeder",
+            "email": "justin@formkit.com",
+            "date": "2026-09-09T10:36:13-04:00",
+            "github_login": "justin-schroeder",
+            "identity_source": "omacom/omarchy#11017@a49800201b8d99aa55062338d29cceada694acc2"
+          },
+          {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-21T06:49:34-05:00",
+            "github_login": "shawnyeager",
+            "identity_source": "omacom/omarchy#7671@500d26c914843154cf0afde4c5c6560906f279de"
+          },
+          {
+            "name": "Omabot",
+            "email": "omabot@omarchy.org",
+            "date": "2026-08-22T05:30:09-07:00",
+            "github_login": "omarchybot",
+            "identity_source": "omacom/omarchy#7671@f81f4d524de2b890a4a1f93c3b55a2c6ab9fdb67"
+          },
+          {
+            "name": "Matteo Murgida",
+            "email": "teomurgi@gmail.com",
+            "date": "2026-09-17T20:44:10+02:00",
+            "github_login": "teomurgi",
+            "identity_source": "omacom/omarchy#12314@84e001d85936f8f15b5a65bd41f90e4f8ca29984"
+          }
+        ],
+        "co_authored_by": [
+          "Shawn Yeager <shawn@shawnyeager.com>",
+          "Omabot <omabot@omarchy.org>",
+          "Matteo Murgida <teomurgi@gmail.com>",
+          "Claude Opus 5 (1M context) <noreply@anthropic.com>",
+          "Codex XHigh <noreply@openai.com>",
+          "Claude Fable 5.1 <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -561,12 +911,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p11-cirrus-audio",
-      "commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
+      "commit": "b19fe49bd33075c07aa577d1ac5efee2dcf0d3eb",
       "tree_sha": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
       "title": "[Intel Mac P11] Consolidate model-specific Cirrus audio support",
       "draft": true,
       "body_file": "bodies/P11.md",
-      "body_sha256": "85df99a109e44b8e2d43c811c1d3572d5a72beb2ee03e21203b3080794751a7f",
+      "body_sha256": "3b26eac206201be0fa7df109c11b2299dbb45f14eebabf9c25064933f1e19136",
       "patch_file": "patches/P11.patch",
       "patch_sha256": "685234b2d70b8f907594095e4a7bbe9ef664fee71f724149dfbb5cd8abd69c83",
       "source_count": 12,
@@ -606,7 +956,74 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
+        "reused_for_commit": "b19fe49bd33075c07aa577d1ac5efee2dcf0d3eb",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
+        "author": {
+          "name": "Shawn Yeager",
+          "email": "shawn@shawnyeager.com",
+          "date": "2026-08-16T09:04:56-05:00",
+          "github_login": "shawnyeager",
+          "identity_source": "omacom/omarchy#9516@ff83da9a8ef60687d5bdc29c6d4195a76d84b848"
+        },
+        "commit_authors": [
+          {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-16T09:04:56-05:00",
+            "github_login": "shawnyeager",
+            "identity_source": "omacom/omarchy#9516@ff83da9a8ef60687d5bdc29c6d4195a76d84b848"
+          },
+          {
+            "name": "J7",
+            "email": "31825378+j7j7@users.noreply.github.com",
+            "date": "2026-09-01T08:30:53+08:00",
+            "github_login": "j7j7",
+            "identity_source": "omacom/omarchy#9516@db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72"
+          },
+          {
+            "name": "S-M Robinson",
+            "email": "seanmichael@hey.com",
+            "date": "2026-08-14T23:05:04-06:00",
+            "github_login": null,
+            "identity_source": "omacom/omarchy#6921@316e1f0b97f4f8362473af69f76695cb75c7466d"
+          },
+          {
+            "name": "David Heinemeier Hansson",
+            "email": "david@hey.com",
+            "date": "2026-08-15T03:15:26-07:00",
+            "github_login": "dhh",
+            "identity_source": "omacom/omarchy#6921@0345c98a0c9f543cc40d0624d07faacb7a03bd13"
+          },
+          {
+            "name": "Jake Pillai",
+            "email": "jakepillai@me.com",
+            "date": "2026-08-16T00:45:27-07:00",
+            "github_login": "doctor",
+            "identity_source": "sunoxen-lab/omarchy#1@3fd681db4f692bf9eaa07d73c44954d91ba5e4b5"
+          },
+          {
+            "name": "inspiretelapps",
+            "email": "207020073+inspiretelapps@users.noreply.github.com",
+            "date": "2026-09-06T12:21:50+02:00",
+            "github_login": "inspiretelapps",
+            "identity_source": "omacom/omarchy#10458@5cf2638796937bfad1c3eb1aeec3c21a57d4154c"
+          }
+        ],
+        "co_authored_by": [
+          "J7 <31825378+j7j7@users.noreply.github.com>",
+          "S-M Robinson <seanmichael@hey.com>",
+          "David Heinemeier Hansson <david@hey.com>",
+          "Jake Pillai <jakepillai@me.com>",
+          "inspiretelapps <207020073+inspiretelapps@users.noreply.github.com>",
+          "Cursor <cursoragent@cursor.com>",
+          "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -619,12 +1036,12 @@
       "base_branch": "master",
       "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
       "branch": "intel-mac/p11-cirrus-audio",
-      "commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
+      "commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
       "tree_sha": "6d084ddd8be492d394135e050e046c1a5a98c39e",
       "title": "[Intel Mac P11/packages] Consolidate model-specific Cirrus audio packages",
       "draft": true,
       "body_file": "bodies/P11-packages.md",
-      "body_sha256": "fdc91345362e76a84ea57d1507f00ed9f5835df3c6c137b214f1947d3e628bfb",
+      "body_sha256": "30f08c2134e548b0642627deb8fa535535c2dd3823a95e7040bfd332551db7b4",
       "patch_file": "patches/P11-packages.patch",
       "patch_sha256": "f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050",
       "source_count": 12,
@@ -650,7 +1067,49 @@
         "kind": "package-self-tests",
         "passed_commands": 10,
         "total_commands": 10,
-        "full_ci_passed": false
+        "full_ci_passed": false,
+        "tested_commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
+        "reused_for_commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
+        "author": {
+          "name": "Shawn Yeager",
+          "email": "shawn@shawnyeager.com",
+          "date": "2026-08-16T09:04:56-05:00",
+          "github_login": "shawnyeager",
+          "identity_source": "omacom/omarchy-pkgs#249@9eb62fe146c8f40aa8f760195a8942758c2bac60"
+        },
+        "commit_authors": [
+          {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-16T09:04:56-05:00",
+            "github_login": "shawnyeager",
+            "identity_source": "omacom/omarchy-pkgs#249@9eb62fe146c8f40aa8f760195a8942758c2bac60"
+          },
+          {
+            "name": "J7",
+            "email": "31825378+j7j7@users.noreply.github.com",
+            "date": "2026-09-01T08:31:07+08:00",
+            "github_login": "j7j7",
+            "identity_source": "omacom/omarchy-pkgs#249@a346e20667fd163eed792f74d3523b34c5ff6df4"
+          },
+          {
+            "name": "Jake Pillai",
+            "email": "jakepillai@me.com",
+            "date": "2026-08-16T00:35:13-07:00",
+            "github_login": "doctor",
+            "identity_source": "omacom/omarchy-pkgs#153@d9715a74b6be571207c73b94e000750cecaad2b0"
+          }
+        ],
+        "co_authored_by": [
+          "J7 <31825378+j7j7@users.noreply.github.com>",
+          "Jake Pillai <jakepillai@me.com>",
+          "Cursor <cursoragent@cursor.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -663,12 +1122,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p12-t1bridge",
-      "commit": "208e69e960ec5793167e09f908396acff6ecd6f0",
+      "commit": "a96006c888331549383f12ad9255a79ec2005c64",
       "tree_sha": "8d0ea0341f561c202638f6ee76b256de8d5ee34d",
       "title": "[Intel Mac P12] Consolidate T1Bridge support and fingerprint UI",
       "draft": true,
       "body_file": "bodies/P12.md",
-      "body_sha256": "61c253dec256bae3ec56b43914157bfae61bd4bd442b52026669b4c7d82f08dd",
+      "body_sha256": "b14735f064a284fe404eca450fec98c9607de32bc37d2f6ba39845cb3945cd2c",
       "patch_file": "patches/P12.patch",
       "patch_sha256": "8833274aed255ca804b2e8e66341c7be0dbc5f520e6d4fa66f2febf48100979b",
       "source_count": 14,
@@ -710,7 +1169,41 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "208e69e960ec5793167e09f908396acff6ecd6f0",
+        "reused_for_commit": "a96006c888331549383f12ad9255a79ec2005c64",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "208e69e960ec5793167e09f908396acff6ecd6f0",
+        "author": {
+          "name": "Nicolas Nistal",
+          "email": "nistal.nicolas@gmail.com",
+          "date": "2026-09-11T00:56:12-04:00",
+          "github_login": "niconistal",
+          "identity_source": "omacom/omarchy#11273@277ea6f6b4ad5555ddca88c8fec92098c684991a"
+        },
+        "commit_authors": [
+          {
+            "name": "Nicolas Nistal",
+            "email": "nistal.nicolas@gmail.com",
+            "date": "2026-09-11T00:56:12-04:00",
+            "github_login": "niconistal",
+            "identity_source": "omacom/omarchy#11273@277ea6f6b4ad5555ddca88c8fec92098c684991a"
+          },
+          {
+            "name": "Toni Bergholm",
+            "email": "toni.bergholm@iki.fi",
+            "date": "2026-09-15T17:59:50+03:00",
+            "github_login": "tonibergholm",
+            "identity_source": "omacom/omarchy#11952@6d88ae46fe0ac3d27ea2d66a0dfaea7fb066400b"
+          }
+        ],
+        "co_authored_by": [
+          "Toni Bergholm <toni.bergholm@iki.fi>",
+          "Claude Fable 5.1 <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -723,12 +1216,12 @@
       "base_branch": "master",
       "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
       "branch": "intel-mac/p12-t1bridge",
-      "commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
+      "commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
       "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
       "title": "[Intel Mac P12/packages] Package the existing T1Bridge stack",
       "draft": true,
       "body_file": "bodies/P12-packages.md",
-      "body_sha256": "1430c4199c4995af9ddd9ffbd83c91446c4eb6454644553f8cc3c2233510ae4f",
+      "body_sha256": "3a4500f5c9dc820707adb10e0c1a630f583e6127f50d53fe4d06b61306592fc2",
       "patch_file": "patches/P12-packages.patch",
       "patch_sha256": "0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363",
       "source_count": 14,
@@ -756,7 +1249,31 @@
         "kind": "package-self-tests",
         "passed_commands": 10,
         "total_commands": 10,
-        "full_ci_passed": false
+        "full_ci_passed": false,
+        "tested_commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
+        "reused_for_commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
+        "author": {
+          "name": "Andrew Boyd",
+          "email": "andrew@formkit.com",
+          "date": "2026-09-06T13:53:10-04:00",
+          "github_login": "andrew-boyd",
+          "identity_source": "standardagents/t1bridge@031b5bf6b23515f252ec79e8e8bb7f41b52694f4"
+        },
+        "commit_authors": [
+          {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-06T13:53:10-04:00",
+            "github_login": "andrew-boyd",
+            "identity_source": "standardagents/t1bridge@031b5bf6b23515f252ec79e8e8bb7f41b52694f4"
+          }
+        ],
+        "co_authored_by": [],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -769,12 +1286,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p13-kernel-policy",
-      "commit": "f2be26a2195c35205baed9159facf0a312ebb2ae",
+      "commit": "f25357ff42341c0760095bb1cae90f0b558222e0",
       "tree_sha": "932100df6584207c8a0de68877e8cdb2d44776be",
       "title": "[Intel Mac P13] Consolidate the Intel Mac kernel migration policy",
       "draft": true,
       "body_file": "bodies/P13.md",
-      "body_sha256": "667cef782e5c878ea39db2656ebd915fd24d89366a344ec862bfee51b1f926d0",
+      "body_sha256": "cadacc508ad2846075554c539acb5647a47c5f87d78de50df4e6b1c15a53f212",
       "patch_file": "patches/P13.patch",
       "patch_sha256": "06a7ddc25ac90156fb9c48d71a415253da5a446770a9f117104a6bc1018148c8",
       "source_count": 2,
@@ -804,7 +1321,33 @@
         ],
         "matches_baseline_failures": true,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "f2be26a2195c35205baed9159facf0a312ebb2ae",
+        "reused_for_commit": "f25357ff42341c0760095bb1cae90f0b558222e0",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "f2be26a2195c35205baed9159facf0a312ebb2ae",
+        "author": {
+          "name": "Nipun H Sud",
+          "email": "nipunhsud@users.noreply.github.com",
+          "date": "2026-09-17T17:45:53-04:00",
+          "github_login": "nipunhsud",
+          "identity_source": "omacom/omarchy#12328@33f076aa9127c7d8cc5ccf36da6b61f2005f3b11"
+        },
+        "commit_authors": [
+          {
+            "name": "Nipun H Sud",
+            "email": "nipunhsud@users.noreply.github.com",
+            "date": "2026-09-17T17:45:53-04:00",
+            "github_login": "nipunhsud",
+            "identity_source": "omacom/omarchy#12328@33f076aa9127c7d8cc5ccf36da6b61f2005f3b11"
+          }
+        ],
+        "co_authored_by": [
+          "Claude Fable 5.1 <noreply@anthropic.com>"
+        ],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false
@@ -817,12 +1360,12 @@
       "base_branch": "quattro",
       "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
       "branch": "intel-mac/p14-suspend-diagnostics",
-      "commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
+      "commit": "027ceda817926af794e1ff605d1ea9bf67535ee0",
       "tree_sha": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
       "title": "[Intel Mac P14] Consolidate suspend diagnostics",
       "draft": true,
       "body_file": "bodies/P14.md",
-      "body_sha256": "9d23ef39bc5c156c309154efece1b8011993c78c6a1c4b01eb130c312e260714",
+      "body_sha256": "6b1847c056b1d3ddcf349403fd368d5b2130685d1d9a18f142a9c755748f6450",
       "patch_file": "patches/P14.patch",
       "patch_sha256": "03dd3da10e306d6ba17c0fe3b43dde5f9ca7d1b98c1f937c04fada827cfc7818",
       "source_count": 1,
@@ -854,7 +1397,31 @@
         ],
         "matches_baseline_failures": false,
         "skip_notices": 17,
-        "full_suite_passed": false
+        "full_suite_passed": false,
+        "tested_commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
+        "reused_for_commit": "027ceda817926af794e1ff605d1ea9bf67535ee0",
+        "reuse_reason": "Metadata-only authorship correction; identical tree and base."
+      },
+      "authorship": {
+        "previous_commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
+        "author": {
+          "name": "ganjeez",
+          "email": "clubrantra@gmail.com",
+          "date": "2026-09-15T10:10:05+05:30",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#11904@38ffbdc94e7e5e54afc1e551c7f3c640af603821"
+        },
+        "commit_authors": [
+          {
+            "name": "ganjeez",
+            "email": "clubrantra@gmail.com",
+            "date": "2026-09-15T10:10:05+05:30",
+            "github_login": null,
+            "identity_source": "omacom/omarchy#11904@38ffbdc94e7e5e54afc1e551c7f3c640af603821"
+          }
+        ],
+        "co_authored_by": [],
+        "code_and_tests_unchanged": true
       },
       "remote_pushed": false,
       "pr_created": false

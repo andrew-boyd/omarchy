@@ -43,5 +43,7 @@
     "test/shell.d/omarchy-kernel-migration-test.sh",
     "test/shell.d/plymouth-set-test.sh"
   ],
-  "original_log_sha256": "0223075d33dcfbb9b3265dcb0c86ddbccc8fe5eed251bf9e58cba18d523a8d35"
+  "original_log_sha256": "0223075d33dcfbb9b3265dcb0c86ddbccc8fe5eed251bf9e58cba18d523a8d35",
+  "reused_for_commit": "fe0928850d125db300d8a91ffa4809d5ef0558ce",
+  "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
 }

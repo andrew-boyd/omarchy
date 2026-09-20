@@ -36,11 +36,12 @@ These are recommendations for original authors and maintainers. No original PR i
 ## Validation and provenance
 
 - Base: `omacom/omarchy-pkgs:master` at `bda2a070f4641fd44e5d02bd9cbf7da3fce4e345`.
-- Prepared commit: `30fd083f692e64c91571f3d710aa8b0f45b6daf4`; tree: `b2d0b11b41597343c84dad16a3750ccc48a77bc4`.
+- Prepared commit: `ac72542958800b9f36910c8c721cd260a7f1e80e`; tree: `b2d0b11b41597343c84dad16a3750ccc48a77bc4`.
 - [Exact patch](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/patches/P12-packages.patch), SHA-256 `0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363`. The candidate tree matches the already-reviewed consolidation; publication preparation changes no implementation.
 - Available package CI self-tests: **10/10 command groups passed**, including the workflow-approval tests; changed recipe syntax/JSON checks recorded. These ran on this actual tree in a disconnected disposable filesystem.
 - Unrun: publish-artifact fixture (`rclone` unavailable), Docker build-isolation job, remote build-pr approval and fresh signed target-kernel delivery. The local subset does not equal passing upstream CI.
 - [Check logs and receipts](https://github.com/andrew-boyd/omarchy/tree/intel-mac/review-index/checks) and [focused evidence / hardware checklist](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/evidence/P12/README.md). Observations reproducing defects are not successful hardware behavior. No real module load, firmware write, suspend or host configuration change occurred.
+- Tests ran at `30fd083f692e64c91571f3d710aa8b0f45b6daf4`. Results are reused for this identical tree after an authorship-only metadata correction; no new code or test result is implied.
 
 ## Known gaps and follow-up work
 
@@ -54,6 +55,8 @@ Hardware reports should include the exact commit, model, relevant device/codec I
 
 ## Attribution
 
-Original authors and the treatment of their work are listed above. Jev supplied advisory classification; agent work compared sources, consolidated compatible existing contributions, reconciled target collisions and recorded checks. Software observations do not establish hardware support.
+The source table names PR authors. The prepared commit uses **Andrew Boyd** as Git Author. Source-declared co-author trailers are retained too. Andrew Boyd is the consolidating committer; this does not imply source-author approval or sign-off. See [verified commit attribution](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/AUTHORSHIP.md).
+
+Jev supplied advisory classification; agent work compared sources, consolidated compatible existing contributions, reconciled target collisions and recorded checks. Software observations do not establish hardware support.
 
 The existing released T1Bridge sources and recipes are by Standard Agents / Andrew Boyd and their upstream contributors. Original MIT/GPL/LGPL notices and fingerprint patches are preserved. The [released setup/removal documents](https://github.com/andrew-boyd/omarchy/tree/intel-mac/review-index/evidence/P12/released-docs) and pinned public source archives accompany the evidence.

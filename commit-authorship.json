@@ -1,0 +1,2466 @@
+{
+  "corrected_at": "2026-09-20T19:17:35.142229+00:00",
+  "policy": "Preserve a contributing source author as Git Author; credit other included commit authors with Co-authored-by, and retain original source-declared co-author trailers. The coordinator remains Committer. PR openers, merge-only identities, excluded alternatives and transitive dependency authors are not substituted for actual contributing authors.",
+  "github_profile_limit": "Original identities are preserved, including unlinked identities. GitHub profile/contribution attribution depends on email association and the eventual merge strategy; no email is invented or replaced with a guessed noreply address.",
+  "source_commits_reused_unchanged": false,
+  "candidate_trees_unchanged": true,
+  "test_results_reused_by_identical_tree": true,
+  "remote_writes": 0,
+  "entries": [
+    {
+      "id": "P01",
+      "previous_commit": "65b280d9e2a8789c36a152bbb5d1a033588971e6",
+      "commit": "6cdb1f52e0f96dde74f5805ac9bbb5ba5547c394",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "c2bd98b8f0a904094b023973f1523bacc081b972",
+      "author": {
+        "name": "Roman Elizarov",
+        "email": "elizarov.rr@gmail.com",
+        "date": "2026-09-18T04:44:23+03:00",
+        "github_login": "notabene00",
+        "identity_source": "omacom/omarchy#12350@c23ff7f397dc2ba6684246046d92f99664c11c7e"
+      },
+      "commit_authors": [
+        {
+          "name": "Roman Elizarov",
+          "email": "elizarov.rr@gmail.com",
+          "date": "2026-09-18T04:44:23+03:00",
+          "github_login": "notabene00",
+          "identity_source": "omacom/omarchy#12350@c23ff7f397dc2ba6684246046d92f99664c11c7e"
+        },
+        {
+          "name": "adityagarud",
+          "email": "garudaditya079@gmail.com",
+          "date": "2026-08-13T20:42:25Z",
+          "github_login": "yashranaway",
+          "identity_source": "omacom/omarchy#6834@f179938c35e4d4fdf3374361a936c1f55466559a"
+        }
+      ],
+      "co_authored_by": [
+        "adityagarud <garudaditya079@gmail.com>"
+      ],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#12350",
+          "url": "https://github.com/omacom/omarchy/pull/12350",
+          "sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+          "author": {
+            "name": "Roman Elizarov",
+            "email": "elizarov.rr@gmail.com",
+            "date": "2026-09-18T04:44:23+03:00"
+          },
+          "author_login": "notabene00",
+          "changed_files": [
+            "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+            "test/shell.d/keyboard-layout-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#6834",
+          "url": "https://github.com/omacom/omarchy/pull/6834",
+          "sha": "f179938c35e4d4fdf3374361a936c1f55466559a",
+          "author": {
+            "name": "adityagarud",
+            "email": "garudaditya079@gmail.com",
+            "date": "2026-08-13T20:42:25Z"
+          },
+          "author_login": "yashranaway",
+          "changed_files": [
+            "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+            "test/shell.d/keyboard-layout-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [
+        {
+          "source": "omacom/omarchy#6834",
+          "sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+          "reason": "Merge-only commit; original implementation authors are credited from their contributing commits."
+        }
+      ],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P02",
+      "previous_commit": "15f8b5970c1279950bc3335f474c2793189e82e0",
+      "commit": "d8acbbfbf39c27b7f238bd4867a0f9e6ad62f4fa",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "b14a53c4ceb7abbdab5569479fff1e4ecc04afdf",
+      "author": {
+        "name": "Oliver Oxenham",
+        "email": "oliver.oxenham@gmail.com",
+        "date": "2026-09-16T12:13:17+04:00",
+        "github_login": "oliverox",
+        "identity_source": "omacom/omarchy#12074@6d9986a1704f166ea3134e0ade2148f8291ce3d8"
+      },
+      "commit_authors": [
+        {
+          "name": "Oliver Oxenham",
+          "email": "oliver.oxenham@gmail.com",
+          "date": "2026-09-16T12:13:17+04:00",
+          "github_login": "oliverox",
+          "identity_source": "omacom/omarchy#12074@6d9986a1704f166ea3134e0ade2148f8291ce3d8"
+        }
+      ],
+      "co_authored_by": [
+        "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Claude Opus 5 (1M context)",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#12074",
+          "url": "https://github.com/omacom/omarchy/pull/12074",
+          "sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+          "author": {
+            "name": "Oliver Oxenham",
+            "email": "oliver.oxenham@gmail.com",
+            "date": "2026-09-16T12:13:17+04:00"
+          },
+          "author_login": "oliverox",
+          "changed_files": [
+            "migrations/1789546355.sh",
+            "test/shell.d/broadcom-wl-headers-migration-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Opus 5 (1M context)",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P03",
+      "previous_commit": "da27f6caa989360a0689ecde5433c075f51f2342",
+      "commit": "ad416ff12f1172641016de721feaecc320b1749b",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "39b3cd7469a720ca3f729c654885f5ae818b97ac",
+      "author": {
+        "name": "Taksh",
+        "email": "takshkothari09@gmail.com",
+        "date": "2026-09-08T16:48:36+05:30",
+        "github_login": "Chessing234",
+        "identity_source": "omacom/omarchy#12076@9b10b4bf0c1bcfdfe637d3bf67bebab48563d91e"
+      },
+      "commit_authors": [
+        {
+          "name": "Taksh",
+          "email": "takshkothari09@gmail.com",
+          "date": "2026-09-08T16:48:36+05:30",
+          "github_login": "Chessing234",
+          "identity_source": "omacom/omarchy#12076@9b10b4bf0c1bcfdfe637d3bf67bebab48563d91e"
+        }
+      ],
+      "co_authored_by": [],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "9b10b4bf0c1bcfdfe637d3bf67bebab48563d91e",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "bin/omarchy-hw-bcm43xx"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "d50f8551d10313fab1e86c76f29a86bf03fcb195",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "install/hardware/fix-bcm43xx.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "2c99d893e70b49bcbd5e6605bbc3f7718ceb199c",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "test/shell.d/hw-bcm43xx-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "afc6ea70d0390cc3531459fbf412536c920bb829",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "bin/omarchy-hw-t2"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "db282d84c090131588705768962529f74234b734",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "install/hardware/apple/fix-t2.sh",
+            "install/hardware/pacman.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "6e4eddb2047e03bf87836ed8598ccc58137121f8",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:36+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "test/shell.d/hw-t2-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "acf3eba533eaddf2a1ac1ec6b4b6d18e478105e6",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:23+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "install/hardware/vulkan.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "9aae71bc72ff205b8d67106257cfcf27b1da9ae0",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:24+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "test/shell.d/vulkan-sysfs-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "ff5424d68a87f8704029cebbd4fc1ac9c1c00cc2",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:23+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "install/hardware/nvidia.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12076",
+          "url": "https://github.com/omacom/omarchy/pull/12076",
+          "sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+          "author": {
+            "name": "Taksh",
+            "email": "takshkothari09@gmail.com",
+            "date": "2026-09-08T16:48:23+05:30"
+          },
+          "author_login": "Chessing234",
+          "changed_files": [
+            "test/shell.d/nvidia-hw-detect-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P04",
+      "previous_commit": "eb9d9c358cad7dc6ef00fb82278c39394f45c2cf",
+      "commit": "34adcf55c77e25510d25ccd4d6d7b15ec7e005ac",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "9bb1fb0cd95cb5ed565ae553343a21351dc0d4db",
+      "author": {
+        "name": "adityagarud",
+        "email": "garudaditya079@gmail.com",
+        "date": "2026-09-07T20:42:09Z",
+        "github_login": "yashranaway",
+        "identity_source": "omacom/omarchy#10713@a833373fa37f80347245f4d0cc7c4976b86e7f5e"
+      },
+      "commit_authors": [
+        {
+          "name": "adityagarud",
+          "email": "garudaditya079@gmail.com",
+          "date": "2026-09-07T20:42:09Z",
+          "github_login": "yashranaway",
+          "identity_source": "omacom/omarchy#10713@a833373fa37f80347245f4d0cc7c4976b86e7f5e"
+        }
+      ],
+      "co_authored_by": [],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#10713",
+          "url": "https://github.com/omacom/omarchy/pull/10713",
+          "sha": "a833373fa37f80347245f4d0cc7c4976b86e7f5e",
+          "author": {
+            "name": "adityagarud",
+            "email": "garudaditya079@gmail.com",
+            "date": "2026-09-07T20:42:09Z"
+          },
+          "author_login": "yashranaway",
+          "changed_files": [
+            "bin/omarchy-system-lid-close",
+            "test/shell.d/lid-close-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [
+        {
+          "source": "omacom/omarchy#10713",
+          "sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+          "reason": "Merge-only commit; original implementation authors are credited from their contributing commits."
+        }
+      ],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P05",
+      "previous_commit": "ebf2c823ddb26188edc15b2f3e6ff70b4044e21f",
+      "commit": "dbc2abab13c63f26266ef9420ab39c02f1134266",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "40a1c0dcac181830688141bdc956b54c013ea307",
+      "author": {
+        "name": "Piotr Synowiec",
+        "email": "piotr@synowiec.co",
+        "date": "2026-09-04T18:19:14+02:00",
+        "github_login": null,
+        "identity_source": "omacom/omarchy#10198@35f3354ed122decab94b0507d6c633b45cd9d0a0"
+      },
+      "commit_authors": [
+        {
+          "name": "Piotr Synowiec",
+          "email": "piotr@synowiec.co",
+          "date": "2026-09-04T18:19:14+02:00",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#10198@35f3354ed122decab94b0507d6c633b45cd9d0a0"
+        },
+        {
+          "name": "Vincent Ritter",
+          "email": "git@vincentritter.com",
+          "date": "2026-09-16T09:35:22+02:00",
+          "github_login": "vincentritter",
+          "identity_source": "omacom/omarchy#12072@1c5764a206145647d34567da97e99846fdbc567c"
+        }
+      ],
+      "co_authored_by": [
+        "Vincent Ritter <git@vincentritter.com>"
+      ],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#10198",
+          "url": "https://github.com/omacom/omarchy/pull/10198",
+          "sha": "35f3354ed122decab94b0507d6c633b45cd9d0a0",
+          "author": {
+            "name": "Piotr Synowiec",
+            "email": "piotr@synowiec.co",
+            "date": "2026-09-04T18:19:14+02:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "bin/omarchy-hyprland-monitor-disable-ghosts",
+            "bin/omarchy-hyprland-monitor-watch",
+            "test/shell.d/monitor-modeless-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12072",
+          "url": "https://github.com/omacom/omarchy/pull/12072",
+          "sha": "1c5764a206145647d34567da97e99846fdbc567c",
+          "author": {
+            "name": "Vincent Ritter",
+            "email": "git@vincentritter.com",
+            "date": "2026-09-16T09:35:22+02:00"
+          },
+          "author_login": "vincentritter",
+          "changed_files": [
+            "bin/omarchy-monitor-state",
+            "shell/plugins/panels/monitor/Model.js",
+            "test/shell.d/monitor-state-test.sh",
+            "test/shell.d/monitor-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12072",
+          "url": "https://github.com/omacom/omarchy/pull/12072",
+          "sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+          "author": {
+            "name": "Vincent Ritter",
+            "email": "git@vincentritter.com",
+            "date": "2026-09-16T12:25:59+02:00"
+          },
+          "author_login": "vincentritter",
+          "changed_files": [
+            "test/shell.d/monitor-state-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [
+        {
+          "name": "Piotr Synowiec",
+          "email": "piotr@synowiec.co",
+          "date": "2026-09-04T18:19:14+02:00",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#10198@35f3354ed122decab94b0507d6c633b45cd9d0a0"
+        }
+      ],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P06",
+      "previous_commit": "b569a71fce64d8f9522d8293f3c168274608b1b1",
+      "commit": "fe0928850d125db300d8a91ffa4809d5ef0558ce",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "89aa14f27a6d6ba7f95c422507db6594dc61a443",
+      "author": {
+        "name": "Josh Hudson",
+        "email": "313875020+hudsonwa@users.noreply.github.com",
+        "date": "2026-09-03T03:30:26+08:00",
+        "github_login": "hudsonwa",
+        "identity_source": "omacom/omarchy#9880@fb6cc648f382171388f374c0d364cc037cdfa076"
+      },
+      "commit_authors": [
+        {
+          "name": "Josh Hudson",
+          "email": "313875020+hudsonwa@users.noreply.github.com",
+          "date": "2026-09-03T03:30:26+08:00",
+          "github_login": "hudsonwa",
+          "identity_source": "omacom/omarchy#9880@fb6cc648f382171388f374c0d364cc037cdfa076"
+        },
+        {
+          "name": "omarchybot",
+          "email": "omarchybot@users.noreply.github.com",
+          "date": "2026-09-03T05:26:44-07:00",
+          "github_login": "omarchybot",
+          "identity_source": "omacom/omarchy#9880@9605c7a134aab0f27ebcfc55b4782d185cdfe09d"
+        }
+      ],
+      "co_authored_by": [
+        "omarchybot <omarchybot@users.noreply.github.com>",
+        "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Claude Opus 5 (1M context)",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#9880",
+          "url": "https://github.com/omacom/omarchy/pull/9880",
+          "sha": "fb6cc648f382171388f374c0d364cc037cdfa076",
+          "author": {
+            "name": "Josh Hudson",
+            "email": "313875020+hudsonwa@users.noreply.github.com",
+            "date": "2026-09-03T03:30:26+08:00"
+          },
+          "author_login": "hudsonwa",
+          "changed_files": [
+            "install/hardware/apple/fix-spi-keyboard.sh",
+            "test/shell.d/spi-keyboard-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#9880",
+          "url": "https://github.com/omacom/omarchy/pull/9880",
+          "sha": "9605c7a134aab0f27ebcfc55b4782d185cdfe09d",
+          "author": {
+            "name": "omarchybot",
+            "email": "omarchybot@users.noreply.github.com",
+            "date": "2026-09-03T05:26:44-07:00"
+          },
+          "author_login": "omarchybot",
+          "changed_files": [
+            "install/omarchy-other.packages",
+            "test/shell.d/spi-keyboard-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Opus 5 (1M context)",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy#9880",
+          "url": "https://github.com/omacom/omarchy/pull/9880",
+          "sha": "2d49be5e65c514f029ba3a99b8ebaf9ec5da0147",
+          "author": {
+            "name": "Josh Hudson",
+            "email": "313875020+hudsonwa@users.noreply.github.com",
+            "date": "2026-09-03T23:34:43+08:00"
+          },
+          "author_login": "hudsonwa",
+          "changed_files": [
+            "migrations/1788476400.sh",
+            "test/shell.d/spi-keyboard-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P07",
+      "previous_commit": "0df69f595201dda4666138a86387edb5df9fee62",
+      "commit": "14f9a8fc232f55bc4798795a7b0962f3e0364752",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "73a922cb3040d54a999b0b92784b2f27c330992b",
+      "author": {
+        "name": "jeissonneira",
+        "email": "12259586+jeissonneira@users.noreply.github.com",
+        "date": "2026-09-01T22:23:38-05:00",
+        "github_login": "jeissonneira",
+        "identity_source": "omacom/omarchy#9735@abba2c44f500717fe1e28f9efd7e3873c94c9b73"
+      },
+      "commit_authors": [
+        {
+          "name": "jeissonneira",
+          "email": "12259586+jeissonneira@users.noreply.github.com",
+          "date": "2026-09-01T22:23:38-05:00",
+          "github_login": "jeissonneira",
+          "identity_source": "omacom/omarchy#9735@abba2c44f500717fe1e28f9efd7e3873c94c9b73"
+        }
+      ],
+      "co_authored_by": [],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#9735",
+          "url": "https://github.com/omacom/omarchy/pull/9735",
+          "sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+          "author": {
+            "name": "jeissonneira",
+            "email": "12259586+jeissonneira@users.noreply.github.com",
+            "date": "2026-09-01T22:23:38-05:00"
+          },
+          "author_login": "jeissonneira",
+          "changed_files": [
+            "install/hardware/apple/fix-spi-keyboard.sh",
+            "manual/44-mac-support.md",
+            "migrations/1788318101.sh",
+            "test/shell.d/macbook81-spi-pio-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P08",
+      "previous_commit": "bb6f4169876b4913fae1d938739433cd2dd45a5d",
+      "commit": "68d5af69a2126af5856445ba9916772f7b0f9f33",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "a7a0397158301b3ce1ae684f88cd078fd40c563a",
+      "author": {
+        "name": "Bradley Marks",
+        "email": "bazzieb@gmail.com",
+        "date": "2026-09-16T09:10:41+02:00",
+        "github_login": "MrBazzieB",
+        "identity_source": "omacom/omarchy#12067@8bb9e8e663e5decc4bae299f8ba0177adb3fe256"
+      },
+      "commit_authors": [
+        {
+          "name": "Bradley Marks",
+          "email": "bazzieb@gmail.com",
+          "date": "2026-09-16T09:10:41+02:00",
+          "github_login": "MrBazzieB",
+          "identity_source": "omacom/omarchy#12067@8bb9e8e663e5decc4bae299f8ba0177adb3fe256"
+        },
+        {
+          "name": "rand0mdud3",
+          "email": "rand0mdud31@gmail.com",
+          "date": "2026-09-11T15:26:31-07:00",
+          "github_login": "rand0mdud3",
+          "identity_source": "omacom/omarchy#11381@24760fca3dc9a78ad00c12fadd89c413d937f91b"
+        }
+      ],
+      "co_authored_by": [
+        "rand0mdud3 <rand0mdud31@gmail.com>"
+      ],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#12067",
+          "url": "https://github.com/omacom/omarchy/pull/12067",
+          "sha": "8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+          "author": {
+            "name": "Bradley Marks",
+            "email": "bazzieb@gmail.com",
+            "date": "2026-09-16T09:10:41+02:00"
+          },
+          "author_login": "MrBazzieB",
+          "changed_files": [
+            "bin/omarchy-hw-facetimehd",
+            "install/hardware/all.sh",
+            "install/hardware/apple/fix-facetimehd.sh",
+            "install/omarchy-other.packages",
+            "manual/44-mac-support.md",
+            "migrations/1789542390.sh",
+            "test/shell.d/facetimehd-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#11381",
+          "url": "https://github.com/omacom/omarchy/pull/11381",
+          "sha": "24760fca3dc9a78ad00c12fadd89c413d937f91b",
+          "author": {
+            "name": "rand0mdud3",
+            "email": "rand0mdud31@gmail.com",
+            "date": "2026-09-11T15:26:31-07:00"
+          },
+          "author_login": "rand0mdud3",
+          "changed_files": [
+            "install/hardware/all.sh",
+            "install/hardware/apple/fix-facetimehd.sh",
+            "migrations/1789743826.sh",
+            "test/shell.d/apple-facetimehd-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P08-packages",
+      "previous_commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
+      "commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
+      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "tree_sha": "1e67c884154c830dac79418e81aa028351b5a4ca",
+      "author": {
+        "name": "xiota",
+        "email": "aur@mentalfossa.com",
+        "date": "2026-09-18T00:56:35Z",
+        "github_login": null,
+        "identity_source": "https://aur.archlinux.org/facetimehd-dkms.git@ca34f817216017b9d51e3bde6f7c5af281766a35"
+      },
+      "commit_authors": [
+        {
+          "name": "xiota",
+          "email": "aur@mentalfossa.com",
+          "date": "2026-09-18T00:56:35Z",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-dkms.git@ca34f817216017b9d51e3bde6f7c5af281766a35"
+        },
+        {
+          "name": "Harrison",
+          "email": "contact@htv04.com",
+          "date": "2024-07-07T22:48:35-04:00",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-data.git@4a3276adda43939bffaf0168d272760336a1230f"
+        },
+        {
+          "name": "Hugo Osvaldo Barrera",
+          "email": "hugo@barrera.io",
+          "date": "2017-05-24T16:43:38-03:00",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-firmware.git@7b9e6c71c6229a88ce1908e5d5692045a095a6da"
+        }
+      ],
+      "co_authored_by": [
+        "Harrison <contact@htv04.com>",
+        "Hugo Osvaldo Barrera <hugo@barrera.io>"
+      ],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "sha": "ca34f817216017b9d51e3bde6f7c5af281766a35",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2026-09-18T00:56:35Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 2,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-data.git",
+          "url": "https://aur.archlinux.org/facetimehd-data.git",
+          "sha": "33e352319b802718579ddc3781a327dd130ff6fc",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2025-04-17T01:18:30Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 11,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-data.git",
+          "url": "https://aur.archlinux.org/facetimehd-data.git",
+          "sha": "4a3276adda43939bffaf0168d272760336a1230f",
+          "author": {
+            "name": "Harrison",
+            "email": "contact@htv04.com",
+            "date": "2024-07-07T22:48:35-04:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 1,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-data.git",
+          "url": "https://aur.archlinux.org/facetimehd-data.git",
+          "sha": "8283bb66aa67ce0cf6a1f138f8d82d356eaab146",
+          "author": {
+            "name": "Harrison",
+            "email": "contact@htv04.com",
+            "date": "2024-07-07T22:11:40-04:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 15,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-data.git",
+          "url": "https://aur.archlinux.org/facetimehd-data.git",
+          "sha": "b8cba31544c4d56e69aaa2e49f71e3c153e7581d",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2025-04-17T01:30:42Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 1,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "sha": "36f65a01f98a76884bbe6e31128edcbe68966464",
+          "author": {
+            "name": "Harrison",
+            "email": "contact@htv04.com",
+            "date": "2024-07-07T22:29:28-04:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 8,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "sha": "50b7e0d861caba13b8f60b370f01bb017944d1f6",
+          "author": {
+            "name": "Harrison",
+            "email": "contact@htv04.com",
+            "date": "2024-07-07T22:55:55-04:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 1,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "sha": "5d31c3a87f6e16aa0f38a681d062e6dfeea922f7",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2025-04-17T01:07:35Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 14,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "url": "https://aur.archlinux.org/facetimehd-dkms.git",
+          "sha": "6e27c65ed584abc30890730b0d04e71dcdc48919",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2026-05-07T16:40:44Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 3,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "url": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "sha": "1568c93b84d9e2f25d523fe8d9f29475f118dc3d",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2025-04-18T06:43:37Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 31,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "url": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "sha": "3cf07f097e9666511118d61d13f04071f95e927a",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2025-06-09T16:00:19Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 3,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "url": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "sha": "7b9e6c71c6229a88ce1908e5d5692045a095a6da",
+          "author": {
+            "name": "Hugo Osvaldo Barrera",
+            "email": "hugo@barrera.io",
+            "date": "2017-05-24T16:43:38-03:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 3,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "url": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "sha": "a8be5c17fb7745be01563c75a9dcaa8a823bc49c",
+          "author": {
+            "name": "Harrison",
+            "email": "contact@htv04.com",
+            "date": "2024-07-09T22:49:35-04:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 2,
+          "declared_coauthors": []
+        },
+        {
+          "source": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "url": "https://aur.archlinux.org/facetimehd-firmware.git",
+          "sha": "e860659e229d329f887671ffa4eda6eee9cedd96",
+          "author": {
+            "name": "xiota",
+            "email": "aur@mentalfossa.com",
+            "date": "2025-04-17T00:51:14Z"
+          },
+          "author_login": null,
+          "changed_files": [
+            "PKGBUILD"
+          ],
+          "retained_noncomment_lines": 6,
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [
+        {
+          "name": "xiota",
+          "email": "aur@mentalfossa.com",
+          "date": "2026-09-18T00:56:35Z",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-dkms.git@ca34f817216017b9d51e3bde6f7c5af281766a35"
+        },
+        {
+          "name": "Harrison",
+          "email": "contact@htv04.com",
+          "date": "2024-07-07T22:48:35-04:00",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-data.git@4a3276adda43939bffaf0168d272760336a1230f"
+        },
+        {
+          "name": "Hugo Osvaldo Barrera",
+          "email": "hugo@barrera.io",
+          "date": "2017-05-24T16:43:38-03:00",
+          "github_login": null,
+          "identity_source": "https://aur.archlinux.org/facetimehd-firmware.git@7b9e6c71c6229a88ce1908e5d5692045a095a6da"
+        }
+      ],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P09",
+      "previous_commit": "83242e08651c458ae2e87a0f8d146ca459f74af5",
+      "commit": "55c22ce34ac42f91e95f78633465096d4aebd8c0",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "6343d43b395da10f887f755382af6d6c362a5f2d",
+      "author": {
+        "name": "Nicolas Nistal",
+        "email": "nistal.nicolas@gmail.com",
+        "date": "2026-09-13T00:44:42-04:00",
+        "github_login": "niconistal",
+        "identity_source": "omacom/omarchy#11624@e9ee03c9ab10c3c64c44518a030a09abe2c2a73d"
+      },
+      "commit_authors": [
+        {
+          "name": "Nicolas Nistal",
+          "email": "nistal.nicolas@gmail.com",
+          "date": "2026-09-13T00:44:42-04:00",
+          "github_login": "niconistal",
+          "identity_source": "omacom/omarchy#11624@e9ee03c9ab10c3c64c44518a030a09abe2c2a73d"
+        }
+      ],
+      "co_authored_by": [
+        "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Claude Opus 5 (1M context)",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#11624",
+          "url": "https://github.com/omacom/omarchy/pull/11624",
+          "sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+          "author": {
+            "name": "Nicolas Nistal",
+            "email": "nistal.nicolas@gmail.com",
+            "date": "2026-09-13T00:44:42-04:00"
+          },
+          "author_login": "niconistal",
+          "changed_files": [
+            "install/hardware/apple/fix-suspend-nvme.sh",
+            "migrations/1789274148.sh",
+            "test/shell.d/apple-suspend-nvme-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Opus 5 (1M context)",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P10",
+      "previous_commit": "c85a3e400a950e2867b0069aeb9a6eacdda2fa15",
+      "commit": "740945dc13a101597ba361f62ec4b6e5e2e4168c",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "aa0e2108412410f11a0077878769c42533b08d48",
+      "author": {
+        "name": "Justin Schroeder",
+        "email": "justin@formkit.com",
+        "date": "2026-09-09T10:36:13-04:00",
+        "github_login": "justin-schroeder",
+        "identity_source": "omacom/omarchy#11017@a49800201b8d99aa55062338d29cceada694acc2"
+      },
+      "commit_authors": [
+        {
+          "name": "Justin Schroeder",
+          "email": "justin@formkit.com",
+          "date": "2026-09-09T10:36:13-04:00",
+          "github_login": "justin-schroeder",
+          "identity_source": "omacom/omarchy#11017@a49800201b8d99aa55062338d29cceada694acc2"
+        },
+        {
+          "name": "Shawn Yeager",
+          "email": "shawn@shawnyeager.com",
+          "date": "2026-08-21T06:49:34-05:00",
+          "github_login": "shawnyeager",
+          "identity_source": "omacom/omarchy#7671@500d26c914843154cf0afde4c5c6560906f279de"
+        },
+        {
+          "name": "Omabot",
+          "email": "omabot@omarchy.org",
+          "date": "2026-08-22T05:30:09-07:00",
+          "github_login": "omarchybot",
+          "identity_source": "omacom/omarchy#7671@f81f4d524de2b890a4a1f93c3b55a2c6ab9fdb67"
+        },
+        {
+          "name": "Matteo Murgida",
+          "email": "teomurgi@gmail.com",
+          "date": "2026-09-17T20:44:10+02:00",
+          "github_login": "teomurgi",
+          "identity_source": "omacom/omarchy#12314@84e001d85936f8f15b5a65bd41f90e4f8ca29984"
+        }
+      ],
+      "co_authored_by": [
+        "Shawn Yeager <shawn@shawnyeager.com>",
+        "Omabot <omabot@omarchy.org>",
+        "Matteo Murgida <teomurgi@gmail.com>",
+        "Claude Opus 5 (1M context) <noreply@anthropic.com>",
+        "Codex XHigh <noreply@openai.com>",
+        "Claude Fable 5.1 <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Claude Opus 5 (1M context)",
+          "email": "noreply@anthropic.com"
+        },
+        {
+          "name": "Codex XHigh",
+          "email": "noreply@openai.com"
+        },
+        {
+          "name": "Claude Fable 5.1",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#11017",
+          "url": "https://github.com/omacom/omarchy/pull/11017",
+          "sha": "a49800201b8d99aa55062338d29cceada694acc2",
+          "author": {
+            "name": "Justin Schroeder",
+            "email": "justin@formkit.com",
+            "date": "2026-09-09T10:36:13-04:00"
+          },
+          "author_login": "justin-schroeder",
+          "changed_files": [
+            "install/hardware/all.sh",
+            "install/hardware/apple/fix-bcm43602-nvram.sh",
+            "test/shell.d/apple-bcm43602-nvram-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "500d26c914843154cf0afde4c5c6560906f279de",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-21T06:49:34-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "install/hardware/all.sh",
+            "install/hardware/apple/brcmfmac-43602.sh",
+            "install/hardware/apple/brcmfmac43602-pcie.txt",
+            "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+            "manual/44-mac-support.md",
+            "migrations/1787312531.sh",
+            "test/shell.d/brcmfmac-5ghz-test.sh",
+            "test/shell.d/unowned-system-paths-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "53796d773f5a34a1f94712e61749c91554b2b06f",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-21T09:09:18-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "default/firmware/apple/brcmfmac43602-pcie.txt",
+            "install/hardware/apple/brcmfmac-43602.sh",
+            "install/hardware/apple/brcmfmac43602-pcie.txt",
+            "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+            "manual/44-mac-support.md",
+            "migrations/1787312531.sh",
+            "test/shell.d/brcmfmac-5ghz-test.sh",
+            "test/shell.d/unowned-system-paths-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "f81f4d524de2b890a4a1f93c3b55a2c6ab9fdb67",
+          "author": {
+            "name": "Omabot",
+            "email": "omabot@omarchy.org",
+            "date": "2026-08-22T05:30:09-07:00"
+          },
+          "author_login": "omarchybot",
+          "changed_files": [
+            "install/hardware/apple/brcmfmac-43602.sh",
+            "test/shell.d/brcmfmac-5ghz-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Opus 5 (1M context)",
+              "email": "noreply@anthropic.com"
+            },
+            {
+              "name": "Codex XHigh",
+              "email": "noreply@openai.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "21b1f9222a955520f727c196cbb82ce019d945fd",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-09-03T09:16:30-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "install/hardware/apple/brcmfmac-43602.sh",
+            "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+            "migrations/1787312531.sh",
+            "test/shell.d/brcmfmac-5ghz-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Fable 5.1",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "ffda5d49e045dc5bb87641494eb015d015190e42",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-09-05T15:39:35-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "default/firmware/apple/brcmfmac43602-pcie.txt",
+            "install/hardware/apple/brcmfmac-43602.sh",
+            "test/shell.d/brcmfmac-5ghz-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "c0fea4e972d0b563883e78ca9ccc368616b89f0b",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-09-06T09:15:04-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "default/firmware/apple/brcmfmac43602-pcie.txt",
+            "install/hardware/apple/brcmfmac-43602.sh",
+            "test/shell.d/brcmfmac-5ghz-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#7671",
+          "url": "https://github.com/omacom/omarchy/pull/7671",
+          "sha": "d5493deb522c8288b4bad2566d195b57f655cfe5",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-09-14T18:19:34-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "test/shell.d/brcmfmac-5ghz-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#12314",
+          "url": "https://github.com/omacom/omarchy/pull/12314",
+          "sha": "84e001d85936f8f15b5a65bd41f90e4f8ca29984",
+          "author": {
+            "name": "Matteo Murgida",
+            "email": "teomurgi@gmail.com",
+            "date": "2026-09-17T20:44:10+02:00"
+          },
+          "author_login": "teomurgi",
+          "changed_files": [
+            "default/systemd/system-sleep/rebind-brcmfmac",
+            "docs/file-layout.md",
+            "install/hardware/all.sh",
+            "install/hardware/apple/fix-brcmfmac-suspend.sh",
+            "migrations/1789668939.sh",
+            "test/shell.d/brcmfmac-suspend-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P11",
+      "previous_commit": "4e86dc06dcd3c6e6394729ed390b0732e72c4da0",
+      "commit": "b19fe49bd33075c07aa577d1ac5efee2dcf0d3eb",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "63781ec6f95afc68d6c9f2c3d9b1951144f9ea2a",
+      "author": {
+        "name": "Shawn Yeager",
+        "email": "shawn@shawnyeager.com",
+        "date": "2026-08-16T09:04:56-05:00",
+        "github_login": "shawnyeager",
+        "identity_source": "omacom/omarchy#9516@ff83da9a8ef60687d5bdc29c6d4195a76d84b848"
+      },
+      "commit_authors": [
+        {
+          "name": "Shawn Yeager",
+          "email": "shawn@shawnyeager.com",
+          "date": "2026-08-16T09:04:56-05:00",
+          "github_login": "shawnyeager",
+          "identity_source": "omacom/omarchy#9516@ff83da9a8ef60687d5bdc29c6d4195a76d84b848"
+        },
+        {
+          "name": "J7",
+          "email": "31825378+j7j7@users.noreply.github.com",
+          "date": "2026-09-01T08:30:53+08:00",
+          "github_login": "j7j7",
+          "identity_source": "omacom/omarchy#9516@db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72"
+        },
+        {
+          "name": "S-M Robinson",
+          "email": "seanmichael@hey.com",
+          "date": "2026-08-14T23:05:04-06:00",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#6921@316e1f0b97f4f8362473af69f76695cb75c7466d"
+        },
+        {
+          "name": "David Heinemeier Hansson",
+          "email": "david@hey.com",
+          "date": "2026-08-15T03:15:26-07:00",
+          "github_login": "dhh",
+          "identity_source": "omacom/omarchy#6921@0345c98a0c9f543cc40d0624d07faacb7a03bd13"
+        },
+        {
+          "name": "Jake Pillai",
+          "email": "jakepillai@me.com",
+          "date": "2026-08-16T00:45:27-07:00",
+          "github_login": "doctor",
+          "identity_source": "sunoxen-lab/omarchy#1@3fd681db4f692bf9eaa07d73c44954d91ba5e4b5"
+        },
+        {
+          "name": "inspiretelapps",
+          "email": "207020073+inspiretelapps@users.noreply.github.com",
+          "date": "2026-09-06T12:21:50+02:00",
+          "github_login": "inspiretelapps",
+          "identity_source": "omacom/omarchy#10458@5cf2638796937bfad1c3eb1aeec3c21a57d4154c"
+        }
+      ],
+      "co_authored_by": [
+        "J7 <31825378+j7j7@users.noreply.github.com>",
+        "S-M Robinson <seanmichael@hey.com>",
+        "David Heinemeier Hansson <david@hey.com>",
+        "Jake Pillai <jakepillai@me.com>",
+        "inspiretelapps <207020073+inspiretelapps@users.noreply.github.com>",
+        "Cursor <cursoragent@cursor.com>",
+        "Claude Opus 5 (1M context) <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Cursor",
+          "email": "cursoragent@cursor.com"
+        },
+        {
+          "name": "Claude Opus 5 (1M context)",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#9516",
+          "url": "https://github.com/omacom/omarchy/pull/9516",
+          "sha": "ff83da9a8ef60687d5bdc29c6d4195a76d84b848",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-16T09:04:56-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "bin/omarchy-hw-apple-cs8409",
+            "install/hardware/all.sh",
+            "install/hardware/apple/fix-cs8409-audio.sh",
+            "manual/44-mac-support.md",
+            "migrations/1786889011.sh",
+            "test/shell.d/cs8409-audio-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#9516",
+          "url": "https://github.com/omacom/omarchy/pull/9516",
+          "sha": "ad69a655b949e11eedc68be3d7be4d81d96941c6",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-16T09:32:55-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "test/shell.d/cs8409-audio-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#9516",
+          "url": "https://github.com/omacom/omarchy/pull/9516",
+          "sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+          "author": {
+            "name": "J7",
+            "email": "31825378+j7j7@users.noreply.github.com",
+            "date": "2026-09-01T08:30:53+08:00"
+          },
+          "author_login": "j7j7",
+          "changed_files": [
+            "bin/omarchy-hw-apple-cs8409",
+            "install/hardware/apple/fix-cs8409-audio.sh",
+            "manual/44-mac-support.md",
+            "migrations/1786889011.sh",
+            "test/shell.d/cs8409-audio-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Cursor",
+              "email": "cursoragent@cursor.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy#6921",
+          "url": "https://github.com/omacom/omarchy/pull/6921",
+          "sha": "316e1f0b97f4f8362473af69f76695cb75c7466d",
+          "author": {
+            "name": "S-M Robinson",
+            "email": "seanmichael@hey.com",
+            "date": "2026-08-14T23:05:04-06:00"
+          },
+          "author_login": null,
+          "changed_files": [
+            "install/hardware/all.sh",
+            "install/hardware/apple/fix-cs4208-audio.sh",
+            "install/omarchy-other.packages",
+            "manual/44-mac-support.md",
+            "migrations/1786719479.sh",
+            "test/shell.d/cs4208-audio-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#6921",
+          "url": "https://github.com/omacom/omarchy/pull/6921",
+          "sha": "0345c98a0c9f543cc40d0624d07faacb7a03bd13",
+          "author": {
+            "name": "David Heinemeier Hansson",
+            "email": "david@hey.com",
+            "date": "2026-08-15T03:15:26-07:00"
+          },
+          "author_login": "dhh",
+          "changed_files": [
+            "migrations/1786719479.sh",
+            "test/shell.d/cs4208-audio-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Opus 5 (1M context)",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy#6921",
+          "url": "https://github.com/omacom/omarchy/pull/6921",
+          "sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+          "author": {
+            "name": "David Heinemeier Hansson",
+            "email": "david@hey.com",
+            "date": "2026-08-15T03:15:32-07:00"
+          },
+          "author_login": "dhh",
+          "changed_files": [
+            "manual/44-mac-support.md"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Opus 5 (1M context)",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        },
+        {
+          "source": "sunoxen-lab/omarchy#1",
+          "url": "https://github.com/sunoxen-lab/omarchy/pull/1",
+          "sha": "3fd681db4f692bf9eaa07d73c44954d91ba5e4b5",
+          "author": {
+            "name": "Jake Pillai",
+            "email": "jakepillai@me.com",
+            "date": "2026-08-16T00:45:27-07:00"
+          },
+          "author_login": "doctor",
+          "changed_files": [
+            "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+            "install/hardware/apple/fix-cs4208-audio.sh",
+            "install/hardware/apple/omarchy-cs4208-audio.service",
+            "install/user/all.sh",
+            "install/user/hardware/apple/fix-cs4208-audio.sh",
+            "manual/44-mac-support.md",
+            "migrations/1786719479.sh",
+            "test/shell.d/cs4208-audio-test.sh"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "sunoxen-lab/omarchy#1",
+          "url": "https://github.com/sunoxen-lab/omarchy/pull/1",
+          "sha": "3f64870577fde948bb88468c28d8d4868a86da4e",
+          "author": {
+            "name": "Jake Hope",
+            "email": "jakepillai@me.com",
+            "date": "2026-08-18T17:27:22-07:00"
+          },
+          "author_login": "doctor",
+          "changed_files": [
+            "install/hardware/apple/omarchy-cs4208-audio.service",
+            "manual/44-mac-support.md"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "sunoxen-lab/omarchy#1",
+          "url": "https://github.com/sunoxen-lab/omarchy/pull/1",
+          "sha": "579cef09d0de94caf0d2ead147344483aed3f161",
+          "author": {
+            "name": "Jake Hope",
+            "email": "jakepillai@me.com",
+            "date": "2026-08-18T17:49:38-07:00"
+          },
+          "author_login": "doctor",
+          "changed_files": [
+            "install/hardware/apple/omarchy-cs4208-audio.service"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#10458",
+          "url": "https://github.com/omacom/omarchy/pull/10458",
+          "sha": "5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+          "author": {
+            "name": "inspiretelapps",
+            "email": "207020073+inspiretelapps@users.noreply.github.com",
+            "date": "2026-09-06T12:21:50+02:00"
+          },
+          "author_login": "inspiretelapps",
+          "changed_files": [
+            "bin/omarchy-hw-imac-cs4208",
+            "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+            "install/user/all.sh",
+            "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+            "manual/45-troubleshooting.md",
+            "migrations/1788673159.sh",
+            "test/shell.d/imac-cs4208-speakers-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [
+        {
+          "source": "sunoxen-lab/omarchy#1",
+          "sha": "3e0b9656de1780200a9611e6456ea5ee0537e309",
+          "reason": "Only the unselected CS4208 s2idle policy; the same author is credited for included audio work."
+        }
+      ],
+      "unlinked_source_identities": [
+        {
+          "name": "S-M Robinson",
+          "email": "seanmichael@hey.com",
+          "date": "2026-08-14T23:05:04-06:00",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#6921@316e1f0b97f4f8362473af69f76695cb75c7466d"
+        }
+      ],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P11-packages",
+      "previous_commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
+      "commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
+      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "tree_sha": "6d084ddd8be492d394135e050e046c1a5a98c39e",
+      "author": {
+        "name": "Shawn Yeager",
+        "email": "shawn@shawnyeager.com",
+        "date": "2026-08-16T09:04:56-05:00",
+        "github_login": "shawnyeager",
+        "identity_source": "omacom/omarchy-pkgs#249@9eb62fe146c8f40aa8f760195a8942758c2bac60"
+      },
+      "commit_authors": [
+        {
+          "name": "Shawn Yeager",
+          "email": "shawn@shawnyeager.com",
+          "date": "2026-08-16T09:04:56-05:00",
+          "github_login": "shawnyeager",
+          "identity_source": "omacom/omarchy-pkgs#249@9eb62fe146c8f40aa8f760195a8942758c2bac60"
+        },
+        {
+          "name": "J7",
+          "email": "31825378+j7j7@users.noreply.github.com",
+          "date": "2026-09-01T08:31:07+08:00",
+          "github_login": "j7j7",
+          "identity_source": "omacom/omarchy-pkgs#249@a346e20667fd163eed792f74d3523b34c5ff6df4"
+        },
+        {
+          "name": "Jake Pillai",
+          "email": "jakepillai@me.com",
+          "date": "2026-08-16T00:35:13-07:00",
+          "github_login": "doctor",
+          "identity_source": "omacom/omarchy-pkgs#153@d9715a74b6be571207c73b94e000750cecaad2b0"
+        }
+      ],
+      "co_authored_by": [
+        "J7 <31825378+j7j7@users.noreply.github.com>",
+        "Jake Pillai <jakepillai@me.com>",
+        "Cursor <cursoragent@cursor.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Cursor",
+          "email": "cursoragent@cursor.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy-pkgs#249",
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+          "sha": "9eb62fe146c8f40aa8f760195a8942758c2bac60",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-16T09:04:56-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+            "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy-pkgs#249",
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+          "sha": "58161534978f563a76c6c38fc7336b8a71d14519",
+          "author": {
+            "name": "Shawn Yeager",
+            "email": "shawn@shawnyeager.com",
+            "date": "2026-08-16T11:59:58-05:00"
+          },
+          "author_login": "shawnyeager",
+          "changed_files": [
+            "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy-pkgs#249",
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+          "sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+          "author": {
+            "name": "J7",
+            "email": "31825378+j7j7@users.noreply.github.com",
+            "date": "2026-09-01T08:31:07+08:00"
+          },
+          "author_login": "j7j7",
+          "changed_files": [
+            "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Cursor",
+              "email": "cursoragent@cursor.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy-pkgs#153",
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/153",
+          "sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+          "author": {
+            "name": "Jake Pillai",
+            "email": "jakepillai@me.com",
+            "date": "2026-08-16T00:35:13-07:00"
+          },
+          "author_login": "doctor",
+          "changed_files": [
+            "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+            "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+            "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf",
+            "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P12",
+      "previous_commit": "208e69e960ec5793167e09f908396acff6ecd6f0",
+      "commit": "a96006c888331549383f12ad9255a79ec2005c64",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "8d0ea0341f561c202638f6ee76b256de8d5ee34d",
+      "author": {
+        "name": "Nicolas Nistal",
+        "email": "nistal.nicolas@gmail.com",
+        "date": "2026-09-11T00:56:12-04:00",
+        "github_login": "niconistal",
+        "identity_source": "omacom/omarchy#11273@277ea6f6b4ad5555ddca88c8fec92098c684991a"
+      },
+      "commit_authors": [
+        {
+          "name": "Nicolas Nistal",
+          "email": "nistal.nicolas@gmail.com",
+          "date": "2026-09-11T00:56:12-04:00",
+          "github_login": "niconistal",
+          "identity_source": "omacom/omarchy#11273@277ea6f6b4ad5555ddca88c8fec92098c684991a"
+        },
+        {
+          "name": "Toni Bergholm",
+          "email": "toni.bergholm@iki.fi",
+          "date": "2026-09-15T17:59:50+03:00",
+          "github_login": "tonibergholm",
+          "identity_source": "omacom/omarchy#11952@6d88ae46fe0ac3d27ea2d66a0dfaea7fb066400b"
+        }
+      ],
+      "co_authored_by": [
+        "Toni Bergholm <toni.bergholm@iki.fi>",
+        "Claude Fable 5.1 <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Claude Fable 5.1",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#11273",
+          "url": "https://github.com/omacom/omarchy/pull/11273",
+          "sha": "277ea6f6b4ad5555ddca88c8fec92098c684991a",
+          "author": {
+            "name": "Nicolas Nistal",
+            "email": "nistal.nicolas@gmail.com",
+            "date": "2026-09-11T00:56:12-04:00"
+          },
+          "author_login": "niconistal",
+          "changed_files": [
+            "shell/plugins/lock/Service.qml",
+            "test/shell.d/lock-blank-fingerprint-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Fable 5.1",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        },
+        {
+          "source": "omacom/omarchy#11952",
+          "url": "https://github.com/omacom/omarchy/pull/11952",
+          "sha": "6d88ae46fe0ac3d27ea2d66a0dfaea7fb066400b",
+          "author": {
+            "name": "Toni Bergholm",
+            "email": "toni.bergholm@iki.fi",
+            "date": "2026-09-15T17:59:50+03:00"
+          },
+          "author_login": "tonibergholm",
+          "changed_files": [
+            "shell/plugins/lock/LockView.qml",
+            "shell/plugins/lock/Service.qml",
+            "shell/plugins/polkit/PolkitAgent.qml",
+            "test/shell.d/lock-fingerprint-message-test.sh"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P12-packages",
+      "previous_commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
+      "commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
+      "base_sha": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
+      "tree_sha": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
+      "author": {
+        "name": "Andrew Boyd",
+        "email": "andrew@formkit.com",
+        "date": "2026-09-06T13:53:10-04:00",
+        "github_login": "andrew-boyd",
+        "identity_source": "standardagents/t1bridge@031b5bf6b23515f252ec79e8e8bb7f41b52694f4"
+      },
+      "commit_authors": [
+        {
+          "name": "Andrew Boyd",
+          "email": "andrew@formkit.com",
+          "date": "2026-09-06T13:53:10-04:00",
+          "github_login": "andrew-boyd",
+          "identity_source": "standardagents/t1bridge@031b5bf6b23515f252ec79e8e8bb7f41b52694f4"
+        }
+      ],
+      "co_authored_by": [],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "031b5bf6b23515f252ec79e8e8bb7f41b52694f4",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-06T13:53:10-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "5b97cc119c3b6d3ab1389bac393b080463af35a71f1d3382dcde6adb7882e598",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "25a50534ddff1ebfd15ea76f72ad1cd12d9d5cc4",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-05T17:52:29-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "5b97cc119c3b6d3ab1389bac393b080463af35a71f1d3382dcde6adb7882e598",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "379f65310bc27059c923da0da6b86fa7a6e6d4f1",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-11T13:03:14-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "5b97cc119c3b6d3ab1389bac393b080463af35a71f1d3382dcde6adb7882e598",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "5b97cc119c3b6d3ab1389bac393b080463af35a71f1d3382dcde6adb7882e598",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "f148acda69934ce3bb2f13b820f776ad067fc1a5",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-09T13:30:28-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "5b97cc119c3b6d3ab1389bac393b080463af35a71f1d3382dcde6adb7882e598",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "031b5bf6b23515f252ec79e8e8bb7f41b52694f4",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-06T13:53:10-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge-dkms/PKGBUILD"
+          ],
+          "source_blob_sha256": "6fe71e5fe04dbfb9ba5e3ceaaea58dfa8c3d18fa8140159d8da85f2d28f6f7d9",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "25a50534ddff1ebfd15ea76f72ad1cd12d9d5cc4",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-05T17:52:29-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge-dkms/PKGBUILD"
+          ],
+          "source_blob_sha256": "6fe71e5fe04dbfb9ba5e3ceaaea58dfa8c3d18fa8140159d8da85f2d28f6f7d9",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "379f65310bc27059c923da0da6b86fa7a6e6d4f1",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-11T13:03:14-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge-dkms/PKGBUILD"
+          ],
+          "source_blob_sha256": "6fe71e5fe04dbfb9ba5e3ceaaea58dfa8c3d18fa8140159d8da85f2d28f6f7d9",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "ba16415c1e4526073f52d40b639c17f986b92649",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:45:28-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge-dkms/PKGBUILD"
+          ],
+          "source_blob_sha256": "6fe71e5fe04dbfb9ba5e3ceaaea58dfa8c3d18fa8140159d8da85f2d28f6f7d9",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/t1bridge-dkms/PKGBUILD"
+          ],
+          "source_blob_sha256": "6fe71e5fe04dbfb9ba5e3ceaaea58dfa8c3d18fa8140159d8da85f2d28f6f7d9",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge-omarchy",
+          "url": "https://github.com/standardagents/t1bridge-omarchy",
+          "sha": "1e5d99da49e38f4530e6e13baf5d7218ad691956",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-06T18:22:13-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/PKGBUILD"
+          ],
+          "source_blob_sha256": "02b98aa899d598052c844fd1d63e0d693e9eaf1c692a99ef4d31de866009defa",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge-omarchy",
+          "url": "https://github.com/standardagents/t1bridge-omarchy",
+          "sha": "45d2c25aa58d44f2ff8d4547e2766d41e1b2e6b6",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-11T13:00:28-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/PKGBUILD"
+          ],
+          "source_blob_sha256": "02b98aa899d598052c844fd1d63e0d693e9eaf1c692a99ef4d31de866009defa",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge-omarchy",
+          "url": "https://github.com/standardagents/t1bridge-omarchy",
+          "sha": "b4f82e398eef5530e617a3b6fdf2565a6fdc8cf3",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-11T09:57:49-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/PKGBUILD"
+          ],
+          "source_blob_sha256": "02b98aa899d598052c844fd1d63e0d693e9eaf1c692a99ef4d31de866009defa",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "57f42cc76b4484e5a8b214f9518e4df31d343840",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:57:52-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/0001-Add-T1Bridge-fingerprint-driver.patch"
+          ],
+          "source_blob_sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/0001-Add-T1Bridge-fingerprint-driver.patch"
+          ],
+          "source_blob_sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/0002-Use-relative-test-helper-path.patch"
+          ],
+          "source_blob_sha256": "43a10082d4909eb0ba161679537dae9ab23835f69f20d414c671251aae5424ed",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "25a50534ddff1ebfd15ea76f72ad1cd12d9d5cc4",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-05T17:52:29-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "012b08ca156de71ec93603990c811393748abeb4bba5c1434f7862a7b03b2b75",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "379f65310bc27059c923da0da6b86fa7a6e6d4f1",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-11T13:03:14-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "012b08ca156de71ec93603990c811393748abeb4bba5c1434f7862a7b03b2b75",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "57f42cc76b4484e5a8b214f9518e4df31d343840",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:57:52-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "012b08ca156de71ec93603990c811393748abeb4bba5c1434f7862a7b03b2b75",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/libfprint-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "012b08ca156de71ec93603990c811393748abeb4bba5c1434f7862a7b03b2b75",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "LICENSE"
+          ],
+          "source_blob_sha256": "a59f489b7cb0fb2df6b806e687e17a3f52df1d63c599a96d86eef895324f9bf1",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "57f42cc76b4484e5a8b214f9518e4df31d343840",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:57:52-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch"
+          ],
+          "source_blob_sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "ba16415c1e4526073f52d40b639c17f986b92649",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:45:28-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch"
+          ],
+          "source_blob_sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch"
+          ],
+          "source_blob_sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/0002-Fix-tests-for-current-GLib.patch"
+          ],
+          "source_blob_sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "cd6c189d76808a78b3c40969be1f96451a3f90dd",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-05T09:03:16-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/0002-Fix-tests-for-current-GLib.patch"
+          ],
+          "source_blob_sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "25a50534ddff1ebfd15ea76f72ad1cd12d9d5cc4",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-05T17:52:29-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "379f65310bc27059c923da0da6b86fa7a6e6d4f1",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-11T13:03:14-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "57f42cc76b4484e5a8b214f9518e4df31d343840",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:57:52-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "c1f28e7ca4ae4b6e8674d586f7180f9538b214e9",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-04T15:25:41-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+          "declared_coauthors": []
+        },
+        {
+          "source": "standardagents/t1bridge",
+          "url": "https://github.com/standardagents/t1bridge",
+          "sha": "cd6c189d76808a78b3c40969be1f96451a3f90dd",
+          "author": {
+            "name": "Andrew Boyd",
+            "email": "andrew@formkit.com",
+            "date": "2026-09-05T09:03:16-04:00"
+          },
+          "author_login": "andrew-boyd",
+          "changed_files": [
+            "packaging/arch/fprintd-t1bridge/PKGBUILD"
+          ],
+          "source_blob_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P13",
+      "previous_commit": "f2be26a2195c35205baed9159facf0a312ebb2ae",
+      "commit": "f25357ff42341c0760095bb1cae90f0b558222e0",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "932100df6584207c8a0de68877e8cdb2d44776be",
+      "author": {
+        "name": "Nipun H Sud",
+        "email": "nipunhsud@users.noreply.github.com",
+        "date": "2026-09-17T17:45:53-04:00",
+        "github_login": "nipunhsud",
+        "identity_source": "omacom/omarchy#12328@33f076aa9127c7d8cc5ccf36da6b61f2005f3b11"
+      },
+      "commit_authors": [
+        {
+          "name": "Nipun H Sud",
+          "email": "nipunhsud@users.noreply.github.com",
+          "date": "2026-09-17T17:45:53-04:00",
+          "github_login": "nipunhsud",
+          "identity_source": "omacom/omarchy#12328@33f076aa9127c7d8cc5ccf36da6b61f2005f3b11"
+        }
+      ],
+      "co_authored_by": [
+        "Claude Fable 5.1 <noreply@anthropic.com>"
+      ],
+      "source_declared_coauthors": [
+        {
+          "name": "Claude Fable 5.1",
+          "email": "noreply@anthropic.com"
+        }
+      ],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#12328",
+          "url": "https://github.com/omacom/omarchy/pull/12328",
+          "sha": "33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+          "author": {
+            "name": "Nipun H Sud",
+            "email": "nipunhsud@users.noreply.github.com",
+            "date": "2026-09-17T17:45:53-04:00"
+          },
+          "author_login": "nipunhsud",
+          "changed_files": [
+            "migrations/1789325478.sh",
+            "test/shell.d/omarchy-kernel-migration-test.sh"
+          ],
+          "declared_coauthors": [
+            {
+              "name": "Claude Fable 5.1",
+              "email": "noreply@anthropic.com"
+            }
+          ]
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    },
+    {
+      "id": "P14",
+      "previous_commit": "e5c74899188dc0244b4427ba5f807e1df7907556",
+      "commit": "027ceda817926af794e1ff605d1ea9bf67535ee0",
+      "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+      "tree_sha": "53c6198e3947aa9a24175e4ed0519ad3e9f64cf3",
+      "author": {
+        "name": "ganjeez",
+        "email": "clubrantra@gmail.com",
+        "date": "2026-09-15T10:10:05+05:30",
+        "github_login": null,
+        "identity_source": "omacom/omarchy#11904@38ffbdc94e7e5e54afc1e551c7f3c640af603821"
+      },
+      "commit_authors": [
+        {
+          "name": "ganjeez",
+          "email": "clubrantra@gmail.com",
+          "date": "2026-09-15T10:10:05+05:30",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#11904@38ffbdc94e7e5e54afc1e551c7f3c640af603821"
+        }
+      ],
+      "co_authored_by": [],
+      "source_declared_coauthors": [],
+      "included_source_commits": [
+        {
+          "source": "omacom/omarchy#11904",
+          "url": "https://github.com/omacom/omarchy/pull/11904",
+          "sha": "38ffbdc94e7e5e54afc1e551c7f3c640af603821",
+          "author": {
+            "name": "ganjeez",
+            "email": "clubrantra@gmail.com",
+            "date": "2026-09-15T10:10:05+05:30"
+          },
+          "author_login": null,
+          "changed_files": [
+            "bin/omarchy-diagnose-suspend-wake"
+          ],
+          "declared_coauthors": []
+        },
+        {
+          "source": "omacom/omarchy#11904",
+          "url": "https://github.com/omacom/omarchy/pull/11904",
+          "sha": "2f27ee35051e043f2dd46da0ce7c7e5450444fe3",
+          "author": {
+            "name": "ganjeez",
+            "email": "clubrantra@gmail.com",
+            "date": "2026-09-15T10:49:23+05:30"
+          },
+          "author_login": null,
+          "changed_files": [
+            "bin/omarchy-diagnose-suspend-wake"
+          ],
+          "declared_coauthors": []
+        }
+      ],
+      "omitted_commits": [],
+      "unlinked_source_identities": [
+        {
+          "name": "ganjeez",
+          "email": "clubrantra@gmail.com",
+          "date": "2026-09-15T10:10:05+05:30",
+          "github_login": null,
+          "identity_source": "omacom/omarchy#11904@38ffbdc94e7e5e54afc1e551c7f3c640af603821"
+        }
+      ],
+      "code_and_tests_unchanged": true,
+      "test_receipts_refer_to_previous_commit": true
+    }
+  ]
+}

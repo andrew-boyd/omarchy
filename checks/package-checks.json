@@ -127,7 +127,9 @@
       "build-isolation: prescribed Docker fixture image/daemon unavailable in this disconnected environment.",
       "build-pr: maintainer-controlled remote CI; no PR has been created.",
       "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
-    ]
+    ],
+    "reused_for_commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
+    "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
   },
   "P11-packages": {
     "id": "P11-packages",
@@ -249,7 +251,9 @@
       "build-isolation: prescribed Docker fixture image/daemon unavailable in this disconnected environment.",
       "build-pr: maintainer-controlled remote CI; no PR has been created.",
       "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
-    ]
+    ],
+    "reused_for_commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
+    "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
   },
   "P12-packages": {
     "id": "P12-packages",
@@ -395,6 +399,8 @@
       "build-isolation: prescribed Docker fixture image/daemon unavailable in this disconnected environment.",
       "build-pr: maintainer-controlled remote CI; no PR has been created.",
       "Fresh signed package builds and target-kernel hardware acceptance remain unverified."
-    ]
+    ],
+    "reused_for_commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
+    "reuse_reason": "Commit metadata corrected; exact tested tree and base unchanged."
   }
 }

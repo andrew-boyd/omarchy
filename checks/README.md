@@ -11,3 +11,5 @@ Graphical/device/tool/namespace skips are listed in each receipt. `assertions_pa
 The package candidates each pass ten available CI self-test command groups plus recorded syntax/metadata checks. The prescribed publish-artifact fixture needs unavailable rclone; Docker build-isolation and maintainer-controlled remote builds were not run. These local results do not satisfy the full upstream CI suite. Earlier package/DKMS receipts are qualified by their actual kernel, recipe and isolation limitations.
 
 Paths/usernames in public logs are redacted. Current receipts contain the staged log hash and preserve the original log hash separately. Historical receipt hashes are in `../evidence/receipt-index.json`.
+
+The authorship correction changes metadata only. Receipts retain their actual tested commit IDs; `reused_for_commit` identifies the corrected candidate with the same tree and base. See `../commit-authorship.json`. No new full-suite run is claimed for the corrected commit IDs.

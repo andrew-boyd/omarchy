@@ -24,11 +24,12 @@ These are recommendations for original authors and maintainers. No original PR i
 ## Validation and provenance
 
 - Base: `omacom/omarchy-pkgs:master` at `bda2a070f4641fd44e5d02bd9cbf7da3fce4e345`.
-- Prepared commit: `bfae880d88643e7b486fe4a1a44663e11a9f922a`; tree: `1e67c884154c830dac79418e81aa028351b5a4ca`.
+- Prepared commit: `9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6`; tree: `1e67c884154c830dac79418e81aa028351b5a4ca`.
 - [Exact patch](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/patches/P08-packages.patch), SHA-256 `ac24d299ba8e87d641b71ec57cd715b3dd33608d3eec07d431ac89dd67f0a354`. The candidate tree matches the already-reviewed consolidation; publication preparation changes no implementation.
 - Available package CI self-tests: **10/10 command groups passed**, including the workflow-approval tests; changed recipe syntax/JSON checks recorded. These ran on this actual tree in a disconnected disposable filesystem.
 - Unrun: publish-artifact fixture (`rclone` unavailable), Docker build-isolation job, remote build-pr approval and fresh signed target-kernel delivery. The local subset does not equal passing upstream CI.
 - [Check logs and receipts](https://github.com/andrew-boyd/omarchy/tree/intel-mac/review-index/checks) and [focused evidence / hardware checklist](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/evidence/P08/README.md). Observations reproducing defects are not successful hardware behavior. No real module load, firmware write, suspend or host configuration change occurred.
+- Tests ran at `bfae880d88643e7b486fe4a1a44663e11a9f922a`. Results are reused for this identical tree after an authorship-only metadata correction; no new code or test result is implied.
 
 ## Known gaps and follow-up work
 
@@ -40,6 +41,8 @@ Hardware reports should include the exact commit, model, relevant device/codec I
 
 ## Attribution
 
-Original authors and the treatment of their work are listed above. Jev supplied advisory classification; agent work compared sources, consolidated compatible existing contributions, reconciled target collisions and recorded checks. Software observations do not establish hardware support.
+The source table names PR authors. The prepared commit uses **xiota** as Git Author, with native co-author credit for **Harrison, Hugo Osvaldo Barrera**. Source-declared co-author trailers are retained too. Andrew Boyd is the consolidating committer; this does not imply source-author approval or sign-off. See [verified commit attribution](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/AUTHORSHIP.md).
+
+Jev supplied advisory classification; agent work compared sources, consolidated compatible existing contributions, reconciled target collisions and recorded checks. Software observations do not establish hardware support.
 
 Package provenance also credits the pinned AUR/upstream recipes, driver and firmware/data sources; see the P08 recipe/source receipts.

@@ -13,4 +13,6 @@ When publication is separately authorized:
 5. Record each returned PR URL and add the corresponding link to the series index and paired bodies. Branch/index links already identify the right targets; never guess PR numbers. Re-read published bodies to verify all source rows and companion relationships survived.
 6. Leave drafts open for review, hardware-owner contributions and maintainer-controlled CI. Preserve original failures, exclusions and author credit when updating a candidate. A future combined release branch is a separate integration task.
 
+Preserve original author and Co-authored-by metadata during any later squash/rebase. PR-body references alone do not provide commit credit. Tested old commits remain as audit objects in the portable bundles, not additional PR branches. AUTHORSHIP.md records exact identities and account-linkage limits.
+
 Portable local Git bundles are provided alongside the packet. Clone each full bundle, inspect its named branches, and verify the candidate tree/parent against the manifest. Keep full-suite failures, missing visual evidence and unavailable CI visible; local draft readiness is not permission to merge or install.
