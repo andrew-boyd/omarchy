@@ -1,0 +1,47 @@
+{
+  "recorded_at": "2026-09-20T19:30:01.150250+00:00",
+  "scope": "Local consolidation of existing 64-bit Intel Mac PRs; no new hardware fixes or remote publication.",
+  "hardware_validated": false,
+  "decisions": {
+    "P04": {
+      "status": "held_for_compatible_existing_contributions",
+      "user_choice": "Keep P04 held for compatible existing contributions (recommended)",
+      "direction": "Keep the full lid-handling group held for compatible existing contributions. Retain #10713 as a verified lid-lock component; do not narrow the group to that component. Preserve USB-display and debounce proposals for comparison.",
+      "conditions": [
+        "Connector identity, USB displays and debounce remain within the group scope.",
+        "The retained lid-lock patch is review material, not an accepted canonical test target for the full group.",
+        "No blanket USB exclusion or speculative debounce repair is adopted."
+      ]
+    },
+    "P06": {
+      "status": "accepted_dependent_local_test_target",
+      "user_choice": "Accept the dependent local test target (recommended)",
+      "direction": "Accept unchanged #9880 as a dependent local test target for prepared systems, after completing the existing manual T1Bridge replacement path.",
+      "conditions": [
+        "Complete the P12 manual provider setup before old-package removal.",
+        "The migration does not enforce replacement before removal; automatic transition remains a documented gap.",
+        "This acceptance does not authorize automatic rollout or certify hardware."
+      ]
+    },
+    "P09": {
+      "status": "held_for_compatible_existing_contributions",
+      "user_choice": "Keep both held for compatible existing contributions (recommended)",
+      "direction": "Keep both #11624 and #10877 held for compatible existing contributions. Preserve both complete patches and their findings; neither is accepted as the canonical local test target.",
+      "conditions": [
+        "Custom-unit ownership, preservation, unknown-state handling and rollback remain unresolved.",
+        "Fixed-address Apple-vendor detection and first-NVMe selection do not establish quirk applicability.",
+        "No synthesized detector, unit-preservation fix or GPU-policy change is added."
+      ]
+    },
+    "P10": {
+      "status": "accepted_provisional_local_test_target",
+      "user_choice": "Accept the existing pre/post candidate (recommended)",
+      "direction": "Accept the existing calibration plus #12314 pre-sleep/post-wake candidate as a provisional local test target.",
+      "conditions": [
+        "Customized-hook overwrite, lost retry state after failed rebind and repeated-pre state loss remain documented.",
+        "Preserve the separate post-resume alternative and contradictory model reports.",
+        "Cross-model hardware validation remains absent; this is not a release approval."
+      ]
+    }
+  }
+}

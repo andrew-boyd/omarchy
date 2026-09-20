@@ -1,10 +1,10 @@
 # P09 review evidence
 
-Carry the complete narrower #11624 Apple-controller proposal as the source for future NVMe applicability work. Preserve #10877's first-controller discovery approach separately. Selection does not establish that a discovered controller needs a quirk.
+Both #11624 and #10877 remain held for compatible existing contributions. Preserve both complete patches and their ownership/applicability findings. The retained #11624 branch is comparison material; neither implementation is accepted as the canonical local test target.
 
 ## Known gaps and future work
 
-- The selected source overwrites custom units and removes them when vendor data is missing, unreadable or non-Apple. Ownership, unknown-state handling and rollback remain unresolved.
+- #11624 overwrites custom units and removes them when vendor data is missing, unreadable or non-Apple. Ownership, unknown-state handling and rollback remain unresolved.
 - The fixed PCI address/vendor test does not prove an affected storage controller. Multi-controller, Samsung/replaced-drive and model applicability need hardware evidence.
 - #10877 also overwrites units and can reset a legacy GPU power setting based on a path substring. Neither source is recommended for unattended live installation.
 

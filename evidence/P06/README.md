@@ -1,6 +1,6 @@
 # P06 review evidence
 
-Carry the complete #9880 installer/cache cleanup and retirement migration. The intended T1 replacement is P12's existing manual T1Bridge path; the source migration itself neither detects nor installs that replacement.
+Carry the complete #9880 installer/cache cleanup and retirement migration. The intended T1 replacement is P12's existing manual T1Bridge path; the source migration itself neither detects nor installs that replacement. Accepted as a dependent local test target only for systems that have completed that manual replacement before removal; automatic migration remains a documented gap.
 
 ## Known gaps and future work
 

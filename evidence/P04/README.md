@@ -1,6 +1,6 @@
 # P04 review evidence
 
-Use #10713's active-external-display check as the lid-lock starting point. The implemented change concerns locking; connector identity and debounce remain future work, and existing logind sleep ownership is retained.
+Held for compatible existing contributions. Retain #10713 as a verified lid-lock component; the full group still includes connector identity, real USB displays and debounce. The existing branch is preserved review material, not an accepted canonical test target.
 
 ## Known gaps and future work
 

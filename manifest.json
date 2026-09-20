@@ -1,6 +1,6 @@
 {
-  "status": "ready_for_draft_review",
-  "prepared_at": "2026-09-20T19:22:09.459852+00:00",
+  "status": "partially_ready_with_holds",
+  "prepared_at": "2026-09-20T19:33:22.252175+00:00",
   "features": 14,
   "companions": 3,
   "proposed_prs": 17,
@@ -42,6 +42,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Independent shared UI candidate. No package companion.",
       "checks": {
         "kind": "test/all",
@@ -130,6 +132,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "The merged header foundations are already in the base. P13 is a separate kernel-policy proposal; header repair does not require adopting it.",
       "checks": {
         "kind": "test/all",
@@ -207,6 +211,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Independent detection candidate. Later release integration must reconcile shared installer files with the camera/audio groups.",
       "checks": {
         "kind": "test/all",
@@ -265,7 +271,7 @@
       "title": "[Intel Mac P04] Consolidate lid handling and display classification",
       "draft": true,
       "body_file": "bodies/P04.md",
-      "body_sha256": "1b48b34ae2e0b37e5b645c0721058e74e9321b1986e01d473a03a336df1cabbe",
+      "body_sha256": "4fd0880605207e374a8389ef8c272d0927e4b51e13650a597e35114bb9b8e01c",
       "patch_file": "patches/P04.patch",
       "patch_sha256": "8462a866b03db57b9ddafe9ff63e4bb83b6fd40db2d82018d6c8d238255441e8",
       "source_count": 8,
@@ -286,7 +292,18 @@
         "compatibility",
         "sleep"
       ],
-      "dependency_note": "Compare P05 display filtering and P12 shared lock-service work during later integration. The selected lid-lock diff does not require adopting competing wake/debounce implementations.",
+      "review_status": "held_for_compatible_existing_contributions",
+      "scope_decision": {
+        "status": "held_for_compatible_existing_contributions",
+        "user_choice": "Keep P04 held for compatible existing contributions (recommended)",
+        "direction": "Keep the full lid-handling group held for compatible existing contributions. Retain #10713 as a verified lid-lock component; do not narrow the group to that component. Preserve USB-display and debounce proposals for comparison.",
+        "conditions": [
+          "Connector identity, USB displays and debounce remain within the group scope.",
+          "The retained lid-lock patch is review material, not an accepted canonical test target for the full group.",
+          "No blanket USB exclusion or speculative debounce repair is adopted."
+        ]
+      },
+      "dependency_note": "Held for compatible existing contributions. Preserve the verified lid-lock component and compare P05 display filtering and P12 shared lock-service work. Connector identity and debounce remain in scope; no canonical test target is accepted for this group.",
       "checks": {
         "kind": "test/all",
         "exit_code": 1,
@@ -358,6 +375,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Independent recovery/settings candidate. P04 handles lid decisions separately; combine their shared display concerns only with explicit integration testing.",
       "checks": {
         "kind": "test/all",
@@ -425,7 +444,7 @@
       "title": "[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge",
       "draft": true,
       "body_file": "bodies/P06.md",
-      "body_sha256": "5a2fa0b92d655d41909d77072e47e6c1669d46db8b2843d5f5ba1ccbb4323d65",
+      "body_sha256": "1bc5dcadc53660074dbed5954672bd5239d5eb3d2cd4921d1b9b1b3bf5726885",
       "patch_file": "patches/P06.patch",
       "patch_sha256": "c96a2377d62e32b5cd344ce93cb10cc3ad4deb69bdf85956aeabc7c81931f1ee",
       "source_count": 3,
@@ -440,6 +459,17 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": {
+        "status": "accepted_dependent_local_test_target",
+        "user_choice": "Accept the dependent local test target (recommended)",
+        "direction": "Accept unchanged #9880 as a dependent local test target for prepared systems, after completing the existing manual T1Bridge replacement path.",
+        "conditions": [
+          "Complete the P12 manual provider setup before old-package removal.",
+          "The migration does not enforce replacement before removal; automatic transition remains a documented gap.",
+          "This acceptance does not authorize automatic rollout or certify hardware."
+        ]
+      },
       "dependency_note": "Before a T1 retirement trial, complete and validate the existing P12 manual provider setup. The source migration does not enforce this prerequisite. Resolve P07 package ownership before combined rollout; this is a review branch, not an automatic transition.",
       "checks": {
         "kind": "test/all",
@@ -522,6 +552,8 @@
         "compatibility",
         "sleep"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Retains the baseline SPI package. Resolve ownership before combining with P06 retirement. No new package companion.",
       "checks": {
         "kind": "test/all",
@@ -594,6 +626,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Review P08/packages first. Build, approve and make its matching packages available before installer/migration or offline-ISO acceptance. No new ISO PR is planned; ISO delivery remains an integration check.",
       "checks": {
         "kind": "test/all",
@@ -672,6 +706,8 @@
       "followup_repository": "andrew-boyd/omarchy-pkgs",
       "followup_base": "intel-mac/p08-facetime-camera",
       "recommended_labels": [],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Review P08/packages first. Build, approve and make its matching packages available before installer/migration or offline-ISO acceptance. No new ISO PR is planned; ISO delivery remains an integration check.",
       "checks": {
         "kind": "package-self-tests",
@@ -736,7 +772,7 @@
       "title": "[Intel Mac P09] Consolidate NVMe suspend applicability",
       "draft": true,
       "body_file": "bodies/P09.md",
-      "body_sha256": "08b097152b9021e7b4ef70c419925823697d96d3c1dfcc43976e7933a7bd9110",
+      "body_sha256": "4665fa7d8729772862858badd2b1e3affb6f5b997dc736a9f8738425971c255f",
       "patch_file": "patches/P09.patch",
       "patch_sha256": "e08e8463d9e895cfca817856ee4a286a67a4e83bd2ce8c8431ae8d062021bb51",
       "source_count": 2,
@@ -751,7 +787,18 @@
         "compatibility",
         "sleep"
       ],
-      "dependency_note": "Review unit ownership and actual controller applicability before live trials. P14 diagnostics is optional separate evidence, not a dependency or proof that this quirk is needed.",
+      "review_status": "held_for_compatible_existing_contributions",
+      "scope_decision": {
+        "status": "held_for_compatible_existing_contributions",
+        "user_choice": "Keep both held for compatible existing contributions (recommended)",
+        "direction": "Keep both #11624 and #10877 held for compatible existing contributions. Preserve both complete patches and their findings; neither is accepted as the canonical local test target.",
+        "conditions": [
+          "Custom-unit ownership, preservation, unknown-state handling and rollback remain unresolved.",
+          "Fixed-address Apple-vendor detection and first-NVMe selection do not establish quirk applicability.",
+          "No synthesized detector, unit-preservation fix or GPU-policy change is added."
+        ]
+      },
+      "dependency_note": "Both NVMe proposals are held for compatible existing contributions. Neither is an accepted test target. P14 diagnostics remains separate evidence, not proof that a controller needs this quirk.",
       "checks": {
         "kind": "test/all",
         "exit_code": 1,
@@ -811,7 +858,7 @@
       "title": "[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery",
       "draft": true,
       "body_file": "bodies/P10.md",
-      "body_sha256": "9100a2e8c8c1b5f675e0f8e3e1741bf80f1537eeba1bf04889a1588bace441d5",
+      "body_sha256": "042bdad3421a6da583efbf7dad4a9c9d8ab7f521f1e1dcece19f60aeaaf37cb8",
       "patch_file": "patches/P10.patch",
       "patch_sha256": "a4c4c7bf27fea00c1b3a342e7cabe162e836179b928865f020eef8e74e6a4db0",
       "source_count": 6,
@@ -830,6 +877,17 @@
         "compatibility",
         "sleep"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": {
+        "status": "accepted_provisional_local_test_target",
+        "user_choice": "Accept the existing pre/post candidate (recommended)",
+        "direction": "Accept the existing calibration plus #12314 pre-sleep/post-wake candidate as a provisional local test target.",
+        "conditions": [
+          "Customized-hook overwrite, lost retry state after failed rebind and repeated-pre state loss remain documented.",
+          "Preserve the separate post-resume alternative and contradictory model reports.",
+          "Cross-model hardware validation remains absent; this is not a release approval."
+        ]
+      },
       "dependency_note": "Reconcile shared installer/manual files with P08/P11 in a later combined release branch. Select one recovery lifecycle per trial. P12 does not establish whole-system suspend support.",
       "checks": {
         "kind": "test/all",
@@ -940,6 +998,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Review P11/packages first; publish the appropriate package before its model-specific installer/migration trial. Do not install both conflicting audio packages together. The iMac in-tree track has no package prerequisite.",
       "checks": {
         "kind": "test/all",
@@ -1062,6 +1122,8 @@
       "followup_repository": "andrew-boyd/omarchy-pkgs",
       "followup_base": "intel-mac/p11-cirrus-audio",
       "recommended_labels": [],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Review P11/packages first; publish the appropriate package before its model-specific installer/migration trial. Do not install both conflicting audio packages together. The iMac in-tree track has no package prerequisite.",
       "checks": {
         "kind": "package-self-tests",
@@ -1153,6 +1215,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Shared fingerprint UI can be reviewed independently. T1 hardware trials require P12/packages and the released manual setup on a prepared system. This is the replacement direction for P06, not an automatic migration supplied by either PR.",
       "checks": {
         "kind": "test/all",
@@ -1244,6 +1308,8 @@
       "followup_repository": "andrew-boyd/omarchy-pkgs",
       "followup_base": "intel-mac/p12-t1bridge",
       "recommended_labels": [],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Shared fingerprint UI can be reviewed independently. T1 hardware trials require P12/packages and the released manual setup on a prepared system. This is the replacement direction for P06, not an automatic migration supplied by either PR.",
       "checks": {
         "kind": "package-self-tests",
@@ -1305,6 +1371,8 @@
         "mac",
         "compatibility"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Maintainers must evaluate the broad Apple upgrade exception. P02 header repair is separate; the merged ISO kernel policy remains unchanged.",
       "checks": {
         "kind": "test/all",
@@ -1379,6 +1447,8 @@
         "compatibility",
         "sleep"
       ],
+      "review_status": "ready_for_draft_review",
+      "scope_decision": null,
       "dependency_note": "Standalone command, no package companion or automatic hook. Its active operations need a separately prepared attended trial; other sleep-related groups do not depend on running it.",
       "checks": {
         "kind": "test/all",
@@ -1427,6 +1497,14 @@
       "pr_created": false
     }
   ],
+  "ready_features": 12,
+  "ready_companions": 3,
+  "ready_proposals": 15,
+  "held_plans": [
+    "P04",
+    "P09"
+  ],
+  "scope_decisions_file": "scope-decisions.json",
   "publication_order": [
     "P08-packages",
     "P11-packages",
@@ -1434,12 +1512,10 @@
     "P01",
     "P02",
     "P03",
-    "P04",
     "P05",
     "P06",
     "P07",
     "P08",
-    "P09",
     "P10",
     "P11",
     "P12",

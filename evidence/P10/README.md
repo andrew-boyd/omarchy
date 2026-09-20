@@ -1,6 +1,6 @@
 # P10 review evidence
 
-Combine #11017's MacBookPro13,3 / 106b:015a calibration, #7671's MacBookPro14,2/14,3 path and #12314's pre-sleep unbind/post-wake rebind. Retain the three original installer calls; no calibration bytes, model gates or recovery logic were invented.
+Combine #11017's MacBookPro13,3 / 106b:015a calibration, #7671's MacBookPro14,2/14,3 path and #12314's pre-sleep unbind/post-wake rebind. Retain the three original installer calls; no calibration bytes, model gates or recovery logic were invented. Accepted as a provisional local test target with the documented hook-preservation/retry gaps and absent cross-model hardware validation.
 
 ## Known gaps and future work
 
