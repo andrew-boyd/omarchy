@@ -1,6 +1,6 @@
 # P09 review evidence
 
-Both #11624 and #10877 remain held for compatible existing contributions. Preserve both complete patches and their ownership/applicability findings. The retained #11624 branch is comparison material; neither implementation is accepted as the canonical local test target.
+Use complete #11624's narrower Apple-controller implementation as an accepted provisional NVMe consolidation draft, with its custom-unit overwrite/deletion risks documented. Preserve #10877's first-controller discovery approach separately. Selection does not establish that a discovered controller needs a quirk.
 
 ## Known gaps and future work
 

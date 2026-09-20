@@ -1,16 +1,17 @@
 {
-  "recorded_at": "2026-09-20T19:30:01.150250+00:00",
+  "recorded_at": "2026-09-20T20:01:20.745510+00:00",
   "scope": "Local consolidation of existing 64-bit Intel Mac PRs; no new hardware fixes or remote publication.",
   "hardware_validated": false,
   "decisions": {
     "P04": {
-      "status": "held_for_compatible_existing_contributions",
-      "user_choice": "Keep P04 held for compatible existing contributions (recommended)",
-      "direction": "Keep the full lid-handling group held for compatible existing contributions. Retain #10713 as a verified lid-lock component; do not narrow the group to that component. Preserve USB-display and debounce proposals for comparison.",
+      "status": "accepted_provisional_consolidation_draft",
+      "user_choice": "accept",
+      "accepted_scope": "Accept both with documented gaps; local draft readiness only.",
+      "direction": "Use #10713's verified lid-lock component as the provisional consolidation target. Keep connector identity, real USB displays and debounce documented as unfinished work; preserve competing proposals.",
       "conditions": [
-        "Connector identity, USB displays and debounce remain within the group scope.",
-        "The retained lid-lock patch is review material, not an accepted canonical test target for the full group.",
-        "No blanket USB exclusion or speculative debounce repair is adopted."
+        "The accepted code covers the lid-lock component; broader connector and debounce concerns remain visible as future work.",
+        "Preserve #11516 and #12210 as alternatives with their documented USB-display, PID and missing-hook problems.",
+        "Acceptance establishes local draft readiness, not hardware validation or permission to open PRs."
       ]
     },
     "P06": {
@@ -24,13 +25,15 @@
       ]
     },
     "P09": {
-      "status": "held_for_compatible_existing_contributions",
-      "user_choice": "Keep both held for compatible existing contributions (recommended)",
-      "direction": "Keep both #11624 and #10877 held for compatible existing contributions. Preserve both complete patches and their findings; neither is accepted as the canonical local test target.",
+      "status": "accepted_provisional_consolidation_draft",
+      "user_choice": "accept",
+      "accepted_scope": "Accept both with documented gaps; local draft readiness only.",
+      "direction": "Use complete #11624's narrower Apple-controller implementation as the provisional NVMe consolidation target. Preserve its custom-unit overwrite/deletion defects and retain #10877 as the separate alternative.",
       "conditions": [
-        "Custom-unit ownership, preservation, unknown-state handling and rollback remain unresolved.",
-        "Fixed-address Apple-vendor detection and first-NVMe selection do not establish quirk applicability.",
-        "No synthesized detector, unit-preservation fix or GPU-policy change is added."
+        "Custom-unit ownership, preservation, unknown-state handling and rollback remain unresolved and documented.",
+        "Fixed-address Apple-vendor detection does not establish controller applicability or prove a quirk is needed.",
+        "Preserve #10877's first-NVMe discovery and legacy GPU-setting risks separately.",
+        "Acceptance establishes local draft readiness, not hardware validation or permission to open PRs."
       ]
     },
     "P10": {
@@ -43,5 +46,33 @@
         "Cross-model hardware validation remains absent; this is not a release approval."
       ]
     }
-  }
+  },
+  "superseded_decisions": [
+    {
+      "recorded_at": "2026-09-20T19:30:01.150250+00:00",
+      "decisions": {
+        "P04": {
+          "status": "held_for_compatible_existing_contributions",
+          "user_choice": "Keep P04 held for compatible existing contributions (recommended)",
+          "direction": "Keep the full lid-handling group held for compatible existing contributions. Retain #10713 as a verified lid-lock component; do not narrow the group to that component. Preserve USB-display and debounce proposals for comparison.",
+          "conditions": [
+            "Connector identity, USB displays and debounce remain within the group scope.",
+            "The retained lid-lock patch is review material, not an accepted canonical test target for the full group.",
+            "No blanket USB exclusion or speculative debounce repair is adopted."
+          ]
+        },
+        "P09": {
+          "status": "held_for_compatible_existing_contributions",
+          "user_choice": "Keep both held for compatible existing contributions (recommended)",
+          "direction": "Keep both #11624 and #10877 held for compatible existing contributions. Preserve both complete patches and their findings; neither is accepted as the canonical local test target.",
+          "conditions": [
+            "Custom-unit ownership, preservation, unknown-state handling and rollback remain unresolved.",
+            "Fixed-address Apple-vendor detection and first-NVMe selection do not establish quirk applicability.",
+            "No synthesized detector, unit-preservation fix or GPU-policy change is added."
+          ]
+        }
+      },
+      "superseded_by": "User acceptance of both existing candidates as provisional consolidation drafts with documented gaps."
+    }
+  ]
 }

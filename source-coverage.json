@@ -209,9 +209,9 @@
         "author": "codemonkey76",
         "head_sha": "c792cc7f8277b9b524f9d59f1890faf0f5785cca",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Existing lid-open display wake differs from the reported local lock-IPC variant; complete source preserved, not stacked with #12210.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "alternative",
+        "rationale": "Existing lid-open display wake differs from the reported local lock-IPC variant; complete source preserved, not stacked with #12210.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/10713",
@@ -221,9 +221,9 @@
         "author": "yashranaway",
         "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Complete existing lid-lock decision using active external displays; logind ownership unchanged.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "incorporated",
+        "rationale": "Complete existing lid-lock decision using active external displays; logind ownership unchanged. Accepted as a provisional consolidation target; connector identity and debounce remain future work.",
+        "recommended_action": "Recommend closure in favor of this feature roll-up after maintainers accept preserved coverage."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/11516",
@@ -233,9 +233,9 @@
         "author": "hanscnelson",
         "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Blanket USB connector exclusion also excludes real USB displays; preserve reproduction and full source for identity work.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "alternative",
+        "rationale": "Blanket USB connector exclusion also excludes real USB displays; preserve reproduction and full source for identity work.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/12210",
@@ -245,9 +245,9 @@
         "author": "ijt",
         "head_sha": "45a478ad6712b2a436f880f5b0c3dbc28a386648",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Broader debounce/logind policy remains separate: stale-PID termination, 20-second model delay and missing installed wake hook are documented.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "alternative",
+        "rationale": "Broader debounce/logind policy remains separate: stale-PID termination, 20-second model delay and missing installed wake hook are documented.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/12435",
@@ -257,9 +257,9 @@
         "author": "jonathan-downs",
         "head_sha": "e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Existing logind-resume IPC/focus implementation; lacks the suggested lid-to-IPC call and overlaps P12's lock service.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "alternative",
+        "rationale": "Existing logind-resume IPC/focus implementation; lacks the suggested lid-to-IPC call and overlaps P12's lock service.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/12502",
@@ -281,9 +281,9 @@
         "author": "HritwikSinghal",
         "head_sha": "aa4630f75ce5dea81a386ebe09c3fbda6967f40d",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Virtual-output filtering preserves physical outputs but does not identify Touch Bar hardware; source tests retained.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "alternative",
+        "rationale": "Virtual-output filtering preserves physical outputs but does not identify Touch Bar hardware; source tests retained.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/12634",
@@ -437,9 +437,9 @@
         "author": "Drecullith",
         "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. First-NVMe discovery and legacy power restoration are a different policy; custom-unit and GPU-setting risks remain visible.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "alternative",
+        "rationale": "First-NVMe discovery and legacy power restoration are a different policy; custom-unit and GPU-setting risks remain visible.",
+        "recommended_action": "Retain for comparison; supersede only after distinct behavior and hardware coverage are accepted here."
       },
       {
         "url": "https://github.com/omacom/omarchy/pull/11624",
@@ -449,9 +449,9 @@
         "author": "niconistal",
         "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
         "state": "open",
-        "treatment": "held",
-        "rationale": "Held for compatible existing contributions. Complete narrower Apple-controller starting point; custom-unit overwrite/deletion and unknown-state findings preserved.",
-        "recommended_action": "Keep open for compatible existing contributions; this held group does not supersede the original."
+        "treatment": "incorporated",
+        "rationale": "Complete narrower Apple-controller starting point; custom-unit overwrite/deletion and unknown-state findings preserved. Accepted as a provisional consolidation target with those documented gaps.",
+        "recommended_action": "Recommend closure in favor of this feature roll-up after maintainers accept preserved coverage."
       }
     ],
     "P10": [

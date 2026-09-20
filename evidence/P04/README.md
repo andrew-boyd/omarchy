@@ -1,6 +1,6 @@
 # P04 review evidence
 
-Held for compatible existing contributions. Retain #10713 as a verified lid-lock component; the full group still includes connector identity, real USB displays and debounce. The existing branch is preserved review material, not an accepted canonical test target.
+Use #10713's verified active-external-display lid-lock component as an accepted provisional consolidation draft. Retain existing logind sleep ownership. Connector identity, real USB displays and debounce remain documented future work; all competing sources are preserved.
 
 ## Known gaps and future work
 

@@ -6,7 +6,7 @@ The existing coordinating forks are `andrew-boyd/omarchy` and `andrew-boyd/omarc
 
 When publication is separately authorized:
 
-P04 and P09 remain held. Their branches and bodies are retained for comparison, but they are excluded from `publication_order`. Do not publish them unless later compatible contributions and an explicit status change resolve the holds. The current eligible set is twelve feature drafts and three package companions.
+Use the current `held_plans` and `publication_order` in the manifest. An accepted provisional consolidation draft can retain documented implementation gaps. Follow the recorded scope decisions; draft readiness does not certify hardware or authorize publication.
 
 1. Refresh source heads/states and upstream targets. Compare them with the packet. Reconcile any changes that affect a candidate; rerun relevant checks on changed trees. The current failures and missing hardware evidence remain disclosed.
 2. Inspect existing fork branches and matching open PRs first. Reuse an already-published exact candidate; do not overwrite someone else's branch or create duplicates. Use ordinary pushes without force only after resolving any collision.
