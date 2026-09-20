@@ -1,5 +1,5 @@
 {
-  "status": "ready_for_draft_review",
+  "status": "drafts_open",
   "prepared_at": "2026-09-20T20:56:29.613743+00:00",
   "features": 14,
   "companions": 3,
@@ -11,9 +11,9 @@
   "coordinating_owner": "andrew-boyd",
   "index_branch": "intel-mac/review-index",
   "index_url_after_publication": "https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/INTEL-MAC-ROLLUPS.md",
-  "public_links_live": false,
+  "public_links_live": true,
   "hardware_verified": 0,
-  "remote_writes": 0,
+  "remote_writes": true,
   "entries": [
     {
       "id": "P01",
@@ -28,7 +28,7 @@
       "title": "[Intel Mac P01] Keep keyboard layout tracking on typing devices",
       "draft": true,
       "body_file": "bodies/P01.md",
-      "body_sha256": "4c1fa3cb0a3de55311f47c88cec31717272cba21fd80c7ed43bd96c95c57e13c",
+      "body_sha256": "c98f6ef3ef28e17fe71757ddb405b1e21d8a34e9156fe3f87e57d2b33255db78",
       "patch_file": "patches/P01.patch",
       "patch_sha256": "01e95cb7a37f4a4cf0d2c4a12d057aa9eb4cb239042a32a18fda859b37096796",
       "source_count": 2,
@@ -113,8 +113,10 @@
           "audit_ref": "refs/reconciliation-before/P01"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12679",
+      "pr_number": 12679
     },
     {
       "id": "P02",
@@ -129,7 +131,7 @@
       "title": "[Intel Mac P02] Repair headers for retained stock kernels",
       "draft": true,
       "body_file": "bodies/P02.md",
-      "body_sha256": "8e88ba73372b9f80f2513bd76d93d5f37f4354b36ba930271642135058e3cc51",
+      "body_sha256": "6008adac2626132219a8178a17596207015e8bcd43e3cb9e34740b7789d24cd7",
       "patch_file": "patches/P02.patch",
       "patch_sha256": "904a56c26c968a70159f0aeb22b0674212c597bb4e374073435914e489a84e85",
       "source_count": 9,
@@ -214,8 +216,10 @@
           "audit_ref": "refs/reconciliation-before/P02"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12680",
+      "pr_number": 12680
     },
     {
       "id": "P03",
@@ -230,7 +234,7 @@
       "title": "[Intel Mac P03] Consolidate Apple hardware detection",
       "draft": true,
       "body_file": "bodies/P03.md",
-      "body_sha256": "77ec183c9216215e399be293cd63cbbd5cb237bcc970d89505508a6ca74ea3e5",
+      "body_sha256": "8642ce961262351aec973716680ec6900a067cf5a4eed8a8f8d0e791c8441448",
       "patch_file": "patches/P03.patch",
       "patch_sha256": "b5be149ea524ab18ce6d5e4de39c3d4d3355e316fd1741000459549022f7e26c",
       "source_count": 5,
@@ -319,8 +323,10 @@
           "audit_ref": "refs/reconciliation-before/P03"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12681",
+      "pr_number": 12681
     },
     {
       "id": "P04",
@@ -335,7 +341,7 @@
       "title": "[Intel Mac P04] Consolidate lid handling and display classification",
       "draft": true,
       "body_file": "bodies/P04.md",
-      "body_sha256": "a166a3d51d7f062b1af32c482f1144e90b729ac9cc97cac200058b843d838fba",
+      "body_sha256": "94b3863244d1c84288581ce2097f2136e3e719f59d4d8a0c60c5896b206f4b97",
       "patch_file": "patches/P04.patch",
       "patch_sha256": "8462a866b03db57b9ddafe9ff63e4bb83b6fd40db2d82018d6c8d238255441e8",
       "source_count": 12,
@@ -433,8 +439,10 @@
           "audit_ref": "refs/reconciliation-before/P04"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12682",
+      "pr_number": 12682
     },
     {
       "id": "P05",
@@ -449,7 +457,7 @@
       "title": "[Intel Mac P05] Handle ghost internal displays",
       "draft": true,
       "body_file": "bodies/P05.md",
-      "body_sha256": "fb09d34e4b86eecb0310dacf8c438b91b743b2f4b607682d9b84ee7a16d018cc",
+      "body_sha256": "8953ef700b7da20c162c2fc6a56d5d598ce757b184aa2e830f5df36cea2a65aa",
       "patch_file": "patches/P05.patch",
       "patch_sha256": "367c0a170e394f5a409339d699f921c84366635ac44098364831e386c843e5b8",
       "source_count": 3,
@@ -539,8 +547,10 @@
           "audit_ref": "refs/reconciliation-before/P05"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12683",
+      "pr_number": 12683
     },
     {
       "id": "P06",
@@ -555,7 +565,7 @@
       "title": "[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge",
       "draft": true,
       "body_file": "bodies/P06.md",
-      "body_sha256": "e16dd6e0dff63d6bf6c093dd655ff2b0ea4e18f109357c2df297854eace5076d",
+      "body_sha256": "27c8644f8b1348ad259e06724c4f2928c23d2a9d28877c45f5c6b3bc61d26534",
       "patch_file": "patches/P06.patch",
       "patch_sha256": "c96a2377d62e32b5cd344ce93cb10cc3ad4deb69bdf85956aeabc7c81931f1ee",
       "source_count": 4,
@@ -654,8 +664,10 @@
           "audit_ref": "refs/reconciliation-before/P06"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12684",
+      "pr_number": 12684
     },
     {
       "id": "P07",
@@ -670,7 +682,7 @@
       "title": "[Intel Mac P07] Preserve the MacBook8,1 SPI PIO workaround",
       "draft": true,
       "body_file": "bodies/P07.md",
-      "body_sha256": "272ea52a4d0aaeae069c299bc8cfeae7bf650a604931752cad4ea132af52ca63",
+      "body_sha256": "f6f60d92d2fbd5a9afd6a838e191f8c8858eeef32eb06d16012f045de0720678",
       "patch_file": "patches/P07.patch",
       "patch_sha256": "203312ee4cd5501d360743c3c6f8ddb5231d74cbfe588ad393271a20b269c815",
       "source_count": 2,
@@ -751,8 +763,10 @@
           "audit_ref": "refs/reconciliation-before/P07"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12685",
+      "pr_number": 12685
     },
     {
       "id": "P08",
@@ -767,7 +781,7 @@
       "title": "[Intel Mac P08] Consolidate FaceTime PCIe camera support",
       "draft": true,
       "body_file": "bodies/P08.md",
-      "body_sha256": "8d7d2f01c32d6d1de05132c3fe47f9f03c5b1b5b505743e9502f9388d9bc5812",
+      "body_sha256": "a798ef79ff7e2f9a89c2bd7b21183a8c4314922732394c6769f8b8434338a738",
       "patch_file": "patches/P08.patch",
       "patch_sha256": "171cf52dbc34fbd6232006011e3881154d6e714ab696cf414f0010c641135703",
       "source_count": 2,
@@ -858,8 +872,10 @@
           "audit_ref": "refs/reconciliation-before/P08"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12686",
+      "pr_number": 12686
     },
     {
       "id": "P08-packages",
@@ -874,7 +890,7 @@
       "title": "[Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages",
       "draft": true,
       "body_file": "bodies/P08-packages.md",
-      "body_sha256": "5ed534b0a7b31d56fee9a222ba46e667f13cfdad47f90b032430666a0ad71b84",
+      "body_sha256": "9aeda7146a3d2a53992a1603a90511409f65046c47d2e5f5d5fe140f44f9d841",
       "patch_file": "patches/P08-packages.patch",
       "patch_sha256": "ac24d299ba8e87d641b71ec57cd715b3dd33608d3eec07d431ac89dd67f0a354",
       "source_count": 2,
@@ -966,8 +982,10 @@
           ]
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy-pkgs/pull/556",
+      "pr_number": 556
     },
     {
       "id": "P09",
@@ -982,7 +1000,7 @@
       "title": "[Intel Mac P09] Consolidate NVMe suspend applicability",
       "draft": true,
       "body_file": "bodies/P09.md",
-      "body_sha256": "62b57d255648b9b496acaf37668e50ce8ba7072492007015ecbb5e47c49bf789",
+      "body_sha256": "7dc90cd968aaeb282a99922596cb22a5c54f96f834098d305f92b97019dab786",
       "patch_file": "patches/P09.patch",
       "patch_sha256": "e08e8463d9e895cfca817856ee4a286a67a4e83bd2ce8c8431ae8d062021bb51",
       "source_count": 3,
@@ -1074,8 +1092,10 @@
           "audit_ref": "refs/reconciliation-before/P09"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12687",
+      "pr_number": 12687
     },
     {
       "id": "P10",
@@ -1090,7 +1110,7 @@
       "title": "[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery",
       "draft": true,
       "body_file": "bodies/P10.md",
-      "body_sha256": "2aebb2ffebb3a4194c73c9924cffaa9179e9d6c82773a099755b1eb24201ed0e",
+      "body_sha256": "1ca97e61d824c74cc730f11891155ef71711fa1b4482a9ec0f9b179e46a4d4db",
       "patch_file": "patches/P10.patch",
       "patch_sha256": "a4c4c7bf27fea00c1b3a342e7cabe162e836179b928865f020eef8e74e6a4db0",
       "source_count": 7,
@@ -1223,8 +1243,10 @@
           "audit_ref": "refs/reconciliation-before/P10"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12688",
+      "pr_number": 12688
     },
     {
       "id": "P11",
@@ -1239,7 +1261,7 @@
       "title": "[Intel Mac P11] Consolidate model-specific Cirrus audio support",
       "draft": true,
       "body_file": "bodies/P11.md",
-      "body_sha256": "e5066834bb565be09b226bc6839374a70f3a9f61b9ea7aa37b9d8c7639397608",
+      "body_sha256": "4cb9b122535173a9c678247549c4b51a7c9639b06d2569bb4b4b6ecde5ea5c7a",
       "patch_file": "patches/P11.patch",
       "patch_sha256": "685234b2d70b8f907594095e4a7bbe9ef664fee71f724149dfbb5cd8abd69c83",
       "source_count": 12,
@@ -1386,8 +1408,10 @@
           "audit_ref": "refs/reconciliation-before/P11"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12689",
+      "pr_number": 12689
     },
     {
       "id": "P11-packages",
@@ -1402,7 +1426,7 @@
       "title": "[Intel Mac P11/packages] Consolidate model-specific Cirrus audio packages",
       "draft": true,
       "body_file": "bodies/P11-packages.md",
-      "body_sha256": "163d6abe7aed379a377a5efa2d872ef52ebc6d3e437cdfb29b2f7ea83dc1ac21",
+      "body_sha256": "a34583aa0eaf9beaa2943640d13f262434a6b3dd65825b214e03d6d03e9cf936",
       "patch_file": "patches/P11-packages.patch",
       "patch_sha256": "f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050",
       "source_count": 12,
@@ -1503,8 +1527,10 @@
           ]
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy-pkgs/pull/557",
+      "pr_number": 557
     },
     {
       "id": "P12",
@@ -1519,7 +1545,7 @@
       "title": "[Intel Mac P12] Consolidate T1Bridge support and fingerprint UI",
       "draft": true,
       "body_file": "bodies/P12.md",
-      "body_sha256": "2f34f6205eb5cb8da59a8bcc2b1eb5800e3bcaab54f192f2845c7bdf4ca8b88b",
+      "body_sha256": "67e7425a3e7724e05217896218a62c96aec3caf2a209cca8f6fee22a05dbda9d",
       "patch_file": "patches/P12.patch",
       "patch_sha256": "8833274aed255ca804b2e8e66341c7be0dbc5f520e6d4fa66f2febf48100979b",
       "source_count": 19,
@@ -1625,8 +1651,10 @@
           "audit_ref": "refs/reconciliation-before/P12"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12690",
+      "pr_number": 12690
     },
     {
       "id": "P12-packages",
@@ -1641,7 +1669,7 @@
       "title": "[Intel Mac P12/packages] Package the existing T1Bridge stack",
       "draft": true,
       "body_file": "bodies/P12-packages.md",
-      "body_sha256": "fc75e7f7683a744ca6f37d2e96bd9346713b3f02bacd3d059da998a378172b97",
+      "body_sha256": "332e6cf31f285fdb79f9624405b191a8a656dc164d6309219933a08cbbd488dd",
       "patch_file": "patches/P12-packages.patch",
       "patch_sha256": "0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363",
       "source_count": 19,
@@ -1742,8 +1770,10 @@
           ]
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy-pkgs/pull/558",
+      "pr_number": 558
     },
     {
       "id": "P13",
@@ -1758,7 +1788,7 @@
       "title": "[Intel Mac P13] Consolidate the Intel Mac kernel migration policy",
       "draft": true,
       "body_file": "bodies/P13.md",
-      "body_sha256": "6efa88af07378d85b0337b78316242367a30bd68b3f8f9fece3cdaf66f95aa12",
+      "body_sha256": "719222a85afc62253bfcd07eb63dbaa7dadb07cbe387e114836260d8b0dafc8a",
       "patch_file": "patches/P13.patch",
       "patch_sha256": "06a7ddc25ac90156fb9c48d71a415253da5a446770a9f117104a6bc1018148c8",
       "source_count": 2,
@@ -1837,8 +1867,10 @@
           "audit_ref": "refs/reconciliation-before/P13"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12691",
+      "pr_number": 12691
     },
     {
       "id": "P14",
@@ -1853,7 +1885,7 @@
       "title": "[Intel Mac P14] Consolidate suspend diagnostics",
       "draft": true,
       "body_file": "bodies/P14.md",
-      "body_sha256": "3947ba6317c3bf9b37c52a30b68c4e9a9bfcd3f68dabd9035ec308243ae1c293",
+      "body_sha256": "82ea18cf31cbf03d5bb4ba831e71d835751cd1ffe22ad968f0ea9ee0424e9188",
       "patch_file": "patches/P14.patch",
       "patch_sha256": "03dd3da10e306d6ba17c0fe3b43dde5f9ca7d1b98c1f937c04fada827cfc7818",
       "source_count": 1,
@@ -1930,8 +1962,10 @@
           "audit_ref": "refs/reconciliation-before/P14"
         }
       },
-      "remote_pushed": false,
-      "pr_created": false
+      "remote_pushed": true,
+      "pr_created": true,
+      "pr_url": "https://github.com/omacom/omarchy/pull/12692",
+      "pr_number": 12692
     }
   ],
   "ready_features": 14,
@@ -1959,7 +1993,7 @@
     "P14"
   ],
   "readiness_definition": "Complete local packet for draft review/opening later. Known source defects, failing/skipped checks and unavailable hardware/CI remain disclosed; not merge/release readiness.",
-  "upstream_actions": "None. Publication requires a separate instruction; do not push, create forks/PRs or contact maintainers from this packet.",
+  "upstream_actions": "17 new draft PRs created; original source PRs unchanged.",
   "target_checked_at": "2026-09-20T20:54:41.373507+00:00",
   "target_preflight": {
     "omacom/omarchy": {
@@ -1977,5 +2011,7 @@
       "sha": "7cfb7111a06873d61c45d37034577d4ba08d3f4f",
       "expected_sha": "7cfb7111a06873d61c45d37034577d4ba08d3f4f"
     }
-  }
+  },
+  "published_at": "2026-09-20T21:03:04.241936+00:00",
+  "publication_record": "published-prs.json"
 }

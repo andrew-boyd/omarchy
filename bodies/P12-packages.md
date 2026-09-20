@@ -6,6 +6,12 @@ Import the existing T1Bridge core/driver 0.1.9, optional desktop consumer 0.2.1 
 
 **Contribute:** open follow-up PRs in `andrew-boyd/omarchy-pkgs` with base **`intel-mac/p12-t1bridge`**. Use `[Intel Mac P12/packages]` in the title and a contributor branch such as `intel-mac/p12/describe-change`. Link this feature in the series index. Merging a follow-up into this branch updates its roll-up.
 
+## Published series
+
+This draft: [omacom/omarchy-pkgs#558](https://github.com/omacom/omarchy-pkgs/pull/558). [All feature and package drafts](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/INTEL-MAC-ROLLUPS.md).
+
+Feature draft: [omacom/omarchy#12690](https://github.com/omacom/omarchy/pull/12690). Keep the merge/setup dependencies below.
+
 ## Scope and dependencies
 
 Shared fingerprint UI can be reviewed independently. T1 hardware trials require P12/packages and the released manual setup on a prepared system. This is the replacement direction for P06, not an automatic migration supplied by either PR.

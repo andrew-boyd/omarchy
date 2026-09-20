@@ -1,10 +1,10 @@
-# Publication handoff — local preparation only
+# Publication handoff — drafts opened
 
-Nothing in this packet authorizes remote publication. No push or PR creation has been performed.
+The user explicitly authorized publication. All 17 draft PRs are now open; [the series index](INTEL-MAC-ROLLUPS.md) records their real URLs. Original source PRs were not modified.
 
 The existing coordinating forks are `andrew-boyd/omarchy` and `andrew-boyd/omarchy-pkgs`. The 17 proposed draft bodies and their exact commits, bases and hashes are in `manifest.json`. The extra `intel-mac/review-index` branch carries this evidence/index only; it is not an eighteenth PR and is not part of any feature diff.
 
-When publication is separately authorized:
+Procedure used for this publication (retained for future refreshes):
 
 Use the current `held_plans` and `publication_order` in the manifest. An accepted provisional consolidation draft can retain documented implementation gaps. Follow the recorded scope decisions; draft readiness does not certify hardware or authorize publication.
 

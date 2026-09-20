@@ -6,6 +6,12 @@ Propose the existing facetimehd-dkms, facetimehd-firmware and facetimehd-data re
 
 **Contribute:** open follow-up PRs in `andrew-boyd/omarchy-pkgs` with base **`intel-mac/p08-facetime-camera`**. Use `[Intel Mac P08/packages]` in the title and a contributor branch such as `intel-mac/p08/describe-change`. Link this feature in the series index. Merging a follow-up into this branch updates its roll-up.
 
+## Published series
+
+This draft: [omacom/omarchy-pkgs#556](https://github.com/omacom/omarchy-pkgs/pull/556). [All feature and package drafts](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/INTEL-MAC-ROLLUPS.md).
+
+Feature draft: [omacom/omarchy#12686](https://github.com/omacom/omarchy/pull/12686). Keep the merge/setup dependencies below.
+
 ## Scope and dependencies
 
 Review P08/packages first. Build, approve and make its matching packages available before installer/migration or offline-ISO acceptance. No new ISO PR is planned; ISO delivery remains an integration check.

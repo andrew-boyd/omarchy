@@ -6,6 +6,12 @@ Combine the unchanged omacom/omarchy-pkgs#249 snd-hda-macbookpro-dkms and omacom
 
 **Contribute:** open follow-up PRs in `andrew-boyd/omarchy-pkgs` with base **`intel-mac/p11-cirrus-audio`**. Use `[Intel Mac P11/packages]` in the title and a contributor branch such as `intel-mac/p11/describe-change`. Link this feature in the series index. Merging a follow-up into this branch updates its roll-up.
 
+## Published series
+
+This draft: [omacom/omarchy-pkgs#557](https://github.com/omacom/omarchy-pkgs/pull/557). [All feature and package drafts](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/INTEL-MAC-ROLLUPS.md).
+
+Feature draft: [omacom/omarchy#12689](https://github.com/omacom/omarchy/pull/12689). Keep the merge/setup dependencies below.
+
 ## Scope and dependencies
 
 Review P11/packages first; publish the appropriate package before its model-specific installer/migration trial. Do not install both conflicting audio packages together. The iMac in-tree track has no package prerequisite.

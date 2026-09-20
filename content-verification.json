@@ -195,6 +195,6 @@
   "hardware_verified": false,
   "native_commit_attribution_verified": 17,
   "full_suite_passed": false,
-  "remote_writes": 0,
+  "remote_writes": true,
   "qualification": "Local draft-content, source coverage, exact trees, test receipts and artifacts; failing/skipped checks remain disclosed."
 }
