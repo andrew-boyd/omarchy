@@ -41,7 +41,7 @@ require_root() {
 }
 
 require_rtcwake() {
-  command -v rtcwake >/dev/null 2>&1 || {
+  omarchy-cmd-present rtcwake || {
     echo "omarchy-diagnose-suspend-wake: rtcwake not found (package: util-linux)" >&2
     exit 1
   }
