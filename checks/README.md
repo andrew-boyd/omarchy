@@ -8,7 +8,9 @@ A fresh-copy baseline diagnostic passes locate, while the full run raises a Unic
 
 Graphical/device/tool/namespace skips are listed in each receipt. `assertions_passed` counts literal `ok` lines, including skip messages; it is not a count of hardware cases or an overall passing suite. Tests within a failing file can stop at its first failure, though the runner continues to subsequent files.
 
-The package candidates each pass eleven available CI self-test command groups, including the new artifact-helper round-trip test, plus recorded syntax/metadata checks. The prescribed publish-artifact fixture needs unavailable rclone; Docker build-isolation and maintainer-controlled remote builds were not run. These local results do not satisfy the full upstream CI suite. Earlier package/DKMS receipts are qualified by their actual kernel, recipe and isolation limitations.
+The package candidates each pass twelve available CI self-test command groups, including artifact-helper round-trip and builder-image tests, plus recorded syntax/metadata checks. The prescribed publish-artifact fixture needs unavailable rclone; Docker build-isolation and maintainer-controlled remote builds were not run. These local results do not satisfy the full upstream CI suite. Earlier package/DKMS receipts are qualified by their actual kernel, recipe and isolation limitations.
+
+The last package rebase incorporates seven upstream CI/tooling commits before opening. Full Omarchy receipts retain their actual earlier package inputs; the package recipes and all feature trees are unchanged. Package tests were rerun on the new companion trees, including the new builder-image group. The changed paths and scope are recorded in opening-reconciliation.json at the packet root.
 
 Paths/usernames in public logs are redacted. Current receipts contain the staged log hash and preserve the original log hash separately. Historical receipt hashes are in `../evidence/receipt-index.json`.
 

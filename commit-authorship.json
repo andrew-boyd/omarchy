@@ -892,9 +892,9 @@
     {
       "id": "P08-packages",
       "previous_commit": "bfae880d88643e7b486fe4a1a44663e11a9f922a",
-      "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
-      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-      "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
+      "commit": "6c1cecc4e49978745ebb57062b83c828b610238f",
+      "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+      "tree_sha": "41e8fa815c18dcfddbb458611a3c49b8f68b5fee",
       "author": {
         "name": "xiota",
         "email": "aur@mentalfossa.com",
@@ -1188,9 +1188,9 @@
         "previous_commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
         "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
         "previous_tree": "1e67c884154c830dac79418e81aa028351b5a4ca",
-        "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
-        "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-        "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
+        "commit": "6c1cecc4e49978745ebb57062b83c828b610238f",
+        "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+        "tree_sha": "41e8fa815c18dcfddbb458611a3c49b8f68b5fee",
         "candidate_delta_unchanged": true,
         "contributed_files_unchanged": true,
         "author_and_message_preserved": true,
@@ -1204,7 +1204,14 @@
           "pkgbuilds/facetimehd-firmware/LicenseRef-Apple.tar.xz",
           "pkgbuilds/facetimehd-firmware/PKGBUILD"
         ],
-        "audit_ref": "refs/reconciliation-before/P08-packages"
+        "audit_ref": "refs/reconciliation-before/P08-packages",
+        "intermediate_rebases": [
+          {
+            "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
+            "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+            "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a"
+          }
+        ]
       },
       "candidate_delta_unchanged": true,
       "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
@@ -1906,9 +1913,9 @@
     {
       "id": "P11-packages",
       "previous_commit": "bd6bc96b69a9eb793ef651ac81f52d344054b4ea",
-      "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
-      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-      "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
+      "commit": "dd91732c68a4bce5b26af7a5ad15aacd41601ca9",
+      "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+      "tree_sha": "eb633a12f0c9774db16f1cff529a2e7fc449b0e4",
       "author": {
         "name": "Shawn Yeager",
         "email": "shawn@shawnyeager.com",
@@ -2031,9 +2038,9 @@
         "previous_commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
         "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
         "previous_tree": "6d084ddd8be492d394135e050e046c1a5a98c39e",
-        "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
-        "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-        "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
+        "commit": "dd91732c68a4bce5b26af7a5ad15aacd41601ca9",
+        "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+        "tree_sha": "eb633a12f0c9774db16f1cff529a2e7fc449b0e4",
         "candidate_delta_unchanged": true,
         "contributed_files_unchanged": true,
         "author_and_message_preserved": true,
@@ -2045,7 +2052,14 @@
           "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
           "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD"
         ],
-        "audit_ref": "refs/reconciliation-before/P11-packages"
+        "audit_ref": "refs/reconciliation-before/P11-packages",
+        "intermediate_rebases": [
+          {
+            "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
+            "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+            "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708"
+          }
+        ]
       },
       "candidate_delta_unchanged": true,
       "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."
@@ -2161,9 +2175,9 @@
     {
       "id": "P12-packages",
       "previous_commit": "30fd083f692e64c91571f3d710aa8b0f45b6daf4",
-      "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
-      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-      "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
+      "commit": "014acc8e0b892105448a497eedad4780ed72b83e",
+      "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+      "tree_sha": "38d9351e72b9c7fea544167d5b70fa7df3fe83cf",
       "author": {
         "name": "Andrew Boyd",
         "email": "andrew@formkit.com",
@@ -2690,9 +2704,9 @@
         "previous_commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
         "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
         "previous_tree": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
-        "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
-        "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-        "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
+        "commit": "014acc8e0b892105448a497eedad4780ed72b83e",
+        "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+        "tree_sha": "38d9351e72b9c7fea544167d5b70fa7df3fe83cf",
         "candidate_delta_unchanged": true,
         "contributed_files_unchanged": true,
         "author_and_message_preserved": true,
@@ -2715,7 +2729,14 @@
           "pkgbuilds/t1bridge/.omarchy/package.json",
           "pkgbuilds/t1bridge/PKGBUILD"
         ],
-        "audit_ref": "refs/reconciliation-before/P12-packages"
+        "audit_ref": "refs/reconciliation-before/P12-packages",
+        "intermediate_rebases": [
+          {
+            "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
+            "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+            "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045"
+          }
+        ]
       },
       "candidate_delta_unchanged": true,
       "test_receipt_policy": "Rerun checks on current rebased commit; previous_commit remains the original authorship-only audit anchor."

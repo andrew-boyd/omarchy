@@ -1,6 +1,6 @@
 {
   "status": "ready_for_draft_review",
-  "prepared_at": "2026-09-20T20:48:41.801442+00:00",
+  "prepared_at": "2026-09-20T20:56:29.613743+00:00",
   "features": 14,
   "companions": 3,
   "proposed_prs": 17,
@@ -867,14 +867,14 @@
       "repository": "omacom/omarchy-pkgs",
       "fork": "andrew-boyd/omarchy-pkgs",
       "base_branch": "master",
-      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
       "branch": "intel-mac/p08-facetime-camera",
-      "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
-      "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
+      "commit": "6c1cecc4e49978745ebb57062b83c828b610238f",
+      "tree_sha": "41e8fa815c18dcfddbb458611a3c49b8f68b5fee",
       "title": "[Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages",
       "draft": true,
       "body_file": "bodies/P08-packages.md",
-      "body_sha256": "ddb0b49f0f6737b842b89b59703e7fddd85ed5397e20d2547296ef77b7c97211",
+      "body_sha256": "5ed534b0a7b31d56fee9a222ba46e667f13cfdad47f90b032430666a0ad71b84",
       "patch_file": "patches/P08-packages.patch",
       "patch_sha256": "ac24d299ba8e87d641b71ec57cd715b3dd33608d3eec07d431ac89dd67f0a354",
       "source_count": 2,
@@ -890,10 +890,10 @@
       "dependency_note": "Review P08/packages first. Build, approve and make its matching packages available before installer/migration or offline-ISO acceptance. No new ISO PR is planned; ISO delivery remains an integration check.",
       "checks": {
         "kind": "package-self-tests",
-        "passed_commands": 11,
-        "total_commands": 11,
+        "passed_commands": 12,
+        "total_commands": 12,
         "full_ci_passed": false,
-        "tested_commit": "976d561d4557b79135cf7666ddee80ccd3541509",
+        "tested_commit": "6c1cecc4e49978745ebb57062b83c828b610238f",
         "tested_after_upstream_reconciliation": true
       },
       "authorship": {
@@ -940,9 +940,9 @@
           "previous_commit": "9de25db9d1ecaf32d1869da6e3cce9adbc0b44b6",
           "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
           "previous_tree": "1e67c884154c830dac79418e81aa028351b5a4ca",
-          "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
-          "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-          "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a",
+          "commit": "6c1cecc4e49978745ebb57062b83c828b610238f",
+          "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+          "tree_sha": "41e8fa815c18dcfddbb458611a3c49b8f68b5fee",
           "candidate_delta_unchanged": true,
           "contributed_files_unchanged": true,
           "author_and_message_preserved": true,
@@ -956,7 +956,14 @@
             "pkgbuilds/facetimehd-firmware/LicenseRef-Apple.tar.xz",
             "pkgbuilds/facetimehd-firmware/PKGBUILD"
           ],
-          "audit_ref": "refs/reconciliation-before/P08-packages"
+          "audit_ref": "refs/reconciliation-before/P08-packages",
+          "intermediate_rebases": [
+            {
+              "commit": "976d561d4557b79135cf7666ddee80ccd3541509",
+              "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+              "tree_sha": "37ca5b60c5fe97cea933808a1da9894991fb554a"
+            }
+          ]
         }
       },
       "remote_pushed": false,
@@ -1388,14 +1395,14 @@
       "repository": "omacom/omarchy-pkgs",
       "fork": "andrew-boyd/omarchy-pkgs",
       "base_branch": "master",
-      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
       "branch": "intel-mac/p11-cirrus-audio",
-      "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
-      "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
+      "commit": "dd91732c68a4bce5b26af7a5ad15aacd41601ca9",
+      "tree_sha": "eb633a12f0c9774db16f1cff529a2e7fc449b0e4",
       "title": "[Intel Mac P11/packages] Consolidate model-specific Cirrus audio packages",
       "draft": true,
       "body_file": "bodies/P11-packages.md",
-      "body_sha256": "4762e2e3950037d1087bb38233f64213517be0040cd5cfd4bdbfbecb724d765a",
+      "body_sha256": "163d6abe7aed379a377a5efa2d872ef52ebc6d3e437cdfb29b2f7ea83dc1ac21",
       "patch_file": "patches/P11-packages.patch",
       "patch_sha256": "f5584a507810d4fb66a0ae327fd53faa1343699c7963aafc0f859c3700f51050",
       "source_count": 12,
@@ -1421,10 +1428,10 @@
       "dependency_note": "Review P11/packages first; publish the appropriate package before its model-specific installer/migration trial. Do not install both conflicting audio packages together. The iMac in-tree track has no package prerequisite.",
       "checks": {
         "kind": "package-self-tests",
-        "passed_commands": 11,
-        "total_commands": 11,
+        "passed_commands": 12,
+        "total_commands": 12,
         "full_ci_passed": false,
-        "tested_commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
+        "tested_commit": "dd91732c68a4bce5b26af7a5ad15aacd41601ca9",
         "tested_after_upstream_reconciliation": true
       },
       "authorship": {
@@ -1472,9 +1479,9 @@
           "previous_commit": "65c17cb1a24626945c273e55ab9a0d1698fdcff9",
           "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
           "previous_tree": "6d084ddd8be492d394135e050e046c1a5a98c39e",
-          "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
-          "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-          "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708",
+          "commit": "dd91732c68a4bce5b26af7a5ad15aacd41601ca9",
+          "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+          "tree_sha": "eb633a12f0c9774db16f1cff529a2e7fc449b0e4",
           "candidate_delta_unchanged": true,
           "contributed_files_unchanged": true,
           "author_and_message_preserved": true,
@@ -1486,7 +1493,14 @@
             "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
             "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD"
           ],
-          "audit_ref": "refs/reconciliation-before/P11-packages"
+          "audit_ref": "refs/reconciliation-before/P11-packages",
+          "intermediate_rebases": [
+            {
+              "commit": "bc89b86ef8397b000e73ceb60cd97e0b6e088db6",
+              "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+              "tree_sha": "0a5195bbd3af5304500b246b46098d5769318708"
+            }
+          ]
         }
       },
       "remote_pushed": false,
@@ -1620,14 +1634,14 @@
       "repository": "omacom/omarchy-pkgs",
       "fork": "andrew-boyd/omarchy-pkgs",
       "base_branch": "master",
-      "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+      "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
       "branch": "intel-mac/p12-t1bridge",
-      "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
-      "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
+      "commit": "014acc8e0b892105448a497eedad4780ed72b83e",
+      "tree_sha": "38d9351e72b9c7fea544167d5b70fa7df3fe83cf",
       "title": "[Intel Mac P12/packages] Package the existing T1Bridge stack",
       "draft": true,
       "body_file": "bodies/P12-packages.md",
-      "body_sha256": "4c230241ee52e5ba41f72a645c4ff722e369814228ee0cfdd2635c90afff5b38",
+      "body_sha256": "fc75e7f7683a744ca6f37d2e96bd9346713b3f02bacd3d059da998a378172b97",
       "patch_file": "patches/P12-packages.patch",
       "patch_sha256": "0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363",
       "source_count": 19,
@@ -1660,10 +1674,10 @@
       "dependency_note": "Shared fingerprint UI can be reviewed independently. T1 hardware trials require P12/packages and the released manual setup on a prepared system. This is the replacement direction for P06, not an automatic migration supplied by either PR.",
       "checks": {
         "kind": "package-self-tests",
-        "passed_commands": 11,
-        "total_commands": 11,
+        "passed_commands": 12,
+        "total_commands": 12,
         "full_ci_passed": false,
-        "tested_commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
+        "tested_commit": "014acc8e0b892105448a497eedad4780ed72b83e",
         "tested_after_upstream_reconciliation": true
       },
       "authorship": {
@@ -1693,9 +1707,9 @@
           "previous_commit": "ac72542958800b9f36910c8c721cd260a7f1e80e",
           "previous_base": "bda2a070f4641fd44e5d02bd9cbf7da3fce4e345",
           "previous_tree": "b2d0b11b41597343c84dad16a3750ccc48a77bc4",
-          "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
-          "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-          "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045",
+          "commit": "014acc8e0b892105448a497eedad4780ed72b83e",
+          "base_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+          "tree_sha": "38d9351e72b9c7fea544167d5b70fa7df3fe83cf",
           "candidate_delta_unchanged": true,
           "contributed_files_unchanged": true,
           "author_and_message_preserved": true,
@@ -1718,7 +1732,14 @@
             "pkgbuilds/t1bridge/.omarchy/package.json",
             "pkgbuilds/t1bridge/PKGBUILD"
           ],
-          "audit_ref": "refs/reconciliation-before/P12-packages"
+          "audit_ref": "refs/reconciliation-before/P12-packages",
+          "intermediate_rebases": [
+            {
+              "commit": "0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472",
+              "base_sha": "30e862935e6593545546a6dc8363bc80c34987a1",
+              "tree_sha": "2130b19c45dcfb9e827bb842e0471fb4bb36a045"
+            }
+          ]
         }
       },
       "remote_pushed": false,
@@ -1939,7 +1960,7 @@
   ],
   "readiness_definition": "Complete local packet for draft review/opening later. Known source defects, failing/skipped checks and unavailable hardware/CI remain disclosed; not merge/release readiness.",
   "upstream_actions": "None. Publication requires a separate instruction; do not push, create forks/PRs or contact maintainers from this packet.",
-  "target_checked_at": "2026-09-20T20:40:54.169288+00:00",
+  "target_checked_at": "2026-09-20T20:54:41.373507+00:00",
   "target_preflight": {
     "omacom/omarchy": {
       "branch": "quattro",
@@ -1948,8 +1969,8 @@
     },
     "omacom/omarchy-pkgs": {
       "branch": "master",
-      "sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-      "expected_sha": "30e862935e6593545546a6dc8363bc80c34987a1"
+      "sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+      "expected_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c"
     },
     "omacom/omarchy-iso": {
       "branch": "quattro",

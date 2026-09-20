@@ -40,13 +40,13 @@ These are recommendations for original authors and maintainers. No original PR i
 
 ## Validation and provenance
 
-- Base: `omacom/omarchy-pkgs:master` at `30e862935e6593545546a6dc8363bc80c34987a1`.
-- Prepared commit: `0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472`; tree: `2130b19c45dcfb9e827bb842e0471fb4bb36a045`.
+- Base: `omacom/omarchy-pkgs:master` at `4b60e4cd95972c16fbf3da634522a955cf7bf36c`.
+- Prepared commit: `014acc8e0b892105448a497eedad4780ed72b83e`; tree: `38d9351e72b9c7fea544167d5b70fa7df3fe83cf`.
 - [Exact patch](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/patches/P12-packages.patch), SHA-256 `0e003b22c9cc44e6bb931537306a7ea1ca2851e473a23215260eb0cc90ca6363`. The contribution diff matches the accepted consolidation; the [upstream refresh](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/UPSTREAM-REFRESH.md) advances its base without changing that contribution.
-- Available package CI self-tests: **11/11 command groups passed**, including the workflow-approval tests; changed recipe syntax/JSON checks recorded. These ran on this actual tree in a disconnected disposable filesystem.
+- Available package CI self-tests: **12/12 command groups passed**, including the workflow-approval tests; changed recipe syntax/JSON checks recorded. These ran on this actual tree in a disconnected disposable filesystem.
 - Unrun: publish-artifact fixture (`rclone` unavailable), Docker build-isolation job, remote build-pr approval and fresh signed target-kernel delivery. The local subset does not equal passing upstream CI.
 - [Check logs and receipts](https://github.com/andrew-boyd/omarchy/tree/intel-mac/review-index/checks) and [focused evidence / hardware checklist](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/evidence/P12/README.md). Observations reproducing defects are not successful hardware behavior. No real module load, firmware write, suspend or host configuration change occurred.
-- Tests ran at this rebased commit, `0a68e0d1fd2d6481c15eea3f68f41bfc5c0fa472`. The prior commits remain audit evidence; these results belong to the current candidate tree.
+- Tests ran at this rebased commit, `014acc8e0b892105448a497eedad4780ed72b83e`. The prior commits remain audit evidence; these results belong to the current candidate tree.
 
 ## Known gaps and follow-up work
 

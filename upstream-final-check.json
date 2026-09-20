@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-09-20T20:40:54.169288+00:00",
+  "checked_at": "2026-09-20T20:54:41.373507+00:00",
   "sources_checked": 73,
   "sources": [
     {
@@ -450,8 +450,8 @@
     },
     "omacom/omarchy-pkgs": {
       "branch": "master",
-      "sha": "30e862935e6593545546a6dc8363bc80c34987a1",
-      "expected_sha": "30e862935e6593545546a6dc8363bc80c34987a1"
+      "sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+      "expected_sha": "4b60e4cd95972c16fbf3da634522a955cf7bf36c"
     },
     "omacom/omarchy-iso": {
       "branch": "quattro",

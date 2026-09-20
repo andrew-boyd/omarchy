@@ -1,0 +1,14 @@
+✔ image keys are stable across checkout location and timestamp changes (22.401286ms)
+✔ image keys separate architectures, mirrors, content, modes and symlink targets (75.204268ms)
+✔ fresh builds refresh package layers and record their compatibility key (89.548327ms)
+✔ invalid targets fail before starting an image build (13.839856ms)
+✔ a public tested image gets a version tag before the compatible-image tag advances (267.560183ms)
+✔ a private image or failed push never replaces the previous compatible-image tag (326.164743ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 869.153438

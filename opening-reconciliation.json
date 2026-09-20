@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-09-20T20:52:01.237198+00:00",
+  "previous_package_base": "30e862935e6593545546a6dc8363bc80c34987a1",
+  "package_base": "4b60e4cd95972c16fbf3da634522a955cf7bf36c",
+  "upstream_commits": 7,
+  "changed_paths": [
+    ".github/workflows/build-pr.yml",
+    ".github/workflows/builder-images.yml",
+    ".github/workflows/test.yml",
+    "README.md",
+    "bin/builder-image",
+    "helpers/artifact-helpers.sh",
+    "tests/artifact-helpers.sh",
+    "tests/builder-image.cjs"
+  ],
+  "source_pr_changes": [],
+  "package_recipe_changes": false,
+  "feature_tree_changes": false,
+  "accepted_contribution_changes": false,
+  "qualification": "Three package companions rebased without altering contribution diffs or authorship. Package checks rerun including new builder-image group. Full Omarchy receipts retain their actual earlier package inputs; no feature tree or package recipe changed in this final CI/tooling-only rebase."
+}
