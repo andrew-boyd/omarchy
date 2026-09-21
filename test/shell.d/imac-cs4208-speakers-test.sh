@@ -94,7 +94,7 @@ run_leaf() {
   rm -rf "$home"
   mkdir -p "$home"
   : >"$test_tmp/calls.log"
-  HOME="$home" \
+  HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_STATE_HOME="$home/.local/state" \
     PATH="$stub_bin:$PATH" \
     OMARCHY_PATH="$ROOT" \
     CALL_LOG="$test_tmp/calls.log" \
@@ -120,7 +120,7 @@ run_migration() {
   rm -rf "$home"
   mkdir -p "$home"
   : >"$test_tmp/calls.log"
-  HOME="$home" \
+  HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_STATE_HOME="$home/.local/state" \
     PATH="$stub_bin:$PATH" \
     OMARCHY_PATH="$ROOT" \
     CALL_LOG="$test_tmp/calls.log" \
