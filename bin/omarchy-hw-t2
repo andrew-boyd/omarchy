@@ -13,8 +13,11 @@ shopt -s nullglob
 
 for device in "$pci_devices_path"/*; do
   [[ -r $device/vendor && -r $device/device ]] || continue
-  [[ $(<"$device/vendor") == "0x106b" ]] || continue
-  case $(<"$device/device") in
+  # Attributes may disappear after the readability check during hot-unplug.
+  vendor=$(cat "$device/vendor" 2>/dev/null) || continue
+  [[ $vendor == "0x106b" ]] || continue
+  device_id=$(cat "$device/device" 2>/dev/null) || continue
+  case $device_id in
     0x1801 | 0x1802) exit 0 ;;
   esac
 done

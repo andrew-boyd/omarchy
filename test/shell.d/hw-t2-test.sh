@@ -50,3 +50,18 @@ grep -Fq 'omarchy-hw-t2' "$ROOT/install/hardware/pacman.sh" ||
 ! grep -q 'lspci' "$ROOT/install/hardware/pacman.sh" ||
   fail "the arch-mact2 repo drop-in no longer greps lspci"
 pass "T2 install paths share one sysfs helper"
+
+# Hold the vendor read after both attributes were checked, then remove the
+# device ID before completing the vendor read: deterministic hot-unplug race.
+write_pci 0x106b:0x1801:0x068000
+rm "$tmp/devices/0000:00:00.0/vendor"
+mkfifo "$tmp/devices/0000:00:00.0/vendor"
+hw_t2 2>"$tmp/hot-unplug.stderr" &
+reader=$!
+exec 3>"$tmp/devices/0000:00:00.0/vendor"
+rm "$tmp/devices/0000:00:00.0/device"
+printf '0x106b\n' >&3
+exec 3>&-
+if wait "$reader"; then fail "a disappearing device cannot be confirmed as T2"; fi
+[[ ! -s $tmp/hot-unplug.stderr ]] || fail "mid-read hot-unplug is handled without a shell error" "$(cat "$tmp/hot-unplug.stderr")"
+pass "mid-read hot-unplug does not produce a false match or shell error"
