@@ -43,7 +43,7 @@ run_leaf() {
       -e "s|/etc/systemd/system|$test_tmp/etc/systemd/system|g" \
       "$leaf" >"$script"
 
-  PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
+  PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
     bash -eE -o pipefail -c 'source "$1"' bash "$script" </dev/null
 }
 
@@ -78,7 +78,7 @@ run_migration() {
   : >"$calls"
   printf '%s\n' "$vendor" >"$test_tmp/pci/vendor"
 
-  PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
+  PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
     OMARCHY_NVME_SUSPEND_UNIT="$unit" \
     OMARCHY_NVME_SUSPEND_PCI_VENDOR="$test_tmp/pci/vendor" \
     bash -euo pipefail "$migration" >/dev/null
@@ -86,7 +86,7 @@ run_migration() {
 
 write_old_unit() {
   mkdir -p "$(dirname "$unit")"
-  printf '%s\n' '[Service]' "ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000\:01\:00.0/d3cold_allowed'" >"$unit"
+  sed 's/0000:01:00.0/0000\\:01\\:00.0/' "$ROOT/default/systemd/system/omarchy-nvme-suspend-fix.service" >"$unit"
 }
 
 # A 15-inch install from before the fix carries the service aimed at its GPU.
@@ -112,3 +112,34 @@ rm -rf "${test_tmp:?}/etc"
 run_migration 0x8086
 [[ ! -s $calls ]] || fail "the migration skips machines that never had the service" "$(cat "$calls")"
 pass "the migration skips machines that never had the service"
+
+write_old_unit
+printf '# custom setting\n' >> "$unit"
+cp "$unit" "$test_tmp/custom-unit"
+if run_migration 0x1002; then fail "custom unit requires manual reconciliation"; fi
+cmp "$unit" "$test_tmp/custom-unit" || fail "custom unit survives migration"
+[[ ! -s $calls ]] || fail "custom unit is not disabled"
+pass "migration preserves customized units"
+
+write_old_unit
+for vendor in '' unknown; do
+  if run_migration "$vendor"; then fail "unknown vendor leaves migration pending"; fi
+  [[ -f $unit && ! -s $calls ]] || fail "unknown vendor cannot remove a unit"
+done
+pass "unknown PCI state never means a non-Apple device"
+
+for model in OtherMacBook8,1 MacBookPro14,20; do
+  run_leaf "$model" 0x106b >/dev/null
+  [[ ! -e $unit && ! -s $calls ]] || fail "model allowlist is exact"
+done
+pass "partial model names do not match the hardware allowlist"
+
+run_leaf MacBook8,1 0x106b >/dev/null
+printf '# custom setting\n' >> "$unit"
+cp "$unit" "$test_tmp/custom-unit"
+if PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
+  bash -eE -o pipefail -c 'source "$1"' bash "$test_tmp/leaf.sh"; then
+  fail "setup reports a customized target"
+fi
+cmp "$unit" "$test_tmp/custom-unit" || fail "setup preserves customized unit"
+pass "repeat hardware setup preserves administrator changes"
