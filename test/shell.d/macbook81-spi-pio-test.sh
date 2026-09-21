@@ -69,7 +69,7 @@ run_leaf() {
 run_leaf "MacBook8,1" >/dev/null
 modules="$test_tmp/etc/mkinitcpio.conf.d/macbook_spi_modules.conf"
 pio="$test_tmp/etc/limine-entry-tool.d/macbook81-spi-pio.conf"
-grep -Fq 'MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)' "$modules" ||
+grep -Fq 'MODULES+=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)' "$modules" ||
   fail "MacBook8,1 still gets the SPI initramfs modules" "$(cat "$modules" 2>/dev/null)"
 grep -Fq 'initcall_blacklist=dw_pci_driver_init' "$pio" ||
   fail "MacBook8,1 gets the PIO kernel parameter" "$(cat "$pio" 2>/dev/null)"
@@ -142,3 +142,44 @@ run_migration "MacBook10,1"
 [[ ! -e $pio ]] || fail "the migration skips later 12-inch MacBooks"
 [[ ! -s $calls ]] || fail "the migration escalates nothing on unrelated Macs" "$(cat "$calls")"
 pass "the migration skips unrelated hardware"
+
+# Comments and partial assignments are not proof that both boot parameters
+# are configured. Preserve these unknown/custom files, and report unfinished.
+mkdir -p "$(dirname "$pio")"
+for contents in '# initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle' \
+  'KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init"' \
+  'KERNEL_CMDLINE[default]+=" custom=keep"'; do
+  printf '%s\n' "$contents" > "$pio"
+  cp "$pio" "$test_tmp/custom-pio"
+  touch "$test_tmp/repair-complete"
+  if run_migration MacBook8,1; then fail "custom/incomplete settings remain pending"; fi
+  cmp "$pio" "$test_tmp/custom-pio" || fail "custom parameters are preserved"
+  [[ ! -s $calls ]] || fail "custom parameters cannot trigger a blind boot rebuild"
+done
+pass "comments, partial parameters and custom configuration are preserved without false success"
+
+# A failed rebuild must not leave a stale successful marker that suppresses
+# the next attempt after a missing config was recreated.
+rm "$pio"
+touch "$test_tmp/repair-complete"
+printf '#!/bin/bash\nexit 1\n' > "$stub_bin/limine-mkinitcpio"
+if run_migration MacBook8,1; then fail "failed rebuild is reported"; fi
+[[ ! -e $test_tmp/repair-complete ]] || fail "failed rebuild invalidates the old completion marker"
+printf '#!/bin/bash\necho limine-mkinitcpio >>"$TEST_LOG"\n' > "$stub_bin/limine-mkinitcpio"
+run_migration MacBook8,1
+grep -Fxq limine-mkinitcpio "$calls" || fail "failed rebuild is retried"
+pass "an interrupted rebuild is retried even when an earlier marker existed"
+
+run_leaf MacBook8,1 >/dev/null
+# The emitted drop-in must add to, rather than erase, modules from the main
+# mkinitcpio configuration.
+MODULES=(custom_module)
+source "$modules"
+[[ ${MODULES[*]} == 'custom_module applespi spi_pxa2xx_platform spi_pxa2xx_pci' ]] || fail "SPI modules preserve the base module list"
+printf '# custom module setting\n' >> "$modules"
+cp "$modules" "$test_tmp/custom-modules"
+if PATH="$stub_bin:$PATH" TEST_LOG="$calls" bash -eE -o pipefail -c 'source "$1"' bash "$test_tmp/leaf.sh"; then
+  fail "customized module drop-in requires reconciliation"
+fi
+cmp "$modules" "$test_tmp/custom-modules" || fail "custom module drop-in is preserved"
+pass "SPI setup preserves base modules and customized drop-ins"

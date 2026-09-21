@@ -7,36 +7,43 @@ echo "Force SPI PIO on MacBook8,1 so the built-in keyboard works"
 product="${OMARCHY_MACBOOK81_DMI_PRODUCT:-/sys/class/dmi/id/product_name}"
 limine_conf="${OMARCHY_MACBOOK81_LIMINE_CONF:-/etc/limine-entry-tool.d/macbook81-spi-pio.conf}"
 repair_marker="${OMARCHY_MACBOOK81_REPAIR_MARKER:-/var/lib/omarchy/migrations/1788318101}"
-running_cmdline="${OMARCHY_MACBOOK81_RUNNING_CMDLINE:-/proc/cmdline}"
 
 product_name="$(cat "$product" 2>/dev/null || true)"
 if [[ $product_name != "MacBook8,1" ]]; then
   exit 0
 fi
 
-needs_limine_rebuild=0
-
-if [[ ! -f $limine_conf ]] || ! grep -q 'initcall_blacklist=dw_pci_driver_init' "$limine_conf"; then
-  sudo mkdir -p "$(dirname "$limine_conf")"
-  sudo tee "$limine_conf" >/dev/null <<'EOF'
+expected=$(cat <<'EOF'
 # MacBook8,1: DesignWare DMA never completes GSPI transfers.
 KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle"
 EOF
+)
+
+# Only the exact shipped drop-in establishes both active settings here.
+# Do not infer active shell assignments from text inside comments or blocks.
+if [[ -L $limine_conf ]] || { [[ -e $limine_conf ]] &&
+  [[ ! -f $limine_conf || $(cat "$limine_conf") != "$expected" ]]; }; then
+  echo "Preserving customized SPI boot parameters: $limine_conf; reconcile both required parameters manually before retrying." >&2
+  exit 1
+fi
+
+needs_limine_rebuild=0
+if [[ ! -f $limine_conf ]]; then
+  # Invalidate an earlier success before changing the configuration. A failed
+  # rebuild must remain retryable even if this file is complete next time.
+  sudo rm -f "$repair_marker"
+  sudo mkdir -p "$(dirname "$limine_conf")"
+  printf '%s\n' "$expected" | sudo tee "$limine_conf" >/dev/null
   needs_limine_rebuild=1
 fi
 
-# The current kernel keeps its old command line until reboot. Record a
-# successful machine-wide rebuild so another user's migration does not repeat
-# it before then, while a missing marker still retries an interrupted rebuild.
-if [[ -f $limine_conf ]] &&
-  [[ ! -e $repair_marker ]] &&
-  grep -q 'initcall_blacklist=dw_pci_driver_init' "$limine_conf" &&
-  { [[ ! -r $running_cmdline ]] ||
-    ! grep -Eq '(^| )initcall_blacklist=dw_pci_driver_init( |$)' "$running_cmdline"; }; then
+# A marker is written only after a successful machine-wide boot rebuild.
+# The running kernel's old command line is not proof of the next boot image.
+if [[ ! -e $repair_marker ]]; then
   needs_limine_rebuild=1
 fi
-
 if (( needs_limine_rebuild )); then
+  sudo rm -f "$repair_marker"
   sudo limine-mkinitcpio
   sudo install -Dm644 /dev/null "$repair_marker"
 fi
