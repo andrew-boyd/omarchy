@@ -4,11 +4,11 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 mkdir -p "$scratch/bin"
-for command in omarchy-hw-imac-cs4208 omarchy-pkg-add systemctl; do
+for command in omarchy-hw-imac-cs4208 omarchy-pkg-add systemctl amixer; do
   printf '#!/bin/bash\nprintf "%%s\\n" "$0 $*" >> "$TEST_LOG"\n' >"$scratch/bin/$command"
 done
-# No mixer is exposed by this software fixture.
-printf '#!/bin/bash\nexit 0\n' >"$scratch/bin/aplay"
+# Use a synthetic mixer; every mixer command is logged by the stub.
+printf '#!/bin/bash\necho "card 1: PCH device 0: CS4208 Analog"\n' >"$scratch/bin/aplay"
 chmod +x "$scratch/bin/"*
 export OMARCHY_PATH="$ROOT" OMARCHY_INSTALL="$ROOT/install"
 export PATH="$scratch/bin:$PATH" TEST_LOG="$scratch/events"
