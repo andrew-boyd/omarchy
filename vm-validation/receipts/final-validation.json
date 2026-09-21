@@ -1,0 +1,68 @@
+{
+  "completed_at": "2026-09-21T03:27:45.336951+00:00",
+  "validation_completed": true,
+  "overall_release_validation_green": false,
+  "feature_scope_count": 14,
+  "draft_pr_count": 17,
+  "source_receipts": "integration-heads.json",
+  "final_iso": {
+    "iso": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/omarchy-2026.09.21-x86_64.iso",
+    "bytes": 6215624704,
+    "sha256": "4c76334deab6c999b55814122132f95c8d9fe8e61be9f06a0e7ebd3fd8e073bb",
+    "build_exit": 0,
+    "source_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "79eaa4deef8ee02b3aa5e1e089c83cb3ac2b6f31",
+      "omarchy-iso": "5526761d972236afeccbc1542e07a96180c400a6"
+    },
+    "embedded_package_verification": "passed",
+    "embedded_package_count": 13,
+    "vm_install": "completed: fresh interactive unencrypted installer and installed-disk reboot; SSH bootstrap used confirmed tty4 after original tty3 targeted greeter",
+    "desktop_acceptance": "all 8 files passed in 94s with test-only OCR patch; product unchanged",
+    "prior_artifact": "build-5-iso-artifact.json",
+    "audio_regression": "0.1-2 exact archive installed, target DKMS and reboot passed, stock headers absent, no orphan-kernel hook error",
+    "installed_payload_verification": "49 of 49 changed files matched source SHA256"
+  },
+  "build_5_evidence": "build-5-iso-artifact.json",
+  "unchanged_artifacts": 12,
+  "changed_artifacts": [
+    "macbook12-audio-driver-dkms 0.1-2"
+  ],
+  "combined_guest_cli_passed": true,
+  "combined_guest_shell_files_passed": 267,
+  "final_acceptance_files_passed": 8,
+  "final_installed_payload_files_matched": 49,
+  "final_audio_scenario": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-232516-mac-packages-audio12",
+  "real_hardware_verified": false,
+  "retained_failure": "Shared-ESP factory reset fails in byte-identical pinned baseline code; see factory-reset-baseline-failure.json.",
+  "retained_source_limits": "P04/P06/P09/P10/P12 accepted scope gaps and P14 recovery defects remain documented.",
+  "harness_adjustments": "guest-harness-adjustments.json and acceptance-ocr-evidence.json",
+  "logs": [
+    {
+      "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/acceptance.log",
+      "sha256": "7c719cf0a5025034225b9857b372f4b237d2925c90d0b469700861cc90a20604"
+    },
+    {
+      "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/audio12-retest.log",
+      "sha256": "ebbfa073fc0581cbe618628fb52e023450ea73b0a6ab1f22019621c451af5ce2"
+    },
+    {
+      "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-232516-mac-packages-audio12/package-install.log",
+      "sha256": "84fd95badf90420c2202613ce4ae98c330a89e581b8168e294790284fb08eba1"
+    },
+    {
+      "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-232516-mac-packages-audio12/audio-header-regression.log",
+      "sha256": "6fcb1455a07bf6bee9b80cbdfeebb5666ab48ab3138415bb3f5d1df65572d724"
+    },
+    {
+      "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-232516-mac-packages-audio12/runtime-payload.log",
+      "sha256": "6758ad8b2127e191831f4fc0138f6da691014d30833fc391391c1883a829c65e"
+    },
+    {
+      "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-232516-mac-packages-audio12/reboot.log",
+      "sha256": "64d48008703ec1cb0792acbb8f1e610d69bfc3ba9df69444ae28fe4885f4d4b5"
+    }
+  ],
+  "public_update_scope": "Existing 17 draft PRs and review index. Publication/readback receipt recorded separately in published-pr-updates.json.",
+  "source_followups_pushed": true
+}

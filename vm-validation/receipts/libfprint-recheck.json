@@ -1,0 +1,16 @@
+{
+  "recorded_at": "2026-09-21T01:21:24.209185+00:00",
+  "original_result": "130 passed; egis_etu905 failed",
+  "isolated_repeats": 3,
+  "isolated_failures": 0,
+  "full_suite_tests": 131,
+  "full_suite_repeats": 2,
+  "passed": 262,
+  "failed": 0,
+  "skipped": 0,
+  "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/libfprint-full-serial.log",
+  "sha256": "7becd639d42da5e7c2c1b1e6bfd577786a52c30db3d736cba4b5349a4f424b84",
+  "command": "meson test -C build --no-rebuild --num-processes 1 --repeat 2 --print-errorlogs --logbase all-serial",
+  "source_changed": false,
+  "inference": "Default concurrent USB replay tests may exceed container scheduling limits. Serial full-suite repetitions pass; this does not prove physical fingerprint operation."
+}

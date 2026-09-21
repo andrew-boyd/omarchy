@@ -1,0 +1,102 @@
+{
+  "cases": [
+    {
+      "case": "replace stale cached archive",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for t1bridge (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified omarchy-dev",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for omarchy-dev (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified omarchy-settings-dev",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for omarchy-settings-dev (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified omarchy-nvim",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for omarchy-nvim (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified facetimehd-firmware",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for facetimehd-firmware (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified facetimehd-data",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for facetimehd-data (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified facetimehd-dkms",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for facetimehd-dkms (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified macbook12-audio-driver-dkms",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for macbook12-audio-driver-dkms (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified snd-hda-macbookpro-dkms",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for snd-hda-macbookpro-dkms (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified libfprint-t1bridge",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for libfprint-t1bridge (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified fprintd-t1bridge",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for fprintd-t1bridge (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified t1bridge-dkms",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for t1bridge-dkms (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "verified t1bridge",
+      "exit": 0,
+      "stdout": "Reusing verified build artifact for t1bridge (matching source commits and SHA256).\n",
+      "stderr": ""
+    },
+    {
+      "case": "failed/unbuilt package excluded",
+      "exit": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "different source rejected",
+      "exit": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "case": "different bytes rejected",
+      "exit": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "paths_rewritten_for_unprivileged_test_only": true,
+  "actual_package_archives": true
+}

@@ -1,0 +1,21 @@
+diff --git a/pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD b/pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD
+index f00ab66..5f7d3d5 100644
+--- a/pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD
++++ b/pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD
+@@ -1,12 +1,14 @@
+ _pkgbase=macbook12-audio-driver
+ pkgname=${_pkgbase}-dkms
+ pkgver=0.1
+-pkgrel=1
++pkgrel=2
+ pkgdesc="CS4208 audio driver for the 12-inch MacBook (DKMS)"
+ arch=('x86_64')
+ url="https://github.com/leifliddy/macbook12-audio-driver"
+ license=('GPL-2.0-or-later')
+-depends=('curl' 'dkms' 'linux-headers')
++depends=('curl' 'dkms')
++optdepends=('linux-headers: build against the Arch kernel'
++            'linux-omarchy-headers: build against the Omarchy kernel')
+ makedepends=('git')
+ conflicts=('snd-hda-macbookpro-dkms-git')
+ options=('!debug' '!strip')

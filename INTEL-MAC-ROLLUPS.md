@@ -4,6 +4,8 @@
 
 **17 draft PRs are open: 14 feature groups + 3 package companions.** No groups are held. See [current scope decisions](scope-decisions.json). P04 retains connector/debounce future work; P09 retains custom-unit preservation/applicability gaps and its alternative. P06 requires the existing manual T1Bridge replacement before removal; P10 is a provisional pre/post recovery target with its documented gaps.
 
+**ISO / VM follow-up (2026-09-21 UTC):** custom ISOs built and installed; all 14 scopes now have explicit VM/fixture evidence. Read [results and remaining failures](vm-validation/HANDOFF.md), [coverage](vm-validation/COVERAGE.md), and [reproduction](vm-validation/REPRODUCE.md). The baseline factory-reset scenario failed; physical Mac behavior remains unverified. This does not certify release readiness.
+
 ## Feature and package targets
 
 | ID | Proposal | Follow-up base in the coordinating fork | Source rows | Status |
@@ -30,9 +32,11 @@
 
 Open feature work against `andrew-boyd/omarchy` and the exact feature base above; package work goes to `andrew-boyd/omarchy-pkgs` with the matching base. Use `[Intel Mac PNN]` or `[Intel Mac PNN/packages]` in titles and `intel-mac/pnn/short-change` contributor branches. Merging follow-ups updates their roll-up. The table links each live draft and its canonical contribution branch.
 
-Review the three package companions alongside their linked feature drafts. Package availability must precede dependent installer/migration acceptance. P12 UI is independently reviewable; its hardware path requires manual setup. P06 retirement requires that prepared provider transition and resolution of P07 ownership before any automatic rollout. P02 header repair and P13 kernel policy are separate decisions. Other features can be reviewed independently. Shared installer/manual/lock files require reconciliation in a later optional release branch; there is no claim that all fourteen stack cleanly today.
+Review the three package companions alongside their linked feature drafts. Package availability must precede dependent installer/migration acceptance. P12 UI is independently reviewable; its hardware path requires manual setup. P06 retirement requires that prepared provider transition and resolution of P07 ownership before any automatic rollout. P02 header repair and P13 kernel policy are separate decisions. Other features can be reviewed independently. Shared installer/manual/lock files were reconciled in the recorded local integration source. Its exact merge decisions and source bundles are in the VM handoff; independent feature merges still require review.
 
-## Validation status
+## Original publication validation (historical)
+
+These pre-VM results are retained as historical evidence; the dated VM follow-up above gives the current tested scope.
 
 Full Omarchy pre-push runs and an unchanged-base control are recorded under [checks](checks). They currently fail and skip cases as disclosed in each body. The three package candidates pass their available self-test subset; Docker isolation and publish-artifact checks were not run locally; live maintainer-controlled CI status is on each draft. Hardware and visual evidence are absent. This packet makes the known gaps reviewable; it does not approve deployment.
 

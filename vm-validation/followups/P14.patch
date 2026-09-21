@@ -1,0 +1,13 @@
+diff --git a/bin/omarchy-diagnose-suspend-wake b/bin/omarchy-diagnose-suspend-wake
+index 56fb3a67..4ee4605e 100755
+--- a/bin/omarchy-diagnose-suspend-wake
++++ b/bin/omarchy-diagnose-suspend-wake
+@@ -41,7 +41,7 @@ require_root() {
+ }
+ 
+ require_rtcwake() {
+-  command -v rtcwake >/dev/null 2>&1 || {
++  omarchy-cmd-present rtcwake || {
+     echo "omarchy-diagnose-suspend-wake: rtcwake not found (package: util-linux)" >&2
+     exit 1
+   }

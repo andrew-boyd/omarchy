@@ -1,0 +1,17 @@
+disabled
+ok - bcm43xx excludes the real QEMU PCI inventory
+ok - t2 excludes the real QEMU PCI inventory
+ok - nvidia excludes the real QEMU PCI inventory
+ok - facetimehd excludes the real QEMU PCI inventory
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+ok - non-Apple hardware setup leaves package and hardware configuration unchanged
+ok - installed monitor watcher survives reload and preserves the working virtual output
+ok - the installed desktop switches a real virtual keyboard US to German and back
+ok - installed suspend diagnostics enumerate the guest wake sources

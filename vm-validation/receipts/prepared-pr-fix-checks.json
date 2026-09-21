@@ -1,0 +1,94 @@
+[
+  {
+    "id": "P14",
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "HEAD^",
+      "HEAD"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P14-focused.log"
+  },
+  {
+    "id": "P14",
+    "command": [
+      "bash",
+      "-n",
+      "bin/omarchy-diagnose-suspend-wake"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P14-focused.log"
+  },
+  {
+    "id": "P14",
+    "command": [
+      "bash",
+      "test/cli"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P14-focused.log"
+  },
+  {
+    "id": "P14",
+    "command": [
+      "bash",
+      "test/shell.d/bin-style-test.sh"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P14-focused.log"
+  },
+  {
+    "id": "P11-packages",
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "HEAD^",
+      "HEAD"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P11-packages-focused.log"
+  },
+  {
+    "id": "P11-packages",
+    "command": [
+      "bash",
+      "-n",
+      "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P11-packages-focused.log"
+  },
+  {
+    "id": "P13",
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "HEAD^",
+      "HEAD"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P13-focused.log"
+  },
+  {
+    "id": "P13",
+    "command": [
+      "bash",
+      "test/shell.d/omarchy-kernel-migration-test.sh"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P13-focused.log"
+  },
+  {
+    "id": "P13",
+    "command": [
+      "bash",
+      "test/shell.d/intel-mac-kernel-policy-test.sh"
+    ],
+    "exit": 0,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P13-focused.log"
+  }
+]

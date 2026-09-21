@@ -1,0 +1,35 @@
+[
+  {
+    "id": "P13",
+    "commit": "50606b45743ca16acf18fe2edddb61957f99d57e",
+    "command": "bash test/all",
+    "exit": 1,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P13-test-all.log",
+    "failing_files": [
+      "test/shell.d/config-test.sh",
+      "test/shell.d/hermes-skin-migration-test.sh",
+      "test/shell.d/locate-test.sh",
+      "test/shell.d/snapper-test.sh",
+      "test/shell.d/unowned-system-paths-test.sh",
+      "test/shell"
+    ],
+    "context": "isolated standalone branch; no companion checkout siblings; original log retained. Changed-area focused checks passed. Combined actual guest suite separately passed all 267 files."
+  },
+  {
+    "id": "P14",
+    "commit": "31626e74cf36f315acdaf0942b4e2b2a6e240e50",
+    "command": "bash test/all",
+    "exit": 1,
+    "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P14-test-all.log",
+    "failing_files": [
+      "test/shell.d/config-test.sh",
+      "test/shell.d/hermes-skin-migration-test.sh",
+      "test/shell.d/locate-test.sh",
+      "test/shell.d/omarchy-kernel-migration-test.sh",
+      "test/shell.d/snapper-test.sh",
+      "test/shell.d/unowned-system-paths-test.sh",
+      "test/shell"
+    ],
+    "context": "isolated standalone branch; no companion checkout siblings; original log retained. Changed-area focused checks passed. Combined actual guest suite separately passed all 267 files."
+  }
+]

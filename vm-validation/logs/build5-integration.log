@@ -1,0 +1,23 @@
+[1;35m==> Installing omarchy-2026.09.21-intel-mac-local-x86_64.iso unattended via cidata (headless)[0m
+[1;35m==> Waiting for the unattended install to finish (timeout 2400s)[0m
+    ... installing (0s)
+    ... installing (120s)
+[1;35m==> Install finished and rebooted into the installed system.[0m
+[1;35m==> Installed system is up. Saving base image.[0m
+[1;35m==> test/integration.d/factory-reset-test.sh[0m
+[1;35m==> Booting reset VM from base image overlay[0m
+[1;35m==> ESP fixtured as a shared dual-boot ESP (old machine-id 21d86b8422c04a4f889abfbe3e7d0b77)[0m
+[1;35m==> Running omarchy-system-factory-reset[0m
+[1;35m==> Reset staged. Asserting on the shared ESP before rebooting.[0m
+not ok - windows entry survives staging
+ok - windows boot payload survives staging
+not ok - foreign linux entry survives staging
+not ok - foreign boot directory survives staging
+not ok - foreign UKI survives staging
+ok - old omarchy entry is removed by staging
+ok - old omarchy boot directory is removed by staging
+ok - a fresh omarchy entry exists after staging
+[1;35m==> Staging assertions failed; keeping the VM off the reboot path.[0m
+[1;35m==> Stopping test VM[0m
+[1;35m==> Visual review: 2 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-224136-factory-reset[0m
+[1;35m==> Visual review: 3 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-223824-install[0m

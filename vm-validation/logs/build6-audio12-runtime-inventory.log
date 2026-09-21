@@ -1,0 +1,13 @@
+omarchy-dev 4.0.0.r6529.g8ffe7ac-1
+omarchy-settings-dev 4.0.0.r6529.g8ffe7ac-1
+linux-omarchy 7.2.5-4
+linux-omarchy-headers 7.2.5-4
+NAME   FSTYPE FSVER LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sr0                                                                           
+zram0  swap   1     zram0 b58e8b4e-cb1f-429b-a55e-3a05e014a775                [SWAP]
+vda                                                                           
+|-vda1 vfat   FAT32       112D-3819                                 2G     2% /boot
+`-vda2 btrfs              f303fdbc-afdd-4f32-aa14-30d769395899     24G    36% /var/log
+                                                                              /var/cache/pacman/pkg
+                                                                              /home
+                                                                              /

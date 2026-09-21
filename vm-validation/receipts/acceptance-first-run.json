@@ -1,0 +1,12 @@
+{
+  "exit": 1,
+  "log": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/acceptance.log",
+  "failed_file": "test/acceptance.d/shell-surfaces-test.sh",
+  "assertion": "reminder message prompt opens",
+  "observed_image": "The Reminder message... placeholder is visibly present in the failure screenshot.",
+  "baseline_comparison": "ReminderFlow.qml and acceptance helpers/test unchanged from pinned baseline.",
+  "native_ocr": "Native-resolution OCR of the failure image recognizes Reminder message...",
+  "suspected_cause": "2x OCR false negative; live reproduction pending",
+  "installed_boot_passed": true,
+  "other_test_files_passed": 7
+}

@@ -1,0 +1,44 @@
+ok - default shell.json is valid JSON
+ok - default shell.json has versioned bar layout
+ok - default center layout keeps update next to weather
+ok - default center anchor exists in center layout
+ok - default center layout puts elsewhen immediately before the clock
+ok - default clock date format has no leading zero
+ok - default right layout keeps agents next to the tray
+ok - default bar widget ids resolve to manifests and entry points
+ok - package-owned defaults live outside config
+ok - Hyprland user entrypoint keeps package and state path bootstrap in defaults
+ok - Hyprland bootstrap reloads cached Omarchy config modules
+ok - bar use rejects an unknown bar option
+Using local.demo-bar as the active bar
+ok - shell config selects a bar option
+Using omarchy.bar as the active bar
+ok - shell config resets to built-in bar option
+Moved omarchy.active-window
+ok - bar move accepts a positional target section
+Moved omarchy.active-window
+ok - bar move can restore a widget with positional syntax
+ok - bar move rejects conflicting target section syntax
+Bar position set to bottom
+ok - shell config sets bar position
+Bar transparency set to true
+ok - shell config sets bar transparency
+Bar transparency toggled
+ok - shell config toggles bar transparency
+Set enabled on omarchy.bluetooth
+ok - bar set accepts false JSON values
+Set optional on omarchy.bluetooth
+ok - bar set accepts null JSON values
+ok - bar set rejects malformed JSON
+ok - bar set rejects multiple JSON values
+Restored the default Omarchy bar
+ok - bar defaults restores the stock bar
+Restored the default Omarchy bar
+ok - bar defaults places plugins for running optional services
+Restored the default Omarchy bar
+ok - bar defaults places service widgets without a running shell
+Restored the default Omarchy bar
+ok - shell refresh keeps optional service widgets absent when services are unavailable
+Restored the default Omarchy bar
+ok - shell refresh places optional service widgets when services are available
+ok - 4.0 upgrade is handled outside the migration runner

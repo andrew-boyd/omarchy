@@ -1,0 +1,27 @@
+{
+  "recorded_at": "2026-09-21T02:07:04.178770+00:00",
+  "ssh_command": [
+    "ssh",
+    "-i",
+    "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/sources/omarchy-iso/test-runs/omarchy-2026.09.21-x86_64-encrypted/id_ed25519",
+    "-p",
+    "2222",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "StrictHostKeyChecking=no",
+    "-o",
+    "UserKnownHostsFile=/dev/null",
+    "-o",
+    "LogLevel=ERROR",
+    "-o",
+    "ConnectTimeout=5",
+    "omarchy@127.0.0.1",
+    "set -e; test \"$(hostname)\" = omarchy-test; test \"$(systemd-detect-virt)\" = kvm; uname -r; cat /usr/lib/modules/$(uname -r)/pkgbase; pacman -Q omarchy-dev omarchy-settings-dev omarchy-nvim linux-omarchy linux-omarchy-headers; cat /usr/share/omarchy/version; lsblk -J -o NAME,TYPE,FSTYPE,MOUNTPOINTS; readlink -f /usr/share/omarchy; systemctl --failed --no-pager"
+  ],
+  "exit": 0,
+  "stdout": "7.2.5-4-omarchy\nlinux-omarchy\nomarchy-dev 4.0.0.r6529.g8ffe7ac-1\nomarchy-settings-dev 4.0.0.r6529.g8ffe7ac-1\nomarchy-nvim 2026.8.13-1\nlinux-omarchy 7.2.5-4\nlinux-omarchy-headers 7.2.5-4\n4.0.0.alpha\n{\n   \"blockdevices\": [\n      {\n         \"name\": \"sr0\",\n         \"type\": \"rom\",\n         \"fstype\": null,\n         \"mountpoints\": []\n      },{\n         \"name\": \"zram0\",\n         \"type\": \"disk\",\n         \"fstype\": \"swap\",\n         \"mountpoints\": [\n             \"[SWAP]\"\n         ]\n      },{\n         \"name\": \"vda\",\n         \"type\": \"disk\",\n         \"fstype\": null,\n         \"mountpoints\": [],\n         \"children\": [\n            {\n               \"name\": \"vda1\",\n               \"type\": \"part\",\n               \"fstype\": \"vfat\",\n               \"mountpoints\": [\n                   \"/boot\"\n               ]\n            },{\n               \"name\": \"vda2\",\n               \"type\": \"part\",\n               \"fstype\": \"crypto_LUKS\",\n               \"mountpoints\": [],\n               \"children\": [\n                  {\n                     \"name\": \"root\",\n                     \"type\": \"crypt\",\n                     \"fstype\": \"btrfs\",\n                     \"mountpoints\": [\n                         \"/var/log\", \"/home\", \"/var/cache/pacman/pkg\", \"/\"\n                     ]\n                  }\n               ]\n            }\n         ]\n      }\n   ]\n}\n/usr/share/omarchy\n  UNIT LOAD ACTIVE SUB DESCRIPTION\n\n0 loaded units listed.\n",
+  "stderr": "warning: database file for 'core' does not exist (use '-Sy' to download)\nwarning: database file for 'extra' does not exist (use '-Sy' to download)\nwarning: database file for 'multilib' does not exist (use '-Sy' to download)\nwarning: database file for 'omarchy' does not exist (use '-Sy' to download)\n"
+}

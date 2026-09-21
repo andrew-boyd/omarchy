@@ -1,0 +1,38 @@
+[
+  {
+    "id": "P14",
+    "repository": "omacom/omarchy",
+    "fork": "andrew-boyd/omarchy",
+    "branch": "intel-mac/p14-suspend-diagnostics",
+    "old_head": "213d7f6b4179960882e46b7a678bba466878d6c9",
+    "prepared_head": "31626e74cf36f315acdaf0942b4e2b2a6e240e50",
+    "checkout": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P14",
+    "source_fix": "d71d291e0fa073a70625e6493554758ba089c812",
+    "pushed": true,
+    "verified_at": "2026-09-21T03:31:21.629774+00:00"
+  },
+  {
+    "id": "P11-packages",
+    "repository": "omacom/omarchy-pkgs",
+    "fork": "andrew-boyd/omarchy-pkgs",
+    "branch": "intel-mac/p11-cirrus-audio",
+    "old_head": "dd91732c68a4bce5b26af7a5ad15aacd41601ca9",
+    "prepared_head": "f2e815619d90ba8ba5e7f819ccdc7640386b16fb",
+    "checkout": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P11-packages",
+    "source_fix": "79eaa4d",
+    "pushed": true,
+    "verified_at": "2026-09-21T03:31:21.793720+00:00"
+  },
+  {
+    "id": "P13",
+    "repository": "omacom/omarchy",
+    "fork": "andrew-boyd/omarchy",
+    "branch": "intel-mac/p13-kernel-policy",
+    "old_head": "e909e30fa6d66b7558b0ff2a5d35a1ff4a9308e3",
+    "prepared_head": "50606b45743ca16acf18fe2edddb61957f99d57e",
+    "checkout": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/pr-followups/P13",
+    "source_fix": "file-specific change from 8ffe7ac5",
+    "pushed": true,
+    "verified_at": "2026-09-21T03:31:21.970352+00:00"
+  }
+]

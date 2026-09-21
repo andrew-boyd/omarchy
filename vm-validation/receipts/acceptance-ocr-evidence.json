@@ -1,0 +1,27 @@
+{
+  "original_runs": [
+    {
+      "log": "acceptance.log",
+      "exit": 1
+    },
+    {
+      "log": "acceptance-2.log",
+      "exit": 1
+    }
+  ],
+  "whitespace_only_run": {
+    "log": "acceptance-normalized.log",
+    "exit": 1,
+    "failed_assertion": "notification content is visible"
+  },
+  "reproduced_ocr_defects": [
+    "2x Reminder and message recognized on separate lines; native sees full phrase",
+    "2x notification title misrecognized, native sees Acceptance notification"
+  ],
+  "adjustment": "Test harness only: normalize OCR whitespace and use native resolution fallback after 2x. Installed product and immutable ISO unchanged.",
+  "patch": "acceptance-ocr-whitespace.patch",
+  "final_log": "acceptance-ocr-fallback.log",
+  "final_result": "passed: all eight acceptance files, including privileged security checks",
+  "final_exit": 0,
+  "elapsed_seconds": 90
+}

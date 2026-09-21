@@ -1,0 +1,17 @@
+{
+  "result": "failed shared-ESP preservation in unchanged baseline reset code",
+  "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+  "reset_file": "bin/omarchy-system-factory-reset",
+  "reset_sha256": "afbec0432effd3836e41dfb9e83a25a14694ac7c4cc4d2bebbe3fe2e1ad84995",
+  "byte_identical_to_base": true,
+  "actual_failures": [
+    "Windows boot entry removed although Windows payload retained",
+    "foreign Linux boot entry removed",
+    "foreign Linux machine-id directory removed"
+  ],
+  "test_limitation": "The foreign UKI assertion also hardcodes foreign_linux.efi; the real fixture creates foreign_linux-omarchy.efi. That assertion does not prove deletion of the foreign UKI.",
+  "observed_code": "reset_limine_config replaces limine.conf with the template and removes every referenced old machine-id directory except the new identity.",
+  "first_boot_after_reset": "not exercised by original scenario: harness correctly stopped after failed preservation assertions",
+  "evidence_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-224136-factory-reset",
+  "disposition": "Preserve and report as a baseline failure outside the Mac aggregation scope. Do not certify factory reset or dual-boot preservation. No speculative reset rewrite in the 14 Mac targets."
+}

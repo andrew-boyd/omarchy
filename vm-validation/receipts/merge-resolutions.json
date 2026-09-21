@@ -1,0 +1,10 @@
+[
+  {
+    "plan": "P10",
+    "resolution": "Retain P08 FaceTime setup plus all three P10 Broadcom calls; combine camera/5 GHz prose and preserve the P07 MacBook8,1 paragraph. No setup leaf implementation changed."
+  },
+  {
+    "plan": "P11",
+    "resolution": "Retain P06 removal of macbook12-spi-driver-dkms while adding macbook12-audio-driver-dkms. Combine camera, Broadcom, P07 PIO and P11 audio documentation. No hardware leaf implementation changed."
+  }
+]

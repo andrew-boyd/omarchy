@@ -1,0 +1,2 @@
+COMMAND ['git', 'diff', '--check', 'HEAD^', 'HEAD']
+COMMAND ['bash', '-n', 'pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD']

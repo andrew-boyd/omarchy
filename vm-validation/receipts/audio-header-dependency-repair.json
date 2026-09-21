@@ -1,0 +1,10 @@
+{
+  "observed_package": "macbook12-audio-driver-dkms 0.1-1",
+  "target_kernel": "7.2.5-4-omarchy",
+  "observed_result": "Target module compiled and reboot succeeded, but hard linux-headers dependency pulled 7.2.6.arch2-1 headers without stock linux and caused an extra DKMS hook error. Exit status alone did not expose this.",
+  "source_evidence": "build-20260921T014550Z-X4tHsG/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260920-225556-mac-packages-audio12/package-install.log",
+  "fix_commit": "79eaa4deef8ee02b3aa5e1e089c83cb3ac2b6f31",
+  "adjustment": "pkgrel 2; kernel-specific headers move to optdepends, matching existing DKMS package policy. Both stock and Omarchy header variants documented. curl and dkms remain required.",
+  "driver_sources_changed": false,
+  "final_validation": "rebuild and real fresh-guest install pending"
+}

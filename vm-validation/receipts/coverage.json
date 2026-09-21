@@ -1,0 +1,197 @@
+[
+  {
+    "id": "P01",
+    "scope": "Keyboard layout",
+    "source_tests": [
+      "test/shell.d/keyboard-layout-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Switch guest keyboard layouts and verify shell indicator; distinguish typing keyboards from consumer-only devices.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Physical Apple keyboard identities remain hardware-only.",
+    "vm_evidence": "Real QEMU typing keyboard changed US -> German -> US; bar labels EN -> DE -> EN visually verified in mac-desktop-unlocked/. Existing Apple consumer-device fixtures passed in guest.",
+    "guest_source_result": "passed; see guest-software-verification.json"
+  },
+  {
+    "id": "P02",
+    "scope": "Kernel headers",
+    "source_tests": [
+      "test/shell.d/broadcom-wl-headers-migration-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Inspect installed kernel/header versions; exercise retained-kernel header repair and DKMS rebuilds.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "A successful build does not validate physical device operation.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "Installed actual stock linux 7.2.6.arch2-1 and broadcom-wl-dkms without stock headers. The real migration installed matching linux-headers, and DKMS built for both stock 7.2.6-arch2-1 and ISO 7.2.5-4-omarchy. Reboot retained both kernel/header pairs."
+  },
+  {
+    "id": "P03",
+    "scope": "Hardware detection",
+    "source_tests": [
+      "test/shell.d/hw-bcm43xx-test.sh",
+      "test/shell.d/hw-t2-test.sh",
+      "test/shell.d/nvidia-hw-detect-test.sh",
+      "test/shell.d/vulkan-sysfs-test.sh",
+      "test/shell.d/pci-detection-integration-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Verify virtual PCI inventory and non-Apple no-op behavior; run positive/negative ID fixtures in the guest.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "QEMU PCI fixtures do not emulate Apple controllers.",
+    "vm_evidence": "Real QEMU PCI inventory excluded by installed bcm43xx, T2, Nvidia and FaceTime helpers. Positive/negative source fixtures passed in guest.",
+    "guest_source_result": "passed; see guest-software-verification.json"
+  },
+  {
+    "id": "P04",
+    "scope": "Lid handling",
+    "source_tests": [
+      "test/shell.d/lid-close-test.sh",
+      "test/shell.d/lid-active-display-integration-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Verify guest lock behavior and display-state decisions; use explicit fixtures for lid/internal connector identity.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Real lid switches and USB display identity need physical testing.",
+    "vm_evidence": "Installed lock rejects wrong password and accepts valid password via QMP hardware keystrokes; all three screenshots inspected. Lid/external-display decision fixtures passed in guest; real lid switch absent.",
+    "guest_source_result": "passed; see guest-software-verification.json"
+  },
+  {
+    "id": "P05",
+    "scope": "Ghost displays",
+    "source_tests": [
+      "test/shell.d/monitor-modeless-test.sh",
+      "test/shell.d/monitor-state-test.sh",
+      "test/shell.d/monitor-panel-pipeline-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Exercise monitor watcher in the guest desktop and modeless-connector fixtures.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "A virtual output does not reproduce a gmux phantom panel.",
+    "vm_evidence": "Installed monitor watcher survived config reload, kept the active Virtual-1 display, and reported no modeless monitor. Monitor panel inspected; ghost/modeless/pipeline fixtures passed in guest.",
+    "guest_source_result": "passed; see guest-software-verification.json"
+  },
+  {
+    "id": "P06",
+    "scope": "SPI retirement",
+    "source_tests": [
+      "test/shell.d/spi-keyboard-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Verify legacy package omission on fresh install; execute real package removal in a disposable upgrade overlay after prerequisite setup.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "No claim about live T1 provider handoff without physical hardware.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "Fresh VM omits the obsolete package. With all five T1 packages installed and the real initramfs prepared using an explicit MacBookPro13,3 DMI input fixture, installed the original retired SPI archive, then removed it through the actual migration twice. Native applespi checksum and all five T1 package versions were preserved; T1 DKMS remained installed. No physical provisioning/handoff claim."
+  },
+  {
+    "id": "P07",
+    "scope": "MacBook8,1 PIO",
+    "source_tests": [
+      "test/shell.d/macbook81-spi-pio-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Use an explicitly simulated MacBook8,1 identity to exercise setup and initramfs/boot-image generation; inspect and reboot.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "PIO transfer reliability and real s2idle behavior remain hardware-only.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "Explicit MacBook8,1 DMI input fixture exercised actual installed setup, UKI regeneration and migration. A repeated migration preserved UKI hashes; rebooted cmdline includes initcall_blacklist=dw_pci_driver_init and mem_sleep_default=s2idle."
+  },
+  {
+    "id": "P08",
+    "scope": "FaceTime camera",
+    "source_tests": [
+      "test/shell.d/facetimehd-test.sh",
+      "test/shell.d/camera-consolidation-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Verify all three local packages in ISO; install/build DKMS against guest target headers and verify nonmatching detection.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Camera streaming and calibration require the Broadcom camera.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "All three exact camera archives installed from the ISO; facetimehd/0.7.2 built against 7.2.5-4-omarchy, reboot passed, and PAM files were unchanged. Actual nonmatching PCI detection and calibration/model fixtures passed."
+  },
+  {
+    "id": "P09",
+    "scope": "NVMe suspend",
+    "source_tests": [
+      "test/shell.d/apple-suspend-nvme-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Verify nonmatching virtual NVMe handling and unit applicability fixtures, preservation limitations included.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Fixed Apple PCI address and physical storage suspend cannot be proved with a virtual controller.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "QEMU NVMe controller at 0000:01:00.0 reports vendor/device 1b36:0010. With an explicit MacBook8,1 DMI input fixture, the installed setup excludes this non-Apple device and preserves d3cold and a custom unit. Positive Apple-address/unit behavior and retained preservation limitations are fixture evidence only."
+  },
+  {
+    "id": "P10",
+    "scope": "Broadcom calibration and recovery",
+    "source_tests": [
+      "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "test/shell.d/brcmfmac-5ghz-test.sh",
+      "test/shell.d/brcmfmac-suspend-test.sh",
+      "test/shell.d/broadcom-calibration-integration-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Verify exact calibration/hook payloads and guest nonmatching behavior; exercise pre/post and failure fixtures.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Radio association, throughput and physical rebind recovery require Broadcom hardware.",
+    "vm_evidence": "Exact hook/calibration helper payloads match installed source; actual non-Apple setup leaves packages/config unchanged. All pre/post/failure/calibration fixtures passed in guest.",
+    "guest_source_result": "passed; see guest-software-verification.json"
+  },
+  {
+    "id": "P11",
+    "scope": "Cirrus audio",
+    "source_tests": [
+      "test/shell.d/cs4208-audio-test.sh",
+      "test/shell.d/cs8409-audio-test.sh",
+      "test/shell.d/imac-cs4208-speakers-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Install each companion in separate guest overlays, rebuild DKMS, validate WirePlumber configuration and model gating.",
+    "vm_result": "passed_vm_and_fixtures_after_observed_dependency_repair",
+    "physical_limit": "Virtual audio cannot validate speaker safety, channel mapping or hardware mixer behavior.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "CS8409 companion built/installed, DKMS compiled and reboot passed in Build 5. Final Build 6 fresh install verified 12-inch audio 0.1-2, matching Omarchy headers, no stock kernel/header pull, no orphan-kernel hook error, successful target DKMS build and reboot, unchanged PAM. Driver sources unchanged; no physical speaker-safety claim."
+  },
+  {
+    "id": "P12",
+    "scope": "T1Bridge and fingerprint UI",
+    "source_tests": [
+      "test/shell.d/lock-blank-fingerprint-test.sh",
+      "test/shell.d/lock-fingerprint-message-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Build/install the five local packages in a guest overlay, verify services/metadata and password fallback; exercise fingerprint UI states.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Device provisioning, Touch ID, Touch Bar, ALS and camera ownership require actual T1 hardware.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "All five exact T1 packages installed; T1 DKMS built against the installed kernel; reboot passed; PAM hashes unchanged. With an actual logged-in guest desktop, provider reported cap13, volume changed 100 to37, mute toggled and state restored; OSD and fallback notification inspected. Password lock rejected wrong and accepted correct password; zero failed system units. Physical fingerprint/Touch Bar/ALS absent; optional auto-brightness inactive."
+  },
+  {
+    "id": "P13",
+    "scope": "Intel Mac kernel policy",
+    "source_tests": [
+      "test/shell.d/intel-mac-kernel-policy-test.sh",
+      "test/shell.d/omarchy-kernel-migration-test.sh"
+    ],
+    "source_result": "passed_with_runtime_skips_as_recorded",
+    "vm_required": "Run migration fixtures and real guest upgrade checks confirming retained kernels/headers and correct non-Apple policy.",
+    "vm_result": "passed_vm_and_fixtures",
+    "physical_limit": "Retaining a kernel does not prove it drives any particular physical Mac.",
+    "guest_source_result": "passed; see guest-software-verification.json",
+    "vm_evidence": "With both actual stock and Omarchy kernels/headers installed, Apple vendor fixture made the real migration preserve package inventory and Limine config hashes. Actual QEMU non-Apple path rebuilt boot files; reboot chose linux-omarchy while retaining stock linux/headers."
+  },
+  {
+    "id": "P14",
+    "scope": "Suspend diagnostics",
+    "source_tests": [],
+    "source_result": "syntax/helper/CLI checks passed; real virtual RTC and retained defect fixtures recorded",
+    "vm_required": "Run status/test/restore and interruption recovery only inside the guest; test real virtual RTC wake if QEMU supports it.",
+    "vm_result": "passed_virtual_rtc_with_confirmed_known_limits",
+    "physical_limit": "Virtual RTC success cannot identify real Mac wake sources.",
+    "vm_evidence": "Actual installed status and empty restore ran. test 10 held 11 seconds; kernel journal confirms deep/S3 entry and resume. Isolated guest fixtures confirm successful selective restore and reproduce three retained limitations: failed restore clears state, rtcwake failure exits zero, TERM restores then diagnosis continues and disables again.",
+    "guest_source_result": "active and fixture results recorded in vm_evidence"
+  }
+]

@@ -1,0 +1,4 @@
+PASS: restore re-enables its recorded USB fixture, preserves unrelated disabled state, and repeats as a no-op.
+KNOWN LIMIT REPRODUCED: a failed restore write still clears the recorded state.
+KNOWN LIMIT REPRODUCED: rtcwake failure is reported as inconclusive but cmd_test exits zero.
+KNOWN LIMIT REPRODUCED: TERM restores, then diagnosis continues and disables the fixture again.

@@ -1,0 +1,8 @@
+ok - Snapper and Limine retain update snapshots without a transient limit mismatch
+ok - Limine Snapper warning notifier is disabled by default
+ok - Limine Snapper warning notifier migration disables existing user autostart
+ok - snapshot configure normalizes Snapper policy and services
+ok - system setup normalizes Snapper during fresh installs
+ok - Snapper service migration only repairs broken services idempotently
+ok - omarchy-pkgs packages Snapper template, setup, and migration coverage
+ok - omarchy-iso delegates Snapper setup to packaged system setup

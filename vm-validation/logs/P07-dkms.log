@@ -1,0 +1,2 @@
+bash: line 1: dkms: command not found
+find: '/var/lib/dkms': No such file or directory

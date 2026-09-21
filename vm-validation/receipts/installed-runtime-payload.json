@@ -1,0 +1,247 @@
+[
+  {
+    "path": "/usr/bin/omarchy-diagnose-suspend-wake",
+    "sha256": "8484aea9df2235d3375920834fa1370151b95bafb7d77a5d7b506dd4a1d381c8",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hw-apple-cs8409",
+    "sha256": "f854c6ca8460d899ecb11316efab167ba6cc1c535c944c796e6276c3fe2c7839",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hw-bcm43xx",
+    "sha256": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hw-facetimehd",
+    "sha256": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hw-imac-cs4208",
+    "sha256": "26e6ec0bbd7dcc294f4a69ffd3c633b7c09d0a772025c50b7f5633fc409008d5",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hw-t2",
+    "sha256": "72dc8a79c15459116b4b301dca292ef730240c6dc845b04ebc10e6846dd558fb",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hyprland-monitor-disable-ghosts",
+    "sha256": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-hyprland-monitor-watch",
+    "sha256": "254439820dbb959ca439b5f4833bbc6c8725025baab058ae97c899fca7c42ab0",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-monitor-state",
+    "sha256": "f807549eacfd6079d513a2cf54f896eb9695fb34415e9f696853bd6d0e0dc32e",
+    "matched": true
+  },
+  {
+    "path": "/usr/bin/omarchy-system-lid-close",
+    "sha256": "4799cadd69793424468ae79b0a442155f446d5fe6c5a54d48c34bdaae763ecd1",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/all.sh",
+    "sha256": "150b14437c7955acafb32ef49cd8f2826979ca2f0e10ed6c9cf480887e833d53",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/brcmfmac-43602.sh",
+    "sha256": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-bcm43602-nvram.sh",
+    "sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-brcmfmac-5ghz.sh",
+    "sha256": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-brcmfmac-suspend.sh",
+    "sha256": "3bf4b6bc0e73850b97e2298dd50123ade08984369186e3d347aca6aaab4c67ce",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-cs4208-audio.sh",
+    "sha256": "1de8949038dbec5782c3ecd18deecc2f420892978c6857c16cdcbae0c0e26d62",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-cs8409-audio.sh",
+    "sha256": "de1c0716ff6efa826cba3b7ddaf9498d815ae8ad33be3d052a1c1802ca431218",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-facetimehd.sh",
+    "sha256": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-spi-keyboard.sh",
+    "sha256": "b1f7e6ddeae1e78cbc3edf65d36cb1b5369f6f0e4ac976f4cee5724c4a04217a",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-suspend-nvme.sh",
+    "sha256": "d0ddd0249228c0b19d1716c1610e6828169b32410a7a2c64d78663063715ec50",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-t2.sh",
+    "sha256": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/apple/omarchy-cs4208-audio.service",
+    "sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/fix-bcm43xx.sh",
+    "sha256": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/nvidia.sh",
+    "sha256": "25417ff6340279486d937a3f68670b28a5cbf829e85961443db431a32a074718",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/pacman.sh",
+    "sha256": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/hardware/vulkan.sh",
+    "sha256": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/omarchy-other.packages",
+    "sha256": "5901a99d2073f390aeb06e9be5a5a5ac0df2b3331e327708e0d4cb28cefd2b3a",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/user/all.sh",
+    "sha256": "46e026042bdafdb1823b5c824fa8132756638039e40fc3cb52df128f7d30fb0d",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/user/hardware/apple/fix-cs4208-audio.sh",
+    "sha256": "e1eee3ccdd28fc57118ad51e06553bad62ef19965bdfe518c48ddb5815c3c6e4",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+    "sha256": "c933380bea548b19f3760c0a84cedfb1198da7dfcb293865bcf246c5891132e3",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1786889011.sh",
+    "sha256": "881c662c1eaee6f44ccf1a6acea6b185c3fa8bb61e6715fc00933f645d4c0231",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1787312531.sh",
+    "sha256": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1788318101.sh",
+    "sha256": "c490ba8b78fb7470ff364ddef469937fc296fe2cec41c1f8d6a28472f79ff990",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1788476400.sh",
+    "sha256": "5f2515a3a0d62a673faea3afe574971bc0844c33151b6d04fe4ee61cece806dc",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1788673159.sh",
+    "sha256": "fea683a5bec3374120c4c3207a9ddc15de30f2c15b819bb31216c5b7e82a975e",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1789274148.sh",
+    "sha256": "1ef0f307289f91114dca2a891e745319a2b79edab0502b2a1092992e52495c01",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1789325478.sh",
+    "sha256": "60d0dbe15471cfb873571c662f11107a43b6af2c4fa227ded6f74f6a2b59571d",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1789542390.sh",
+    "sha256": "98c28a28296442f5df74bb0707d34f97015b6dca2cd035ce7128a4efd7e0b01b",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1789546355.sh",
+    "sha256": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1789668939.sh",
+    "sha256": "31784502362914ea232d7fad536dc95cd607927b2c9786e3071c30acccee835e",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/migrations/1789869577.sh",
+    "sha256": "7f8b53ff488bc390f813a791440c57a4e01d9ccf59662cca392f37d0395397fa",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+    "sha256": "13432a7a87a03f98158bbeedde3d80360cc4f81e2322bf6dd98451f094daf446",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/shell/plugins/lock/LockView.qml",
+    "sha256": "757c6776bb9e2d18a79653adcff8c80a440c9b8dbe7ccd67a300da9142ad1812",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/shell/plugins/lock/Service.qml",
+    "sha256": "7407af8722984e212cf32155ce79adb7e7dc98f9b49a116df2d7291d65f6a31a",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/shell/plugins/polkit/PolkitAgent.qml",
+    "sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/default/firmware/apple/brcmfmac43602-pcie.txt",
+    "sha256": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/default/systemd/system-sleep/rebind-brcmfmac",
+    "sha256": "0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+    "sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+    "matched": true
+  },
+  {
+    "path": "/usr/share/omarchy/default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+    "sha256": "594cc5b9376c851923573cf5916a5e710f537f5b3474aec78c926635e612bd7a",
+    "matched": true
+  }
+]

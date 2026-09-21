@@ -1,0 +1,1370 @@
+{
+  "source_commits": {
+    "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+    "omarchy-pkgs": "e14b1d6657f272b3cf471db542af1329b56e63ca",
+    "omarchy-iso": "5526761d972236afeccbc1542e07a96180c400a6"
+  },
+  "cli": "passed",
+  "shell_files": 267,
+  "all_files_passed_including_focused_rechecks": true,
+  "initial_shell_exit": 1,
+  "files": [
+    {
+      "path": "test/shell.d/acceptance-helpers-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agent-invitation-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agents-panel-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agents-rename-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agent-usage-claude-limits-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agent-usage-claude-scanner-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agent-usage-codex-scanner-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agent-usage-fireworks-scanner-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/agent-usage-update-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/apple-suspend-nvme-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/apply-lock-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/app-search-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/ascii-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/audio-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/background-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/bar-icon-geometry-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/bar-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/bar-text-color-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/bar-widget-contract-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/battery-status-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/battery-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/battlenet-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/bin-style-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/bluetooth-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/border-geometry-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/branding-about-animation-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/brcmfmac-5ghz-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/brcmfmac-supplicant-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/brcmfmac-suspend-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/brightness-display-apple-cache-test.sh",
+      "result": "passed",
+      "limitations": [
+        "ok - no /dev/hiddev* character device present; skipping the valid-cache case"
+      ]
+    },
+    {
+      "path": "test/shell.d/brightness-display-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/broadcom-calibration-integration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/broadcom-wl-headers-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/browser-env-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/browser-policy-dir-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/browser-policy-sudoers-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/button-border-stability-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/camera-consolidation-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/channel-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/chromium-claude-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/chromium-copy-url-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/chromium-whatsapp-slim-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/chromium-ytdlp-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/clipboard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/clock-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/compositor-guard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/config-test.sh",
+      "result": "passed_on_recheck",
+      "limitations": [],
+      "failures": [
+        "not ok - omarchy-pkgs checkout found for PKGBUILD coverage"
+      ],
+      "recheck_log": "guest-config-recheck.log",
+      "cause": "Required companion source checkout was absent from guest; staged exact build source, then passed."
+    },
+    {
+      "path": "test/shell.d/copy-url-shortcut-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/crash-capture-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/cs8409-audio-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/cups-hardening-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/default-agent-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/default-apps-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/desktop-entry-launch-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/dev-env-path-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/dev-link-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/dev-unlink-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/dns-sudoers-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/docker-group-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/done-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/drive-password-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/dropbox-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/editor-env-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/elsewhen-default-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/emojis-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/facetimehd-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/factory-reset-accounts-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/fingerprint-driver-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/fingerprint-invitation-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/fingerprint-package-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/firewall-config-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/first-run-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/floating-terminal-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/git-url-check-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/herdr-functions-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-cli-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-cli-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-desktop-install-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-remove-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-skills-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-skin-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hermes-theme-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hook-state-name-guard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-bcm43xx-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-display-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-external-monitors-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-fingerprint-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-hybrid-gpu-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-nvidia-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hw-t2-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hybrid-gpu-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-binding-conflicts-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-default-config-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-focus-app-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-keyboard-layout-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-paths-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-qconsole-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-reload-guard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-session-locked-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-window-close-all-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-window-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/hyprland-workspace-layout-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/idle-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/imac-cs4208-speakers-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/image-picker-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/indicator-contract-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/input-group-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/installed-service-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/intel-mac-kernel-policy-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/kernel-headers-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/keybindings-menu-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/keyboard-layout-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/kitty-config-test.sh",
+      "result": "passed_with_native_parser_on_recheck",
+      "limitations": [],
+      "recheck_log": "guest-kitty-parser.log"
+    },
+    {
+      "path": "test/shell.d/launch-1password-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/launch-about-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/launch-browser-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/launcher-remove-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/launch-openclaw-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/launch-shell-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/legacy-icon-font-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/legacy-power-udev-rules-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lid-active-display-integration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lid-close-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/limine-defaults-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/locale-env-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/locate-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lock-blank-fingerprint-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lock-fingerprint-indicator-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lock-fingerprint-message-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lock-password-overflow-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/lock-stranded-recovery-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/logging-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/macbook81-spi-pio-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/manifest-entrypoints-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/media-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/menu-guards-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/menu-images-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/menu-plugin-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/menu-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/migrate-notify-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/migrate-scope-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/migrate-wrapper-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/mise-install-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/mise-work-path-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/mise-wrapper-quiet-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-clamshell-scale-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-modeless-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-output-name-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-panel-pipeline-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-recovery-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-scaling-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-state-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/monitor-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/network-captive-portal-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/network-manager-transition-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/network-password-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/network-qr-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/network-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/nightlight-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/nopasswd-sudo-expiry-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/notification-send-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/notifications-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/nouveau-cursor-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/nvidia-hw-detect-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/nvidia-kms-hook-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/omarchy-kernel-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/openclaw-onboard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/osd-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/panel-command-path-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/pci-detection-integration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/pkg-drop-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugin-add-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugin-auth-boundary-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugin-clone-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugin-enable-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugin-registry-contract-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugins-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plugin-validate-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/plymouth-set-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/pointer-move-gate-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/polkit-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/power-present-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/powerprofiles-set-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/power-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/preinstalls-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/privileged-heredoc-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/provisioning-groups-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/provision-user-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/qml-text-format-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/refresh-config-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/reminders-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/remove-ai-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/restart-shell-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/retired-installer-artifacts-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/row-border-stability-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/runtime-smoke-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/screenrecording-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/screenshot-sanity-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/security-fido2-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/security-fido2-remove-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/security-fido2-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/setup-form-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/setup-security-sshd-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/shell-ipc-display-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/shell-launch-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/sleep-lock-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/sleep-monitor-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/snapper-test.sh",
+      "result": "passed_on_recheck",
+      "limitations": [],
+      "failures": [
+        "not ok - omarchy-iso checkout is available for installer coverage"
+      ],
+      "recheck_log": "guest-snapper-recheck.log",
+      "cause": "Required ISO source checkout was absent from guest; staged exact build source, then passed."
+    },
+    {
+      "path": "test/shell.d/snapper-timeline-leak-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/snapshot-create-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/spi-keyboard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/sshd-hardening-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/ssh-reconnect-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/sudo-docker-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/sudoless-docker-posture-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/sudoless-docker-toggle-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/synaptic-touchpad-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/systemd-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/system-lock-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/system-power-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/system-sleep-ownership-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/t2-hardware-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/t3code-install-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/tailscale-receive-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/tailscale-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/theme-install-guards-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/theme-staging-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/timezone-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/tmux-alert-removal-migration-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/toggle-input-device-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/toggle-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/tray-menu-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/tray-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/unowned-system-paths-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-available-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-dev-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-disk-space-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-file-conflict-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-keyring-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-lock-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-orphan-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-package-conflict-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-pacman-guard-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-pacman-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-pkg-prune-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-sequence-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/update-status-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/upgrade-to-quattro-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/user-theme-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/version-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/video-background-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/voxtype-invitation-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/vscode-theme-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/vulkan-sysfs-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/weather-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/webapp-install-escaping-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/webapp-install-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/webapp-name-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/whatsapp-slim-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/wifiqr-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/windows-key-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/windows-vm-compose-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/windows-vm-mount-boundary-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/windows-vm-test.sh",
+      "result": "passed",
+      "limitations": []
+    },
+    {
+      "path": "test/shell.d/xps13-sidecar-amps-test.sh",
+      "result": "passed",
+      "limitations": []
+    }
+  ],
+  "desktop_acceptance": "eight files passed with test-only OCR fallback",
+  "runtime_notes": [
+    "No Wayland/compositor skips in the in-guest suite.",
+    "Physical /dev/hiddev cache case remains unavailable.",
+    "Kitty native parser passed after installing Kitty as a guest-only test dependency.",
+    "Initial real lock test encountered a temporary PAM lockout after the suite generated polkit authentication failures. Successful password validation after expiry and a fresh lock test proved wrong-password rejection and correct-password unlock.",
+    "The first extra desktop screenshots captured a session locked by the long-running suite; those images are not keyboard-label evidence. The rerun explicitly required an unlocked desktop and its EN/DE/EN labels were visually inspected."
+  ],
+  "evidence_directory": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG"
+}

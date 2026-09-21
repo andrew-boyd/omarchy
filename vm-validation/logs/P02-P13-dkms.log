@@ -1,0 +1,186 @@
+broadcom-wl/6.30.223.271, 7.2.5-4-omarchy, x86_64: installed
+broadcom-wl/6.30.223.271, 7.2.6-arch2-1, x86_64: installed
+DKMS (dkms-3.4.3) make.log for broadcom-wl/6.30.223.271 for kernel 7.2.5-4-omarchy (x86_64)
+Mon Sep 21 02:53:07 UTC 2026
+
+Building module(s)
+# command: make -j8 KERNELRELEASE=7.2.5-4-omarchy -C /usr/lib/modules/7.2.5-4-omarchy/build M=/var/lib/dkms/broadcom-wl/6.30.223.271/build
+make: Entering directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[1]: Entering directory '/var/lib/dkms/broadcom-wl/6.30.223.271/build'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+CFG80211 API is prefered for this kernel version
+Using CFG80211 API
+  CC [M]  src/shared/linux_osl.o
+  CC [M]  src/wl/sys/wl_linux.o
+  CC [M]  src/wl/sys/wl_iw.o
+  CC [M]  src/wl/sys/wl_cfg80211_hybrid.o
+In file included from src/wl/sys/wl_linux.c:85:
+././src/wl/sys/wl_iw.h:73:9: warning: 'isprint' redefined
+   73 | #define isprint(c) bcm_isprint(c)
+      |         ^~~~~~~
+In file included from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/string_helpers.h:6,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/seq_file.h:7,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/seq_file_net.h:5,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/net/net_namespace.h:206,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/netdevice.h:38,
+                 from ././src/include/linuxver.h:69,
+                 from src/wl/sys/wl_linux.c:27:
+/usr/lib/modules/7.2.5-4-omarchy/build/include/linux/ctype.h:30:9: note: this is the location of the previous definition
+   30 | #define isprint(c)      ((__ismask(c)&(_P|_U|_L|_D|_SP)) != 0)
+      |         ^~~~~~~
+src/wl/sys/wl_linux.c: In function 'wl_pci_probe':
+src/wl/sys/wl_linux.c:792:9: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  792 |         if ((val & 0x0000ff00) != 0)
+      |         ^~
+src/wl/sys/wl_linux.c:794:17: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  794 |                 bar1_size = pci_resource_len(pdev, 2);
+      |                 ^~~~~~~~~
+src/wl/sys/wl_linux.c: In function 'wl_open':
+src/wl/sys/wl_linux.c:1108:38: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1108 |                 OLD_MOD_INC_USE_COUNT;
+      |                                      ^
+src/wl/sys/wl_linux.c: In function 'wl_set_mac_address':
+src/wl/sys/wl_linux.c:1872:40: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1872 |                         wl->pub->unit));
+      |                                        ^
+src/wl/sys/wl_linux.c: In function 'wl_start':
+src/wl/sys/wl_linux.c:2262:58: warning: suggest braces around empty body in an 'else' statement [-Wempty-body]
+ 2262 |                                           wl->pub->unit));
+      |                                                          ^
+In file included from src/wl/sys/wl_cfg80211_hybrid.c:40:
+src/wl/sys/wl_cfg80211_hybrid.c: In function 'wl_set_auth_type':
+././src/wl/sys/wl_cfg80211_hybrid.h:52:12: warning: this statement may fall through [-Wimplicit-fallthrough=]
+   52 |         if (wl_dbg_level & WL_DBG_DBG) {                        \
+      |            ^
+src/wl/sys/wl_cfg80211_hybrid.c:835:17: note: in expansion of macro 'WL_DBG'
+  835 |                 WL_DBG(("network eap\n"));
+      |                 ^~~~~~
+src/wl/sys/wl_cfg80211_hybrid.c:836:9: note: here
+  836 |         default:
+      |         ^~~~~~~
+In file included from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/srcu.h:21,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/notifier.h:16,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/arch/x86/include/asm/uprobes.h:13,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/uprobes.h:66,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/mm_types.h:16,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/mmzone.h:22,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/gfp.h:7,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/umh.h:4,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/kmod.h:9,
+                 from /usr/lib/modules/7.2.5-4-omarchy/build/include/linux/module.h:18,
+                 from ././src/include/linuxver.h:40:
+src/wl/sys/wl_linux.c: In function 'wl_down':
+/usr/lib/modules/7.2.5-4-omarchy/build/include/linux/workqueue.h:802:9: warning: call to '__warn_flushing_systemwide_wq' declared with attribute warning: Please avoid flushing system-wide workqueues. [-Wattribute-warning]
+  802 |         __warn_flushing_systemwide_wq();                                \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/wl/sys/wl_linux.c:1502:25: note: in expansion of macro 'flush_scheduled_work'
+ 1502 |                         flush_scheduled_work();
+      |                         ^~~~~~~~~~~~~~~~~~~~
+  LD [M]  wl.o
+CFG80211 API is prefered for this kernel version
+Using CFG80211 API
+  MODPOST Module.symvers
+  CC [M]  wl.mod.o
+  CC [M]  .module-common.o
+  LD [M]  wl.ko
+  BTF [M] wl.ko
+make[1]: Leaving directory '/var/lib/dkms/broadcom-wl/6.30.223.271/build'
+make: Leaving directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+
+# exit code: 0
+# elapsed time: 00:00:04
+----------------------------------------------------------------
+DKMS (dkms-3.4.3) make.log for broadcom-wl/6.30.223.271 for kernel 7.2.6-arch2-1 (x86_64)
+Mon Sep 21 02:53:45 UTC 2026
+
+Building module(s)
+# command: make -j8 KERNELRELEASE=7.2.6-arch2-1 -C /usr/lib/modules/7.2.6-arch2-1/build M=/var/lib/dkms/broadcom-wl/6.30.223.271/build
+make: Entering directory '/usr/lib/modules/7.2.6-arch2-1/build'
+make[1]: Entering directory '/var/lib/dkms/broadcom-wl/6.30.223.271/build'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+CFG80211 API is prefered for this kernel version
+Using CFG80211 API
+  CC [M]  src/shared/linux_osl.o
+  CC [M]  src/wl/sys/wl_linux.o
+  CC [M]  src/wl/sys/wl_iw.o
+  CC [M]  src/wl/sys/wl_cfg80211_hybrid.o
+In file included from src/wl/sys/wl_linux.c:85:
+././src/wl/sys/wl_iw.h:73:9: warning: 'isprint' redefined
+   73 | #define isprint(c) bcm_isprint(c)
+      |         ^~~~~~~
+In file included from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/string_helpers.h:6,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/seq_file.h:7,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/seq_file_net.h:5,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/net/net_namespace.h:206,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/netdevice.h:38,
+                 from ././src/include/linuxver.h:69,
+                 from src/wl/sys/wl_linux.c:27:
+/usr/lib/modules/7.2.6-arch2-1/build/include/linux/ctype.h:30:9: note: this is the location of the previous definition
+   30 | #define isprint(c)      ((__ismask(c)&(_P|_U|_L|_D|_SP)) != 0)
+      |         ^~~~~~~
+src/wl/sys/wl_linux.c: In function 'wl_pci_probe':
+src/wl/sys/wl_linux.c:792:9: warning: this 'if' clause does not guard... [-Wmisleading-indentation]
+  792 |         if ((val & 0x0000ff00) != 0)
+      |         ^~
+src/wl/sys/wl_linux.c:794:17: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the 'if'
+  794 |                 bar1_size = pci_resource_len(pdev, 2);
+      |                 ^~~~~~~~~
+src/wl/sys/wl_linux.c: In function 'wl_open':
+src/wl/sys/wl_linux.c:1108:38: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1108 |                 OLD_MOD_INC_USE_COUNT;
+      |                                      ^
+src/wl/sys/wl_linux.c: In function 'wl_set_mac_address':
+src/wl/sys/wl_linux.c:1872:40: warning: suggest braces around empty body in an 'if' statement [-Wempty-body]
+ 1872 |                         wl->pub->unit));
+      |                                        ^
+src/wl/sys/wl_linux.c: In function 'wl_start':
+src/wl/sys/wl_linux.c:2262:58: warning: suggest braces around empty body in an 'else' statement [-Wempty-body]
+ 2262 |                                           wl->pub->unit));
+      |                                                          ^
+In file included from src/wl/sys/wl_cfg80211_hybrid.c:40:
+src/wl/sys/wl_cfg80211_hybrid.c: In function 'wl_set_auth_type':
+././src/wl/sys/wl_cfg80211_hybrid.h:52:12: warning: this statement may fall through [-Wimplicit-fallthrough=]
+   52 |         if (wl_dbg_level & WL_DBG_DBG) {                        \
+      |            ^
+src/wl/sys/wl_cfg80211_hybrid.c:835:17: note: in expansion of macro 'WL_DBG'
+  835 |                 WL_DBG(("network eap\n"));
+      |                 ^~~~~~
+src/wl/sys/wl_cfg80211_hybrid.c:836:9: note: here
+  836 |         default:
+      |         ^~~~~~~
+In file included from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/srcu.h:21,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/notifier.h:16,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/arch/x86/include/asm/uprobes.h:13,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/uprobes.h:66,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/mm_types.h:16,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/mmzone.h:22,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/gfp.h:7,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/umh.h:4,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/kmod.h:9,
+                 from /usr/lib/modules/7.2.6-arch2-1/build/include/linux/module.h:18,
+                 from ././src/include/linuxver.h:40:
+src/wl/sys/wl_linux.c: In function 'wl_down':
+/usr/lib/modules/7.2.6-arch2-1/build/include/linux/workqueue.h:802:9: warning: call to '__warn_flushing_systemwide_wq' declared with attribute warning: Please avoid flushing system-wide workqueues. [-Wattribute-warning]
+  802 |         __warn_flushing_systemwide_wq();                                \
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/wl/sys/wl_linux.c:1502:25: note: in expansion of macro 'flush_scheduled_work'
+ 1502 |                         flush_scheduled_work();
+      |                         ^~~~~~~~~~~~~~~~~~~~
+  LD [M]  wl.o
+CFG80211 API is prefered for this kernel version
+Using CFG80211 API
+  MODPOST Module.symvers
+  CC [M]  wl.mod.o
+  CC [M]  .module-common.o
+  LD [M]  wl.ko
+  BTF [M] wl.ko
+make[1]: Leaving directory '/var/lib/dkms/broadcom-wl/6.30.223.271/build'
+make: Leaving directory '/usr/lib/modules/7.2.6-arch2-1/build'
+
+# exit code: 0
+# elapsed time: 00:00:04
+----------------------------------------------------------------

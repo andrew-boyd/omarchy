@@ -1,0 +1,29 @@
+{
+  "package_repo": {
+    "initial_result": "camera and audio12 could not read the file:// repository under the private guest home; no package transaction began",
+    "adjustment": "Keep staging in guest home, but copy the checksum-verified archives to /var/cache/vintage-packages with traversable/readable modes before repo-add and pacman. Preserve pacman download sandbox.",
+    "confirmation": "Camera, both audio stacks and T1 exact packages installed, DKMS compiled for 7.2.5-4-omarchy, and reboot checks passed. The separate audio12 orphan-header hook error prompted a package metadata repair.",
+    "reruns": "camera/audio12 initial failures and successful retry logs retained"
+  },
+  "guest_boot": {
+    "scenario": "audio-pro",
+    "observation": "third overlay stalled before SSH while two prior overlays from identical base booted; serial output stopped after resume warning",
+    "action": "One QMP system_reset before any packages were installed; subsequent boot reached SSH and package installation",
+    "evidence": "audio-pro scenario boot-retry.json, boot-check.ppm, serial.log"
+  },
+  "scoping": "These are guest harness/environment adjustments. No host hardware configuration or driver behavior changed.",
+  "graphical_login": {
+    "observation": "An SSH-ready unencrypted guest is at SDDM, not necessarily in a user desktop. The first T1 provider test therefore lacked a live session.",
+    "adjustment": "Use QMP password entry and verify a real Hyprland session before provider/lock tests. Final T1 recheck passed."
+  },
+  "unsupported_cli_probe": {
+    "observation": "The first T1 desktop recheck passed provider and lock checks but then exited on an invented --help contract.",
+    "adjustment": "Removed that unsupported help invocation and verified package ownership instead. Final recheck exit0."
+  },
+  "final_iso_console": {
+    "reason": "Original unencrypted bootstrap used ctrl-alt-f3 but landed in SDDM; blind username input logged in graphically and subsequent shell command was never executed. Screenshots preserve this.",
+    "action": "Selected actual tty4, logged in with synthetic guest credentials, and executed the exact existing HTTP bootstrap through QMP keystrokes. No product files or disk contents bypassed.",
+    "original_harness": "resumes when existing SSH gate succeeds",
+    "product_changed": false
+  }
+}

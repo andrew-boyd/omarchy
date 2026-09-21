@@ -1,0 +1,66 @@
+freeze mem disk
+s2idle [deep]
+Device	S-state	  Status   Sysfs node
+Nothing pending - no wake sources were left disabled by this tool.
+Suspending for 10s via RTC alarm...
+elapsed: 11s (requested 10s, threshold 8s)
+Held the full duration - suspend is behaving normally.
+command exit: 0
+Device	S-state	  Status   Sysfs node
+Sep 20 22:37:15 omarchy-test kernel: PM: suspend entry (deep)
+Sep 20 22:37:26 omarchy-test kernel: Filesystems sync: 0.000 seconds
+Sep 20 22:37:26 omarchy-test kernel: Freezing user space processes
+Sep 20 22:37:26 omarchy-test kernel: Freezing user space processes completed (elapsed 0.001 seconds)
+Sep 20 22:37:26 omarchy-test kernel: OOM killer disabled.
+Sep 20 22:37:26 omarchy-test kernel: Freezing remaining freezable tasks
+Sep 20 22:37:26 omarchy-test kernel: Freezing remaining freezable tasks completed (elapsed 0.001 seconds)
+Sep 20 22:37:26 omarchy-test kernel: printk: Suspending console(s) (use no_console_suspend to debug)
+Sep 20 22:37:26 omarchy-test kernel: ata3.00: Check power mode failed (err_mask=0x1)
+Sep 20 22:37:26 omarchy-test kernel: ACPI: PM: Preparing to enter system sleep state S3
+Sep 20 22:37:26 omarchy-test kernel: ACPI: PM: Saving platform NVS memory
+Sep 20 22:37:26 omarchy-test kernel: Disabling non-boot CPUs ...
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 7 is now offline
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 6 is now offline
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 5 is now offline
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 4 is now offline
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 3 is now offline
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 2 is now offline
+Sep 20 22:37:26 omarchy-test kernel: smpboot: CPU 1 is now offline
+Sep 20 22:37:26 omarchy-test kernel: ACPI: PM: Low-level resume complete
+Sep 20 22:37:26 omarchy-test kernel: ACPI: PM: Restoring platform NVS memory
+Sep 20 22:37:26 omarchy-test kernel: Enabling non-boot CPUs ...
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 1 APIC 0x1
+Sep 20 22:37:26 omarchy-test kernel: CPU1 is up
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 2 APIC 0x2
+Sep 20 22:37:26 omarchy-test kernel: CPU2 is up
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 3 APIC 0x3
+Sep 20 22:37:26 omarchy-test kernel: CPU3 is up
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 4 APIC 0x4
+Sep 20 22:37:26 omarchy-test kernel: CPU4 is up
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 5 APIC 0x5
+Sep 20 22:37:26 omarchy-test kernel: CPU5 is up
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 6 APIC 0x6
+Sep 20 22:37:26 omarchy-test kernel: CPU6 is up
+Sep 20 22:37:26 omarchy-test kernel: smpboot: Booting Node 0 Processor 7 APIC 0x7
+Sep 20 22:37:26 omarchy-test kernel: CPU7 is up
+Sep 20 22:37:26 omarchy-test kernel: ACPI: PM: Waking up from system sleep state S3
+Sep 20 22:37:26 omarchy-test kernel: virtio_blk virtio0: 8/0/0 default/read/poll queues
+Sep 20 22:37:26 omarchy-test kernel: usb usb1: root hub lost power or was reset
+Sep 20 22:37:26 omarchy-test kernel: usb usb4: root hub lost power or was reset
+Sep 20 22:37:26 omarchy-test kernel: usb usb3: root hub lost power or was reset
+Sep 20 22:37:26 omarchy-test kernel: usb usb2: root hub lost power or was reset
+Sep 20 22:37:26 omarchy-test kernel: usb 2-1: reset high-speed USB device number 2 using ehci-pci
+Sep 20 22:37:26 omarchy-test kernel: ata6: SATA link down (SStatus 0 SControl 300)
+Sep 20 22:37:26 omarchy-test kernel: ata3: SATA link up 1.5 Gbps (SStatus 113 SControl 300)
+Sep 20 22:37:26 omarchy-test kernel: ata1: SATA link down (SStatus 0 SControl 300)
+Sep 20 22:37:26 omarchy-test kernel: ata5: SATA link down (SStatus 0 SControl 300)
+Sep 20 22:37:26 omarchy-test kernel: ata2: SATA link down (SStatus 0 SControl 300)
+Sep 20 22:37:26 omarchy-test kernel: ata4: SATA link down (SStatus 0 SControl 300)
+Sep 20 22:37:26 omarchy-test kernel: ata3.00: configured for UDMA/100
+Sep 20 22:37:26 omarchy-test kernel: OOM killer enabled.
+Sep 20 22:37:26 omarchy-test kernel: Restarting tasks: Starting
+Sep 20 22:37:26 omarchy-test kernel: Restarting tasks: Done
+Sep 20 22:37:26 omarchy-test kernel: efivarfs: resyncing variable state
+Sep 20 22:37:26 omarchy-test kernel: efivarfs: finished resyncing variable state
+Sep 20 22:37:26 omarchy-test kernel: random: crng reseeded on system resumption
+Sep 20 22:37:26 omarchy-test kernel: PM: suspend exit

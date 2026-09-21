@@ -1,0 +1,12 @@
+{
+  "recorded_at": "2026-09-21T01:45:45.461979+00:00",
+  "asset_url": "https://github.com/NoaHimesaka1873/arch-mact2-mirror/releases/download/release/apple-bcm-firmware-14.0-1-any.pkg.tar.zst",
+  "asset_created_at": "2026-09-16T03:27:53Z",
+  "github_digest": "sha256:f2cd47d9e3fb9658f16997b2d9ace3033b57925b8c6ddd86ccc3d07d0c3e9559",
+  "local_sha256": "f2cd47d9e3fb9658f16997b2d9ace3033b57925b8c6ddd86ccc3d07d0c3e9559",
+  "digest_matches": true,
+  "package_metadata": "Name            : apple-bcm-firmware\nVersion         : 14.0-1\nDescription     : Wi-Fi and Bluetooth Firmware from macOS Big Sur for T2 and M1 Macs\nArchitecture    : any\nURL             : None\nLicenses        : unknown\nGroups          : None\nProvides        : None\nDepends On      : None\nOptional Deps   : None\nConflicts With  : None\nReplaces        : apple-bcm-wifi-firmware\nCompressed Size : 7.16 MiB\nInstalled Size  : 22.69 MiB\nPackager        : Unknown Packager\nBuild Date      : Mon Oct 23 03:50:30 2023\nInstall Script  : No\nValidated By    : None\nSignatures      : None\n\n",
+  "reason": "Baseline package target absent from current arch-mact2 database; only fetcher is indexed. Original maintainer still publishes the unchanged 14.0-1 package. Pin it for the offline local ISO.",
+  "baseline_omarchy_commit": "45748a2812f42e32f915b053caf4074e150e2048",
+  "new_driver_implementation": false
+}

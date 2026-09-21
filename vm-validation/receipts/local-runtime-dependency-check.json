@@ -1,0 +1,32 @@
+[
+  {
+    "case": "default",
+    "exit": 0,
+    "stdout": "pkgbase = t1bridge-omarchy\n\tpkgdesc = Optional Omarchy desktop integration for T1Bridge\n\tpkgver = 0.2.1\n\tpkgrel = 1\n\tarch = any\n\tlicense = MIT\n\tcheckdepends = diffutils\n\tmakedepends = make\n\tdepends = brightnessctl\n\tdepends = coreutils\n\tdepends = iio-sensor-proxy\n\tdepends = bash\n\tdepends = gawk\n\tdepends = jq\n\tdepends = libpulse\n\tdepends = omarchy>=4.0.1\n\tdepends = systemd\n\tdepends = t1bridge>=0.1.0\n\tsource = t1bridge-omarchy-0.2.1.tar.gz::https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-omarchy-0.2.1.tar.gz\n\tsha256sums = bbd4b4a6f923cc308fbdeb6703c0fb71858d68140fa44e10cec217611c1b0e90\n\npkgname = t1bridge-omarchy\n",
+    "stderr": ""
+  },
+  {
+    "case": "exact",
+    "exit": 0,
+    "stdout": "pkgbase = t1bridge-omarchy\n\tpkgdesc = Optional Omarchy desktop integration for T1Bridge\n\tpkgver = 0.2.1\n\tpkgrel = 1.1\n\tarch = any\n\tlicense = MIT\n\tcheckdepends = diffutils\n\tmakedepends = make\n\tdepends = brightnessctl\n\tdepends = coreutils\n\tdepends = iio-sensor-proxy\n\tdepends = bash\n\tdepends = gawk\n\tdepends = jq\n\tdepends = libpulse\n\tdepends = omarchy-dev=4.0.0.r6529.g8ffe7ac-1\n\tdepends = systemd\n\tdepends = t1bridge>=0.1.0\n\tsource = t1bridge-omarchy-0.2.1.tar.gz::https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-omarchy-0.2.1.tar.gz\n\tsha256sums = bbd4b4a6f923cc308fbdeb6703c0fb71858d68140fa44e10cec217611c1b0e90\n\npkgname = t1bridge-omarchy\n",
+    "stderr": ""
+  },
+  {
+    "case": "unversioned",
+    "exit": 6,
+    "stdout": "",
+    "stderr": "Invalid exact local Omarchy dependency: omarchy-dev\n==> ERROR: Failed to source /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/repos/omarchy-pkgs/pkgbuilds/t1bridge-omarchy/PKGBUILD\n"
+  },
+  {
+    "case": "wrong-package",
+    "exit": 6,
+    "stdout": "",
+    "stderr": "Invalid exact local Omarchy dependency: omarchy=4.0.1\n==> ERROR: Failed to source /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/repos/omarchy-pkgs/pkgbuilds/t1bridge-omarchy/PKGBUILD\n"
+  },
+  {
+    "case": "range",
+    "exit": 6,
+    "stdout": "",
+    "stderr": "Invalid exact local Omarchy dependency: omarchy-dev>=4.0.0\n==> ERROR: Failed to source /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/repos/omarchy-pkgs/pkgbuilds/t1bridge-omarchy/PKGBUILD\n"
+  }
+]

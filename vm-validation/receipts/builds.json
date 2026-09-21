@@ -1,0 +1,117 @@
+[
+  {
+    "build_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T004858Z-gqtoB0",
+    "container_id": "69749ca1257316bad2c5fe11f2efbc4a7f5cbaed90b09920d08db7dcf2168190",
+    "observed_build_pid": 3749494,
+    "observed_at": "2026-09-21T00:50:06.811346+00:00",
+    "status": "failed",
+    "input_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "202950a47e987a125ce3eb8f45ff399eeef7dea5",
+      "omarchy-iso": "e0ba29034377e8fe39003cb31805648d78e06d92"
+    },
+    "iso_built": false,
+    "vm_installed": false,
+    "exit": 1,
+    "reason": "Wrapper expected an optional debug archive for the data-only facetimehd-firmware package. The primary package and check() succeeded.",
+    "fix_commit": "f508445112d8af7aa01d974bbf9e666a46a2ad9e",
+    "retry_ready": true
+  },
+  {
+    "build_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T005802Z-Lh6Ihl",
+    "container_id": "fa452622aceaa65066c91faabf83e1001767c768a5645242905ffc3760dd11e0",
+    "status": "failed",
+    "input_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "202950a47e987a125ce3eb8f45ff399eeef7dea5",
+      "omarchy-iso": "f508445112d8af7aa01d974bbf9e666a46a2ad9e"
+    },
+    "iso_built": false,
+    "vm_installed": false,
+    "exit": 1,
+    "reason": "libfprint egis_etu905 replay test failed (130/131 passed), blocking exact fprintd dependency; eight of ten companion packages built. t1bridge-omarchy also pulled the published runtime to satisfy omarchy>=4.0.1.",
+    "companions_built": [
+      "facetimehd-firmware",
+      "facetimehd-data",
+      "facetimehd-dkms",
+      "macbook12-audio-driver-dkms",
+      "snd-hda-macbookpro-dkms",
+      "t1bridge-dkms",
+      "t1bridge",
+      "t1bridge-omarchy"
+    ],
+    "companions_failed": [
+      "libfprint-t1bridge",
+      "fprintd-t1bridge"
+    ]
+  },
+  {
+    "build_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T012132Z-0tN41F",
+    "container_id": "258ed0ff07561c0371b9adf81a2f1ccbaf6587283dd3f5dd1536fd851c414a91",
+    "status": "failed",
+    "observed_at": "2026-09-21T01:22:13.464097+00:00",
+    "input_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "e14b1d6657f272b3cf471db542af1329b56e63ca",
+      "omarchy-iso": "a424da4e8cbde52b5d1ab82a7913d608744a5f13"
+    },
+    "iso_built": false,
+    "vm_installed": false,
+    "exit": 1,
+    "reason": "Dedicated pacman cache retained an older t1bridge archive under the rebuilt filename. Checksum rejection blocked the final t1bridge-omarchy dependency transaction. libfprint 131/131 and fprintd 560/560 passed; nine of ten companions plus all runtime packages built."
+  },
+  {
+    "build_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014136Z-q8jXHg",
+    "container_id": "e019846b49b5afa50cfda4316ce187426ddacd0d86371ac7afaf52848d80b9c8",
+    "status": "failed",
+    "input_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "e14b1d6657f272b3cf471db542af1329b56e63ca",
+      "omarchy-iso": "57248affec848330e5a52dedaca4c1a4e4069c9b"
+    },
+    "observed_at": "2026-09-21T01:42:07.564773+00:00",
+    "iso_built": false,
+    "vm_installed": false,
+    "reusing_verified_build_3_packages": 12,
+    "exit": 1,
+    "reason": "All 13 local packages available; offline mirror resolution fails because baseline apple-bcm-firmware target is absent from current arch-mact2 index. Original maintainer release archive verified separately.",
+    "all_mac_companions_built": true
+  },
+  {
+    "build_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG",
+    "container_id": "3f5b153052ead15acbbc652c26de9eacfdcb937ae5308c86c722aa46acc65f03",
+    "status": "succeeded",
+    "input_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "e14b1d6657f272b3cf471db542af1329b56e63ca",
+      "omarchy-iso": "5526761d972236afeccbc1542e07a96180c400a6"
+    },
+    "observed_at": "2026-09-21T01:46:30.753229+00:00",
+    "iso_built": true,
+    "vm_installed": true,
+    "reusing_verified_build_3_packages": 12,
+    "pinned_baseline_firmware": "apple-bcm-firmware 14.0-1",
+    "exit": 0,
+    "iso_path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/omarchy-2026.09.21-x86_64.iso",
+    "embedded_package_count_verified": 13
+  },
+  {
+    "build_dir": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D",
+    "container_id": "688843c35fe7872e82f26ef6004427970406c5ef2d1cfb1e06b51b0f454c4f99",
+    "status": "succeeded",
+    "input_commits": {
+      "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+      "omarchy-pkgs": "79eaa4deef8ee02b3aa5e1e089c83cb3ac2b6f31",
+      "omarchy-iso": "5526761d972236afeccbc1542e07a96180c400a6"
+    },
+    "reason": "Repair observed audio12 dependency: hard stock linux-headers dependency caused orphan-kernel DKMS hook error on linux-omarchy-only install. Driver sources unchanged.",
+    "reuse_evidence": "audio-repair-reuse.json",
+    "iso_built": true,
+    "vm_installed": true,
+    "exit": 0,
+    "iso_path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/omarchy-2026.09.21-x86_64.iso",
+    "embedded_package_count_verified": 13,
+    "desktop_acceptance_exit": 0,
+    "audio_regression_exit": 0
+  }
+]

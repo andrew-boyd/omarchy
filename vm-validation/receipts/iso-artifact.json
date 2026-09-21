@@ -1,0 +1,18 @@
+{
+  "iso": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/omarchy-2026.09.21-x86_64.iso",
+  "bytes": 6215624704,
+  "sha256": "4c76334deab6c999b55814122132f95c8d9fe8e61be9f06a0e7ebd3fd8e073bb",
+  "build_exit": 0,
+  "source_commits": {
+    "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+    "omarchy-pkgs": "79eaa4deef8ee02b3aa5e1e089c83cb3ac2b6f31",
+    "omarchy-iso": "5526761d972236afeccbc1542e07a96180c400a6"
+  },
+  "embedded_package_verification": "passed",
+  "embedded_package_count": 13,
+  "vm_install": "completed: fresh interactive unencrypted installer and installed-disk reboot; SSH bootstrap used confirmed tty4 after original tty3 targeted greeter",
+  "desktop_acceptance": "all 8 files passed in 94s with test-only OCR patch; product unchanged",
+  "prior_artifact": "build-5-iso-artifact.json",
+  "audio_regression": "0.1-2 exact archive installed, target DKMS and reboot passed, stock headers absent, no orphan-kernel hook error",
+  "installed_payload_verification": "49 of 49 changed files matched source SHA256"
+}

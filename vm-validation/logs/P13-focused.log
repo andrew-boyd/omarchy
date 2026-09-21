@@ -1,0 +1,37 @@
+COMMAND ['git', 'diff', '--check', 'HEAD^', 'HEAD']
+COMMAND ['bash', 'test/shell.d/omarchy-kernel-migration-test.sh']
+ok - linux systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-lts systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-zen systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-ptl systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-omarchy-ptl-novrr-mm systems receive the generic Omarchy kernel and retain their recovery kernel
+ok - linux-t2 systems are skipped even with other kernels installed
+ok - a running T2 kernel is excluded even if its package is no longer installed
+ok - ARM systems cannot receive an x86_64 kernel
+ok - T1 and older Macs keep their kernel even without a T2 package or kernel
+ok - machines without DMI vendor information still receive the generic kernel
+ok - users who completed the PTL migration run the renamed migration with fresh completion markers
+ok - new packages install, the central boot order is set, and the old kernel remains available
+ok - repeat runs are a no-op after successful completion
+ok - a partially installed kernel gets its missing headers
+ok - existing new packages still receive the config repair and boot rebuild
+ok - package failures leave the old boot setup intact and the migration pending
+ok - a failed rebuild is retried even after config and package changes succeeded
+ok - older Omarchy variants and fallback entries cannot satisfy generic kernel verification
+ok - the exact generic kernel takes first position over previous PTL and custom orders
+ok - the central boot order overrides legacy drop-ins and pacnew files without rewriting them
+ok - a missing central config is created with the exact kernel first
+COMMAND ['bash', 'test/shell.d/intel-mac-kernel-policy-test.sh']
+ok - source Apple-prefix policy skips Apple Inc. without changing boot order
+ok - source Apple-prefix policy skips Apple Computer, Inc. without changing boot order
+ok - source Apple-prefix policy skips Apple without changing boot order
+ok - source Apple-prefix policy skips Appleish without changing boot order
+ok - source non-Apple policy migrates Dell Inc.
+ok - source non-Apple policy migrates apple Inc.
+ok - source non-Apple policy migrates 
+ok - source policy treats missing DMI as non-Apple
+ok - source policy treats unreadable DMI as non-Apple
+ok - source policy treats directory DMI as non-Apple
+ok - Apple exemption does not roll back an already migrated system
+ok - source migration is reached for a user with no completion marker
+ok - completed user migration is not automatically revisited

@@ -1,0 +1,17 @@
+{
+  "iso": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/omarchy-2026.09.21-x86_64.iso",
+  "bytes": 6209560576,
+  "sha256": "0026b7df063f20ebbe4f56bca1d19c3920dbb00807539127ba32703489a44c7d",
+  "build_exit": 0,
+  "source_commits": {
+    "omarchy": "8ffe7ac51a35d8bce32e3e272b3a5ce0704c92c9",
+    "omarchy-pkgs": "e14b1d6657f272b3cf471db542af1329b56e63ca",
+    "omarchy-iso": "5526761d972236afeccbc1542e07a96180c400a6"
+  },
+  "created_at": "2026-09-21T01:58:54.208332+00:00",
+  "vm_install": "completed: encrypted installer finished; installed disk booted; SSH authorized; clean base saved",
+  "embedded_package_verification": "passed",
+  "embedded_package_count": 13,
+  "desktop_acceptance": "passed in installed guest: eight files; test-only OCR normalization/native fallback required; original failures retained in acceptance-ocr-evidence.json",
+  "integration_iso_alias": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T014550Z-X4tHsG/omarchy-2026.09.21-intel-mac-local-x86_64.iso"
+}

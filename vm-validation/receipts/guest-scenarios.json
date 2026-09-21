@@ -1,0 +1,217 @@
+[
+  {
+    "scope": "P08",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-225451-mac-packages-camera",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "archive-verification.log",
+        "bytes": 144,
+        "sha256": "484058474b7058441d8a0f87e9888a5aca0fd594f4202813be691dfbfbfdc9c1"
+      },
+      {
+        "name": "installed-state.log",
+        "bytes": 18905,
+        "sha256": "6091ea5d6521aec9b64efe4ac889afd51d0095f0d994e992e1838bcf0a6ff724"
+      },
+      {
+        "name": "package-install.log",
+        "bytes": 3864,
+        "sha256": "41c8a4012a65795fe1d20d9fc717fb25bf6cdd25b7a3d6909ed2716d04a43c8b"
+      },
+      {
+        "name": "reboot.log",
+        "bytes": 212,
+        "sha256": "155dda4842d9dfb7ab36bbe73d0cd7398a578a13a1bba46d3dd64721d4569160"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 31964,
+        "sha256": "c5f3d788d751181cd85ad788b07ac678a96cac0a0f53263d6d3c5c7b7a41d3b2"
+      }
+    ]
+  },
+  {
+    "scope": "P11-CS8409",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-224325-mac-packages-audio-pro",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "archive-verification.log",
+        "bytes": 53,
+        "sha256": "c14008fe2949d166d704bf92499260c121e21645f05a5e578d63cb663059babe"
+      },
+      {
+        "name": "installed-state.log",
+        "bytes": 18908,
+        "sha256": "beb532a45445e2a23129644f99dda7e4b291448977e82eae313ec249de55f7e6"
+      },
+      {
+        "name": "package-install.log",
+        "bytes": 3524,
+        "sha256": "7dad3e26109e9e46c0633c373f99e408c0587aad91cfa07391e7597e40332300"
+      },
+      {
+        "name": "reboot.log",
+        "bytes": 243,
+        "sha256": "2369813b43c5fa82b818fcee615fdb85bae529f6d540d8fb8e07459b68670f62"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 32725,
+        "sha256": "1a06b06f2232ecc797d8007a0093c84139f1a3fb00ca0ece69f442278db254a2"
+      }
+    ]
+  },
+  {
+    "scope": "P11-audio12-before-repair",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-225556-mac-packages-audio12",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "archive-verification.log",
+        "bytes": 57,
+        "sha256": "2b33dc21b341a8865b64ac8973904cb8dfd93c7201ee502ec21b1a832bc2c9ed"
+      },
+      {
+        "name": "installed-state.log",
+        "bytes": 18930,
+        "sha256": "c61810c2a6009ab785d73765085b8caef4462c37258c4f327242a10c1c8394fc"
+      },
+      {
+        "name": "package-install.log",
+        "bytes": 3530,
+        "sha256": "49d3cffd9b354a566cb6418627d4318fd594a636c21cd1ecfe89e9b2dcb797d6"
+      },
+      {
+        "name": "reboot.log",
+        "bytes": 247,
+        "sha256": "64d48008703ec1cb0792acbb8f1e610d69bfc3ba9df69444ae28fe4885f4d4b5"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 31968,
+        "sha256": "61119a22d0f978f8b2bfe53ee82924904e2342312ba5edf605561f2187bd2206"
+      }
+    ]
+  },
+  {
+    "scope": "P12",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-230118-mac-t1-desktop-recheck",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "installed-state.log",
+        "bytes": 264,
+        "sha256": "f540cdcd010ebc249c9e6255fb1151e2130d286ccb1f387f2425a6532b53d04a"
+      },
+      {
+        "name": "lock-check.log",
+        "bytes": 94,
+        "sha256": "6f358d0e29eee8cd6581ac7634a0bd20aba98f73f1e3ace1c182db12a6edb94f"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 16069,
+        "sha256": "af1541b1133d3f4182a156d6d166db9edfaf0599d713c35d573322dbdab4bb95"
+      },
+      {
+        "name": "t1-desktop.log",
+        "bytes": 263,
+        "sha256": "5c7b266296daa200ac544db2f5c0a19b240b4999ac1d35be610134b066442c9e"
+      }
+    ]
+  },
+  {
+    "scope": "P07",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-225137-mac-migration-spi-pio",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "dkms.log",
+        "bytes": 87,
+        "sha256": "28bc7e771dbaa731a91ec07b562aaeb5bf7e203b6adf04f96d3d30d7cefc6d34"
+      },
+      {
+        "name": "migration.log",
+        "bytes": 3638,
+        "sha256": "2023ad164c0b8912c7e0082f20531ab40f8890e9a8bb6cbfe9c458aa1f2e2f55"
+      },
+      {
+        "name": "reboot.log",
+        "bytes": 817,
+        "sha256": "967ebd77f25d4fb0d1b342716326a3dc325b725f14a5b76e32f0add9aa5590fb"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 31255,
+        "sha256": "f2091d243cbdabe29c899d39d022122e6e413c12ae4916873cf3aa7e40651f33"
+      }
+    ]
+  },
+  {
+    "scope": "P02-P13",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-225231-mac-migration-kernel-headers",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "dkms.log",
+        "bytes": 11070,
+        "sha256": "c63ad34d33623d9678001d74cda67961b5935d1f703af19b1dd56fb6b3d42054"
+      },
+      {
+        "name": "migration.log",
+        "bytes": 7846,
+        "sha256": "a6348dd7613a7c57d2374b23b64596fc82080c52dd9a044354d12ff02327cc7c"
+      },
+      {
+        "name": "reboot.log",
+        "bytes": 454,
+        "sha256": "e3c3c194845a6cb136902e01777811276988a43cbabd26238debb329214ceaf0"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 31985,
+        "sha256": "cc6edb84f821df54150e58b596efed387fce4ca11cc3e4a048781d27d1113dad"
+      }
+    ]
+  },
+  {
+    "scope": "P09",
+    "build": "build-20260921T014550Z-X4tHsG",
+    "run": "20260920-225425-mac-nvme-nonmatching",
+    "exit_files": {
+      "scenario.exit": "0"
+    },
+    "logs": [
+      {
+        "name": "nvme.log",
+        "bytes": 3671,
+        "sha256": "a3444f6fb1c582422633535fd5a0db3bdf74ef6f6a15451c25ac2848e2dea6fc"
+      },
+      {
+        "name": "serial.log",
+        "bytes": 15664,
+        "sha256": "f7893d1c119dc5430ecc49dd6749c2ce2e0d6af9bf0f25c2a2ba522e65c23224"
+      }
+    ]
+  }
+]
