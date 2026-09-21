@@ -17,14 +17,24 @@ reboot_required=0
 
 config_source="$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
 config_target="$config_home/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
+service_source="$OMARCHY_PATH/install/hardware/apple/omarchy-cs4208-audio.service"
+service_target="$systemd_dir/omarchy-cs4208-audio.service"
+for pair in config service; do
+  source_var="${pair}_source"
+  target_var="${pair}_target"
+  target_file=${!target_var}
+  if [[ -e $target_file || -L $target_file ]]; then
+    if [[ -L $target_file || ! -f $target_file ]] || ! cmp -s "${!source_var}" "$target_file"; then
+      echo "Preserving customized audio file: $target_file; reconcile it manually before retrying." >&2
+      exit 1
+    fi
+  fi
+done
 if ! cmp -s "$config_source" "$config_target"; then
-  install -Dm644 "$config_source" "$config_target"
-  rm -rf "$state_home/wireplumber/default-routes"
+  source "$OMARCHY_PATH/install/user/hardware/apple/fix-cs4208-audio.sh"
   reboot_required=1
 fi
 
-service_source="$OMARCHY_PATH/install/hardware/apple/omarchy-cs4208-audio.service"
-service_target="$systemd_dir/omarchy-cs4208-audio.service"
 if ! cmp -s "$service_source" "$service_target"; then
   sudo install -Dm644 "$service_source" "$service_target"
   sudo systemctl daemon-reload

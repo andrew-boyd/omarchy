@@ -10,9 +10,17 @@ product_name="${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_n
 if [[ $product_name == "MacBook9,1" || $product_name == "MacBook10,1" ]]; then
   echo "Detected 12-inch MacBook with CS4208 audio"
 
+  systemd_dir="${OMARCHY_SYSTEMD_DIR:-/etc/systemd/system}"
+  service_target="$systemd_dir/omarchy-cs4208-audio.service"
+  if [[ -e $service_target || -L $service_target ]]; then
+    if [[ -L $service_target || ! -f $service_target ]] ||
+      ! cmp -s "$OMARCHY_INSTALL/hardware/apple/omarchy-cs4208-audio.service" "$service_target"; then
+      echo "Preserving customized audio service: $service_target; reconcile it manually before retrying." >&2
+      return 1
+    fi
+  fi
   omarchy-pkg-add macbook12-audio-driver-dkms
 
-  systemd_dir="${OMARCHY_SYSTEMD_DIR:-/etc/systemd/system}"
   install -Dm644 \
     "$OMARCHY_INSTALL/hardware/apple/omarchy-cs4208-audio.service" \
     "$systemd_dir/omarchy-cs4208-audio.service"

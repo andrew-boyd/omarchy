@@ -90,8 +90,8 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
   OMARCHY_PATH="$ROOT" \
   OMARCHY_INSTALL="$ROOT/install" \
   bash -c 'source "$1"' _ "$fix"
-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
-  fail "install hook adds headers and the CS8409 package on a two-port 13-inch"
+grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
+  fail "install hook adds only the CS8409 driver package on a two-port 13-inch"
 pass "install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)"
 
 : >"$calls"
@@ -111,7 +111,7 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
   TEST_LOG="$calls" \
   OMARCHY_DMI_PRODUCT_NAME="$dmi" \
   bash -euo pipefail "$migration" >/dev/null
-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
+grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
   fail "migration installs the CS8409 package on a 15-inch T1"
 pass "migration installs the driver on MacBookPro14,3"
 
@@ -123,8 +123,8 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
   OMARCHY_PATH="$ROOT" \
   OMARCHY_INSTALL="$ROOT/install" \
   bash -c 'source "$1"' _ "$fix"
-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
-  fail "install hook adds headers and the CS8409 package on iMac18,3"
+grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
+  fail "install hook adds only the CS8409 driver package on iMac18,3"
 pass "install hook runs on iMac18,3 (CS8409)"
 
 : >"$calls"
@@ -133,7 +133,7 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
   TEST_LOG="$calls" \
   OMARCHY_DMI_PRODUCT_NAME="$dmi" \
   bash -euo pipefail "$migration" >/dev/null
-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
+grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
   fail "migration installs the CS8409 package on iMac18,3"
 pass "migration installs the driver on iMac18,3"
 
@@ -145,3 +145,6 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
   bash -euo pipefail "$migration" >/dev/null
 [[ ! -s $calls ]] || fail "migration skips non-CS8409 hardware" "$(cat "$calls")"
 pass "migration skips non-CS8409 hardware"
+
+assert_hw OtherMacBookPro14,3 no "vendor prefixes do not broaden the CS8409 allowlist"
+assert_hw iMac19,20 no "longer model numbers do not match the CS8409 allowlist"

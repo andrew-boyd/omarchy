@@ -9,4 +9,4 @@
 # - 2017–2019 iMacs (iMac18,x / iMac19,x) with the same CS8409 bridge
 # T2 and later use a different codec and must not get this driver.
 product_name=$(cat "${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}" 2>/dev/null)
-[[ $product_name =~ MacBookPro13,[123]|MacBookPro14,[123]|iMac18,[123]|iMac19,[12] ]]
+[[ $product_name =~ ^(MacBookPro13,[123]|MacBookPro14,[123]|iMac18,[123]|iMac19,[12])$ ]]

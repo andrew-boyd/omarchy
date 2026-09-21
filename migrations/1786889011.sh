@@ -6,4 +6,5 @@ if ! omarchy-hw-apple-cs8409; then
   exit 0
 fi
 
-omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms
+# Matching kernel headers are supplied by the base install/kernel repair.
+omarchy-pkg-add snd-hda-macbookpro-dkms

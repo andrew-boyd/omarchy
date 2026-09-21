@@ -5,5 +5,5 @@
 if omarchy-hw-apple-cs8409; then
   echo "Detected Mac with Cirrus CS8409 audio"
 
-  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms
+  omarchy-pkg-add snd-hda-macbookpro-dkms
 fi
