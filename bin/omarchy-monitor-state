@@ -22,7 +22,8 @@ omarchy-hyprland-monitor-scaling 2>/dev/null || echo
 printf '%s\n' "$monitors_json" | jq -c '
   def present: . != null and . != "";
   def listable:
-    ((.width // 0) > 0 and (.height // 0) > 0)
+    ((.name | test("^(eDP|LVDS|DSI)-")) | not)
+    or ((.width // 0) > 0 and (.height // 0) > 0)
     or ((.availableModes // []) | length) > 0
     or (.description | present)
     or (.make | present)

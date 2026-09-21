@@ -148,3 +148,8 @@ assert_line_count "monitor state answers every line when the ghost is eDP-2"
 [[ ${state_lines[7]-} == '[{"name":"eDP-1","enabled":true,"focused":true,"width":2880,"height":1800}]' ]] ||
   fail "monitor state omits an empty duplicate regardless of eDP numbering" "actual: ${state_lines[7]-<missing>}"
 pass "monitor state omits an empty duplicate regardless of eDP numbering"
+
+monitor_state '[{"name":"DP-1","description":"","make":"","model":"","availableModes":[],"mirrorOf":"none","disabled":false,"focused":false,"width":0,"height":0}]'
+[[ ${state_lines[7]-} == '[{"name":"DP-1","enabled":true,"focused":false,"width":0,"height":0}]' ]] ||
+  fail "a modeless external connector remains available for recovery in the panel" "actual: ${state_lines[7]-<missing>}"
+pass "identityless modeless external connectors remain listed"
