@@ -48,6 +48,7 @@ Item {
   property string failureMessage: ""
   property int failedAttempts: 0
   property string backgroundPath: ""
+  property string videoPosterPath: ""
   property int backgroundVersion: 0
   property string lastEvent: "init"
   property string lastEventAt: ""
@@ -131,6 +132,16 @@ Item {
 
   function refreshBackground() {
     if (!readlinkProc.running) readlinkProc.running = true
+  }
+
+  function refreshPoster() {
+    if (!root.videoBackground) {
+      root.videoPosterPath = ""
+      return
+    }
+    if (posterProc.running) return
+    posterProc.sourcePath = root.backgroundPath
+    posterProc.running = true
   }
 
   function refreshFingerprintStatus() {
@@ -369,6 +380,7 @@ Item {
         id: lockView
         anchors.fill: parent
         backgroundPath: root.backgroundPath
+        videoPosterPath: root.videoPosterPath
         backgroundVersion: root.backgroundVersion
         fingerprintConfigured: root.fingerprintConfigured
         fingerprintMessage: root.fingerprintMessage
@@ -402,6 +414,7 @@ Item {
     LockView {
       anchors.fill: parent
       backgroundPath: root.backgroundPath
+      videoPosterPath: root.videoPosterPath
       backgroundVersion: root.backgroundVersion
       fingerprintConfigured: root.fingerprintConfigured
       fingerprintMessage: root.fingerprintMessage
@@ -483,9 +496,25 @@ Item {
       onStreamFinished: {
         var next = String(text || "").trim()
         if (next !== root.backgroundPath) {
+          root.videoPosterPath = ""
           root.backgroundPath = next
           root.backgroundVersion += 1
         }
+        root.refreshPoster()
+      }
+    }
+  }
+
+  Process {
+    id: posterProc
+    property string sourcePath: ""
+    command: ["bash", Quickshell.env("OMARCHY_PATH") + "/shell/plugins/lock/poster.sh", sourcePath]
+    stdout: StdioCollector { id: posterOutput; waitForEnd: true }
+    onExited: function(exitCode) {
+      if (sourcePath !== root.backgroundPath) {
+        root.refreshPoster()
+      } else {
+        root.videoPosterPath = exitCode === 0 ? String(posterOutput.text || "").trim() : ""
       }
     }
   }
