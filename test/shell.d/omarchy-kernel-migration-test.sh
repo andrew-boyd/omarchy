@@ -156,7 +156,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
 export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
 touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
 cp "$migration" "$scratch/omarchy/migrations/"
-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
+# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
+# retired kernel installation, rather than requiring that filename to be absent.
+if [[ -e $ROOT/migrations/1789095456.sh ]]; then
+  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
+    fail "the superseded migration must not install the PTL variant first"
+fi
 pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
 [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
 OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
