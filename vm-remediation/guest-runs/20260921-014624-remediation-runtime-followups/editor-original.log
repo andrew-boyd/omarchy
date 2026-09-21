@@ -1,0 +1,27 @@
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mRunning task clone[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mCloning into '/home/omarchy/.local/share/nvim/lazy/monokai-pro.nvim'...
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mfatal: could not read Username for 'https://github.com': terminal prompts disabled
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mFinished task clone in 123ms[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mRunning task clone[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mCloning into '/home/omarchy/.local/share/nvim/lazy/monokai-pro.nvim'...
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mfatal: could not read Username for 'https://github.com': terminal prompts disabled
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mFinished task clone in 93ms[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mRunning task clone[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mCloning into '/home/omarchy/.local/share/nvim/lazy/monokai-pro.nvim'...
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mfatal: could not read Username for 'https://github.com': terminal prompts disabled
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mFinished task clone in 103ms[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mRunning task clone[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mCloning into '/home/omarchy/.local/share/nvim/lazy/monokai-pro.nvim'...
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mfatal: could not read Username for 'https://github.com': terminal prompts disabled
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mFinished task clone in 103ms[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mRunning task clone[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mCloning into '/home/omarchy/.local/share/nvim/lazy/monokai-pro.nvim'...
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mfatal: could not read Username for 'https://github.com': terminal prompts disabled
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mFinished task clone in 84ms[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mRunning task clone[0m
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mCloning into '/home/omarchy/.local/share/nvim/lazy/monokai-pro.nvim'...
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0mfatal: could not read Username for 'https://github.com': terminal prompts disabled
+[35m[monokai-pro.nvim] [0m[36mclone[0m[90m | [0m[34mFinished task clone in 103ms[0m
+Error in /home/omarchy/.config/nvim/init.lua:
+Too many rounds of missing plugins
+NVIM_STARTUP_ERRMSG=Too many rounds of missing plugins

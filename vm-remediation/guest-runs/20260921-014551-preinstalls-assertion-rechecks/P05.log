@@ -1,0 +1,12 @@
+ok - Install and Remove Preinstalls cover the same packages
+ok - every preinstall is shipped in omarchy-base.packages
+ok - preinstalls cover the Omacom apps
+ok - restore keeps the opt-out marker when packages fail to install
+ok - restore clears the opt-out marker once the packages are back
+ok - declining Remove Preinstalls changes nothing
+ok - Remove Preinstalls records the opt-out
+ok - Remove Preinstalls deletes the Omarchy Hermes wrapper
+ok - Remove Preinstalls keeps the desktop app's Hermes command
+ok - Remove Preinstalls keeps an official Hermes install
+ok - Remove Preinstalls keeps a wrapper that merely mentions the installer
+ok - Remove Preinstalls keeps a foreign hermes link

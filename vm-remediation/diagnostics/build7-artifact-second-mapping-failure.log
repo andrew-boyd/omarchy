@@ -1,0 +1,14 @@
+bsdtar: usr/share/omarchy/default/firmware/apple/brcmfmac43602-pcie.txt: Not found in archive
+bsdtar: Error exit delayed from previous errors
+Traceback (most recent call last):
+  File "/home/boyd/Work/vintage-pr-review/reviews/remediation/inspect-artifact.py", line 30, in <module>
+    data=subprocess.check_output(['bsdtar','-xOf',str(archive),package_path]);h=hashlib.sha256(data).hexdigest();assert h==digest(repo/rel),rel
+  File "/usr/lib/python3.14/subprocess.py", line 473, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               **kwargs).stdout
+               ^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['bsdtar', '-xOf', '/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/verification/omarchy-dev-4.0.0.r6542.gf19b35f-1-x86_64.pkg.tar.zst', 'usr/share/omarchy/default/firmware/apple/brcmfmac43602-pcie.txt']' returned non-zero exit status 1.

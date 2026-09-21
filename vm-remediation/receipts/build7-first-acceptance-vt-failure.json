@@ -1,0 +1,6 @@
+{
+  "time_utc": "2026-09-21T05:26:25.779253+00:00",
+  "observation": "During acceptance, /sys/class/tty/tty0/active was tty6 while loginctl placed the sole graphical session 5 on tty2. grim timed out with exit124 and the artifact directory was empty. Menu/screenshot assertions failed; installed Neovim and system checks passed.",
+  "cause": "Agent QMP bootstrap recovery selected tty6; a late second intervention used the socket reused by the acceptance VM and left the graphical session inactive. Do not attribute these menu/capture failures to product behavior.",
+  "action": "Preserve original failed acceptance log/screenshots and rerun acceptance in a fresh overlay without manual VT intervention. New dynamic-console harness will also be exercised by a fresh encrypted installation."
+}

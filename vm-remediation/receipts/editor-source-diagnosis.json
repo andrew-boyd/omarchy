@@ -1,0 +1,15 @@
+{
+  "sources": [
+    {
+      "url": "https://api.github.com/repos/gthelding/monokai-pro.nvim/commits/HEAD",
+      "status": 404
+    },
+    {
+      "url": "https://api.github.com/repos/loctvl842/monokai-pro.nvim/commits/HEAD",
+      "status": 200,
+      "commit": "a68e38b8e55d69a215d0f02598900a79c356da9d"
+    }
+  ],
+  "baseline_recipe_unchanged": true,
+  "not_in_mac_feature_scope": true
+}

@@ -1,0 +1,266 @@
+diff --git a/default/systemd/system-sleep/rebind-brcmfmac b/default/systemd/system-sleep/rebind-brcmfmac
+index f61cacb1..3a6c58c3 100755
+--- a/default/systemd/system-sleep/rebind-brcmfmac
++++ b/default/systemd/system-sleep/rebind-brcmfmac
+@@ -8,23 +8,57 @@
+ # firmware to reload cleanly, so NetworkManager sees a fresh interface and
+ # reconnects on its own.
+ 
++set -euo pipefail
++umask 077
++
+ driver=/sys/bus/pci/drivers/brcmfmac
+ state_file=${OMARCHY_BRCMFMAC_SLEEP_STATE:-/run/omarchy-brcmfmac-sleep}
+ 
++case "${1:-}" in pre|post) ;; *) exit 0 ;; esac
++[[ ! -L $state_file && ! -L $state_file.lock ]] || exit 1
++exec 9>"$state_file.lock"
++flock 9
++
++failed=0
+ case "$1" in
+   pre)
+-    : > "$state_file"
++    # Keep pending devices across repeated pre calls. Record intent before
++    # unbinding so interruption cannot strand a device without recovery state.
++    touch "$state_file"
+     for bound in "$driver"/0000:*; do
+       [[ -L $bound ]] || continue
+-      device=$(basename "$bound")
+-      echo "$device" > "$driver/unbind" 2>/dev/null && echo "$device" >> "$state_file"
++      device=${bound##*/}
++      [[ $device =~ ^0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$ ]] || continue
++      if ! grep -Fxq "$device" "$state_file"; then
++        printf '%s\n' "$device" >>"$state_file"
++      fi
++      if ! { printf '%s\n' "$device" >"$driver/unbind"; } 2>/dev/null; then
++        echo "brcmfmac: could not unbind $device; recovery state retained" >&2
++        failed=1
++      fi
+     done
+     ;;
+   post)
+     [[ -f $state_file ]] || exit 0
+-    while read -r device; do
+-      echo "$device" > "$driver/bind" 2>/dev/null || true
+-    done < "$state_file"
+-    rm -f "$state_file"
++    pending=$(mktemp "$state_file.XXXXXX")
++    trap 'rm -f "$pending"' EXIT
++    trap 'exit 130' INT
++    trap 'exit 143' TERM
++    trap 'exit 129' HUP
++    while IFS= read -r device || [[ -n $device ]]; do
++      if [[ $device =~ ^0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$ ]] &&
++        { [[ -L $driver/$device ]] || { printf '%s\n' "$device" >"$driver/bind"; } 2>/dev/null; }; then
++        continue
++      fi
++      echo "brcmfmac: could not restore $device; retry state retained" >&2
++      printf '%s\n' "$device" >>"$pending"
++      failed=1
++    done <"$state_file"
++    if [[ -s $pending ]]; then
++      mv "$pending" "$state_file"
++    else
++      rm -f "$state_file"
++    fi
+     ;;
+ esac
++exit "$failed"
+diff --git a/install/hardware/apple/fix-brcmfmac-suspend.sh b/install/hardware/apple/fix-brcmfmac-suspend.sh
+index 827f66e6..46bcd3de 100644
+--- a/install/hardware/apple/fix-brcmfmac-suspend.sh
++++ b/install/hardware/apple/fix-brcmfmac-suspend.sh
+@@ -13,7 +13,19 @@ if lspci -nn | grep "106b:180[12]" >/dev/null ||
+     lspci -nn | grep -E "14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)" >/dev/null; }; then
+   echo "Detected a Mac with Broadcom Wi-Fi; rebinding brcmfmac across suspend"
+ 
++  hook=/usr/lib/systemd/system-sleep/rebind-brcmfmac
++  if [[ -f $hook && ! -L $hook ]] && cmp -s "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" "$hook"; then
++    return 0
++  fi
++  # Replace only the previously shipped hook, never administrator changes.
++  if [[ -e $hook || -L $hook ]]; then
++    if [[ -L $hook || ! -f $hook ]] ||
++      [[ $(sha256sum "$hook" | cut -d ' ' -f1) != 0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1 ]]; then
++      echo "Preserving customized Broadcom sleep hook: $hook. Reconcile it with $OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac, then retry." >&2
++      return 1
++    fi
++  fi
+   sudo install -Dm 0755 -o root -g root \
+     "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" \
+-    /usr/lib/systemd/system-sleep/rebind-brcmfmac
++    "$hook"
+ fi
+diff --git a/migrations/1789668939.sh b/migrations/1789668939.sh
+index b043460b..31dd61fc 100644
+--- a/migrations/1789668939.sh
++++ b/migrations/1789668939.sh
+@@ -16,10 +16,19 @@ if ! lspci -nn | grep "106b:180[12]" >/dev/null &&
+ fi
+ 
+ # Idempotent: a hook identical to the source is already the fix.
+-if [[ -f $hook ]] && /usr/bin/cmp -s "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" "$hook"; then
++if [[ -f $hook && ! -L $hook ]] && /usr/bin/cmp -s "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" "$hook"; then
+   exit 0
+ fi
+ 
++# Replace only the previously shipped hook, never administrator changes.
++if [[ -e $hook || -L $hook ]]; then
++  if [[ -L $hook || ! -f $hook ]] ||
++    [[ $(sha256sum "$hook" | cut -d ' ' -f1) != 0e16be9962c708bfe9fe20829fbd54af4d792388f2baeaa868e16351e12148a1 ]]; then
++    echo "Preserving customized Broadcom sleep hook: $hook. Reconcile it with $OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac, then retry." >&2
++    exit 1
++  fi
++fi
++
+ sudo /usr/bin/mkdir -p "$(dirname "$hook")"
+ sudo /usr/bin/install -m 0755 -o root -g root \
+   "$OMARCHY_PATH/default/systemd/system-sleep/rebind-brcmfmac" \
+diff --git a/test/shell.d/brcmfmac-suspend-test.sh b/test/shell.d/brcmfmac-suspend-test.sh
+index 65584723..5c62c9c1 100755
+--- a/test/shell.d/brcmfmac-suspend-test.sh
++++ b/test/shell.d/brcmfmac-suspend-test.sh
+@@ -126,10 +126,12 @@ run_migration "Apple Inc." 43a3 0
+ pass "the migration is idempotent"
+ 
+ printf '# local tweak\n' >> "$hook"
+-run_migration "Apple Inc." 43a3 0
+-cmp -s "$source_hook" "$hook" ||
+-  fail "the migration refreshes a modified hook"
+-pass "the migration refreshes a modified hook"
++cp "$hook" "$test_tmp/custom-hook"
++if run_migration "Apple Inc." 43a3 0; then
++  fail "a custom hook must leave the migration pending"
++fi
++cmp -s "$test_tmp/custom-hook" "$hook" || fail "the migration preserves a customized hook"
++pass "the migration preserves a customized hook and reports that manual reconciliation is required"
+ 
+ rm -f "$hook"
+ run_migration "LENOVO" 43a3 0
+@@ -155,6 +157,19 @@ grep -qx '0000:02:00.0' "$driver/unbind" ||
+ [[ -f $state_file ]] || fail "pre-sleep records the unbound device"
+ pass "pre-sleep unbinds the bound device"
+ 
++# A real successful unbind removes the driver's device symlink.
++rm "$driver/0000:02:00.0"
++"$hook_script" pre
++grep -qx '0000:02:00.0' "$state_file" || fail "a second pre retains pending devices"
++pass "repeated pre-sleep retains a device already unbound"
++
++rm "$driver/bind"
++mkdir "$driver/bind"
++if "$hook_script" post 2>/dev/null; then fail "failed bind reports failure"; fi
++grep -qx '0000:02:00.0' "$state_file" || fail "failed bind retains retry state"
++pass "failed rebind retains the device for retry"
++rmdir "$driver/bind"
++touch "$driver/bind"
+ "$hook_script" post
+ grep -qx '0000:02:00.0' "$driver/bind" ||
+   fail "post-sleep rebinds the same device" "$(cat "$driver/bind")"
+@@ -168,3 +183,47 @@ rm -f "$state_file"
+ "$hook_script" post
+ [[ ! -s $driver/bind ]] || fail "post without pre writes nothing"
+ pass "post without pre is a no-op"
++
++# Already bound devices do not need a second bind; stale records may follow
++# an interruption between the successful bind and the state replacement.
++printf '%s\n' 0000:02:00.0 > "$state_file"
++ln -s /stub/device "$driver/0000:02:00.0"
++: > "$driver/bind"
++"$hook_script" post
++[[ ! -e $state_file && ! -s $driver/bind ]] || fail "already-bound records clear without rebinding"
++pass "an interrupted successful bind can be retried without rebinding"
++
++printf '%s\n' invalid-device > "$state_file"
++if "$hook_script" post 2>/dev/null; then fail "invalid saved device is not accepted"; fi
++[[ ! -s $driver/bind ]] || fail "invalid saved device never reaches sysfs"
++grep -qx invalid-device "$state_file" || fail "invalid records remain available for investigation"
++pass "invalid device records are retained and never written to sysfs"
++
++# A partial recovery retains only the device that failed. Keep the first
++# device bound and force the second bind to fail.
++printf '%s\n' 0000:02:00.0 0000:03:00.0 > "$state_file"
++rm "$driver/bind"
++mkdir "$driver/bind"
++if "$hook_script" post 2>/dev/null; then fail "partial recovery reports failure"; fi
++[[ $(cat "$state_file") == 0000:03:00.0 ]] || fail "only unresolved recovery remains"
++rmdir "$driver/bind"
++touch "$driver/bind"
++"$hook_script" post
++[[ ! -e $state_file ]] || fail "retry completes partial recovery"
++pass "partial recovery keeps only failed devices and a later retry completes"
++
++# Re-run the setup leaf directly with the redirected copy and a customized
++# target, without run_leaf's fresh-install reset.
++run_leaf "Apple Inc." 43a3 0 >/dev/null
++printf '# custom\n' >> "$hook"
++cp "$hook" "$test_tmp/custom-hook"
++if WIFI_ID=43a3 T2_HARDWARE=0 PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++  bash -eE -o pipefail -c 'source "$1"' bash "$test_tmp/leaf.sh" 2>/dev/null; then
++  fail "setup reports a customized target"
++fi
++cmp "$test_tmp/custom-hook" "$hook" || fail "setup preserves custom contents"
++rm "$hook"
++ln -s "$test_tmp/custom-hook" "$hook"
++if run_migration "Apple Inc." 43a3 0 2>/dev/null; then fail "migration refuses a symlink target"; fi
++[[ -L $hook ]] || fail "migration preserves the symlink"
++pass "setup and migration preserve customized and symlinked hooks"
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 24e3480b..7d470885 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -140,7 +140,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
+ export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
+ touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
+ cp "$migration" "$scratch/omarchy/migrations/"
+-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
++# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
++# retired kernel installation, rather than requiring that filename to be absent.
++if [[ -e $ROOT/migrations/1789095456.sh ]]; then
++  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
++    fail "the superseded migration must not install the PTL variant first"
++fi
+ pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
+ [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
+ OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

@@ -2,9 +2,9 @@
 
 14 feature roll-ups and 3 package companions organize 73 reviewed source/context PRs (52 original references plus later related discoveries). Existing PRs remain credited; closure recommendations are conditional. Scope: 64-bit Intel Macs. No hardware certification or complete release-wide integration is claimed.
 
-**17 draft PRs are open: 14 feature groups + 3 package companions.** No groups are held. See [current scope decisions](scope-decisions.json). P04 retains connector/debounce future work; P09 retains custom-unit preservation/applicability gaps and its alternative. P06 requires the existing manual T1Bridge replacement before removal; P10 is a provisional pre/post recovery target with its documented gaps.
+**17 draft PRs are open: 14 feature groups + 3 package companions.** No groups are held. See [current scope decisions](scope-decisions.json). P04 retains connector/debounce future work; P09 retains its physical applicability boundary and alternative; software follow-ups now preserve custom units. P06 requires the existing manual T1Bridge replacement before removal; P10 remains a provisional pre/post recovery target; software follow-ups preserve customized hooks and failed recovery state.
 
-**ISO / VM follow-up (2026-09-21 UTC):** custom ISOs built and installed; all 14 scopes now have explicit VM/fixture evidence. Read [results and remaining failures](vm-validation/HANDOFF.md), [coverage](vm-validation/COVERAGE.md), and [reproduction](vm-validation/REPRODUCE.md). The baseline factory-reset scenario failed; physical Mac behavior remains unverified. This does not certify release readiness.
+**Current software/VM follow-up (2026-09-21 UTC):** [rebuilt ISO results and remaining limitations](vm-remediation/HANDOFF.md), [exact feature follow-ups](vm-remediation/followups/commits.json), and [reproduction](vm-remediation/REPRODUCE.md). The new shared-ESP reset passed. The ISO still has an unrelated baseline editor-startup defect; physical Mac behavior remains unverified. The [earlier ISO packet](vm-validation/HANDOFF.md) preserves the original failures. This does not certify release readiness.
 
 ## Feature and package targets
 
@@ -48,4 +48,4 @@ Follow repository AGENTS/contribution rules, atomic commits and prescribed tests
 
 Original Git authors and co-author trailers are preserved in the prepared commits; [attribution details](AUTHORSHIP.md) distinguish actual contributing identities from PR openers. Preserve this metadata during later squash/rebase.
 
-[Latest upstream refresh](UPSTREAM-REFRESH.md): rebased candidates, source dispositions and refreshed check receipts. The accepted P04/P09 scope remains unchanged.
+[Latest upstream refresh](UPSTREAM-REFRESH.md): rebased candidates, source dispositions and refreshed check receipts. P04 retains its accepted scope; P09 adds the documented software-preservation repair without changing the chosen hardware policy.

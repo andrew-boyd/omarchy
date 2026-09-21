@@ -1,0 +1,11 @@
+--- a/pkgbuilds/omarchy-nvim/lua/plugins/all-themes.lua
++++ b/pkgbuilds/omarchy-nvim/lua/plugins/all-themes.lua
+@@ -77,7 +77,7 @@
+ 		priority = 1000,
+ 	},
+ 	{
+-		"gthelding/monokai-pro.nvim",
++		"loctvl842/monokai-pro.nvim",
+ 		lazy = true,
+ 		priority = 1000,
+ 	},

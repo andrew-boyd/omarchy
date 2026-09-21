@@ -1,0 +1,3 @@
+PASS: new reset refuses the old factory snapshot before account, identity or ESP changes; temporary mount cleaned.
+Artifacts: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-014435-old-snapshot-refusal
+[1;35m==> Stopping test VM[0m

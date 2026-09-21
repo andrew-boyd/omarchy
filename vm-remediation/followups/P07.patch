@@ -1,0 +1,233 @@
+diff --git a/install/hardware/apple/fix-spi-keyboard.sh b/install/hardware/apple/fix-spi-keyboard.sh
+index 2a5cbc34..db8bd1ff 100644
+--- a/install/hardware/apple/fix-spi-keyboard.sh
++++ b/install/hardware/apple/fix-spi-keyboard.sh
+@@ -1,13 +1,11 @@
+ # Detect MacBook models that need SPI keyboard modules
+ product_name="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"
+-if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123] ]]; then
++if [[ $product_name =~ ^(MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123])$ ]]; then
+   echo "Detected MacBook with SPI keyboard"
+ 
+   omarchy-pkg-add macbook12-spi-driver-dkms
+-  sudo mkdir -p /etc/mkinitcpio.conf.d
+   if [[ $product_name == "MacBook8,1" ]]; then
+-    echo "MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)" | \
+-      sudo tee /etc/mkinitcpio.conf.d/macbook_spi_modules.conf >/dev/null
++    expected_modules="MODULES+=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)"
+ 
+     # The Wildcat Point GSPI controller (00:15.4) does transfers through the
+     # companion DesignWare DMA engine (00:15.0). On this board those DMA
+@@ -15,13 +13,29 @@ if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPr
+     # at zero. dw_dmac_pci is builtin, so it cannot be blacklisted as a module.
+     # Blacklisting its initcall forces spi-pxa2xx into PIO, which works.
+     # Deep/S3 sleep then wedges the same SPI device until reboot; s2idle does not.
+-    sudo mkdir -p /etc/limine-entry-tool.d
+-    sudo tee /etc/limine-entry-tool.d/macbook81-spi-pio.conf >/dev/null <<'EOF'
++    pio=/etc/limine-entry-tool.d/macbook81-spi-pio.conf
++    expected_pio=$(cat <<'EOF'
+ # MacBook8,1: DesignWare DMA never completes GSPI transfers.
+ KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle"
+ EOF
++    )
++    if [[ -L $pio ]] || { [[ -e $pio ]] && [[ ! -f $pio || $(cat "$pio") != "$expected_pio" ]]; }; then
++      echo "Preserving customized SPI boot parameters: $pio; reconcile them manually before retrying." >&2
++      return 1
++    fi
++    sudo mkdir -p /etc/limine-entry-tool.d
++    printf '%s\n' "$expected_pio" | sudo tee "$pio" >/dev/null
+   else
+-    echo "MODULES=(applespi intel_lpss_pci spi_pxa2xx_platform)" | \
+-      sudo tee /etc/mkinitcpio.conf.d/macbook_spi_modules.conf >/dev/null
++    expected_modules="MODULES+=(applespi intel_lpss_pci spi_pxa2xx_platform)"
+   fi
++  modules=/etc/mkinitcpio.conf.d/macbook_spi_modules.conf
++  if [[ -L $modules ]] || { [[ -e $modules ]] &&
++    [[ ! -f $modules || ( $(cat "$modules") != "$expected_modules" &&
++       $(cat "$modules") != "${expected_modules/+=/=}" ) ]]; }; then
++    echo "Preserving customized SPI module configuration: $modules; reconcile it manually before retrying." >&2
++    return 1
++  fi
++  sudo mkdir -p /etc/mkinitcpio.conf.d
++  # Keep modules contributed by the main config and other drop-ins.
++  printf '%s\n' "$expected_modules" | sudo tee "$modules" >/dev/null
+ fi
+diff --git a/migrations/1788318101.sh b/migrations/1788318101.sh
+index 69f14754..ab273d7d 100644
+--- a/migrations/1788318101.sh
++++ b/migrations/1788318101.sh
+@@ -7,36 +7,43 @@ echo "Force SPI PIO on MacBook8,1 so the built-in keyboard works"
+ product="${OMARCHY_MACBOOK81_DMI_PRODUCT:-/sys/class/dmi/id/product_name}"
+ limine_conf="${OMARCHY_MACBOOK81_LIMINE_CONF:-/etc/limine-entry-tool.d/macbook81-spi-pio.conf}"
+ repair_marker="${OMARCHY_MACBOOK81_REPAIR_MARKER:-/var/lib/omarchy/migrations/1788318101}"
+-running_cmdline="${OMARCHY_MACBOOK81_RUNNING_CMDLINE:-/proc/cmdline}"
+ 
+ product_name="$(cat "$product" 2>/dev/null || true)"
+ if [[ $product_name != "MacBook8,1" ]]; then
+   exit 0
+ fi
+ 
+-needs_limine_rebuild=0
+-
+-if [[ ! -f $limine_conf ]] || ! grep -q 'initcall_blacklist=dw_pci_driver_init' "$limine_conf"; then
+-  sudo mkdir -p "$(dirname "$limine_conf")"
+-  sudo tee "$limine_conf" >/dev/null <<'EOF'
++expected=$(cat <<'EOF'
+ # MacBook8,1: DesignWare DMA never completes GSPI transfers.
+ KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle"
+ EOF
++)
++
++# Only the exact shipped drop-in establishes both active settings here.
++# Do not infer active shell assignments from text inside comments or blocks.
++if [[ -L $limine_conf ]] || { [[ -e $limine_conf ]] &&
++  [[ ! -f $limine_conf || $(cat "$limine_conf") != "$expected" ]]; }; then
++  echo "Preserving customized SPI boot parameters: $limine_conf; reconcile both required parameters manually before retrying." >&2
++  exit 1
++fi
++
++needs_limine_rebuild=0
++if [[ ! -f $limine_conf ]]; then
++  # Invalidate an earlier success before changing the configuration. A failed
++  # rebuild must remain retryable even if this file is complete next time.
++  sudo rm -f "$repair_marker"
++  sudo mkdir -p "$(dirname "$limine_conf")"
++  printf '%s\n' "$expected" | sudo tee "$limine_conf" >/dev/null
+   needs_limine_rebuild=1
+ fi
+ 
+-# The current kernel keeps its old command line until reboot. Record a
+-# successful machine-wide rebuild so another user's migration does not repeat
+-# it before then, while a missing marker still retries an interrupted rebuild.
+-if [[ -f $limine_conf ]] &&
+-  [[ ! -e $repair_marker ]] &&
+-  grep -q 'initcall_blacklist=dw_pci_driver_init' "$limine_conf" &&
+-  { [[ ! -r $running_cmdline ]] ||
+-    ! grep -Eq '(^| )initcall_blacklist=dw_pci_driver_init( |$)' "$running_cmdline"; }; then
++# A marker is written only after a successful machine-wide boot rebuild.
++# The running kernel's old command line is not proof of the next boot image.
++if [[ ! -e $repair_marker ]]; then
+   needs_limine_rebuild=1
+ fi
+-
+ if (( needs_limine_rebuild )); then
++  sudo rm -f "$repair_marker"
+   sudo limine-mkinitcpio
+   sudo install -Dm644 /dev/null "$repair_marker"
+ fi
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/macbook81-spi-pio-test.sh b/test/shell.d/macbook81-spi-pio-test.sh
+index 74ae221f..4d779431 100644
+--- a/test/shell.d/macbook81-spi-pio-test.sh
++++ b/test/shell.d/macbook81-spi-pio-test.sh
+@@ -69,7 +69,7 @@ run_leaf() {
+ run_leaf "MacBook8,1" >/dev/null
+ modules="$test_tmp/etc/mkinitcpio.conf.d/macbook_spi_modules.conf"
+ pio="$test_tmp/etc/limine-entry-tool.d/macbook81-spi-pio.conf"
+-grep -Fq 'MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)' "$modules" ||
++grep -Fq 'MODULES+=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)' "$modules" ||
+   fail "MacBook8,1 still gets the SPI initramfs modules" "$(cat "$modules" 2>/dev/null)"
+ grep -Fq 'initcall_blacklist=dw_pci_driver_init' "$pio" ||
+   fail "MacBook8,1 gets the PIO kernel parameter" "$(cat "$pio" 2>/dev/null)"
+@@ -142,3 +142,44 @@ run_migration "MacBook10,1"
+ [[ ! -e $pio ]] || fail "the migration skips later 12-inch MacBooks"
+ [[ ! -s $calls ]] || fail "the migration escalates nothing on unrelated Macs" "$(cat "$calls")"
+ pass "the migration skips unrelated hardware"
++
++# Comments and partial assignments are not proof that both boot parameters
++# are configured. Preserve these unknown/custom files, and report unfinished.
++mkdir -p "$(dirname "$pio")"
++for contents in '# initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle' \
++  'KERNEL_CMDLINE[default]+=" initcall_blacklist=dw_pci_driver_init"' \
++  'KERNEL_CMDLINE[default]+=" custom=keep"'; do
++  printf '%s\n' "$contents" > "$pio"
++  cp "$pio" "$test_tmp/custom-pio"
++  touch "$test_tmp/repair-complete"
++  if run_migration MacBook8,1; then fail "custom/incomplete settings remain pending"; fi
++  cmp "$pio" "$test_tmp/custom-pio" || fail "custom parameters are preserved"
++  [[ ! -s $calls ]] || fail "custom parameters cannot trigger a blind boot rebuild"
++done
++pass "comments, partial parameters and custom configuration are preserved without false success"
++
++# A failed rebuild must not leave a stale successful marker that suppresses
++# the next attempt after a missing config was recreated.
++rm "$pio"
++touch "$test_tmp/repair-complete"
++printf '#!/bin/bash\nexit 1\n' > "$stub_bin/limine-mkinitcpio"
++if run_migration MacBook8,1; then fail "failed rebuild is reported"; fi
++[[ ! -e $test_tmp/repair-complete ]] || fail "failed rebuild invalidates the old completion marker"
++printf '#!/bin/bash\necho limine-mkinitcpio >>"$TEST_LOG"\n' > "$stub_bin/limine-mkinitcpio"
++run_migration MacBook8,1
++grep -Fxq limine-mkinitcpio "$calls" || fail "failed rebuild is retried"
++pass "an interrupted rebuild is retried even when an earlier marker existed"
++
++run_leaf MacBook8,1 >/dev/null
++# The emitted drop-in must add to, rather than erase, modules from the main
++# mkinitcpio configuration.
++MODULES=(custom_module)
++source "$modules"
++[[ ${MODULES[*]} == 'custom_module applespi spi_pxa2xx_platform spi_pxa2xx_pci' ]] || fail "SPI modules preserve the base module list"
++printf '# custom module setting\n' >> "$modules"
++cp "$modules" "$test_tmp/custom-modules"
++if PATH="$stub_bin:$PATH" TEST_LOG="$calls" bash -eE -o pipefail -c 'source "$1"' bash "$test_tmp/leaf.sh"; then
++  fail "customized module drop-in requires reconciliation"
++fi
++cmp "$modules" "$test_tmp/custom-modules" || fail "custom module drop-in is preserved"
++pass "SPI setup preserves base modules and customized drop-ins"
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 24e3480b..7d470885 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -140,7 +140,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
+ export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
+ touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
+ cp "$migration" "$scratch/omarchy/migrations/"
+-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
++# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
++# retired kernel installation, rather than requiring that filename to be absent.
++if [[ -e $ROOT/migrations/1789095456.sh ]]; then
++  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
++    fail "the superseded migration must not install the PTL variant first"
++fi
+ pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
+ [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
+ OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

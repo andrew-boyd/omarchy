@@ -1,0 +1,1 @@
+{"original_exit":0,"limitation":"SSH inherited the failed-file list stdin and consumed remaining entries after integration. P07 and P10 files were not run by that invocation.","correction":"Close child stdin and explicitly schedule all five omitted files in separate fresh overlays. Preserve original invocation."}

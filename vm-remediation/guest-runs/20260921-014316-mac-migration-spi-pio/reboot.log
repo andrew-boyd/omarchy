@@ -1,0 +1,8 @@
+root=PARTUUID=7ad5d112-a33e-4a2b-95ab-cb22e361465f zswap.enabled=0 rootflags=subvol=@ rw rootfstype=btrfs resume=/dev/vda2 resume_offset=1628342 initramfs_async=0 quiet splash loglevel=0 systemd.show_status=false rd.udev.log_level=0 vt.global_cursor_default=0 initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle console=uart,io,0x3f8 console=tty0
+Linux omarchy-test 7.2.5-4-omarchy #1 SMP PREEMPT_DYNAMIC Wed, 16 Sep 2026 04:45:18 +0000 x86_64 GNU/Linux
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+linux-omarchy 7.2.5-4
+linux-omarchy-headers 7.2.5-4

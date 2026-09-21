@@ -1,0 +1,136 @@
+[1;35m==> Installing omarchy-2026.09.21-intel-mac-local-x86_64.iso into a fresh VM (headless, driven via console)[0m
+[1;35m==> Watch (do not resize): vncviewer -RemoteResize=0 127.0.0.1:5905[0m
+[1;35m==> Driving the installer wizard[0m
+[1;35m==> Waiting for the install to finish (timeout 2400s)[0m
+    ... installing (0s)
+    ... installing (60s)
+    ... installing (120s)
+[1;35m==> Install finished. Confirming the reboot prompt.[0m
+[1;35m==> Authorizing SSH access via console login[0m
+Timed out after 120s waiting for SSH
+[1;35m==> Installed system is up. Saving base image.[0m
+[1;35m==> Booting acceptance VM from base image overlay[0m
+[1;35m==> Watch (do not resize): vncviewer -RemoteResize=0 127.0.0.1:5905[0m
+[1;35m==> Syncing /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/test-sync/test into the guest[0m
+[1;35m==> Exercising primary desktop shortcuts through the VM keyboard[0m
+ok - menu shortcut opens
+ok - menu shortcut surface closes
+ok - apps-menu shortcut opens
+ok - apps-menu shortcut surface closes
+ok - emojis shortcut opens
+ok - emojis shortcut surface closes
+ok - clipboard shortcut opens
+ok - clipboard shortcut surface closes
+ok - audio-panel shortcut opens
+ok - audio-panel shortcut surface closes
+ok - terminal shortcut opens a window
+ok - terminal shortcut opens a second window
+ok - floating shortcut floats the active window
+ok - floating shortcut returns the window to tiling
+ok - move shortcut follows the window to workspace 2
+ok - workspace shortcut returns to workspace 1
+ok - close shortcut closes the workspace 1 terminal
+ok - workspace shortcut visits workspace 2
+ok - close shortcut closes the workspace 2 terminal
+ok - universal clipboard test opens Chromium
+ok - universal copy uses the active GUI application
+ok - universal paste clipboard is seeded
+ok - universal paste uses the active GUI application
+ok - terminal paste clipboard is seeded
+ok - universal clipboard test opens a terminal
+ok - universal paste uses the terminal-safe shortcut
+[1;35m==> Running acceptance suite[0m
+ok - Hyprland session is up (signature efb50993780079460b0cbed1363e2166a2de1d9f_1789968019_573968307)
+==> test/acceptance.d/apps-test.sh
+ok - terminal opens a window
+ok - terminal window closes
+ok - browser opens a window
+ok - browser window closes
+ok - neovim opens a window
+ok - neovim window closes
+ok - writer opens a window
+ok - writer window closes
+    completed in 56s
+==> test/acceptance.d/cups-test.sh
+ok - printing packages are installed
+ok - the root CUPS-PDF backend is absent
+ok - automatic printer discovery is not installed or running
+ok - automatic printer discovery leaves no package files
+ok - CUPS is enabled, running, and answering
+ok - the CUPS authorization policy is protected
+ok - CUPS denies unauthenticated desktop administration
+    completed in 0s
+==> test/acceptance.d/menu-test.sh
+ok - root menu opens
+timed out after 15s waiting for: screen_contains Apps
+not ok - root menu content is visible
+    completed in 31s
+==> test/acceptance.d/panels-test.sh
+ok - weather panel opens
+timed out after 30s waiting for: screen_contains SAN FRANCISCO
+not ok - weather location is visible
+    completed in 51s
+==> test/acceptance.d/security-test.sh
+ok - user is not in the input group
+ok - no omarchy asdcontrol sudoers grant is shipped
+ok - omarchy-setup-security-sshd completes unattended
+ok - sshd is running after setup
+ok - the key is authorized
+ok - password authentication is off
+ok - keyboard-interactive authentication is off
+ok - the SSH port is rate limited in the firewall
+    completed in 3s
+==> test/acceptance.d/session-test.sh
+ok - compositor reports a monitor
+ok - omarchy-shell responds to ping
+ok - shell plugin is loaded: omarchy.audio
+ok - shell plugin is loaded: omarchy.background
+ok - shell plugin is loaded: omarchy.bar
+ok - shell plugin is loaded: omarchy.bluetooth
+ok - shell plugin is loaded: omarchy.clipboard
+ok - shell plugin is loaded: omarchy.emojis
+ok - shell plugin is loaded: omarchy.menu
+ok - shell plugin is loaded: omarchy.monitor
+ok - shell plugin is loaded: omarchy.network
+ok - shell plugin is loaded: omarchy.notifications
+ok - shell plugin is loaded: omarchy.power
+ok - shell plugin is loaded: omarchy.reminders
+ok - shell plugin is loaded: omarchy.weather
+ok - bar layer is on screen
+ok - background layer is on screen
+ok - hidden bar layer stays mapped
+timed out after 15s waiting for: layer_off_screen omarchy-bar
+not ok - hidden bar layer parks off screen
+    completed in 25s
+==> test/acceptance.d/shell-surfaces-test.sh
+ok - emoji picker opens
+timed out after 15s waiting for: layer_absent omarchy-emojis
+not ok - emoji picker selection closes
+    completed in 37s
+==> test/acceptance.d/system-test.sh
+ok - all Omarchy core packages are installed (0 missing)
+ok - the running linux-omarchy kernel has matching headers (7.2.5-4-omarchy)
+ok - Chromium is the default browser
+ok - Foot is the default terminal
+ok - Neovim is the default editor
+ok - a current theme is configured
+ok - a current background is configured
+ok - a monospace font is configured
+ok - desktop MIME handlers are configured
+ok - core system services are enabled
+ok - critical system services are running
+ok - user audio services are running
+ok - Docker is installed but unreachable by the desktop user without elevation
+ok - Neovim starts headlessly
+ok - Fastfetch can read system information
+mise WARN  mise version 2026.9.12 available
+mise WARN  self-update is disabled for this install, update mise the same way you installed it
+ok - core terminal tools are runnable
+ok - XDG user directories exist
+ok - Omarchy user state and shell configuration exist
+    completed in 4s
+not ok - acceptance suite failed in 207s (artifacts in /tmp/omarchy-acceptance)
+[1;35m==> Collecting artifacts into /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/test-harness/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64/runs/20260921-010850[0m
+[1;35m==> Acceptance suite FAILED. Artifacts: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/test-harness/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64/runs/20260921-010850[0m
+[1;35m==> Stopping test VM[0m
+[1;35m==> Visual review: 37 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/test-harness/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64/runs/20260921-010850[0m

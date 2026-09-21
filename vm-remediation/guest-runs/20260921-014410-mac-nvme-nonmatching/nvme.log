@@ -1,0 +1,72 @@
+00:00.0 Host bridge [0600]: Intel Corporation 82G33/G31/P35/P31 Express DRAM Controller [8086:29c0]
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel modules: intel_agp
+00:01.0 SCSI storage controller [0100]: Red Hat, Inc. Virtio block device [1af4:1001]
+	Subsystem: Red Hat, Inc. Device [1af4:0002]
+	Kernel driver in use: virtio-pci
+	Kernel modules: virtio_pci
+00:02.0 VGA compatible controller [0300]: Red Hat, Inc. Virtio 1.0 GPU [1af4:1050] (rev 01)
+	Subsystem: Red Hat, Inc. QEMU [1af4:1100]
+	Kernel driver in use: virtio-pci
+	Kernel modules: virtio_pci
+00:03.0 Ethernet controller [0200]: Red Hat, Inc. Virtio network device [1af4:1000]
+	Subsystem: Red Hat, Inc. Device [1af4:0001]
+	Kernel driver in use: virtio-pci
+	Kernel modules: virtio_pci
+00:1c.0 PCI bridge [0604]: Red Hat, Inc. QEMU PCIe Root port [1b36:000c]
+	Subsystem: Red Hat, Inc. Device [1b36:0000]
+	Kernel driver in use: pcieport
+	Kernel modules: shpchp
+00:1d.0 USB controller [0c03]: Intel Corporation 82801I (ICH9 Family) USB UHCI Controller #1 [8086:2934] (rev 03)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: uhci_hcd
+	Kernel modules: uhci_hcd
+00:1d.1 USB controller [0c03]: Intel Corporation 82801I (ICH9 Family) USB UHCI Controller #2 [8086:2935] (rev 03)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: uhci_hcd
+	Kernel modules: uhci_hcd
+00:1d.2 USB controller [0c03]: Intel Corporation 82801I (ICH9 Family) USB UHCI Controller #3 [8086:2936] (rev 03)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: uhci_hcd
+	Kernel modules: uhci_hcd
+00:1d.7 USB controller [0c03]: Intel Corporation 82801I (ICH9 Family) USB2 EHCI Controller #1 [8086:293a] (rev 03)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: ehci-pci
+	Kernel modules: ehci_pci
+00:1f.0 ISA bridge [0601]: Intel Corporation 82801IB (ICH9) LPC Interface Controller [8086:2918] (rev 02)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: lpc_ich
+	Kernel modules: lpc_ich
+00:1f.2 SATA controller [0106]: Intel Corporation 82801IR/IO/IH (ICH9R/DO/DH) 6 port SATA Controller [AHCI mode] [8086:2922] (rev 02)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: ahci
+	Kernel modules: ahci
+00:1f.3 SMBus [0c05]: Intel Corporation 82801I (ICH9 Family) SMBus Controller [8086:2930] (rev 02)
+	Subsystem: Red Hat, Inc. QEMU Virtual Machine [1af4:1100]
+	Kernel driver in use: i801_smbus
+	Kernel modules: i2c_i801
+01:00.0 Non-Volatile memory controller [0108]: Red Hat, Inc. QEMU NVM Express Controller [1b36:0010] (rev 02)
+	Subsystem: Red Hat, Inc. Device [1af4:1100]
+	Kernel driver in use: nvme
+	Kernel modules: nvme
+NAME    TYPE MODEL          FSTYPE MOUNTPOINTS
+sr0     rom  QEMU DVD-ROM          
+zram0   disk                swap   [SWAP]
+vda     disk                       
+|-vda1  part                vfat   /boot
+`-vda2  part                btrfs  /var/log
+                                   /home
+                                   /var/cache/pacman/pkg
+                                   /
+nvme0n1 disk QEMU NVMe Ctrl        
+0x1b36
+0x0010
+1
+Detected MacBook model: MacBook8,1
+Warning: Apple NVMe controller not found at expected PCI address (0000:01:00.0)
+This fix may not be needed for this MacBook model
+Detected MacBook model: MacBook8,1
+Warning: Apple NVMe controller not found at expected PCI address (0000:01:00.0)
+This fix may not be needed for this MacBook model
+/etc/systemd/system/omarchy-nvme-suspend-fix.service: OK
+PASS: real non-Apple NVMe at 0000:01:00.0 is excluded; its state and existing unit are preserved.

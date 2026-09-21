@@ -1,0 +1,13 @@
+Warning: Permanently added '[127.0.0.1]:2222' (ED25519) to the list of known hosts.
+NAME     TYPE  FSTYPE      MOUNTPOINTS
+sr0      rom               
+zram0    disk  swap        [SWAP]
+vda      disk              
+|-vda1   part  vfat        /boot
+`-vda2   part  crypto_LUKS 
+  `-root crypt btrfs       /var/log
+                           /var/cache/pacman/pkg
+                           /home
+                           /
+/dev/mapper/root[/@] btrfs
+true

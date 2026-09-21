@@ -1,0 +1,211 @@
+diff --git a/default/systemd/system/omarchy-nvme-suspend-fix.service b/default/systemd/system/omarchy-nvme-suspend-fix.service
+new file mode 100644
+index 00000000..b638f320
+--- /dev/null
++++ b/default/systemd/system/omarchy-nvme-suspend-fix.service
+@@ -0,0 +1,8 @@
++[Unit]
++Description=Omarchy NVMe Suspend Fix for MacBook
++
++[Service]
++ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000:01:00.0/d3cold_allowed'
++
++[Install]
++WantedBy=multi-user.target
+diff --git a/install/hardware/apple/fix-suspend-nvme.sh b/install/hardware/apple/fix-suspend-nvme.sh
+index 194f6814..5d5747eb 100644
+--- a/install/hardware/apple/fix-suspend-nvme.sh
++++ b/install/hardware/apple/fix-suspend-nvme.sh
+@@ -6,24 +6,24 @@
+ MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)
+ NVME_PCI="/sys/bus/pci/devices/0000:01:00.0"
+ 
+-if [[ $MACBOOK_MODEL =~ MacBook(8,1|9,1|10,1)|MacBookPro13,[12]|MacBookPro14,[12] ]]; then
++if [[ $MACBOOK_MODEL =~ ^(MacBook(8,1|9,1|10,1)|MacBookPro13,[12]|MacBookPro14,[12])$ ]]; then
+   echo "Detected MacBook model: $MACBOOK_MODEL"
+ 
+   if [[ $(cat "$NVME_PCI/vendor" 2>/dev/null || true) == "0x106b" ]]; then
+     echo "Applying NVMe suspend fix..."
+ 
+-    sudo mkdir -p /etc/systemd/system
+-    sudo tee /etc/systemd/system/omarchy-nvme-suspend-fix.service >/dev/null <<'EOF'
+-[Unit]
+-Description=Omarchy NVMe Suspend Fix for MacBook
+-
+-[Service]
+-ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000:01:00.0/d3cold_allowed'
+-
+-[Install]
+-WantedBy=multi-user.target
+-EOF
++    unit=/etc/systemd/system/omarchy-nvme-suspend-fix.service
++    if [[ -e $unit || -L $unit ]]; then
++      if [[ -L $unit || ! -f $unit ]] ||
++        [[ $(sha256sum "$unit" | cut -d ' ' -f1) != 7dcd24e421986f79b6f9c51b3165443752953364e4355af8e76baa1329b0d61c &&
++           $(sha256sum "$unit" | cut -d ' ' -f1) != 9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab ]]; then
++        echo "Preserving customized NVMe suspend unit: $unit; reconcile it manually before retrying." >&2
++        return 1
++      fi
++    fi
+ 
++    sudo install -Dm644 "$OMARCHY_PATH/default/systemd/system/omarchy-nvme-suspend-fix.service" "$unit"
++    sudo systemctl daemon-reload
+     sudo systemctl enable omarchy-nvme-suspend-fix.service
+   else
+     echo "Warning: Apple NVMe controller not found at expected PCI address (0000:01:00.0)"
+diff --git a/migrations/1789274148.sh b/migrations/1789274148.sh
+index a14871a8..95a9fec3 100644
+--- a/migrations/1789274148.sh
++++ b/migrations/1789274148.sh
+@@ -7,8 +7,23 @@ echo "Remove the MacBook NVMe suspend fix from 15-inch MacBook Pros, where it di
+ unit="${OMARCHY_NVME_SUSPEND_UNIT:-/etc/systemd/system/omarchy-nvme-suspend-fix.service}"
+ pci_vendor="${OMARCHY_NVME_SUSPEND_PCI_VENDOR:-/sys/bus/pci/devices/0000:01:00.0/vendor}"
+ 
+-if [[ -f $unit && $(cat "$pci_vendor" 2>/dev/null || true) != "0x106b" ]]; then
+-  sudo systemctl disable omarchy-nvme-suspend-fix.service
+-  sudo rm -f "$unit"
+-  sudo systemctl daemon-reload
++[[ -e $unit || -L $unit ]] || exit 0
++vendor=$(cat "$pci_vendor" 2>/dev/null || true)
++if [[ ! $vendor =~ ^0x[0-9a-fA-F]{4}$ ]]; then
++  echo "Cannot read the PCI vendor; preserving $unit and leaving this migration pending." >&2
++  exit 1
+ fi
++[[ $vendor != "0x106b" ]] || exit 0
++
++if [[ -e $unit || -L $unit ]]; then
++  if [[ -L $unit || ! -f $unit ]] ||
++    [[ $(sha256sum "$unit" | cut -d ' ' -f1) != 7dcd24e421986f79b6f9c51b3165443752953364e4355af8e76baa1329b0d61c &&
++       $(sha256sum "$unit" | cut -d ' ' -f1) != 9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab ]]; then
++    echo "Preserving customized NVMe suspend unit: $unit; reconcile it manually before retrying." >&2
++    exit 1
++  fi
++fi
++
++sudo systemctl disable omarchy-nvme-suspend-fix.service
++sudo rm -f "$unit"
++sudo systemctl daemon-reload
+diff --git a/test/shell.d/apple-suspend-nvme-test.sh b/test/shell.d/apple-suspend-nvme-test.sh
+index 937996cd..9d7df287 100755
+--- a/test/shell.d/apple-suspend-nvme-test.sh
++++ b/test/shell.d/apple-suspend-nvme-test.sh
+@@ -43,7 +43,7 @@ run_leaf() {
+       -e "s|/etc/systemd/system|$test_tmp/etc/systemd/system|g" \
+       "$leaf" >"$script"
+ 
+-  PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++  PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
+     bash -eE -o pipefail -c 'source "$1"' bash "$script" </dev/null
+ }
+ 
+@@ -78,7 +78,7 @@ run_migration() {
+   : >"$calls"
+   printf '%s\n' "$vendor" >"$test_tmp/pci/vendor"
+ 
+-  PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
++  PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
+     OMARCHY_NVME_SUSPEND_UNIT="$unit" \
+     OMARCHY_NVME_SUSPEND_PCI_VENDOR="$test_tmp/pci/vendor" \
+     bash -euo pipefail "$migration" >/dev/null
+@@ -86,7 +86,7 @@ run_migration() {
+ 
+ write_old_unit() {
+   mkdir -p "$(dirname "$unit")"
+-  printf '%s\n' '[Service]' "ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000\:01\:00.0/d3cold_allowed'" >"$unit"
++  sed 's/0000:01:00.0/0000\\:01\\:00.0/' "$ROOT/default/systemd/system/omarchy-nvme-suspend-fix.service" >"$unit"
+ }
+ 
+ # A 15-inch install from before the fix carries the service aimed at its GPU.
+@@ -112,3 +112,34 @@ rm -rf "${test_tmp:?}/etc"
+ run_migration 0x8086
+ [[ ! -s $calls ]] || fail "the migration skips machines that never had the service" "$(cat "$calls")"
+ pass "the migration skips machines that never had the service"
++
++write_old_unit
++printf '# custom setting\n' >> "$unit"
++cp "$unit" "$test_tmp/custom-unit"
++if run_migration 0x1002; then fail "custom unit requires manual reconciliation"; fi
++cmp "$unit" "$test_tmp/custom-unit" || fail "custom unit survives migration"
++[[ ! -s $calls ]] || fail "custom unit is not disabled"
++pass "migration preserves customized units"
++
++write_old_unit
++for vendor in '' unknown; do
++  if run_migration "$vendor"; then fail "unknown vendor leaves migration pending"; fi
++  [[ -f $unit && ! -s $calls ]] || fail "unknown vendor cannot remove a unit"
++done
++pass "unknown PCI state never means a non-Apple device"
++
++for model in OtherMacBook8,1 MacBookPro14,20; do
++  run_leaf "$model" 0x106b >/dev/null
++  [[ ! -e $unit && ! -s $calls ]] || fail "model allowlist is exact"
++done
++pass "partial model names do not match the hardware allowlist"
++
++run_leaf MacBook8,1 0x106b >/dev/null
++printf '# custom setting\n' >> "$unit"
++cp "$unit" "$test_tmp/custom-unit"
++if PATH="$stub_bin:$PATH" TEST_LOG="$calls" OMARCHY_PATH="$ROOT" \
++  bash -eE -o pipefail -c 'source "$1"' bash "$test_tmp/leaf.sh"; then
++  fail "setup reports a customized target"
++fi
++cmp "$unit" "$test_tmp/custom-unit" || fail "setup preserves customized unit"
++pass "repeat hardware setup preserves administrator changes"
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 24e3480b..7d470885 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -140,7 +140,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
+ export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
+ touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
+ cp "$migration" "$scratch/omarchy/migrations/"
+-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
++# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
++# retired kernel installation, rather than requiring that filename to be absent.
++if [[ -e $ROOT/migrations/1789095456.sh ]]; then
++  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
++    fail "the superseded migration must not install the PTL variant first"
++fi
+ pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
+ [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
+ OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

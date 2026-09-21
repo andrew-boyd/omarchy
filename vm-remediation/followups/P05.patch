@@ -1,0 +1,85 @@
+diff --git a/bin/omarchy-monitor-state b/bin/omarchy-monitor-state
+index 0be189ad..7238e592 100755
+--- a/bin/omarchy-monitor-state
++++ b/bin/omarchy-monitor-state
+@@ -22,7 +22,8 @@ omarchy-hyprland-monitor-scaling 2>/dev/null || echo
+ printf '%s\n' "$monitors_json" | jq -c '
+   def present: . != null and . != "";
+   def listable:
+-    ((.width // 0) > 0 and (.height // 0) > 0)
++    ((.name | test("^(eDP|LVDS|DSI)-")) | not)
++    or ((.width // 0) > 0 and (.height // 0) > 0)
+     or ((.availableModes // []) | length) > 0
+     or (.description | present)
+     or (.make | present)
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/monitor-state-test.sh b/test/shell.d/monitor-state-test.sh
+index f16cd260..dc4e5e46 100755
+--- a/test/shell.d/monitor-state-test.sh
++++ b/test/shell.d/monitor-state-test.sh
+@@ -148,3 +148,8 @@ assert_line_count "monitor state answers every line when the ghost is eDP-2"
+ [[ ${state_lines[7]-} == '[{"name":"eDP-1","enabled":true,"focused":true,"width":2880,"height":1800}]' ]] ||
+   fail "monitor state omits an empty duplicate regardless of eDP numbering" "actual: ${state_lines[7]-<missing>}"
+ pass "monitor state omits an empty duplicate regardless of eDP numbering"
++
++monitor_state '[{"name":"DP-1","description":"","make":"","model":"","availableModes":[],"mirrorOf":"none","disabled":false,"focused":false,"width":0,"height":0}]'
++[[ ${state_lines[7]-} == '[{"name":"DP-1","enabled":true,"focused":false,"width":0,"height":0}]' ]] ||
++  fail "a modeless external connector remains available for recovery in the panel" "actual: ${state_lines[7]-<missing>}"
++pass "identityless modeless external connectors remain listed"
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 24e3480b..7d470885 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -140,7 +140,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
+ export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
+ touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
+ cp "$migration" "$scratch/omarchy/migrations/"
+-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
++# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
++# retired kernel installation, rather than requiring that filename to be absent.
++if [[ -e $ROOT/migrations/1789095456.sh ]]; then
++  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
++    fail "the superseded migration must not install the PTL variant first"
++fi
+ pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
+ [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
+ OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

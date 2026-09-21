@@ -1,0 +1,126 @@
+diff --git a/migrations/1789325478.sh b/migrations/1789325478.sh
+index d0975aca..bedddb89 100644
+--- a/migrations/1789325478.sh
++++ b/migrations/1789325478.sh
+@@ -9,11 +9,16 @@ echo "Install the Omarchy kernel and make it the first Limine boot entry"
+ [[ $(uname -m) == "x86_64" ]] || exit 0
+ running_kernel=$(uname -r)
+ dmi_vendor="${OMARCHY_KERNEL_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
+-if omarchy-pkg-present linux-t2 || [[ ${running_kernel,,} == *-t2* ]] ||
+-  [[ $(cat "$dmi_vendor" 2>/dev/null) == Apple* ]]; then
++if omarchy-pkg-present linux-t2 || [[ ${running_kernel,,} == *-t2* ]]; then
+   exit 0
+ fi
+ 
++if ! vendor=$(cat "$dmi_vendor" 2>/dev/null) || [[ -z ${vendor//[[:space:]]/} ]]; then
++  echo "Cannot identify the system vendor; keeping the installed kernel and leaving migration pending." >&2
++  exit 1
++fi
++[[ ${vendor,,} != apple* ]] || exit 0
++
+ limine_conf="${OMARCHY_KERNEL_LIMINE_CONF:-/etc/default/limine}"
+ rebuild_marker="${OMARCHY_KERNEL_REBUILD_MARKER:-/var/lib/omarchy/migrations/1789325478}"
+ kernel="linux-omarchy"
+diff --git a/test/shell.d/intel-mac-kernel-policy-test.sh b/test/shell.d/intel-mac-kernel-policy-test.sh
+index 2dae9d2d..d3805d5c 100644
+--- a/test/shell.d/intel-mac-kernel-policy-test.sh
++++ b/test/shell.d/intel-mac-kernel-policy-test.sh
+@@ -107,8 +107,8 @@ assert_skipped() {
+ }
+ 
+ # Local fixture additions. Setup above is retained from #12328's test.
+-# Production migration and source test remain unchanged.
+-for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Apple' 'Appleish'; do
++# Remediation retains the Apple exemption and fails closed on unknown DMI.
++for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Apple' 'Appleish' 'apple Inc.'; do
+   reset_fixture
+   printf '%s\n' "$vendor" > "$OMARCHY_KERNEL_DMI_VENDOR"
+   run_migration
+@@ -116,7 +116,7 @@ for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Apple' 'Appleish'; do
+   pass "source Apple-prefix policy skips $vendor without changing boot order"
+ done
+ 
+-for vendor in 'Dell Inc.' 'apple Inc.' ''; do
++for vendor in 'Dell Inc.'; do
+   reset_fixture
+   printf '%s\n' "$vendor" > "$OMARCHY_KERNEL_DMI_VENDOR"
+   run_migration
+@@ -125,16 +125,17 @@ for vendor in 'Dell Inc.' 'apple Inc.' ''; do
+   pass "source non-Apple policy migrates $vendor"
+ done
+ 
+-for state in missing unreadable directory; do
++for state in missing unreadable directory empty; do
+   reset_fixture
+   case "$state" in
++    empty) : >"$OMARCHY_KERNEL_DMI_VENDOR" ;;
+     missing) rm "$OMARCHY_KERNEL_DMI_VENDOR" ;;
+     unreadable) chmod 000 "$OMARCHY_KERNEL_DMI_VENDOR" ;;
+     directory) rm "$OMARCHY_KERNEL_DMI_VENDOR"; mkdir "$OMARCHY_KERNEL_DMI_VENDOR" ;;
+   esac
+-  run_migration
+-  grep -Fxq "$kernel" "$INSTALLED_PACKAGES" || fail "unavailable DMI still migrates"
+-  pass "source policy treats $state DMI as non-Apple"
++  if run_migration; then fail "unavailable DMI leaves migration pending"; fi
++  assert_skipped
++  pass "unavailable $state DMI preserves the installed kernel"
+   [[ $state != unreadable ]] || chmod 600 "$OMARCHY_KERNEL_DMI_VENDOR"
+   [[ $state != directory ]] || rmdir "$OMARCHY_KERNEL_DMI_VENDOR"
+ done
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 8f82c35e..42116c61 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -145,9 +145,9 @@ pass "T1 and older Macs keep their kernel even without a T2 package or kernel"
+ 
+ reset_fixture
+ rm "$OMARCHY_KERNEL_DMI_VENDOR"
+-run_migration
+-grep -Fxq "$kernel" "$INSTALLED_PACKAGES" || fail "an unreadable DMI vendor is not treated as a Mac"
+-pass "machines without DMI vendor information still receive the generic kernel"
++if run_migration; then fail "unreadable DMI must leave the migration pending"; fi
++assert_skipped
++pass "unknown system vendor preserves the installed kernel and stays pending"
+ 
+ reset_fixture
+ printf '%s\n' linux-omarchy-ptl-novrr-mm > "$INSTALLED_PACKAGES"
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

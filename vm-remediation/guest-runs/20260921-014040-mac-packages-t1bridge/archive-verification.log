@@ -1,0 +1,5 @@
+libfprint-t1bridge-1.94.100-17-x86_64.pkg.tar.zst: OK
+fprintd-t1bridge-1.94.5-14-x86_64.pkg.tar.zst: OK
+t1bridge-dkms-0.1.9-1-x86_64.pkg.tar.zst: OK
+t1bridge-0.1.9-1-x86_64.pkg.tar.zst: OK
+t1bridge-omarchy-0.2.1-2.1-any.pkg.tar.zst: OK

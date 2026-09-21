@@ -1,0 +1,11 @@
+P03 focused recheck: 0
+P05 focused recheck: 0
+P06 focused recheck: 0
+P07 focused recheck: 0
+P09 focused recheck: 0
+P10 focused recheck: 0
+P11 focused recheck: 0
+P13 focused recheck: 0
+P14 focused recheck: 0
+integration test/shell.d/runtime-smoke-test.sh focused recheck: 0
+Artifacts: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T030051Z-m0fg6D/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-014551-preinstalls-assertion-rechecks

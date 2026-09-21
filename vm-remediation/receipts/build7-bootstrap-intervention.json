@@ -1,0 +1,8 @@
+{
+  "time_utc": "2026-09-21T05:19:29.187224+00:00",
+  "failure": "Acceptance fixed tty4 bootstrap typed the username into the graphical greeter and subsequent commands into the desktop; SSH not established. Screenshot evidence preserved.",
+  "intervention": "Selected verified tty6 login and typed synthetic credentials plus the existing HTTP bootstrap; first SSH verification timed out. A further slower console attempt was made, then SSH verified hostname omarchy-test and installed package 4.0.0.r6542.gf19b35f-1/kernel 7.2.5-4. Timing does not establish which queued attempt completed bootstrap. Acceptance harness resumed; original screenshots/timeouts retained.",
+  "harness_adjustment_needed": "Select a confirmed console login prompt rather than assuming a fixed VT is unused.",
+  "ssh_verified": true,
+  "verified_utc": "2026-09-21T05:22:07.465877+00:00"
+}

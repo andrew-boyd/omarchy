@@ -1,0 +1,342 @@
+diff --git a/bin/omarchy-hw-apple-cs8409 b/bin/omarchy-hw-apple-cs8409
+index 04ab4f32..af0ab033 100755
+--- a/bin/omarchy-hw-apple-cs8409
++++ b/bin/omarchy-hw-apple-cs8409
+@@ -9,4 +9,4 @@
+ # - 2017–2019 iMacs (iMac18,x / iMac19,x) with the same CS8409 bridge
+ # T2 and later use a different codec and must not get this driver.
+ product_name=$(cat "${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}" 2>/dev/null)
+-[[ $product_name =~ MacBookPro13,[123]|MacBookPro14,[123]|iMac18,[123]|iMac19,[12] ]]
++[[ $product_name =~ ^(MacBookPro13,[123]|MacBookPro14,[123]|iMac18,[123]|iMac19,[12])$ ]]
+diff --git a/install/hardware/apple/fix-cs4208-audio.sh b/install/hardware/apple/fix-cs4208-audio.sh
+index 691e7faf..294d674a 100644
+--- a/install/hardware/apple/fix-cs4208-audio.sh
++++ b/install/hardware/apple/fix-cs4208-audio.sh
+@@ -10,9 +10,17 @@ product_name="${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_n
+ if [[ $product_name == "MacBook9,1" || $product_name == "MacBook10,1" ]]; then
+   echo "Detected 12-inch MacBook with CS4208 audio"
+ 
++  systemd_dir="${OMARCHY_SYSTEMD_DIR:-/etc/systemd/system}"
++  service_target="$systemd_dir/omarchy-cs4208-audio.service"
++  if [[ -e $service_target || -L $service_target ]]; then
++    if [[ -L $service_target || ! -f $service_target ]] ||
++      ! cmp -s "$OMARCHY_INSTALL/hardware/apple/omarchy-cs4208-audio.service" "$service_target"; then
++      echo "Preserving customized audio service: $service_target; reconcile it manually before retrying." >&2
++      return 1
++    fi
++  fi
+   omarchy-pkg-add macbook12-audio-driver-dkms
+ 
+-  systemd_dir="${OMARCHY_SYSTEMD_DIR:-/etc/systemd/system}"
+   install -Dm644 \
+     "$OMARCHY_INSTALL/hardware/apple/omarchy-cs4208-audio.service" \
+     "$systemd_dir/omarchy-cs4208-audio.service"
+diff --git a/install/hardware/apple/fix-cs8409-audio.sh b/install/hardware/apple/fix-cs8409-audio.sh
+index 45df48eb..26e42baf 100644
+--- a/install/hardware/apple/fix-cs8409-audio.sh
++++ b/install/hardware/apple/fix-cs8409-audio.sh
+@@ -5,5 +5,5 @@
+ if omarchy-hw-apple-cs8409; then
+   echo "Detected Mac with Cirrus CS8409 audio"
+ 
+-  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms
++  omarchy-pkg-add snd-hda-macbookpro-dkms
+ fi
+diff --git a/install/user/hardware/apple/fix-cs4208-audio.sh b/install/user/hardware/apple/fix-cs4208-audio.sh
+index 979920d1..1593ada4 100644
+--- a/install/user/hardware/apple/fix-cs4208-audio.sh
++++ b/install/user/hardware/apple/fix-cs4208-audio.sh
+@@ -4,9 +4,23 @@ product_name="${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_n
+ if [[ $product_name == "MacBook9,1" || $product_name == "MacBook10,1" ]]; then
+   config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+   state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
++  source_config="$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++  target_config="$config_home/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++  if [[ -e $target_config || -L $target_config ]]; then
++    if [[ -L $target_config || ! -f $target_config ]] || ! cmp -s "$source_config" "$target_config"; then
++      echo "Preserving customized audio configuration: $target_config; reconcile it manually before retrying." >&2
++      return 1
++    fi
++    return 0
++  fi
++  routes="$state_home/wireplumber/default-routes"
++  if [[ -e $routes || -L $routes ]]; then
++    if [[ -e $routes.pre-omarchy-cs4208 || -L $routes.pre-omarchy-cs4208 ]]; then
++      echo "Preserving both existing routes and backup: $routes; reconcile them manually before retrying." >&2
++      return 1
++    fi
++    mv -T "$routes" "$routes.pre-omarchy-cs4208" || return 1
++  fi
++  install -Dm644 "$source_config" "$target_config"
+ 
+-  install -Dm644 \
+-    "$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf" \
+-    "$config_home/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
+-  rm -rf "$state_home/wireplumber/default-routes"
+ fi
+diff --git a/install/user/hardware/apple/fix-imac-cs4208-speakers.sh b/install/user/hardware/apple/fix-imac-cs4208-speakers.sh
+index 0c56f564..4f5a5d21 100644
+--- a/install/user/hardware/apple/fix-imac-cs4208-speakers.sh
++++ b/install/user/hardware/apple/fix-imac-cs4208-speakers.sh
+@@ -3,10 +3,26 @@
+ # silent on those speakers, and Master hardware volume does not affect them.
+ 
+ if omarchy-hw-imac-cs4208; then
+-  mkdir -p ~/.config/wireplumber/wireplumber.conf.d/
+-  cp "$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf" \
+-    ~/.config/wireplumber/wireplumber.conf.d/
+-  rm -rf ~/.local/state/wireplumber/default-routes
++  config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
++  state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
++  source_config="$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf"
++  target_config="$config_home/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf"
++  if [[ -e $target_config || -L $target_config ]]; then
++    if [[ -L $target_config || ! -f $target_config ]] || ! cmp -s "$source_config" "$target_config"; then
++      echo "Preserving customized audio configuration: $target_config; reconcile it manually before retrying." >&2
++      return 1
++    fi
++    return 0
++  fi
++  routes="$state_home/wireplumber/default-routes"
++  if [[ -e $routes || -L $routes ]]; then
++    if [[ -e $routes.pre-omarchy-cs4208 || -L $routes.pre-omarchy-cs4208 ]]; then
++      echo "Preserving both existing routes and backup: $routes; reconcile them manually before retrying." >&2
++      return 1
++    fi
++    mv -T "$routes" "$routes.pre-omarchy-cs4208" || return 1
++  fi
++  install -Dm644 "$source_config" "$target_config"
+ 
+   # Leave the hardware mixer wide open so software volume is the only attenuation.
+   card=$(aplay -l 2>/dev/null | grep -i "CS4208 Analog" | head -1 | sed 's/card \([0-9]*\).*/\1/')
+diff --git a/migrations/1786889011.sh b/migrations/1786889011.sh
+index 70937d4a..91b333cb 100644
+--- a/migrations/1786889011.sh
++++ b/migrations/1786889011.sh
+@@ -6,4 +6,5 @@ if ! omarchy-hw-apple-cs8409; then
+   exit 0
+ fi
+ 
+-omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms
++# Matching kernel headers are supplied by the base install/kernel repair.
++omarchy-pkg-add snd-hda-macbookpro-dkms
+diff --git a/migrations/1789869577.sh b/migrations/1789869577.sh
+index c0edaa85..4efdec73 100644
+--- a/migrations/1789869577.sh
++++ b/migrations/1789869577.sh
+@@ -17,14 +17,24 @@ reboot_required=0
+ 
+ config_source="$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
+ config_target="$config_home/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf"
++service_source="$OMARCHY_PATH/install/hardware/apple/omarchy-cs4208-audio.service"
++service_target="$systemd_dir/omarchy-cs4208-audio.service"
++for pair in config service; do
++  source_var="${pair}_source"
++  target_var="${pair}_target"
++  target_file=${!target_var}
++  if [[ -e $target_file || -L $target_file ]]; then
++    if [[ -L $target_file || ! -f $target_file ]] || ! cmp -s "${!source_var}" "$target_file"; then
++      echo "Preserving customized audio file: $target_file; reconcile it manually before retrying." >&2
++      exit 1
++    fi
++  fi
++done
+ if ! cmp -s "$config_source" "$config_target"; then
+-  install -Dm644 "$config_source" "$config_target"
+-  rm -rf "$state_home/wireplumber/default-routes"
++  source "$OMARCHY_PATH/install/user/hardware/apple/fix-cs4208-audio.sh"
+   reboot_required=1
+ fi
+ 
+-service_source="$OMARCHY_PATH/install/hardware/apple/omarchy-cs4208-audio.service"
+-service_target="$systemd_dir/omarchy-cs4208-audio.service"
+ if ! cmp -s "$service_source" "$service_target"; then
+   sudo install -Dm644 "$service_source" "$service_target"
+   sudo systemctl daemon-reload
+diff --git a/test/shell.d/apple-audio-preservation-test.sh b/test/shell.d/apple-audio-preservation-test.sh
+new file mode 100644
+index 00000000..19c6b864
+--- /dev/null
++++ b/test/shell.d/apple-audio-preservation-test.sh
+@@ -0,0 +1,50 @@
++#!/bin/bash
++set -euo pipefail
++source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
++scratch=$(mktemp -d)
++trap 'rm -rf "$scratch"' EXIT
++mkdir -p "$scratch/bin"
++for command in omarchy-hw-imac-cs4208 omarchy-pkg-add systemctl amixer; do
++  printf '#!/bin/bash\nprintf "%%s\\n" "$0 $*" >> "$TEST_LOG"\n' >"$scratch/bin/$command"
++done
++# Use a synthetic mixer; every mixer command is logged by the stub.
++printf '#!/bin/bash\necho "card 1: PCH device 0: CS4208 Analog"\n' >"$scratch/bin/aplay"
++chmod +x "$scratch/bin/"*
++export OMARCHY_PATH="$ROOT" OMARCHY_INSTALL="$ROOT/install"
++export PATH="$scratch/bin:$PATH" TEST_LOG="$scratch/events"
++export OMARCHY_MACBOOK12_AUDIO_MODEL=MacBook10,1
++for variant in macbook imac; do
++  export XDG_CONFIG_HOME="$scratch/$variant/config" XDG_STATE_HOME="$scratch/$variant/state"
++  mkdir -p "$XDG_STATE_HOME/wireplumber"
++  echo custom-route >"$XDG_STATE_HOME/wireplumber/default-routes"
++  if [[ $variant == macbook ]]; then
++    leaf="$ROOT/install/user/hardware/apple/fix-cs4208-audio.sh"
++    name=51-macbook-cs4208-softvol.conf
++  else
++    leaf="$ROOT/install/user/hardware/apple/fix-imac-cs4208-speakers.sh"
++    name=imac-cs4208-speakers.conf
++  fi
++  bash -euo pipefail -c 'source "$1"' bash "$leaf"
++  [[ $(cat "$XDG_STATE_HOME/wireplumber/default-routes.pre-omarchy-cs4208") == custom-route ]] || fail "$variant routes are backed up"
++  echo new-route >"$XDG_STATE_HOME/wireplumber/default-routes"
++  bash -euo pipefail -c 'source "$1"' bash "$leaf"
++  [[ $(cat "$XDG_STATE_HOME/wireplumber/default-routes") == new-route ]] || fail "$variant repeat setup preserves new routes"
++  config="$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d/$name"
++  echo '# custom' >>"$config"
++  cp "$config" "$scratch/expected"
++  if bash -euo pipefail -c 'source "$1"' bash "$leaf" 2>/dev/null; then fail "$variant custom config requires reconciliation"; fi
++  cmp "$config" "$scratch/expected" || fail "$variant custom config survives"
++  [[ $(cat "$XDG_STATE_HOME/wireplumber/default-routes") == new-route ]] || fail "$variant custom routes survive"
++done
++pass "both audio paths preserve custom configurations, back up routes, and leave repeat setup unchanged"
++
++export OMARCHY_SYSTEMD_DIR="$scratch/systemd"
++mkdir -p "$OMARCHY_SYSTEMD_DIR"
++echo custom-service >"$OMARCHY_SYSTEMD_DIR/omarchy-cs4208-audio.service"
++: >"$TEST_LOG"
++if bash -euo pipefail -c 'source "$1"' bash "$ROOT/install/hardware/apple/fix-cs4208-audio.sh" 2>/dev/null; then fail "custom service requires reconciliation"; fi
++[[ $(cat "$OMARCHY_SYSTEMD_DIR/omarchy-cs4208-audio.service") == custom-service && ! -s $TEST_LOG ]] || fail "custom service is preserved before package and system changes"
++export XDG_CONFIG_HOME="$scratch/migration/config" XDG_STATE_HOME="$scratch/migration/state"
++if bash -euo pipefail "$ROOT/migrations/1789869577.sh" 2>/dev/null; then fail "migration reports custom service"; fi
++[[ ! -e $XDG_CONFIG_HOME && ! -s $TEST_LOG ]] || fail "migration preflight preserves all custom state"
++pass "audio setup and migration preserve customized system services before making changes"
+diff --git a/test/shell.d/cs8409-audio-test.sh b/test/shell.d/cs8409-audio-test.sh
+index 7ecbd52c..79b1f114 100755
+--- a/test/shell.d/cs8409-audio-test.sh
++++ b/test/shell.d/cs8409-audio-test.sh
+@@ -90,8 +90,8 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
+   OMARCHY_PATH="$ROOT" \
+   OMARCHY_INSTALL="$ROOT/install" \
+   bash -c 'source "$1"' _ "$fix"
+-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
+-  fail "install hook adds headers and the CS8409 package on a two-port 13-inch"
++grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
++  fail "install hook adds only the CS8409 driver package on a two-port 13-inch"
+ pass "install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)"
+ 
+ : >"$calls"
+@@ -111,7 +111,7 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
+   TEST_LOG="$calls" \
+   OMARCHY_DMI_PRODUCT_NAME="$dmi" \
+   bash -euo pipefail "$migration" >/dev/null
+-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
++grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
+   fail "migration installs the CS8409 package on a 15-inch T1"
+ pass "migration installs the driver on MacBookPro14,3"
+ 
+@@ -123,8 +123,8 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
+   OMARCHY_PATH="$ROOT" \
+   OMARCHY_INSTALL="$ROOT/install" \
+   bash -c 'source "$1"' _ "$fix"
+-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
+-  fail "install hook adds headers and the CS8409 package on iMac18,3"
++grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
++  fail "install hook adds only the CS8409 driver package on iMac18,3"
+ pass "install hook runs on iMac18,3 (CS8409)"
+ 
+ : >"$calls"
+@@ -133,7 +133,7 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
+   TEST_LOG="$calls" \
+   OMARCHY_DMI_PRODUCT_NAME="$dmi" \
+   bash -euo pipefail "$migration" >/dev/null
+-grep -Fq $'omarchy-pkg-add\tlinux-headers\tsnd-hda-macbookpro-dkms' "$calls" ||
++grep -Fq $'omarchy-pkg-add\tsnd-hda-macbookpro-dkms' "$calls" ||
+   fail "migration installs the CS8409 package on iMac18,3"
+ pass "migration installs the driver on iMac18,3"
+ 
+@@ -145,3 +145,6 @@ PATH="$stub_bin:$ROOT/bin:$PATH" \
+   bash -euo pipefail "$migration" >/dev/null
+ [[ ! -s $calls ]] || fail "migration skips non-CS8409 hardware" "$(cat "$calls")"
+ pass "migration skips non-CS8409 hardware"
++
++assert_hw OtherMacBookPro14,3 no "vendor prefixes do not broaden the CS8409 allowlist"
++assert_hw iMac19,20 no "longer model numbers do not match the CS8409 allowlist"
+diff --git a/test/shell.d/imac-cs4208-speakers-test.sh b/test/shell.d/imac-cs4208-speakers-test.sh
+index 1a0030d2..7f0b0c12 100644
+--- a/test/shell.d/imac-cs4208-speakers-test.sh
++++ b/test/shell.d/imac-cs4208-speakers-test.sh
+@@ -94,7 +94,7 @@ run_leaf() {
+   rm -rf "$home"
+   mkdir -p "$home"
+   : >"$test_tmp/calls.log"
+-  HOME="$home" \
++  HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_STATE_HOME="$home/.local/state" \
+     PATH="$stub_bin:$PATH" \
+     OMARCHY_PATH="$ROOT" \
+     CALL_LOG="$test_tmp/calls.log" \
+@@ -120,7 +120,7 @@ run_migration() {
+   rm -rf "$home"
+   mkdir -p "$home"
+   : >"$test_tmp/calls.log"
+-  HOME="$home" \
++  HOME="$home" XDG_CONFIG_HOME="$home/.config" XDG_STATE_HOME="$home/.local/state" \
+     PATH="$stub_bin:$PATH" \
+     OMARCHY_PATH="$ROOT" \
+     CALL_LOG="$test_tmp/calls.log" \
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 24e3480b..7d470885 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -140,7 +140,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
+ export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
+ touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
+ cp "$migration" "$scratch/omarchy/migrations/"
+-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
++# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
++# retired kernel installation, rather than requiring that filename to be absent.
++if [[ -e $ROOT/migrations/1789095456.sh ]]; then
++  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
++    fail "the superseded migration must not install the PTL variant first"
++fi
+ pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
+ [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
+ OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

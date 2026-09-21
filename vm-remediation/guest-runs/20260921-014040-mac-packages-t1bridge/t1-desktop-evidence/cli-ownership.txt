@@ -1,0 +1,2 @@
+/usr/bin/t1bridge is owned by t1bridge 0.1.9-1
+/usr/bin/t1-touchid is owned by t1bridge 0.1.9-1

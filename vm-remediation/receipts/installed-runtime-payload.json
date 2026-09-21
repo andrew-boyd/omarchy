@@ -1,0 +1,366 @@
+[
+  {
+    "source": "bin/omarchy-diagnose-suspend-wake",
+    "path": "/usr/bin/omarchy-diagnose-suspend-wake",
+    "sha256": "e067913534cfd9bfb53bd559db229b0c7e391ed040b272990335add2fe296d3d",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hw-apple-cs8409",
+    "path": "/usr/bin/omarchy-hw-apple-cs8409",
+    "sha256": "c3eb3820d5a8983292a8aa3db312da7ce54716ab5998dd68e28ffe98b2023e10",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hw-bcm43xx",
+    "path": "/usr/bin/omarchy-hw-bcm43xx",
+    "sha256": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hw-facetimehd",
+    "path": "/usr/bin/omarchy-hw-facetimehd",
+    "sha256": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hw-imac-cs4208",
+    "path": "/usr/bin/omarchy-hw-imac-cs4208",
+    "sha256": "26e6ec0bbd7dcc294f4a69ffd3c633b7c09d0a772025c50b7f5633fc409008d5",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hw-t2",
+    "path": "/usr/bin/omarchy-hw-t2",
+    "sha256": "d4854de9fed2a0b03b5c9784d61c5b78155d9466e23a62482c8c7acb0fd3861c",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hyprland-monitor-disable-ghosts",
+    "path": "/usr/bin/omarchy-hyprland-monitor-disable-ghosts",
+    "sha256": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-hyprland-monitor-watch",
+    "path": "/usr/bin/omarchy-hyprland-monitor-watch",
+    "sha256": "254439820dbb959ca439b5f4833bbc6c8725025baab058ae97c899fca7c42ab0",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-monitor-state",
+    "path": "/usr/bin/omarchy-monitor-state",
+    "sha256": "d2ad4e659e37fa3e67059ef688258e6a5fafbf00f5ee0e0bd5ea9618c2d5746f",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-provision-owner",
+    "path": "/usr/bin/omarchy-provision-owner",
+    "sha256": "cae44bec9e4f44d73993b1d0f686305dc32f78605282989d56dc8eadc069863b",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-system-factory-reset",
+    "path": "/usr/bin/omarchy-system-factory-reset",
+    "sha256": "fda9dcbff3240a1ac4c1e88b5e3f2974b2b96c423cf557847dfd5d03c8fdc1f0",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "bin/omarchy-system-lid-close",
+    "path": "/usr/bin/omarchy-system-lid-close",
+    "sha256": "4799cadd69793424468ae79b0a442155f446d5fe6c5a54d48c34bdaae763ecd1",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "default/firmware/apple/brcmfmac43602-pcie.txt",
+    "path": "/usr/share/omarchy/default/firmware/apple/brcmfmac43602-pcie.txt",
+    "sha256": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "default/systemd/system-sleep/rebind-brcmfmac",
+    "path": "/usr/share/omarchy/default/systemd/system-sleep/rebind-brcmfmac",
+    "sha256": "9b03e6f8480a8f504ba89ed89fcfe10d47a615d6d64517bbb8d4adfb0f6953f9",
+    "package_mode": "-rwxr-xr-x",
+    "root_owned": true
+  },
+  {
+    "source": "default/systemd/system/omarchy-nvme-suspend-fix.service",
+    "path": "/usr/share/omarchy/default/systemd/system/omarchy-nvme-suspend-fix.service",
+    "sha256": "9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+    "path": "/usr/share/omarchy/default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+    "sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+    "path": "/usr/share/omarchy/default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+    "sha256": "594cc5b9376c851923573cf5916a5e710f537f5b3474aec78c926635e612bd7a",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/all.sh",
+    "path": "/usr/share/omarchy/install/hardware/all.sh",
+    "sha256": "150b14437c7955acafb32ef49cd8f2826979ca2f0e10ed6c9cf480887e833d53",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/brcmfmac-43602.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/brcmfmac-43602.sh",
+    "sha256": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-bcm43602-nvram.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-bcm43602-nvram.sh",
+    "sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-brcmfmac-5ghz.sh",
+    "sha256": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-brcmfmac-suspend.sh",
+    "sha256": "ac649b2dbf10ee3a979b426ecf7823704cab73c04ca69f17ffdb582da2005455",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-cs4208-audio.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-cs4208-audio.sh",
+    "sha256": "4ede61a1ee28f13142141e3b9216623c79e33b3c4077f6739a3f21a0a2005fa1",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-cs8409-audio.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-cs8409-audio.sh",
+    "sha256": "86ed0308e85591ff9e014667215577564cc61601dfd3362e5b7bc8302fecde47",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-facetimehd.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-facetimehd.sh",
+    "sha256": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-spi-keyboard.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-spi-keyboard.sh",
+    "sha256": "4b41d0dca43dad393e29de5394f1c0f0d184ba9be94919550bb31d0b78f60e76",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-suspend-nvme.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-suspend-nvme.sh",
+    "sha256": "fe6477cc48b756f59e8755943f26f21a588b2fe75742c0fa1cd75b4d29f52671",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/fix-t2.sh",
+    "path": "/usr/share/omarchy/install/hardware/apple/fix-t2.sh",
+    "sha256": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/apple/omarchy-cs4208-audio.service",
+    "path": "/usr/share/omarchy/install/hardware/apple/omarchy-cs4208-audio.service",
+    "sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/fix-bcm43xx.sh",
+    "path": "/usr/share/omarchy/install/hardware/fix-bcm43xx.sh",
+    "sha256": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/nvidia.sh",
+    "path": "/usr/share/omarchy/install/hardware/nvidia.sh",
+    "sha256": "25417ff6340279486d937a3f68670b28a5cbf829e85961443db431a32a074718",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/pacman.sh",
+    "path": "/usr/share/omarchy/install/hardware/pacman.sh",
+    "sha256": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/hardware/vulkan.sh",
+    "path": "/usr/share/omarchy/install/hardware/vulkan.sh",
+    "sha256": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/omarchy-other.packages",
+    "path": "/usr/share/omarchy/install/omarchy-other.packages",
+    "sha256": "5901a99d2073f390aeb06e9be5a5a5ac0df2b3331e327708e0d4cb28cefd2b3a",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/user/all.sh",
+    "path": "/usr/share/omarchy/install/user/all.sh",
+    "sha256": "46e026042bdafdb1823b5c824fa8132756638039e40fc3cb52df128f7d30fb0d",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/user/hardware/apple/fix-cs4208-audio.sh",
+    "path": "/usr/share/omarchy/install/user/hardware/apple/fix-cs4208-audio.sh",
+    "sha256": "6aaef3589011bd95564525251e29e568ca81f91ac837fb72759431f58cac8c52",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+    "path": "/usr/share/omarchy/install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+    "sha256": "f6e17796af7e3fdc85886202afa71a8e5bd2fe6918e042c49a34d8eaa865bc0e",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1786889011.sh",
+    "path": "/usr/share/omarchy/migrations/1786889011.sh",
+    "sha256": "08ee43e6ac782b85bff1a843f886dd58dc9ba0ccd44412f4b5f35066a5d55dd5",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1787312531.sh",
+    "path": "/usr/share/omarchy/migrations/1787312531.sh",
+    "sha256": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1788318101.sh",
+    "path": "/usr/share/omarchy/migrations/1788318101.sh",
+    "sha256": "8a50938cc23857d38e5d632363aeca09a8417ef6cf5f1db33b50cdc9aa2815d5",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1788476400.sh",
+    "path": "/usr/share/omarchy/migrations/1788476400.sh",
+    "sha256": "b44d2c59b6a78dc78a8de6b6d82dfb03ab14d1fa819986a764daf0972ed9080a",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1788673159.sh",
+    "path": "/usr/share/omarchy/migrations/1788673159.sh",
+    "sha256": "fea683a5bec3374120c4c3207a9ddc15de30f2c15b819bb31216c5b7e82a975e",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1789274148.sh",
+    "path": "/usr/share/omarchy/migrations/1789274148.sh",
+    "sha256": "c4f3c3a0ac74e07f8cbccdbb6031e975f27ba7d36d1690dc43b27874658dd24b",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1789325478.sh",
+    "path": "/usr/share/omarchy/migrations/1789325478.sh",
+    "sha256": "0d6db060042f88623e3e309283c40c82ddaf2cb95e1a50e5695b299941cad51f",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1789542390.sh",
+    "path": "/usr/share/omarchy/migrations/1789542390.sh",
+    "sha256": "98c28a28296442f5df74bb0707d34f97015b6dca2cd035ce7128a4efd7e0b01b",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1789546355.sh",
+    "path": "/usr/share/omarchy/migrations/1789546355.sh",
+    "sha256": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1789668939.sh",
+    "path": "/usr/share/omarchy/migrations/1789668939.sh",
+    "sha256": "bf54a2ada165b8e62b05618e999c6840b5f90a820dbde7d2b22d1686c489d3ae",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "migrations/1789869577.sh",
+    "path": "/usr/share/omarchy/migrations/1789869577.sh",
+    "sha256": "5d8ca6e9734605cfe12b3abeb1ed612fe85069d3c71bf6e5770c8876b7940a4d",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+    "path": "/usr/share/omarchy/shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+    "sha256": "13432a7a87a03f98158bbeedde3d80360cc4f81e2322bf6dd98451f094daf446",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "shell/plugins/lock/LockView.qml",
+    "path": "/usr/share/omarchy/shell/plugins/lock/LockView.qml",
+    "sha256": "757c6776bb9e2d18a79653adcff8c80a440c9b8dbe7ccd67a300da9142ad1812",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "shell/plugins/lock/Service.qml",
+    "path": "/usr/share/omarchy/shell/plugins/lock/Service.qml",
+    "sha256": "7407af8722984e212cf32155ce79adb7e7dc98f9b49a116df2d7291d65f6a31a",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  },
+  {
+    "source": "shell/plugins/polkit/PolkitAgent.qml",
+    "path": "/usr/share/omarchy/shell/plugins/polkit/PolkitAgent.qml",
+    "sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+    "package_mode": "-rw-r--r--",
+    "root_owned": true
+  }
+]

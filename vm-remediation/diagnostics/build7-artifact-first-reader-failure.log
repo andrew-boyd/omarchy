@@ -1,0 +1,10 @@
+Setting input-charset to 'UTF-8' from locale.
+FATAL ERROR: Can't find a valid SQUASHFS superblock on /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/verification/airootfs.sfs
+Traceback (most recent call last):
+  File "/home/boyd/Work/vintage-pr-review/reviews/remediation/inspect-artifact.py", line 17, in <module>
+    with package.open('wb') as f:subprocess.run([str(unsquashfs),'-cat',str(sfs),'var/cache/omarchy/mirror/offline/'+filename],stdout=f,check=True)
+                                 ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/tools/usr/bin/unsquashfs', '-cat', '/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/verification/airootfs.sfs', 'var/cache/omarchy/mirror/offline/aalib-1.4rc5-19-x86_64.pkg.tar.zst']' returned non-zero exit status 1.

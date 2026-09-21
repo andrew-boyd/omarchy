@@ -1,0 +1,172 @@
+[
+  {
+    "id": "P01",
+    "url": "https://github.com/omacom/omarchy/pull/12679",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "cee527ff2501df3b38308cb2958889b502015c62",
+    "headRefName": "intel-mac/p01-keyboard-layout",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P02",
+    "url": "https://github.com/omacom/omarchy/pull/12680",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "82a7f77444e446ae10758f385ded7301fcf584f1",
+    "headRefName": "intel-mac/p02-kernel-headers",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P03",
+    "url": "https://github.com/omacom/omarchy/pull/12681",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "3c64ee2d0c88c26351ef6a35063d3aa16c46df39",
+    "headRefName": "intel-mac/p03-hardware-detection",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P04",
+    "url": "https://github.com/omacom/omarchy/pull/12682",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "b5e64f295902651b5d78b9dcf197a9857cc8f0dc",
+    "headRefName": "intel-mac/p04-lid-handling",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P05",
+    "url": "https://github.com/omacom/omarchy/pull/12683",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "93ace98045d0945ad7f374a396c58c9b5936a8c7",
+    "headRefName": "intel-mac/p05-ghost-displays",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P06",
+    "url": "https://github.com/omacom/omarchy/pull/12684",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "c04f77539ad3bca02182b3be5ba5257d3e972ff8",
+    "headRefName": "intel-mac/p06-spi-retirement",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P07",
+    "url": "https://github.com/omacom/omarchy/pull/12685",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "eb1b6090e7e3866ab098afa6162c9b72b16315a7",
+    "headRefName": "intel-mac/p07-spi-pio",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P08",
+    "url": "https://github.com/omacom/omarchy/pull/12686",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "59348a9e66b14a661cf81cc9166f37120dc7423e",
+    "headRefName": "intel-mac/p08-facetime-camera",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P09",
+    "url": "https://github.com/omacom/omarchy/pull/12687",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "37a4d46198db7dbd4f706d9592c73a2a9b7aad36",
+    "headRefName": "intel-mac/p09-nvme-suspend",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P10",
+    "url": "https://github.com/omacom/omarchy/pull/12688",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "40d1a6a856ba95879f081ff042128698a499da42",
+    "headRefName": "intel-mac/p10-broadcom-wifi",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P11",
+    "url": "https://github.com/omacom/omarchy/pull/12689",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "b006a68c0da31e06504f9f3b0025a13302c3fff5",
+    "headRefName": "intel-mac/p11-cirrus-audio",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P12",
+    "url": "https://github.com/omacom/omarchy/pull/12690",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+    "headRefName": "intel-mac/p12-t1bridge",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P13",
+    "url": "https://github.com/omacom/omarchy/pull/12691",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "50606b45743ca16acf18fe2edddb61957f99d57e",
+    "headRefName": "intel-mac/p13-kernel-policy",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P14",
+    "url": "https://github.com/omacom/omarchy/pull/12692",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "31626e74cf36f315acdaf0942b4e2b2a6e240e50",
+    "headRefName": "intel-mac/p14-suspend-diagnostics",
+    "baseRefName": "quattro",
+    "baseRefOid": "45748a2812f42e32f915b053caf4074e150e2048"
+  },
+  {
+    "id": "P08-packages",
+    "url": "https://github.com/omacom/omarchy-pkgs/pull/556",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "6c1cecc4e49978745ebb57062b83c828b610238f",
+    "headRefName": "intel-mac/p08-facetime-camera",
+    "baseRefName": "master",
+    "baseRefOid": "4b60e4cd95972c16fbf3da634522a955cf7bf36c"
+  },
+  {
+    "id": "P11-packages",
+    "url": "https://github.com/omacom/omarchy-pkgs/pull/557",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "f2e815619d90ba8ba5e7f819ccdc7640386b16fb",
+    "headRefName": "intel-mac/p11-cirrus-audio",
+    "baseRefName": "master",
+    "baseRefOid": "4b60e4cd95972c16fbf3da634522a955cf7bf36c"
+  },
+  {
+    "id": "P12-packages",
+    "url": "https://github.com/omacom/omarchy-pkgs/pull/558",
+    "isDraft": true,
+    "state": "OPEN",
+    "headRefOid": "014acc8e0b892105448a497eedad4780ed72b83e",
+    "headRefName": "intel-mac/p12-t1bridge",
+    "baseRefName": "master",
+    "baseRefOid": "4b60e4cd95972c16fbf3da634522a955cf7bf36c"
+  }
+]

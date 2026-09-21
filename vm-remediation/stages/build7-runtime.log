@@ -1,0 +1,7 @@
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+Runtime checks exit 1. Artifacts: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-013152-remediation-runtime
+[1;35m==> Stopping test VM[0m
+[1;35m==> Visual review: 2 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-013152-remediation-runtime[0m

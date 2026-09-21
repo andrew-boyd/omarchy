@@ -1,0 +1,178 @@
+[
+  {
+    "id": "P03",
+    "path": "bin/omarchy-hw-t2",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "d4854de9fed2a0b03b5c9784d61c5b78155d9466e23a62482c8c7acb0fd3861c",
+    "combined_sha256": "d4854de9fed2a0b03b5c9784d61c5b78155d9466e23a62482c8c7acb0fd3861c",
+    "reason": null
+  },
+  {
+    "id": "P05",
+    "path": "bin/omarchy-monitor-state",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "d2ad4e659e37fa3e67059ef688258e6a5fafbf00f5ee0e0bd5ea9618c2d5746f",
+    "combined_sha256": "d2ad4e659e37fa3e67059ef688258e6a5fafbf00f5ee0e0bd5ea9618c2d5746f",
+    "reason": null
+  },
+  {
+    "id": "P06",
+    "path": "migrations/1788476400.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "b44d2c59b6a78dc78a8de6b6d82dfb03ab14d1fa819986a764daf0972ed9080a",
+    "combined_sha256": "b44d2c59b6a78dc78a8de6b6d82dfb03ab14d1fa819986a764daf0972ed9080a",
+    "reason": null
+  },
+  {
+    "id": "P07",
+    "path": "install/hardware/apple/fix-spi-keyboard.sh",
+    "same_runtime_as_combined": false,
+    "branch_sha256": "5405dfa40dd92b4e2e5c2f752599b51b627693441de493bc38d22fbe119d55af",
+    "combined_sha256": "4b41d0dca43dad393e29de5394f1c0f0d184ba9be94919550bb31d0b78f60e76",
+    "reason": "P07 retains legacy package setup until combined with P06."
+  },
+  {
+    "id": "P07",
+    "path": "migrations/1788318101.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "8a50938cc23857d38e5d632363aeca09a8417ef6cf5f1db33b50cdc9aa2815d5",
+    "combined_sha256": "8a50938cc23857d38e5d632363aeca09a8417ef6cf5f1db33b50cdc9aa2815d5",
+    "reason": null
+  },
+  {
+    "id": "P09",
+    "path": "default/systemd/system/omarchy-nvme-suspend-fix.service",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab",
+    "combined_sha256": "9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab",
+    "reason": null
+  },
+  {
+    "id": "P09",
+    "path": "install/hardware/apple/fix-suspend-nvme.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "fe6477cc48b756f59e8755943f26f21a588b2fe75742c0fa1cd75b4d29f52671",
+    "combined_sha256": "fe6477cc48b756f59e8755943f26f21a588b2fe75742c0fa1cd75b4d29f52671",
+    "reason": null
+  },
+  {
+    "id": "P09",
+    "path": "migrations/1789274148.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "c4f3c3a0ac74e07f8cbccdbb6031e975f27ba7d36d1690dc43b27874658dd24b",
+    "combined_sha256": "c4f3c3a0ac74e07f8cbccdbb6031e975f27ba7d36d1690dc43b27874658dd24b",
+    "reason": null
+  },
+  {
+    "id": "P10",
+    "path": "default/systemd/system-sleep/rebind-brcmfmac",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "9b03e6f8480a8f504ba89ed89fcfe10d47a615d6d64517bbb8d4adfb0f6953f9",
+    "combined_sha256": "9b03e6f8480a8f504ba89ed89fcfe10d47a615d6d64517bbb8d4adfb0f6953f9",
+    "reason": null
+  },
+  {
+    "id": "P10",
+    "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "ac649b2dbf10ee3a979b426ecf7823704cab73c04ca69f17ffdb582da2005455",
+    "combined_sha256": "ac649b2dbf10ee3a979b426ecf7823704cab73c04ca69f17ffdb582da2005455",
+    "reason": null
+  },
+  {
+    "id": "P10",
+    "path": "migrations/1789668939.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "bf54a2ada165b8e62b05618e999c6840b5f90a820dbde7d2b22d1686c489d3ae",
+    "combined_sha256": "bf54a2ada165b8e62b05618e999c6840b5f90a820dbde7d2b22d1686c489d3ae",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "bin/omarchy-hw-apple-cs8409",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "c3eb3820d5a8983292a8aa3db312da7ce54716ab5998dd68e28ffe98b2023e10",
+    "combined_sha256": "c3eb3820d5a8983292a8aa3db312da7ce54716ab5998dd68e28ffe98b2023e10",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "install/hardware/apple/fix-cs4208-audio.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "4ede61a1ee28f13142141e3b9216623c79e33b3c4077f6739a3f21a0a2005fa1",
+    "combined_sha256": "4ede61a1ee28f13142141e3b9216623c79e33b3c4077f6739a3f21a0a2005fa1",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "install/hardware/apple/fix-cs8409-audio.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "86ed0308e85591ff9e014667215577564cc61601dfd3362e5b7bc8302fecde47",
+    "combined_sha256": "86ed0308e85591ff9e014667215577564cc61601dfd3362e5b7bc8302fecde47",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "6aaef3589011bd95564525251e29e568ca81f91ac837fb72759431f58cac8c52",
+    "combined_sha256": "6aaef3589011bd95564525251e29e568ca81f91ac837fb72759431f58cac8c52",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "f6e17796af7e3fdc85886202afa71a8e5bd2fe6918e042c49a34d8eaa865bc0e",
+    "combined_sha256": "f6e17796af7e3fdc85886202afa71a8e5bd2fe6918e042c49a34d8eaa865bc0e",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "migrations/1786889011.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "08ee43e6ac782b85bff1a843f886dd58dc9ba0ccd44412f4b5f35066a5d55dd5",
+    "combined_sha256": "08ee43e6ac782b85bff1a843f886dd58dc9ba0ccd44412f4b5f35066a5d55dd5",
+    "reason": null
+  },
+  {
+    "id": "P11",
+    "path": "migrations/1789869577.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "5d8ca6e9734605cfe12b3abeb1ed612fe85069d3c71bf6e5770c8876b7940a4d",
+    "combined_sha256": "5d8ca6e9734605cfe12b3abeb1ed612fe85069d3c71bf6e5770c8876b7940a4d",
+    "reason": null
+  },
+  {
+    "id": "P13",
+    "path": "migrations/1789325478.sh",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "0d6db060042f88623e3e309283c40c82ddaf2cb95e1a50e5695b299941cad51f",
+    "combined_sha256": "0d6db060042f88623e3e309283c40c82ddaf2cb95e1a50e5695b299941cad51f",
+    "reason": null
+  },
+  {
+    "id": "P14",
+    "path": "bin/omarchy-diagnose-suspend-wake",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "e067913534cfd9bfb53bd559db229b0c7e391ed040b272990335add2fe296d3d",
+    "combined_sha256": "e067913534cfd9bfb53bd559db229b0c7e391ed040b272990335add2fe296d3d",
+    "reason": null
+  },
+  {
+    "id": "P12-packages",
+    "path": "pkgbuilds/t1bridge-omarchy/0001-Suppress-auto-brightness-while-panel-is-off.patch",
+    "same_runtime_as_combined": true,
+    "branch_sha256": "f2b9a7a680bee0c5b2a8d315e1bf845f36d64f23ddb93011c14ac87711c43da5",
+    "combined_sha256": "f2b9a7a680bee0c5b2a8d315e1bf845f36d64f23ddb93011c14ac87711c43da5",
+    "reason": null
+  },
+  {
+    "id": "P12-packages",
+    "path": "pkgbuilds/t1bridge-omarchy/PKGBUILD",
+    "same_runtime_as_combined": false,
+    "branch_sha256": "764762ad1bd436123958fc52dc8271c6c71eebf8f1b7f90838b640563aaac4d3",
+    "combined_sha256": "e2cd6d501258061c4fa886c7eb085f69e6dc02d160f93989ebd0abbbf58b3dec",
+    "reason": "Published stable dependency retained; combined ISO explicitly uses the exact local dev runtime adapter."
+  }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "P07",
+    "test": "test/shell.d/manifest-entrypoints-test.sh",
+    "exit": 0
+  },
+  {
+    "id": "P07",
+    "test": "test/shell.d/runtime-smoke-test.sh",
+    "exit": 0
+  },
+  {
+    "id": "P07",
+    "test": "test/shell.d/screenshot-sanity-test.sh",
+    "exit": 0
+  },
+  {
+    "id": "P10",
+    "test": "test/shell.d/runtime-smoke-test.sh",
+    "exit": 0
+  },
+  {
+    "id": "P10",
+    "test": "test/shell.d/screenshot-sanity-test.sh",
+    "exit": 0
+  }
+]

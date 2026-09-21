@@ -1,0 +1,53 @@
+diff --git a/bin/omarchy-iso-test b/bin/omarchy-iso-test
+index 4d7e781..e3a8135 100755
+--- a/bin/omarchy-iso-test
++++ b/bin/omarchy-iso-test
+@@ -859,7 +859,7 @@ unlock_luks() {
+     sleep 20
+     ((waited += 30))
+ 
+-    press ctrl-alt-f3
++    press ctrl-alt-f4
+     sleep 3
+     if ocr_screen | grep -qi "login:"; then
+       return 0
+@@ -890,21 +890,28 @@ EOF
+   (cd "$BASE_DIR/www" && exec python3 -m http.server "$HTTP_PORT" --bind 127.0.0.1 >/dev/null 2>&1) &
+   HTTP_PID=$!
+ 
+-  # Type the login blind: a VNC viewer that resizes the framebuffer makes the
+-  # console font unreadable to OCR, and the real gate is SSH coming up anyway.
+-  # Getty re-prompts after a failed login, so a whole-sequence retry recovers
+-  # from typing before the prompt was ready.
+-  sleep 15 # give first boot time to reach getty
+-  local attempt
++  # The display manager can claim an early-selected VT while boot completes.
++  # Verify a getty prompt before typing: a fixed VT can be the greeter itself.
++  sleep 15
++  local attempt tty console_ready
+   for attempt in 1 2 3; do
+-    press ctrl-alt-f3
+-    sleep 8
+-    press ret # settle a half-typed prompt from a previous attempt
+-    sleep 2
++    console_ready=false
++    for tty in 4 5 6 3; do
++      press "ctrl-alt-f$tty"
++      sleep 4
++      if ocr_screen | grep -qi "login:"; then
++        console_ready=true
++        break
++      fi
++    done
++    if ! $console_ready; then
++      capture_console "failure-first-boot-no-console-$attempt"
++      continue
++    fi
+     type_text "$GUEST_USER"
+     capture_console "success-first-boot-03-console-username"
+     press ret
+-    sleep 3
++    wait_for_screen "Pass.*ord" 60
+     type_text "$GUEST_PASSWORD"
+     press ret
+     sleep 4

@@ -1,0 +1,37 @@
+[1;35m==> Installing omarchy-2026.09.21-intel-mac-local-x86_64.iso unattended via cidata (headless)[0m
+[1;35m==> Waiting for the unattended install to finish (timeout 2400s)[0m
+    ... installing (0s)
+    ... installing (120s)
+[1;35m==> Install finished and rebooted into the installed system.[0m
+[1;35m==> Installed system is up. Saving base image.[0m
+[1;35m==> test/integration.d/factory-reset-test.sh[0m
+[1;35m==> Booting reset VM from base image overlay[0m
+[1;35m==> ESP fixtured as a shared dual-boot ESP (old machine-id f0f98bd7498e4a13b9138b498562a4f1)[0m
+[1;35m==> Running omarchy-system-factory-reset[0m
+[1;35m==> Reset staged. Asserting on the shared ESP before rebooting.[0m
+ok - windows entry survives staging
+ok - windows boot payload survives staging
+ok - foreign linux entry survives staging
+ok - foreign boot directory survives staging
+ok - foreign UKI survives staging
+ok - old omarchy entry is removed by staging
+ok - old omarchy boot directory is removed by staging
+ok - a fresh omarchy entry exists after staging
+[1;35m==> Rebooting into the factory first boot[0m
+[1;35m==> Driving the factory first-boot setup[0m
+ok - the machine boots into first-boot setup unattended
+[1;35m==> Authorizing SSH access via console login[0m
+[1;35m==> Waiting for provisioning to finish[0m
+ok - provisioning completed on first boot
+ok - the reset minted a fresh machine identity
+ok - windows entry survives the first boot
+ok - windows boot payload survives the first boot
+ok - foreign linux entry survives the first boot
+ok - foreign boot directory survives the first boot
+ok - foreign UKI survives the first boot
+ok - old omarchy identity never returns
+ok - the new identity owns a boot entry
+[1;35m==> factory-reset passed. Artifacts: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-012906-factory-reset[0m
+[1;35m==> Stopping test VM[0m
+[1;35m==> Visual review: 9 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-012906-factory-reset[0m
+[1;35m==> Visual review: 3 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-012539-install[0m

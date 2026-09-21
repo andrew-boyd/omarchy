@@ -1,0 +1,99 @@
+diff --git a/bin/omarchy-hw-t2 b/bin/omarchy-hw-t2
+index 50034968..4dc945a4 100755
+--- a/bin/omarchy-hw-t2
++++ b/bin/omarchy-hw-t2
+@@ -13,8 +13,11 @@ shopt -s nullglob
+ 
+ for device in "$pci_devices_path"/*; do
+   [[ -r $device/vendor && -r $device/device ]] || continue
+-  [[ $(<"$device/vendor") == "0x106b" ]] || continue
+-  case $(<"$device/device") in
++  # Attributes may disappear after the readability check during hot-unplug.
++  vendor=$(cat "$device/vendor" 2>/dev/null) || continue
++  [[ $vendor == "0x106b" ]] || continue
++  device_id=$(cat "$device/device" 2>/dev/null) || continue
++  case $device_id in
+     0x1801 | 0x1802) exit 0 ;;
+   esac
+ done
+diff --git a/test/shell.d/hw-t2-test.sh b/test/shell.d/hw-t2-test.sh
+index 232ae914..7f1d58e3 100644
+--- a/test/shell.d/hw-t2-test.sh
++++ b/test/shell.d/hw-t2-test.sh
+@@ -50,3 +50,18 @@ grep -Fq 'omarchy-hw-t2' "$ROOT/install/hardware/pacman.sh" ||
+ ! grep -q 'lspci' "$ROOT/install/hardware/pacman.sh" ||
+   fail "the arch-mact2 repo drop-in no longer greps lspci"
+ pass "T2 install paths share one sysfs helper"
++
++# Hold the vendor read after both attributes were checked, then remove the
++# device ID before completing the vendor read: deterministic hot-unplug race.
++write_pci 0x106b:0x1801:0x068000
++rm "$tmp/devices/0000:00:00.0/vendor"
++mkfifo "$tmp/devices/0000:00:00.0/vendor"
++hw_t2 2>"$tmp/hot-unplug.stderr" &
++reader=$!
++exec 3>"$tmp/devices/0000:00:00.0/vendor"
++rm "$tmp/devices/0000:00:00.0/device"
++printf '0x106b\n' >&3
++exec 3>&-
++if wait "$reader"; then fail "a disappearing device cannot be confirmed as T2"; fi
++[[ ! -s $tmp/hot-unplug.stderr ]] || fail "mid-read hot-unplug is handled without a shell error" "$(cat "$tmp/hot-unplug.stderr")"
++pass "mid-read hot-unplug does not produce a false match or shell error"
+diff --git a/test/shell.d/locate-test.sh b/test/shell.d/locate-test.sh
+index 58eacbbd..e1c4ab50 100644
+--- a/test/shell.d/locate-test.sh
++++ b/test/shell.d/locate-test.sh
+@@ -36,9 +36,9 @@ check(not (root / "install/config/locate.sh").exists() and not (root / "migratio
+       "the retired locate configuration helper and migration are absent")
+ for directory in ("bin", "install", "migrations"):
+   for path in (root / directory).rglob("*"):
+-    if path.is_file():
+-      content = path.read_text()
+-      if "OMARCHY_UPDATEDB_CONF_PATH" in content or "config/locate.sh" in content:
++    if path.is_file() and "__pycache__" not in path.parts:
++      content = path.read_bytes()
++      if b"OMARCHY_UPDATEDB_CONF_PATH" in content or b"config/locate.sh" in content:
+         raise SystemExit("not ok - retired locate configuration path remains in " + str(path))
+ check(True, "runtime and installation no longer reference the configuration rewrite")
+ 
+diff --git a/test/shell.d/omarchy-kernel-migration-test.sh b/test/shell.d/omarchy-kernel-migration-test.sh
+index 24e3480b..7d470885 100644
+--- a/test/shell.d/omarchy-kernel-migration-test.sh
++++ b/test/shell.d/omarchy-kernel-migration-test.sh
+@@ -140,7 +140,12 @@ export OMARCHY_PTL_REBUILD_MARKER="$scratch/state/1789095456"
+ export OMARCHY_MIGRATION_STATE="$scratch/user-markers"
+ touch "$OMARCHY_PTL_REBUILD_MARKER" "$OMARCHY_MIGRATION_STATE/1789095456.sh"
+ cp "$migration" "$scratch/omarchy/migrations/"
+-[[ ! -e $ROOT/migrations/1789095456.sh ]] || fail "the superseded migration must not install the PTL variant first"
++# The timestamp was reused by the unrelated Mise PATH cleanup. Check for the
++# retired kernel installation, rather than requiring that filename to be absent.
++if [[ -e $ROOT/migrations/1789095456.sh ]]; then
++  ! grep -Eq 'omarchy-pkg-add.*(linux-ptl|linux-omarchy-ptl)' "$ROOT/migrations/1789095456.sh" ||
++    fail "the superseded migration must not install the PTL variant first"
++fi
+ pending=$(OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" --pending)
+ [[ $pending == "1789325478.sh" ]] || fail "the renamed migration is pending after completing the old migration"
+ OMARCHY_PATH="$scratch/omarchy" "$ROOT/bin/omarchy-migrate" > "$scratch/output" 2>&1
+diff --git a/test/shell.d/preinstalls-test.sh b/test/shell.d/preinstalls-test.sh
+index 0ca3e141..6f439139 100755
+--- a/test/shell.d/preinstalls-test.sh
++++ b/test/shell.d/preinstalls-test.sh
+@@ -60,14 +60,16 @@ mapfile -t dropped <"$pkg_log"
+ dropped:  ${dropped[*]}"
+ pass "Install and Remove Preinstalls cover the same packages"
+ 
++# Read the complete producer output: grep -q can exit early and SIGPIPE the
++# printf under pipefail, falsely reporting a present package as missing.
+ for package in "${restored[@]}"; do
+-  printf '%s\n' "${shipped[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${shipped[@]}" | grep -xF "$package" >/dev/null ||
+     fail "every preinstall is shipped in omarchy-base.packages" "$package is not shipped"
+ done
+ pass "every preinstall is shipped in omarchy-base.packages"
+ 
+ for package in omacut omacalc omawrite; do
+-  printf '%s\n' "${restored[@]}" | grep -qxF "$package" ||
++  printf '%s\n' "${restored[@]}" | grep -xF "$package" >/dev/null ||
+     fail "preinstalls cover the Omacom apps" "$package is missing"
+ done
+ pass "preinstalls cover the Omacom apps"

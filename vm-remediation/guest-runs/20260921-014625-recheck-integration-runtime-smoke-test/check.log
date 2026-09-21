@@ -1,0 +1,21 @@
+ok - shell IPC lists plugin metadata
+ok - installed plugin changes reload without an explicit rescan
+ok - shell IPC routes built-in ids to enabled clones
+ok - shell IPC returns effective shell config
+ok - shell IPC summon and hide contract works
+ok - plugin IPC contracts respond
+ok - image selector IPC survives plugin rescan
+ok - keepLoaded service instance survives plugin rescan
+ok - kept service is dropped when its plugin stops declaring a service
+ok - default bar layout renders expected module slots
+ok - runtime geometry keeps update before indicators
+ok - direct panel IPC opens and closes default panels
+ok - each widget registers its IPC handler once per screen
+Disabled omarchy.audio
+ok - bar remove reloads shell config and updates bar layout
+ok - bar put places a widget after the one it names
+ok - bar put leaves a widget already on the bar alone
+ok - trusted bar gives a cloned widget its own companion service
+ok - a cloned built-in service retains its auxiliary UI integration
+ok - replacement-bar service and configuration boundaries hold at runtime
+ok - manifest reload revokes cached facade capabilities

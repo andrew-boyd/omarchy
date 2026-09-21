@@ -1,0 +1,162 @@
+[
+  {
+    "id": "P03",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P03",
+    "original_head": "3c64ee2d0c88c26351ef6a35063d3aa16c46df39",
+    "commits": [
+      "80b03d91",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "1e588236bebe51feb75789cd93cc4d7de465b588",
+    "changes": " bin/omarchy-hw-t2                             |  7 +++++--\n test/shell.d/hw-t2-test.sh                    | 15 +++++++++++++++\n test/shell.d/locate-test.sh                   |  6 +++---\n test/shell.d/omarchy-kernel-migration-test.sh |  7 ++++++-\n 4 files changed, 29 insertions(+), 6 deletions(-)\n",
+    "full_suite_head": "45c4b83a1c53135aed21a70dadad69872eb3d888",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "c10d0174ea5b2b066339c8ce67611a518e28dce69ecb5c67d48a5b94989b26be",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P05",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P05",
+    "original_head": "93ace98045d0945ad7f374a396c58c9b5936a8c7",
+    "commits": [
+      "f99b5cad",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "f7757782ac237b5536de777e8fdf610461dd5df8",
+    "changes": " bin/omarchy-monitor-state                     | 3 ++-\n test/shell.d/locate-test.sh                   | 6 +++---\n test/shell.d/monitor-state-test.sh            | 5 +++++\n test/shell.d/omarchy-kernel-migration-test.sh | 7 ++++++-\n 4 files changed, 16 insertions(+), 5 deletions(-)\n",
+    "full_suite_head": "e266107021a09c046485e89090fa9f7caa1b45db",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "b7f41b514e1956aad61d8c973640539652e3db893d42810307f3b48da46b284a",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P06",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P06",
+    "original_head": "c04f77539ad3bca02182b3be5ba5257d3e972ff8",
+    "commits": [
+      "669f17b2",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "e13f7178ae0cc5b93847bcb1b9dca1ac8996430b",
+    "changes": " migrations/1788476400.sh                      | 44 +++++++++++++++++++++++++--\n test/shell.d/locate-test.sh                   |  6 ++--\n test/shell.d/omarchy-kernel-migration-test.sh |  7 ++++-\n test/shell.d/spi-keyboard-test.sh             | 23 ++++++++++++++\n 4 files changed, 74 insertions(+), 6 deletions(-)\n",
+    "full_suite_head": "eab1ef35fed37698dba4d73d621a243cd781ee46",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "004414cd2e1b47edf833bb03126c78257f27fb64e366bebe49633bd3e1c2e427",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P07",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P07",
+    "original_head": "eb1b6090e7e3866ab098afa6162c9b72b16315a7",
+    "commits": [],
+    "conflict": null,
+    "head": "aa68e02ab0bd71d3d286dea26ee76a009042bd16",
+    "changes": " install/hardware/apple/fix-spi-keyboard.sh    | 30 ++++++++++++++-----\n migrations/1788318101.sh                      | 37 +++++++++++++----------\n test/shell.d/locate-test.sh                   |  6 ++--\n test/shell.d/macbook81-spi-pio-test.sh        | 43 ++++++++++++++++++++++++++-\n test/shell.d/omarchy-kernel-migration-test.sh |  7 ++++-\n 5 files changed, 95 insertions(+), 28 deletions(-)\n",
+    "full_suite_head": "0014e68e7a4e415aed0eac17ce6741aa39b4d915",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "c60b34ae3fae72a87335071714a5703dbd684e1014048db7de81a9ed781761f5",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P09",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P09",
+    "original_head": "37a4d46198db7dbd4f706d9592c73a2a9b7aad36",
+    "commits": [
+      "b8c37815",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "e5bdff26c7ab2e835deef82123e96f35e5b538fe",
+    "changes": " .../system/omarchy-nvme-suspend-fix.service        |  8 +++++\n install/hardware/apple/fix-suspend-nvme.sh         | 24 +++++++-------\n migrations/1789274148.sh                           | 23 +++++++++++---\n test/shell.d/apple-suspend-nvme-test.sh            | 37 ++++++++++++++++++++--\n test/shell.d/locate-test.sh                        |  6 ++--\n test/shell.d/omarchy-kernel-migration-test.sh      |  7 +++-\n 6 files changed, 82 insertions(+), 23 deletions(-)\n",
+    "full_suite_head": "fb6876de4b7f74f23e07660c9a10850e03687f1d",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "50e2692ce82a69a717bf6a9faab3c71eb6f37280354ed2c2b161ecc6bfbcfefa",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P10",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P10",
+    "original_head": "40d1a6a856ba95879f081ff042128698a499da42",
+    "commits": [
+      "d68e4339",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "8b5b8819443724af2a3bae0a5deadb90167dba10",
+    "changes": " default/systemd/system-sleep/rebind-brcmfmac   | 48 +++++++++++++++---\n install/hardware/apple/fix-brcmfmac-suspend.sh | 14 +++++-\n migrations/1789668939.sh                       | 11 ++++-\n test/shell.d/brcmfmac-suspend-test.sh          | 67 ++++++++++++++++++++++++--\n test/shell.d/locate-test.sh                    |  6 +--\n test/shell.d/omarchy-kernel-migration-test.sh  |  7 ++-\n 6 files changed, 136 insertions(+), 17 deletions(-)\n",
+    "full_suite_head": "ff6115657d989429ded0a9e4a99570fb9691f578",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "38ff5aa383b269d1a2341320a5669139e93853956a970803f1095dbd59e692fe",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P11",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P11",
+    "original_head": "b006a68c0da31e06504f9f3b0025a13302c3fff5",
+    "commits": [
+      "4dc76be0",
+      "af5bcf41",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "76237f2810e9bf08b348ec6cd95015531351cef9",
+    "changes": " bin/omarchy-hw-apple-cs8409                        |  2 +-\n install/hardware/apple/fix-cs4208-audio.sh         | 10 ++++-\n install/hardware/apple/fix-cs8409-audio.sh         |  2 +-\n install/user/hardware/apple/fix-cs4208-audio.sh    | 22 ++++++++--\n .../hardware/apple/fix-imac-cs4208-speakers.sh     | 24 +++++++++--\n migrations/1786889011.sh                           |  3 +-\n migrations/1789869577.sh                           | 18 ++++++--\n test/shell.d/apple-audio-preservation-test.sh      | 50 ++++++++++++++++++++++\n test/shell.d/cs8409-audio-test.sh                  | 15 ++++---\n test/shell.d/imac-cs4208-speakers-test.sh          |  4 +-\n test/shell.d/locate-test.sh                        |  6 +--\n test/shell.d/omarchy-kernel-migration-test.sh      |  7 ++-\n 12 files changed, 135 insertions(+), 28 deletions(-)\n",
+    "full_suite_head": "62f4540c449b8948716754a3d4e9a998e07bf75b",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "b3760d1320111b5721c5f0a77e3627fb04afe8347921e95ea4553db88311eecf",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P13",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P13",
+    "original_head": "50606b45743ca16acf18fe2edddb61957f99d57e",
+    "commits": [
+      "ab570275",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "1a07c4b6e05106fb02fe952df6349d362a8c3350",
+    "changes": " migrations/1789325478.sh                      |  9 +++++++--\n test/shell.d/intel-mac-kernel-policy-test.sh  | 15 ++++++++-------\n test/shell.d/locate-test.sh                   |  6 +++---\n test/shell.d/omarchy-kernel-migration-test.sh |  6 +++---\n 4 files changed, 21 insertions(+), 15 deletions(-)\n",
+    "full_suite_head": "ddaff2019d2ca19d30ce8c5a27a0f7b18bc9b7ba",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "6b1f3aef7e08f49fd1785f826d3272c15c0d76fb61e660e641f1f2c543385047",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P14",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P14",
+    "original_head": "31626e74cf36f315acdaf0942b4e2b2a6e240e50",
+    "commits": [
+      "683f887d",
+      "50606b45743ca16acf18fe2edddb61957f99d57e",
+      "632e77b0"
+    ],
+    "conflict": null,
+    "head": "8557a3fc6af71e20942f8da49235718f43a05bb0",
+    "changes": " bin/omarchy-diagnose-suspend-wake             | 149 +++++++++++++++++++-------\n test/shell.d/locate-test.sh                   |   6 +-\n test/shell.d/omarchy-kernel-migration-test.sh |   7 +-\n test/shell.d/suspend-wake-recovery-test.sh    |  99 +++++++++++++++++\n 4 files changed, 220 insertions(+), 41 deletions(-)\n",
+    "full_suite_head": "05b45a69b30a59c9adcb2248d7f74ec4e9c5d82f",
+    "test_only_followup": "aa8e8f468dc9662ee48c3ed1e1d85b3fb21a962f",
+    "patch_sha256": "0b9c978c49806cb035595931e603fce7a74804fa2ef7cf7558d3da7e9e2fa408",
+    "original_author_commits_preserved": true
+  },
+  {
+    "id": "P12-packages",
+    "path": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/remediation/branches/P12-packages",
+    "original_head": "014acc8e0b892105448a497eedad4780ed72b83e",
+    "commits": [],
+    "conflict": null,
+    "head": "bdf07c6e157a226c0ea57c69107505a5ad7b567d",
+    "changes": " ...ppress-auto-brightness-while-panel-is-off.patch | 50 ++++++++++++++++++++++\n pkgbuilds/t1bridge-omarchy/PKGBUILD                | 12 ++++--\n 2 files changed, 59 insertions(+), 3 deletions(-)\n",
+    "patch_sha256": "740ec7e98ac0816890678d21733df1fed6af7b0b42aaa798f6dbe368de0f81a6",
+    "original_author_commits_preserved": true
+  }
+]

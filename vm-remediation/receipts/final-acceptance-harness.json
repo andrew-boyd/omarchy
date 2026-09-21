@@ -1,0 +1,5 @@
+{
+  "harness_commit": "e95966c954e0920decc3360846dcf8b637f3cee1",
+  "sha256": "2b70086429d4c16eebe0c0d725331e33a02729941f23bb7cca9c4c0e600a942d",
+  "change": "Choose among spare VTs and confirm a login prompt before typing credentials. Product ISO unchanged."
+}

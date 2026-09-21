@@ -1,0 +1,9 @@
+{
+  "time_utc": "2026-09-21T04:33:51Z",
+  "cause": "systemd user environment provided real XDG_CONFIG_HOME and XDG_STATE_HOME while an existing iMac fixture isolated only HOME; remediation leaf began honoring XDG.",
+  "action": "Stopped host suite. Verified exact newly created config hash/time, moved it to private evidence, and restored byte-identical original default-routes backup to its prior path. No route file replaced.",
+  "restored": true,
+  "config_absent": true,
+  "routes_sha256": "b4a140a964402d61fe220e9144d0ae598417c9fcd6d34f0901b861c0a3a2635a",
+  "runtime_actions": "No real mixer commands or service restarts were performed by the fixture; those commands were stubs. Future full runs use disposable VM."
+}

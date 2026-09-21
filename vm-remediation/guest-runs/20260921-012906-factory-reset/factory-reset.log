@@ -1,0 +1,48 @@
+Cloning the factory snapshot
+Create snapshot of '/run/omarchy-system-factory-reset/top/@factory' in '/run/omarchy-system-factory-reset/top/@omarchy-reset-next'
+Scrubbing machine identity from the factory system
+Removing account credentials from the factory system
+Recreating the hibernation swapfile in the factory system
+Creating Btrfs subvolume
+Create subvolume '//swap'
+Creating swapfile in Btrfs subvolume
+create swapfile /swap/swapfile size 3.81GiB (4087975936) page size 4096
+Adding resume hook to /etc/mkinitcpio.conf.d/omarchy_resume.conf
+Adding resume kernel parameters
+Removed: f0f98bd7498e4a13b9138b498562a4f1
+Updated: /boot/limine.conf
+Rebuilding boot files from the factory system (this can take a minute)
+Limine EFI update completed successfully.
+Building UKI for linux-omarchy (7.2.5-4-omarchy)
+==> Using drop-in configuration file: 'omarchy_hooks.conf'
+==> Using drop-in configuration file: 'omarchy_resume.conf'
+==> Using drop-in configuration file: 'thunderbolt_module.conf'
+==> Starting build: '7.2.5-4-omarchy'
+  -> Running build hook: [base]
+  -> Running build hook: [udev]
+  -> Running build hook: [plymouth]
+  -> Running build hook: [keyboard]
+==> WARNING: Possibly missing firmware for module: 'xhci_pci_renesas'
+  -> Running build hook: [autodetect]
+==> ERROR: failed to detect root filesystem
+  -> Running build hook: [microcode]
+  -> Running build hook: [modconf]
+  -> Running build hook: [kms]
+  -> Running build hook: [keymap]
+  -> Running build hook: [consolefont]
+  -> Running build hook: [block]
+  -> Running build hook: [encrypt]
+==> WARNING: Possibly missing firmware for module: 'qat_6xxx'
+  -> Running build hook: [filesystems]
+  -> Running build hook: [fsck]
+  -> Running build hook: [btrfs-overlayfs]
+  -> Running build hook: [resume]
+==> Generating module dependencies
+==> Creating zstd-compressed initcpio image
+  -> Early uncompressed CPIO image generation successful
+==> Initcpio image generation successful
+==> Creating unified kernel image: '/tmp/limine-mkinitcpio.YJHfFd/linux-omarchy.efi'
+==> Unified kernel image generation successful
+Copied: /tmp/limine-mkinitcpio.YJHfFd/linux-omarchy.efi -> /boot/EFI/Linux/omarchy_linux-omarchy.efi
+Updated: /boot/limine.conf
+Activating the factory system

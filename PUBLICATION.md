@@ -1,5 +1,7 @@
 # Publication handoff — drafts opened
 
+Current software follow-ups, tested commits and limitations are in [vm-remediation/HANDOFF.md](vm-remediation/HANDOFF.md) and [followups/commits.json](vm-remediation/followups/commits.json). The original manifest and pre-VM checks below remain dated publication records; the new packet records later branch changes and exact body-update receipts.
+
 The user explicitly authorized publication. All 17 draft PRs are now open; [the series index](INTEL-MAC-ROLLUPS.md) records their real URLs. Original source PRs were not modified.
 
 The existing coordinating forks are `andrew-boyd/omarchy` and `andrew-boyd/omarchy-pkgs`. The 17 proposed draft bodies and their exact commits, bases and hashes are in `manifest.json`. The extra `intel-mac/review-index` branch carries this evidence/index only; it is not an eighteenth PR and is not part of any feature diff.

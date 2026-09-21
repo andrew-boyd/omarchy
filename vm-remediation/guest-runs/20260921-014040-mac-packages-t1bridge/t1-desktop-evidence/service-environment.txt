@@ -1,0 +1,1 @@
+Environment=T1BRIDGE_DESKTOP_PROVIDER=/usr/lib/t1bridge-omarchy/desktop-provider

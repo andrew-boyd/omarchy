@@ -1,0 +1,2 @@
+Wake-enabled devices (candidates for a spurious wake):
+  (none - only LID0 is enabled)
