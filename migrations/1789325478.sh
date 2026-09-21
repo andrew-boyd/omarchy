@@ -9,10 +9,15 @@ echo "Install the Omarchy kernel and make it the first Limine boot entry"
 [[ $(uname -m) == "x86_64" ]] || exit 0
 running_kernel=$(uname -r)
 dmi_vendor="${OMARCHY_KERNEL_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}"
-if omarchy-pkg-present linux-t2 || [[ ${running_kernel,,} == *-t2* ]] ||
-  [[ $(cat "$dmi_vendor" 2>/dev/null) == Apple* ]]; then
+if omarchy-pkg-present linux-t2 || [[ ${running_kernel,,} == *-t2* ]]; then
   exit 0
 fi
+
+if ! vendor=$(cat "$dmi_vendor" 2>/dev/null) || [[ -z ${vendor//[[:space:]]/} ]]; then
+  echo "Cannot identify the system vendor; keeping the installed kernel and leaving migration pending." >&2
+  exit 1
+fi
+[[ ${vendor,,} != apple* ]] || exit 0
 
 limine_conf="${OMARCHY_KERNEL_LIMINE_CONF:-/etc/default/limine}"
 rebuild_marker="${OMARCHY_KERNEL_REBUILD_MARKER:-/var/lib/omarchy/migrations/1789325478}"

@@ -107,8 +107,8 @@ assert_skipped() {
 }
 
 # Local fixture additions. Setup above is retained from #12328's test.
-# Production migration and source test remain unchanged.
-for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Apple' 'Appleish'; do
+# Remediation retains the Apple exemption and fails closed on unknown DMI.
+for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Apple' 'Appleish' 'apple Inc.'; do
   reset_fixture
   printf '%s\n' "$vendor" > "$OMARCHY_KERNEL_DMI_VENDOR"
   run_migration
@@ -116,7 +116,7 @@ for vendor in 'Apple Inc.' 'Apple Computer, Inc.' 'Apple' 'Appleish'; do
   pass "source Apple-prefix policy skips $vendor without changing boot order"
 done
 
-for vendor in 'Dell Inc.' 'apple Inc.' ''; do
+for vendor in 'Dell Inc.'; do
   reset_fixture
   printf '%s\n' "$vendor" > "$OMARCHY_KERNEL_DMI_VENDOR"
   run_migration
@@ -125,16 +125,17 @@ for vendor in 'Dell Inc.' 'apple Inc.' ''; do
   pass "source non-Apple policy migrates $vendor"
 done
 
-for state in missing unreadable directory; do
+for state in missing unreadable directory empty; do
   reset_fixture
   case "$state" in
+    empty) : >"$OMARCHY_KERNEL_DMI_VENDOR" ;;
     missing) rm "$OMARCHY_KERNEL_DMI_VENDOR" ;;
     unreadable) chmod 000 "$OMARCHY_KERNEL_DMI_VENDOR" ;;
     directory) rm "$OMARCHY_KERNEL_DMI_VENDOR"; mkdir "$OMARCHY_KERNEL_DMI_VENDOR" ;;
   esac
-  run_migration
-  grep -Fxq "$kernel" "$INSTALLED_PACKAGES" || fail "unavailable DMI still migrates"
-  pass "source policy treats $state DMI as non-Apple"
+  if run_migration; then fail "unavailable DMI leaves migration pending"; fi
+  assert_skipped
+  pass "unavailable $state DMI preserves the installed kernel"
   [[ $state != unreadable ]] || chmod 600 "$OMARCHY_KERNEL_DMI_VENDOR"
   [[ $state != directory ]] || rmdir "$OMARCHY_KERNEL_DMI_VENDOR"
 done

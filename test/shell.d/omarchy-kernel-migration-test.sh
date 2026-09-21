@@ -145,9 +145,9 @@ pass "T1 and older Macs keep their kernel even without a T2 package or kernel"
 
 reset_fixture
 rm "$OMARCHY_KERNEL_DMI_VENDOR"
-run_migration
-grep -Fxq "$kernel" "$INSTALLED_PACKAGES" || fail "an unreadable DMI vendor is not treated as a Mac"
-pass "machines without DMI vendor information still receive the generic kernel"
+if run_migration; then fail "unreadable DMI must leave the migration pending"; fi
+assert_skipped
+pass "unknown system vendor preserves the installed kernel and stays pending"
 
 reset_fixture
 printf '%s\n' linux-omarchy-ptl-novrr-mm > "$INSTALLED_PACKAGES"
