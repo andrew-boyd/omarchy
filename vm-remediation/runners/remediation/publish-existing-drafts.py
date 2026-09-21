@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """Publish authorized follow-ups to existing branches/drafts; never create PRs."""
 from pathlib import Path
-import subprocess, json, hashlib, datetime, concurrent.futures
+import subprocess, json, hashlib, datetime, concurrent.futures, time
 root=Path(__file__).resolve().parents[2];w=root/'.state/vm-install/2026-09-20';p=w/'remediation'
 index=w/'pr-followups/review-index'
 gh='/home/boyd/.local/share/mise/installs/gh/2.101.0/gh_2.101.0_linux_amd64/bin/gh'
@@ -53,8 +53,13 @@ for row in records:
   repo='omarchy-pkgs' if row['id'].endswith('-packages') else 'omarchy'
   subprocess.run(['git','-C',branches[row['id']]['path'],'push','https://github.com/andrew-boyd/'+repo+'.git','HEAD:refs/heads/'+row['head_branch']],check=True)
   assert remote_head(repo,row['head_branch'])==row['expected_head']
- _,before=check(row)
- assert before['head']['sha']==row['expected_head']
+ # The Git ref can be updated before GitHub refreshes its PR head record.
+ # Accept neither an unexpected head nor a body edit against the stale one.
+ for attempt in range(15):
+  _,before=check(row)
+  if before['head']['sha']==row['expected_head']:break
+  time.sleep(2)
+ assert before['head']['sha']==row['expected_head'],row['id']+' PR head did not catch up with verified Git ref'
  parts=row['url'].split('/');repo='/'.join(parts[3:5]);number=parts[-1]
  body=Path(row['body_file']).read_text();assert digest(body)==row['new_body_sha256']
  if digest(before['body'])!=row['new_body_sha256']:

@@ -1,5 +1,5 @@
 {
-  "collected_utc": "2026-09-21T06:00:55.881616+00:00",
+  "collected_utc": "2026-09-21T06:05:32.027586+00:00",
   "artifact": {
     "iso": "/home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/omarchy-2026.09.21-x86_64.iso",
     "bytes": 6215624704,
@@ -1144,5 +1144,11 @@
   },
   "latest_live_pr_changes": [],
   "physical_mac_validation": false,
-  "publication": "No remediation changes pushed yet; verify this field when publishing."
+  "publication": {
+    "updated_existing_drafts": 17,
+    "expected_drafts": 17,
+    "receipt": "published-pr-updates.json",
+    "evidence_commit_at_body_publication": "ec27fcdb761a3f5f1f0291e132dc0beb98a268b4"
+  },
+  "live_pr_comparison_scope": "Before these authorized follow-up pushes and body updates; the comparison found no intervening third-party changes."
 }

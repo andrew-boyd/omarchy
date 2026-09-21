@@ -21,5 +21,9 @@ for build in [b6,b]:
   if build==b6 and not any(x in d.name for x in ['old-snapshot-refusal','preinstalls-assertion-rechecks','recheck-']):continue
   runs.append({'build':build.name,'run':d.name,'path':str(d),'exit':exit_code(d/'scenario.exit'),'checks':{f.name:exit_code(f) for f in d.glob('*.exit')},'logs':[{'name':f.name,'bytes':f.stat().st_size,'sha256':sha(f)} for f in d.glob('*.log') if f.name!='serial.log']})
 result={'collected_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'artifact':receipt(b/'verification/artifact.json'),'stages':{n:exit_code(p/(n+'.exit')) for n in stages},'original_full_suites':records,'prepared_branches':receipt(p/'branch-preparation.json'),'guest_runs':runs,'first_acceptance_failure':receipt(p/'build7-first-acceptance-vt-failure.json'),'latest_live_pr_changes':receipt(p/'live-pr-delta.json'),'physical_mac_validation':False,'publication':'No remediation changes pushed yet; verify this field when publishing.'}
+published=receipt(root/'reviews/remediation/published-pr-updates.json')
+if published:
+ result['publication']={'updated_existing_drafts':published['completed_count'],'expected_drafts':published['expected_count'],'receipt':'published-pr-updates.json','evidence_commit_at_body_publication':published['index_commit']}
+ result['live_pr_comparison_scope']='Before these authorized follow-up pushes and body updates; the comparison found no intervening third-party changes.'
 (root/'reviews/remediation/results.json').write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps({'stages':result['stages'],'source_suites':{r['id']:r['aggregate_exit'] for r in records}},indent=2))

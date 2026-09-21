@@ -1,5 +1,7 @@
 # Rebuilt ISO and software follow-up — 2026-09-21 UTC
 
+**Publication verified:** all 17 existing draft bodies were updated and read back; ten feature/package branches advanced by ordinary fast-forward pushes. [Exact publication receipts](receipts/published-pr-updates.json) retain their heads and body hashes. Every source-reference row and original contribution commit remains preserved.
+
 This packet follows ISO/VM testing of the 14 Intel Mac feature drafts and three package companions. It preserves their source contributions and appends repairs to demonstrated software behavior. It does not establish physical Mac compatibility or release readiness. The [earlier packet](../vm-validation/HANDOFF.md) remains historical evidence.
 
 **The rebuilt ISO is not entirely green.** Its installed Neovim configuration still requests an unavailable Monokai repository and fails a strict startup-error check. That recipe is unchanged from the upstream package base and outside these Mac feature diffs. A guest-only replacement-source experiment passed; it is not included in the ISO. See the [source diagnosis](receipts/editor-source-diagnosis.json) and [unbuilt baseline candidate](baseline-editor-candidate.patch). The ordinary acceptance suite can pass without detecting this error.

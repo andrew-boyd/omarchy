@@ -1,0 +1,181 @@
+{
+  "index_commit": "ec27fcdb761a3f5f1f0291e132dc0beb98a268b4",
+  "index_url": "https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/vm-remediation/HANDOFF.md",
+  "index_live_verified": true,
+  "completed_count": 17,
+  "expected_count": 17,
+  "prs": [
+    {
+      "id": "P01",
+      "url": "https://github.com/omacom/omarchy/pull/12679",
+      "head": "cee527ff2501df3b38308cb2958889b502015c62",
+      "body_sha256": "3947f5bb95e7566c3436ded2a072a5b5038515d9ba2402fc7c9623c2897e444c",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 3,
+      "verified_at": "2026-09-21T06:03:15.009455+00:00"
+    },
+    {
+      "id": "P02",
+      "url": "https://github.com/omacom/omarchy/pull/12680",
+      "head": "82a7f77444e446ae10758f385ded7301fcf584f1",
+      "body_sha256": "54b9b75d555a39248222cb3d170b4f50e4d9f59be1b3b4879e7bbfb46e4cd722",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 10,
+      "verified_at": "2026-09-21T06:03:16.104106+00:00"
+    },
+    {
+      "id": "P03",
+      "url": "https://github.com/omacom/omarchy/pull/12681",
+      "head": "1e588236bebe51feb75789cd93cc4d7de465b588",
+      "body_sha256": "d4bfcb3df2c77d4200f74e4510cf929a59cc0377a57a02e8cc0822046d4631e1",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 6,
+      "verified_at": "2026-09-21T06:03:19.335109+00:00"
+    },
+    {
+      "id": "P04",
+      "url": "https://github.com/omacom/omarchy/pull/12682",
+      "head": "b5e64f295902651b5d78b9dcf197a9857cc8f0dc",
+      "body_sha256": "a4bfe394ace5cbfe3804d0b04c8e6d0a86137c22465ff59d38bdf320e68ebd87",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 13,
+      "verified_at": "2026-09-21T06:03:22.073004+00:00"
+    },
+    {
+      "id": "P05",
+      "url": "https://github.com/omacom/omarchy/pull/12683",
+      "head": "f7757782ac237b5536de777e8fdf610461dd5df8",
+      "body_sha256": "0dfb684f81d1645fa84dcd120828950496c95b768c676f2d9c3ea28eafda0279",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 4,
+      "verified_at": "2026-09-21T06:03:28.974508+00:00"
+    },
+    {
+      "id": "P06",
+      "url": "https://github.com/omacom/omarchy/pull/12684",
+      "head": "e13f7178ae0cc5b93847bcb1b9dca1ac8996430b",
+      "body_sha256": "f5897449644a5c6e55620c60fee44c558a68044cdd57dff02fece86cbbc08f2e",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 7,
+      "verified_at": "2026-09-21T06:03:36.393307+00:00"
+    },
+    {
+      "id": "P07",
+      "url": "https://github.com/omacom/omarchy/pull/12685",
+      "head": "aa68e02ab0bd71d3d286dea26ee76a009042bd16",
+      "body_sha256": "d78563678db8e33e2e206422789ed391b0b36b80a63c244c0e1892c66a710539",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 3,
+      "verified_at": "2026-09-21T06:03:43.363996+00:00"
+    },
+    {
+      "id": "P08-packages",
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/556",
+      "head": "6c1cecc4e49978745ebb57062b83c828b610238f",
+      "body_sha256": "c8cc4bd0e62625eb53bed489a9c27c3c5e20ec1de28e9fda08a33b7d7b1345f4",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 4,
+      "verified_at": "2026-09-21T06:03:45.697166+00:00"
+    },
+    {
+      "id": "P08",
+      "url": "https://github.com/omacom/omarchy/pull/12686",
+      "head": "59348a9e66b14a661cf81cc9166f37120dc7423e",
+      "body_sha256": "ac1d1bcd94cc089e7545307c1175c8401ab9afb5c3e8d7aca60c2dd4ca02e71a",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 4,
+      "verified_at": "2026-09-21T06:03:48.229271+00:00"
+    },
+    {
+      "id": "P09",
+      "url": "https://github.com/omacom/omarchy/pull/12687",
+      "head": "e5bdff26c7ab2e835deef82123e96f35e5b538fe",
+      "body_sha256": "485e0949ed6cf7ac53cd35b4dd093b99c2d5f7eabefc8ae375836cf166f7a134",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 4,
+      "verified_at": "2026-09-21T06:03:55.106369+00:00"
+    },
+    {
+      "id": "P10",
+      "url": "https://github.com/omacom/omarchy/pull/12688",
+      "head": "8b5b8819443724af2a3bae0a5deadb90167dba10",
+      "body_sha256": "4f409c8db344f9e3bb79c3a02bde4d96e91b880d01bba72ff9239f7bc222596f",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 8,
+      "verified_at": "2026-09-21T06:04:02.418053+00:00"
+    },
+    {
+      "id": "P11-packages",
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/557",
+      "head": "f2e815619d90ba8ba5e7f819ccdc7640386b16fb",
+      "body_sha256": "da848031110b58a6705367c305b94ce2a4cdcdd18c5b0fc91db3d290b740b580",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 14,
+      "verified_at": "2026-09-21T06:04:05.104115+00:00"
+    },
+    {
+      "id": "P11",
+      "url": "https://github.com/omacom/omarchy/pull/12689",
+      "head": "76237f2810e9bf08b348ec6cd95015531351cef9",
+      "body_sha256": "2208c8794e8d42767a73d8c67a6aec9ecc62b5ac25f084b65aee32a21cc34782",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 14,
+      "verified_at": "2026-09-21T06:04:12.077607+00:00"
+    },
+    {
+      "id": "P12-packages",
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/558",
+      "head": "bdf07c6e157a226c0ea57c69107505a5ad7b567d",
+      "body_sha256": "7a16a85ac8e75dda5a6ada1d08be906d81c74238da02e89538f6431a9a36557c",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 21,
+      "verified_at": "2026-09-21T06:04:18.747427+00:00"
+    },
+    {
+      "id": "P12",
+      "url": "https://github.com/omacom/omarchy/pull/12690",
+      "head": "ab359055f2fe29ad7389c495b9dbbce0d5477cea",
+      "body_sha256": "38c41f49f753479971fd2d07aa6f306a62aaffc211a2c20b31cae56125510242",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 21,
+      "verified_at": "2026-09-21T06:04:21.343299+00:00"
+    },
+    {
+      "id": "P13",
+      "url": "https://github.com/omacom/omarchy/pull/12691",
+      "head": "1a07c4b6e05106fb02fe952df6349d362a8c3350",
+      "body_sha256": "1d8ed9c96ff1b08fa03d3f9db6f70331d4f702b9a82aec677e262c6c3e109373",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 3,
+      "verified_at": "2026-09-21T06:04:28.237779+00:00"
+    },
+    {
+      "id": "P14",
+      "url": "https://github.com/omacom/omarchy/pull/12692",
+      "head": "8557a3fc6af71e20942f8da49235718f43a05bb0",
+      "body_sha256": "433cbe7896eb95fa40b96d57f2b2ee2562c300be34cc8963ea44f63d1997bfe8",
+      "still_open_draft": true,
+      "body_verified": true,
+      "source_pr_urls_preserved": 2,
+      "verified_at": "2026-09-21T06:04:35.131467+00:00"
+    }
+  ],
+  "original_source_prs_modified": false,
+  "basecamp_or_chat_posted": false
+}
