@@ -25,7 +25,9 @@ SECONDS_DEFAULT=60
 SETTLE_SECONDS=5 # pause between suspend cycles so drivers (esp. wifi) fully
                   # come back up before the next one - see the diagnose loop
 ACPI_WAKEUP=/proc/acpi/wakeup
-STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/omarchy-diagnose-suspend-wake.state"
+STATE_DIR=/run/omarchy-diagnose-suspend-wake
+STATE_FILE="$STATE_DIR/pending"
+RESTORE_ON_EXIT=0
 RULE_FILE=/etc/udev/rules.d/91-omarchy-diagnosed-wake.rules
 
 # Never touched: without this the machine would have no way to wake at all
@@ -67,8 +69,12 @@ acpi_is_enabled() {
 
 acpi_set() {
   local name=$1 want=$2
-  [[ "$(acpi_is_enabled "$name")" == "$want" ]] && return 0
-  echo "$name" >"$ACPI_WAKEUP" 2>/dev/null
+  local current
+  current=$(acpi_is_enabled "$name") || return 1
+  [[ $current == "enabled" || $current == "disabled" ]] || return 1
+  [[ $current == "$want" ]] && return 0
+  { echo "$name" >"$ACPI_WAKEUP"; } 2>/dev/null || return 1
+  [[ $(acpi_is_enabled "$name") == "$want" ]]
 }
 
 # bus-port id and sysfs path for every USB device (not hub) that's currently
@@ -88,11 +94,13 @@ usb_enabled_candidates() {
 
 usb_set() {
   local dir=$1 want=$2
-  echo "$want" >"${dir}power/wakeup" 2>/dev/null
+  [[ -r ${dir}power/wakeup ]] || return 1
+  { echo "$want" >"${dir}power/wakeup"; } 2>/dev/null || return 1
+  [[ $(<"${dir}power/wakeup") == "$want" ]]
 }
 
 all_candidates() {
-  acpi_enabled_candidates
+  acpi_enabled_candidates || return 1
   usb_enabled_candidates
 }
 
@@ -101,6 +109,7 @@ set_candidate() {
   case $kind in
     acpi) acpi_set "$name" "$want" ;;
     usb) usb_set "$node" "$want" ;;
+    *) return 1 ;;
   esac
 }
 
@@ -111,13 +120,41 @@ set_candidate() {
 # guessing from current state - some devices are disabled by firmware default
 # and must never be touched, so "re-enable everything that's off" is wrong.
 
+prepare_state_dir() {
+  umask 077
+  if [[ -e $STATE_DIR || -L $STATE_DIR ]]; then
+    if [[ -L $STATE_DIR || ! -d $STATE_DIR || $(stat -c %u "$STATE_DIR") != 0 || $(stat -c %a "$STATE_DIR") != 700 ]]; then
+      echo "Unsafe recovery directory: $STATE_DIR" >&2
+      return 1
+    fi
+  else
+    mkdir -m700 "$STATE_DIR" || return 1
+  fi
+  [[ ! -L $STATE_FILE && ! -L $STATE_DIR/lock ]] || return 1
+  exec 9>"$STATE_DIR/lock" || return 1
+  flock -n 9 || { echo "Another suspend diagnosis is active." >&2; return 1; }
+}
+
 save_state() {
-  : >"$STATE_FILE"
-  printf '%s\n' "$@" >"$STATE_FILE"
+  local pending
+  pending=$(mktemp "$STATE_FILE.XXXXXX") || return 1
+  if ! printf '%s\n' "$@" >"$pending" || ! mv "$pending" "$STATE_FILE"; then
+    rm -f "$pending"
+    return 1
+  fi
 }
 
 clear_state() {
   rm -f "$STATE_FILE"
+}
+
+finish_command() {
+  local status=$?
+  trap - EXIT INT TERM HUP
+  if ((RESTORE_ON_EXIT)); then
+    cmd_restore >&2 || status=1
+  fi
+  exit "$status"
 }
 
 # --- reporting ---------------------------------------------------------------
@@ -217,11 +254,11 @@ cmd_test() {
   local seconds=${1:-$SECONDS_DEFAULT}
   echo "Suspending for ${seconds}s via RTC alarm..."
   local result
-  result=$(run_test "$seconds")
+  result=$(run_test "$seconds") || return 1
   case $result in
     held) echo "Held the full duration - suspend is behaving normally." ;;
     woke-early) echo "Woke up early - something is pulling this machine out of sleep. Run 'diagnose' to find it." ;;
-    *) echo "Could not complete the test." ;;
+    *) echo "Could not complete the test."; return 1 ;;
   esac
 }
 
@@ -233,21 +270,36 @@ cmd_restore() {
     clear_state
     return 0
   fi
-  local name kind node
-  while IFS=$'\t' read -r name kind node; do
+  local name kind node entry
+  local pending=()
+  while IFS=$'\t' read -r name kind node || [[ -n ${name:-} ]]; do
     [[ -z ${name:-} ]] && continue
-    set_candidate "$name" "$kind" "$node" enabled
-    echo "  re-enabled: $(describe_candidate "$name" "$kind" "$node")"
+    if set_candidate "$name" "$kind" "$node" enabled; then
+      echo "  re-enabled: $name"
+    else
+      printf -v entry '%s\t%s\t%s' "$name" "$kind" "$node"
+      pending+=("$entry")
+      echo "  could not restore: $name; keeping recovery state" >&2
+    fi
   done <"$STATE_FILE"
-  clear_state
+  if ((${#pending[@]})); then
+    save_state "${pending[@]}" || return 1
+    return 1
+  fi
+  clear_state || return 1
   echo "Restored."
 }
 
-trap 'echo; echo "Interrupted - restoring wake sources before exiting." >&2; cmd_restore >&2' INT TERM
-
 cmd_diagnose() {
   local seconds=${1:-$SECONDS_DEFAULT}
-  mapfile -t candidates < <(all_candidates)
+  if [[ -s $STATE_FILE ]]; then
+    echo "Recovery is pending. Run restore before starting another diagnosis." >&2
+    return 1
+  fi
+  local candidate_output
+  candidate_output=$(all_candidates) || { echo "Could not enumerate wake sources." >&2; return 1; }
+  local candidates=()
+  [[ -z $candidate_output ]] || mapfile -t candidates <<<"$candidate_output"
 
   if [[ ${#candidates[@]} -eq 0 ]]; then
     echo "Nothing but $ESSENTIAL_ACPI is wake-enabled already - no candidates to test."
@@ -264,7 +316,7 @@ cmd_diagnose() {
 
   echo "==> Baseline: does sleep hold at all right now?"
   local baseline
-  baseline=$(run_test "$seconds")
+  baseline=$(run_test "$seconds") || baseline=inconclusive
   settle
   if [[ $baseline == "held" ]]; then
     echo "Held cleanly - no spurious wake detected. Nothing to fix."
@@ -275,21 +327,20 @@ cmd_diagnose() {
   fi
   echo "Confirmed: woke up early. Disabling every wake-enabled device to isolate the cause..."
 
-  save_state "${candidates[@]}"
+  save_state "${candidates[@]}" || return 1
+  RESTORE_ON_EXIT=1
   local name kind node entry
   for entry in "${candidates[@]}"; do
     IFS=$'\t' read -r name kind node <<<"$entry"
-    set_candidate "$name" "$kind" "$node" disabled
+    set_candidate "$name" "$kind" "$node" disabled || return 1
   done
 
   echo "==> Control: does sleep hold with everything disabled?"
   local control
-  control=$(run_test "$seconds")
+  control=$(run_test "$seconds") || control=inconclusive
   settle
   if [[ $control != "held" ]]; then
-    echo "Still woke early even with every known wake source off. The cause isn't" \
-      "in this candidate list (could be EC/firmware-level) - restoring and stopping."
-    cmd_restore
+    echo "Control sleep did not hold or was inconclusive; restoring and stopping."
     return 1
   fi
 
@@ -298,23 +349,27 @@ cmd_diagnose() {
   for entry in "${candidates[@]}"; do
     IFS=$'\t' read -r name kind node <<<"$entry"
     echo "==> Testing: $(describe_candidate "$name" "$kind" "$node")"
-    set_candidate "$name" "$kind" "$node" enabled
+    set_candidate "$name" "$kind" "$node" enabled || return 1
     local result
-    result=$(run_test "$seconds")
+    result=$(run_test "$seconds") || result=inconclusive
     settle
     if [[ $result == "woke-early" ]]; then
       echo "    culprit - disabling it again and keeping it off."
-      set_candidate "$name" "$kind" "$node" disabled
+      set_candidate "$name" "$kind" "$node" disabled || return 1
       culprits+=("$entry")
-    else
+    elif [[ $result == "held" ]]; then
       echo "    not the cause - leaving it enabled."
+    else
+      echo "    test was inconclusive; restoring and stopping." >&2
+      return 1
     fi
   done
 
   if [[ ${#culprits[@]} -eq 0 ]]; then
     echo "No single device reproduced it on re-enable (the earlier failure may have" \
       "been intermittent). Nothing left disabled."
-    clear_state
+    clear_state || return 1
+    RESTORE_ON_EXIT=0
     return 0
   fi
 
@@ -333,12 +388,22 @@ cmd_diagnose() {
   echo
   read -r -p "Write this rule now so it survives a reboot? [y/N] " reply
   if [[ $reply =~ ^[Yy]$ ]]; then
-    printf '%s\n' "${rule_lines[@]}" >"$RULE_FILE"
-    udevadm control --reload
-    clear_state # now governed by the rule; live state already matches it
+    if [[ -e $RULE_FILE || -L $RULE_FILE ]]; then
+      echo "Preserving existing rule: $RULE_FILE. Reconcile the suggested rule manually." >&2
+      return 1
+    fi
+    # noclobber also protects a file created between the check and write.
+    (set -o noclobber; printf '%s\n' "${rule_lines[@]}" >"$RULE_FILE") || return 1
+    if ! udevadm control --reload; then
+      rm -f "$RULE_FILE"
+      return 1
+    fi
+    clear_state || return 1 # now governed by the rule; live state matches it
+    RESTORE_ON_EXIT=0
     echo "Wrote $RULE_FILE and reloaded udev."
   else
-    save_state "${culprits[@]}"
+    save_state "${culprits[@]}" || return 1
+    RESTORE_ON_EXIT=0
     echo "Left it disabled for this session only - it'll reset on reboot." \
       "Run 'omarchy-diagnose-suspend-wake restore' to undo, or 'diagnose' again later."
   fi
@@ -346,22 +411,32 @@ cmd_diagnose() {
 
 # --- entry point ---------------------------------------------------------------
 
-require_rtcwake
+case "${1:-}" in
+  test|diagnose|restore)
+    require_root
+    prepare_state_dir || exit 1
+    trap finish_command EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
+    ;;
+esac
+if [[ ${1:-} == "test" || ${1:-} == "diagnose" ]]; then
+  require_rtcwake
+  [[ ${2:-$SECONDS_DEFAULT} =~ ^[1-9][0-9]{0,8}$ ]] || { echo "Duration must be a positive whole number of seconds." >&2; exit 2; }
+fi
 
 case "${1:-}" in
   status)
     cmd_status
     ;;
   test)
-    require_root
     cmd_test "${2:-}"
     ;;
   diagnose)
-    require_root
     cmd_diagnose "${2:-}"
     ;;
   restore)
-    require_root
     cmd_restore
     ;;
   *)
