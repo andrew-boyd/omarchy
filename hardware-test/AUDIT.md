@@ -27,7 +27,7 @@ Omarchy's target is `quattro`, not the branch named `main`. The first refresh fo
 
 ## Completed local preparation
 
-- Corrected all 17 draft bodies locally, with every affected source's state, author, disposition and recommended action. Publication is gated on the completed fresh-image receipts and an immediate live-PR preflight.
+- Corrected and published all 17 existing draft bodies, with every affected source's state, author, disposition and recommended action. Completed fresh-image receipts and an immediate live-PR preflight gated publication; all expected heads and complete bodies were read back successfully.
 - Added an independent original-group coverage gate to publication. Removing #422 or its P10 disposition is now rejected; the old incomplete packet also fails. Portable public-source snapshots and a 52-result discovery-screening ledger accompany the audit.
 - Included both source-authored ISO #174 commits with attribution. Its nine EFI-preservation unit tests passed in a disposable guest. A fresh disk-wipe/reinstall preserved all three synthetic EFI files byte-for-byte, wiped an unrelated marker, and left the seed unchanged; no real firmware was used.
 - Corrected the demonstrated baseline Neovim plugin reference in the package source, pinned its replacement commit and added strict startup/theme checks. The rebuilt package and fresh installed guest pass strict startup and explicit Monokai theme checks.

@@ -1,0 +1,9 @@
+{
+  "recorded_at": "2026-09-21T14:45:47.437919+00:00",
+  "first_attempt_verified_drafts": 7,
+  "rejected_branch": "intel-mac/p08-facetime-camera",
+  "rejected_repository": "andrew-boyd/omarchy-pkgs",
+  "reason": "GitHub OAuth app lacks workflow scope for upstream .github/workflows/build-pr.yml history. No package ref changed in the rejected push.",
+  "existing_ssh_identity": "andrew-boyd",
+  "resolution": "Use already-configured GitHub SSH authentication for Git pushes; retain OAuth for authorized PR body edits. No token scopes, keys, source commits or workflow content changed."
+}

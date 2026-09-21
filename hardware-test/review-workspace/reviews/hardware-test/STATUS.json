@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-09-21T14:40:30.182455+00:00",
-  "goal_complete": false,
+  "updated_at": "2026-09-21T14:48:30.309903+00:00",
+  "goal_complete": true,
   "scope": "All 64-bit Intel Macs; first physical test MacBookPro13,3 only",
   "prepared_build_sources": ".state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m",
   "source_heads": {
@@ -15,7 +15,7 @@
   "drafts_prepared_locally": 17,
   "fresh_iso_built": true,
   "fresh_vm_installs_passed": true,
-  "published_this_cycle": false,
+  "published_this_cycle": true,
   "physical_install_authorized": false,
   "pending_user_action": null,
   "resume_build": "bash reviews/vm-install/start-build.sh",
@@ -31,7 +31,7 @@
     "documented_differences": 9,
     "unexplained": 0
   },
-  "execution_state": "validation complete; existing PR publication and final handoff in progress",
+  "execution_state": "ready for the first attended physical trial; inventory, reconciled sources, fresh ISO/VM validation and all existing draft updates complete",
   "build_container": "04889ba581844429063cb38734b0df3a318ce03ca9cdcab04eee0cf1459a2ec8",
   "prior_blocker_audit": {
     "verified_at": "2026-09-21T12:48:51.432149+00:00",
@@ -70,5 +70,7 @@
   "physical_install_ready": true,
   "source_commit_drift": false,
   "runtime_rechecks": "runtime-rechecks.json",
-  "build_container_state": "finished and removed"
+  "build_container_state": "finished and removed",
+  "drafts_updated_and_verified": 17,
+  "next_step": "Identify the attended MacBookPro13,3 and USB device, verify independent data/EFI backups, then explicitly authorize media creation and physical installation."
 }

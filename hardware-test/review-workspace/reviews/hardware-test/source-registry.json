@@ -8731,6 +8731,6 @@
     }
   ],
   "qualification": "Inventory/disposition coverage is not implementation completion. Separate work tracks remain unimplemented by P01\u2013P14; alternative/deferred/context rows are not ISO content.",
-  "publication_updated": false,
+  "publication_updated": true,
   "iso_rebuilt": true
 }

@@ -1,0 +1,39 @@
+{
+  "recorded_at": "2026-09-21T14:43:07.217860+00:00",
+  "all_required_checks_passed": true,
+  "qualification": "Required individual checks satisfied; original runtime stage/aggregate remain failed, with three clean-overlay reruns after confirmed PAM lockout. Earlier libfprint build failure and unchanged-source reruns retained.",
+  "raw_runtime_stage_exit": 1,
+  "physical_install_ready": true,
+  "physical_hardware_tested": false,
+  "usb_flashed": false,
+  "original_source_prs_modified": false,
+  "basecamp_or_chat_posted": false,
+  "published_candidate_heads": {
+    "P01": "2e7b38893f12d4dda5f5c478997a2f65531ee196",
+    "P02": "803260c8feff6d9ed5dbac60d5f630cd45ae1b56",
+    "P03": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+    "P04": "a21829e80e6ecc3ef751a98863030a0314e98a2f",
+    "P05": "7c880e9c3add9df83ad154951198d2323d6da274",
+    "P06": "6435b18c195e13203b267d90397699f5019deced",
+    "P07": "612908e346bfdacd31bd0d70d27955d73803f52e",
+    "P08-packages": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+    "P08": "002c0f11f75ae7ec7d3594752639ba786e433c80",
+    "P09": "1c577ec5c339d02b386db959e15af40175a8a8e6",
+    "P10": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+    "P11-packages": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+    "P11": "718268634ed323174a43c2b83690af921019bd83",
+    "P12-packages": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+    "P12": "2d674eafb2609035081dfd0686b69f2cc531c6d3",
+    "P13": "9ccd35bf2cdad94d56f8e9c6571cd645f70f2135",
+    "P14": "7dc8d929138c8ebe4b2ba0735a64cc5e334c2413"
+  },
+  "evidence_commit": "9546a8fef84cde5cc43597f62299b63a4d5d6895",
+  "iso_sha256": "9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252",
+  "source_commits": {
+    "omarchy": "6096d649643d0d0e0bae65c7949e5043bf2cc338",
+    "omarchy-pkgs": "25712c910f80fdf5989c6434e3e2fa8830ec2581",
+    "omarchy-iso": "d692d24f95c6611f86beef7e4d7c6e23a7d2f42a"
+  },
+  "publication_state": "all 17 existing drafts updated and verified; see published-pr-updates.json",
+  "evidence_commit_role": "Validated prepublication packet; later evidence-only commit adds verified publication receipts."
+}

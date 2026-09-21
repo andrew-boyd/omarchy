@@ -68,4 +68,4 @@ No USB drive has been flashed and no physical installation has been performed. T
 
 ## Existing draft publication
 
-The 17 existing draft updates are prepared and validated. Publication completion is recorded separately in `receipts/published-pr-updates.json`; this paragraph will be updated after remote readback. Original source PRs remain untouched, and nothing is posted to Basecamp/chat.
+All **17 existing drafts** (14 Omarchy features and three package companions) were updated and read back successfully. Every expected commit and complete PR-body hash matches, and all remain open drafts. [Verified publication receipts](receipts/published-pr-updates.json) identify each URL, head and verification time. The package history required the machine's existing GitHub SSH login because the CLI OAuth token lacks workflow scope; no credentials, source commits or workflow files were changed to resolve transport. Original source PRs remain untouched, and nothing was posted to Basecamp/chat.

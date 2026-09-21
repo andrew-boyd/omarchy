@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-21T14:47:30.665254+00:00",
+  "qemu_or_validation_processes_running": false,
+  "docker_running_container_count": 0,
+  "private_download_service": "vintage-iso-download.service",
+  "private_download_service_active": true,
+  "private_download_url": "https://omarchy.tailf2b317.ts.net:8443/",
+  "existing_tailscale_443_routes_preserved": [
+    "/",
+    "/code-rs-audit"
+  ],
+  "funnel_enabled_by_this_work": false,
+  "temporary_sudo_renewed_by_agent": false,
+  "physical_install_performed": false,
+  "usb_flashed": false
+}
