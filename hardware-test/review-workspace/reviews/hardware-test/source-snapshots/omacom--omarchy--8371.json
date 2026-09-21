@@ -1,0 +1,320 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8371",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "gmux-brightness"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8371,
+  "checked_at": "2026-09-21T11:56:26.500593+00:00",
+  "title": "Save Apple GMUX backlight brightness across reboot",
+  "author": "perlausten",
+  "head_sha": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-13T14:29:57Z",
+  "state": "open",
+  "body": "## Summary\n\nDual-GPU Macs expose the panel backlight as `gmux_backlight` on the PNP bus (`/devices/pnp0/00:00/backlight/gmux_backlight`). systemd's `path_id` builtin fails for that device (`No such file or directory`), so the stock `99-systemd.rules` line never sets `SYSTEMD_WANTS` and `systemd-backlight@backlight:gmux_backlight.service` never starts.\n\nAfter a reboot the firmware default comes back instead of the brightness the user last set. On a MacBookPro11,3 that default is 184/1023 (**18%**). Keyboard backlight *is* restored, because that LED has a working `ID_PATH`.\n\nThis ships a udev rule that tags `gmux_backlight` with `systemd` and `SYSTEMD_WANTS` without requiring `path_id`. `systemd-backlight` still saves under `/var/lib/systemd/backlight/backlight:gmux_backlight` when `ID_PATH` is missing.\n\n## Changes\n\n- `default/udev/gmux-backlight.rules` \u2014 the rule (next to the Framework 16 QMK rule)\n- `install/hardware/apple/fix-gmux-backlight.sh` \u2014 copies it to `/etc/udev/rules.d/` on Apple machines (or any machine that already has `gmux_backlight`), reloads udev, and starts the unit so the *current* session will save on shutdown\n- Wired into `install/hardware/all.sh`\n- `migrations/1787689809.sh` \u2014 same leaf for existing installs\n- `test/shell.d/gmux-backlight-test.sh`\n\n## Tested\n\n- MacBookPro11,3, Omarchy 4.0.1, `gmux_backlight` 1023 max\n- Before: `udevadm info` showed `TAGS=:seat:` only; `systemd-backlight@backlight:gmux_backlight.service` inactive; no save file under `/var/lib/systemd/backlight/`\n- After installing the equivalent rule locally: `SYSTEMD_WANTS` is set, the unit is active, shutdown will save\n- `bash test/shell.d/gmux-backlight-test.sh` passes\n\n## Notes\n\nThe rule is a no-op on machines without `KERNEL==\"gmux_backlight\"`. It is still dropped on any `Apple*` DMI vendor so ISO finalization does not depend on `apple_gmux` already having registered the sysfs node.\n\nRelated but distinct: #8205 reads `actual_brightness` for gmux OSD steps. This PR is about save/restore across reboot.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "71d15c6f0836c7f613e81ef754171392e68d332f",
+      "filename": "default/udev/gmux-backlight.rules",
+      "status": "added",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/default%2Fudev%2Fgmux-backlight.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/default%2Fudev%2Fgmux-backlight.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Fgmux-backlight.rules?ref=5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "patch": "@@ -0,0 +1,5 @@\n+# Apple GMUX backlight is a PNP device. systemd's path_id builtin fails for it\n+# (\"No such file or directory\"), so 99-systemd.rules never sets SYSTEMD_WANTS\n+# and brightness is not saved or restored across reboot.\n+SUBSYSTEM==\"backlight\", KERNEL==\"gmux_backlight\", \\\n+  TAG+=\"systemd\", ENV{SYSTEMD_WANTS}+=\"systemd-backlight@backlight:gmux_backlight.service\""
+    },
+    {
+      "sha": "f5602a12691625343e73b1b6506d815bd65fa281",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "patch": "@@ -40,6 +40,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-gmux-backlight.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "e6b9d18a51649e2e631133117decdc8d83363ea0",
+      "filename": "install/hardware/apple/fix-gmux-backlight.sh",
+      "status": "added",
+      "additions": 32,
+      "deletions": 0,
+      "changes": 32,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/install%2Fhardware%2Fapple%2Ffix-gmux-backlight.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/install%2Fhardware%2Fapple%2Ffix-gmux-backlight.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-gmux-backlight.sh?ref=5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "patch": "@@ -0,0 +1,32 @@\n+# Apple dual-GPU Macs expose the panel backlight as gmux_backlight on the PNP\n+# bus. systemd's path_id builtin fails for that device, so 99-systemd.rules\n+# never sets SYSTEMD_WANTS and systemd-backlight never starts. After a reboot\n+# the firmware default comes back (about 18% on these panels) instead of the\n+# brightness the user last set.\n+#\n+# This rule starts systemd-backlight without needing ID_PATH. The service still\n+# saves under /var/lib/systemd/backlight/backlight:gmux_backlight when path_id\n+# cannot supply a name.\n+udev_rules_dir=\"${OMARCHY_UDEV_RULES_DIR:-/etc/udev/rules.d}\"\n+backlight_path=\"${OMARCHY_BACKLIGHT_PATH:-/sys/class/backlight}\"\n+dmi_vendor=\"${OMARCHY_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+rule_src=\"$OMARCHY_PATH/default/udev/gmux-backlight.rules\"\n+rule_dest=\"$udev_rules_dir/99-omarchy-gmux-backlight.rules\"\n+\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ -e $backlight_path/gmux_backlight || $sys_vendor == Apple* ]]; then\n+  echo \"Detected Apple GMUX backlight; enabling systemd-backlight save/restore\"\n+\n+  sudo mkdir -p \"$udev_rules_dir\"\n+  if [[ ! -f $rule_dest ]]; then\n+    sudo cp -f \"$rule_src\" \"$rule_dest\"\n+  fi\n+\n+  # Best-effort on a live session so this shutdown already saves. The ISO chroot\n+  # has no running udev/systemd for the target, and a missing binary must not\n+  # abort hardware setup.\n+  sudo udevadm control --reload-rules 2>/dev/null || true\n+  sudo udevadm trigger --action=add --subsystem-match=backlight --sysname-match=gmux_backlight 2>/dev/null || true\n+  sudo systemctl start systemd-backlight@backlight:gmux_backlight.service 2>/dev/null || true\n+fi"
+    },
+    {
+      "sha": "966ac9852105a80efaea1ba8540c3abdcb1613fe",
+      "filename": "migrations/1787689809.sh",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/migrations%2F1787689809.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/migrations%2F1787689809.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787689809.sh?ref=5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "patch": "@@ -0,0 +1,7 @@\n+echo \"Save and restore Apple GMUX backlight brightness across reboot\"\n+\n+# Dual-GPU Macs expose the panel as gmux_backlight on the PNP bus. systemd's\n+# path_id builtin fails there, so 99-systemd.rules never starts\n+# systemd-backlight and brightness resets to the firmware default after reboot.\n+# See install/hardware/apple/fix-gmux-backlight.sh.\n+source \"$OMARCHY_PATH/install/hardware/apple/fix-gmux-backlight.sh\""
+    },
+    {
+      "sha": "d05f1c80d2cb55ebcca8c7b8c4a989883a8fda60",
+      "filename": "test/shell.d/gmux-backlight-test.sh",
+      "status": "added",
+      "additions": 144,
+      "deletions": 0,
+      "changes": 144,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/test%2Fshell.d%2Fgmux-backlight-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5181ac23be820d9c5c2bcd64b14fe1f82e6a2946/test%2Fshell.d%2Fgmux-backlight-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fgmux-backlight-test.sh?ref=5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "patch": "@@ -0,0 +1,144 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-gmux-backlight.sh\"\n+rule=\"$ROOT/default/udev/gmux-backlight.rules\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1787689809.sh\"\n+\n+grep -q 'apple/fix-gmux-backlight.sh' \"$all\" ||\n+  fail \"the gmux backlight quirk runs during hardware setup\"\n+pass \"the gmux backlight quirk runs during hardware setup\"\n+\n+grep -Fq 'ENV{SYSTEMD_WANTS}+=\"systemd-backlight@backlight:gmux_backlight.service\"' \"$rule\" ||\n+  fail \"the udev rule starts systemd-backlight for gmux_backlight\"\n+! grep -Fq 'IMPORT{builtin}=\"path_id\"' \"$rule\" ||\n+  fail \"the udev rule must not depend on path_id\"\n+pass \"the udev rule starts systemd-backlight without path_id\"\n+\n+grep -q 'fix-gmux-backlight.sh' \"$migration\" ||\n+  fail \"the migration applies the gmux backlight quirk\" \"$migration\"\n+pass \"the migration applies the gmux backlight quirk\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+rules_dir=\"$test_tmp/etc/udev/rules.d\"\n+dest=\"$rules_dir/99-omarchy-gmux-backlight.rules\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\" \"$test_tmp/backlight\"\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/udevadm\" <<'SH'\n+#!/bin/bash\n+\n+printf 'udevadm' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local vendor=\"$1\" gmux=\"${2:-0}\" keep=\"${3:-0}\"\n+  if (( keep == 0 )); then\n+    rm -rf \"$test_tmp/etc\" \"$test_tmp/backlight\"\n+    mkdir -p \"$test_tmp/etc\" \"$test_tmp/backlight\"\n+  fi\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  if (( gmux == 1 )); then\n+    mkdir -p \"$test_tmp/backlight/gmux_backlight\"\n+  fi\n+  : >\"$calls\"\n+\n+  OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_UDEV_RULES_DIR=\"$rules_dir\" \\\n+    OMARCHY_BACKLIGHT_PATH=\"$test_tmp/backlight\" \\\n+    OMARCHY_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\" </dev/null\n+}\n+\n+run_leaf \"Apple Inc.\" 1 >/dev/null\n+[[ -f $dest ]] || fail \"a Mac with gmux gets the udev rule\" \"$(ls -R \"$test_tmp/etc\" 2>&1)\"\n+diff -q \"$rule\" \"$dest\" >/dev/null ||\n+  fail \"the installed udev rule matches the packaged source\"\n+grep -Fq $'udevadm\\tcontrol\\t--reload-rules' \"$calls\" ||\n+  fail \"a live session reloads udev\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tstart\\tsystemd-backlight@backlight:gmux_backlight.service' \"$calls\" ||\n+  fail \"a live session starts systemd-backlight\" \"$(cat \"$calls\")\"\n+pass \"a Mac with gmux gets the udev rule\"\n+\n+# ISO-time apple_gmux may not have registered yet; still drop the rule so first\n+# boot can start systemd-backlight when the device appears.\n+run_leaf \"Apple Inc.\" 0 >/dev/null\n+[[ -f $dest ]] || fail \"an Apple machine without gmux sysfs still gets the rule\"\n+pass \"an Apple machine without gmux sysfs still gets the rule\"\n+\n+run_leaf \"Apple Computer, Inc.\" 0 >/dev/null\n+[[ -f $dest ]] || fail \"the older Apple vendor string is recognized\"\n+pass \"the older Apple vendor string is recognized\"\n+\n+run_leaf \"LENOVO\" 0 >/dev/null\n+[[ ! -f $dest ]] || fail \"non-Apple hardware without gmux is left alone\"\n+[[ ! -s $calls ]] || fail \"non-Apple hardware escalates nothing\" \"$(cat \"$calls\")\"\n+pass \"non-Apple hardware without gmux is left alone\"\n+\n+run_leaf \"LENOVO\" 1 >/dev/null\n+[[ -f $dest ]] || fail \"a gmux device on unexpected vendor still gets the rule\"\n+pass \"a gmux device on unexpected vendor still gets the rule\"\n+\n+run_leaf \"Apple Inc.\" 1 >/dev/null\n+printf 'keep me\\n' >\"$dest\"\n+run_leaf \"Apple Inc.\" 1 1 >/dev/null\n+[[ $(<\"$dest\") == \"keep me\" ]] || fail \"an existing udev rule is not overwritten\"\n+grep -Fq $'systemctl\\tstart\\tsystemd-backlight@backlight:gmux_backlight.service' \"$calls\" ||\n+  fail \"a second run still starts systemd-backlight\" \"$(cat \"$calls\")\"\n+pass \"an existing udev rule is left in place\"\n+\n+run_migration() {\n+  local vendor=\"$1\" gmux=\"${2:-0}\"\n+  rm -rf \"$test_tmp/etc\" \"$test_tmp/backlight\"\n+  mkdir -p \"$test_tmp/etc\" \"$test_tmp/backlight\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  if (( gmux == 1 )); then\n+    mkdir -p \"$test_tmp/backlight/gmux_backlight\"\n+  fi\n+  : >\"$calls\"\n+\n+  OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_UDEV_RULES_DIR=\"$rules_dir\" \\\n+    OMARCHY_BACKLIGHT_PATH=\"$test_tmp/backlight\" \\\n+    OMARCHY_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration \"Apple Inc.\" 1\n+[[ -f $dest ]] || fail \"the migration installs the udev rule on a Mac with gmux\"\n+pass \"the migration installs the udev rule on a Mac with gmux\"\n+\n+run_migration \"LENOVO\" 0\n+[[ ! -f $dest ]] || fail \"the migration skips non-Apple hardware without gmux\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on unaffected hardware\" \"$(cat \"$calls\")\"\n+pass \"the migration skips hardware without gmux\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5638017109",
+      "html_url": "https://github.com/omacom/omarchy/pull/8371#issuecomment-5638017109",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8371",
+      "id": 5638017109,
+      "node_id": "IC_kwDOO0Cobs8AAAABUA1QVQ",
+      "user": {
+        "login": "rand0mdud3",
+        "id": 87219286,
+        "node_id": "MDQ6VXNlcjg3MjE5Mjg2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/87219286?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rand0mdud3",
+        "html_url": "https://github.com/rand0mdud3",
+        "followers_url": "https://api.github.com/users/rand0mdud3/followers",
+        "following_url": "https://api.github.com/users/rand0mdud3/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rand0mdud3/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rand0mdud3/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rand0mdud3/subscriptions",
+        "organizations_url": "https://api.github.com/users/rand0mdud3/orgs",
+        "repos_url": "https://api.github.com/users/rand0mdud3/repos",
+        "events_url": "https://api.github.com/users/rand0mdud3/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rand0mdud3/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-11T17:13:35Z",
+      "updated_at": "2026-09-11T17:13:35Z",
+      "body": "Tested on MacBookPro11,5 (Omarchy 4.x, kernel 7.2.3-arch1-3, gmux max 1023). Before: systemd-backlight@backlight:gmux_backlight inactive, no backlight:gmux_backlight save file. After applying the rule: service active with TAGS=:systemd:seat:, set brightness to 700, clean reboot still 700, save file contains 700. test/shell.d/gmux-backlight-test.sh 11/11 pass. Confirms the fix beyond the author's 11,3.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5638017109/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5029949075,
+      "node_id": "PRR_kwDOO0Cobs8AAAABK87ukw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds persistent brightness restoration for Apple GMUX backlights where systemd\u2019s standard `path_id` handling fails.\n\n**Changes:**\n- Adds a dedicated udev rule.\n- Installs it for new and existing systems.\n- Adds shell regression coverage.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 5 out of 5 changed files in this pull request and generated 2 comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `default/udev/gmux-backlight.rules` | Starts systemd backlight handling for GMUX. |\r\n| `install/hardware/apple/fix-gmux-backlight.sh` | Installs and activates the rule. |\r\n| `install/hardware/all.sh` | Runs the Apple hardware fix during setup. |\r\n| `migrations/1787689809.sh` | Applies the fix to existing installations. |\r\n| `test/shell.d/gmux-backlight-test.sh` | Tests detection, installation, and migration behavior. |\n</details>\n\n\n\n\n\n<details>\n<summary>Suppressed comments (1)</summary>\n\n**test/shell.d/gmux-backlight-test.sh:116**\n* This test codifies the faulty behavior by preserving an invalid rule (`keep me`) and requiring privileged activation on every rerun. The idempotence case should rerun with the valid installed rule and assert no calls; a separate stale-content case should assert that the packaged rule replaces it and activation occurs.\n```\nprintf 'keep me\\n' >\"$dest\"\nrun_leaf \"Apple Inc.\" 1 1 >/dev/null\n[[ $(<\"$dest\") == \"keep me\" ]] || fail \"an existing udev rule is not overwritten\"\ngrep -Fq $'systemctl\\tstart\\tsystemd-backlight@backlight:gmux_backlight.service' \"$calls\" ||\n  fail \"a second run still starts systemd-backlight\" \"$(cat \"$calls\")\"\n```\n</details>\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8371#pullrequestreview-5029949075",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8371",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8371#pullrequestreview-5029949075"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8371"
+        }
+      },
+      "submitted_at": "2026-08-26T11:42:20Z",
+      "commit_id": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3862360123",
+      "pull_request_review_id": 5029949075,
+      "id": 3862360123,
+      "node_id": "PRRC_kwDOO0Cobs7mNvA7",
+      "diff_hunk": "@@ -0,0 +1,32 @@\n+# Apple dual-GPU Macs expose the panel backlight as gmux_backlight on the PNP\n+# bus. systemd's path_id builtin fails for that device, so 99-systemd.rules\n+# never sets SYSTEMD_WANTS and systemd-backlight never starts. After a reboot\n+# the firmware default comes back (about 18% on these panels) instead of the\n+# brightness the user last set.\n+#\n+# This rule starts systemd-backlight without needing ID_PATH. The service still\n+# saves under /var/lib/systemd/backlight/backlight:gmux_backlight when path_id\n+# cannot supply a name.\n+udev_rules_dir=\"${OMARCHY_UDEV_RULES_DIR:-/etc/udev/rules.d}\"\n+backlight_path=\"${OMARCHY_BACKLIGHT_PATH:-/sys/class/backlight}\"\n+dmi_vendor=\"${OMARCHY_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+rule_src=\"$OMARCHY_PATH/default/udev/gmux-backlight.rules\"\n+rule_dest=\"$udev_rules_dir/99-omarchy-gmux-backlight.rules\"\n+\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ -e $backlight_path/gmux_backlight || $sys_vendor == Apple* ]]; then\n+  echo \"Detected Apple GMUX backlight; enabling systemd-backlight save/restore\"\n+\n+  sudo mkdir -p \"$udev_rules_dir\"\n+  if [[ ! -f $rule_dest ]]; then\n+    sudo cp -f \"$rule_src\" \"$rule_dest\"\n+  fi",
+      "path": "install/hardware/apple/fix-gmux-backlight.sh",
+      "commit_id": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "original_commit_id": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The existence-only guard can mark this repair successful while leaving it broken: a stale, empty, or previously shipped destination is preserved, so the valid rule is never installed. Conversely, an identical installed rule still causes every user's per-user migration to repeat the privileged reload/start commands, contrary to the idempotence requirement in `agents/skills/migrations.md:28-32`. Compare the destination with the packaged source: no-op when they match; otherwise replace it and run the activation commands, updating the existing-file test accordingly.",
+      "created_at": "2026-08-26T11:42:20Z",
+      "updated_at": "2026-08-26T11:42:21Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8371#discussion_r3862360123",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8371",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3862360123"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8371#discussion_r3862360123"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8371"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3862360123/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 22,
+      "original_start_line": 22,
+      "start_side": "RIGHT",
+      "line": 24,
+      "original_line": 24,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 24,
+      "position": 24,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3862360192",
+      "pull_request_review_id": 5029949075,
+      "id": 3862360192,
+      "node_id": "PRRC_kwDOO0Cobs7mNvCA",
+      "diff_hunk": "@@ -0,0 +1,144 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-gmux-backlight.sh\"\n+rule=\"$ROOT/default/udev/gmux-backlight.rules\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1787689809.sh\"\n+\n+grep -q 'apple/fix-gmux-backlight.sh' \"$all\" ||\n+  fail \"the gmux backlight quirk runs during hardware setup\"\n+pass \"the gmux backlight quirk runs during hardware setup\"\n+\n+grep -Fq 'ENV{SYSTEMD_WANTS}+=\"systemd-backlight@backlight:gmux_backlight.service\"' \"$rule\" ||\n+  fail \"the udev rule starts systemd-backlight for gmux_backlight\"\n+! grep -Fq 'IMPORT{builtin}=\"path_id\"' \"$rule\" ||\n+  fail \"the udev rule must not depend on path_id\"\n+pass \"the udev rule starts systemd-backlight without path_id\"\n+\n+grep -q 'fix-gmux-backlight.sh' \"$migration\" ||\n+  fail \"the migration applies the gmux backlight quirk\" \"$migration\"\n+pass \"the migration applies the gmux backlight quirk\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+rules_dir=\"$test_tmp/etc/udev/rules.d\"\n+dest=\"$rules_dir/99-omarchy-gmux-backlight.rules\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\" \"$test_tmp/backlight\"\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/udevadm\" <<'SH'\n+#!/bin/bash\n+\n+printf 'udevadm' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local vendor=\"$1\" gmux=\"${2:-0}\" keep=\"${3:-0}\"\n+  if (( keep == 0 )); then\n+    rm -rf \"$test_tmp/etc\" \"$test_tmp/backlight\"\n+    mkdir -p \"$test_tmp/etc\" \"$test_tmp/backlight\"\n+  fi\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  if (( gmux == 1 )); then\n+    mkdir -p \"$test_tmp/backlight/gmux_backlight\"\n+  fi\n+  : >\"$calls\"\n+\n+  OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_UDEV_RULES_DIR=\"$rules_dir\" \\\n+    OMARCHY_BACKLIGHT_PATH=\"$test_tmp/backlight\" \\\n+    OMARCHY_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\" </dev/null\n+}\n+\n+run_leaf \"Apple Inc.\" 1 >/dev/null\n+[[ -f $dest ]] || fail \"a Mac with gmux gets the udev rule\" \"$(ls -R \"$test_tmp/etc\" 2>&1)\"\n+diff -q \"$rule\" \"$dest\" >/dev/null ||\n+  fail \"the installed udev rule matches the packaged source\"\n+grep -Fq $'udevadm\\tcontrol\\t--reload-rules' \"$calls\" ||\n+  fail \"a live session reloads udev\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tstart\\tsystemd-backlight@backlight:gmux_backlight.service' \"$calls\" ||\n+  fail \"a live session starts systemd-backlight\" \"$(cat \"$calls\")\"",
+      "path": "test/shell.d/gmux-backlight-test.sh",
+      "commit_id": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "original_commit_id": "5181ac23be820d9c5c2bcd64b14fe1f82e6a2946",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The focused test verifies reload and direct service start but never checks the new targeted `udevadm trigger`, so removing it or changing its filters would still pass even though the live device would not receive the newly installed rule. Assert the exact trigger invocation here.\n\nThis issue also appears on line 112 of the same file.",
+      "created_at": "2026-08-26T11:42:20Z",
+      "updated_at": "2026-08-26T11:42:21Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8371#discussion_r3862360192",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8371",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3862360192"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8371#discussion_r3862360192"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8371"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3862360192/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 86,
+      "original_start_line": 86,
+      "start_side": "RIGHT",
+      "line": 89,
+      "original_line": 89,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 89,
+      "position": 89,
+      "subject_type": "line"
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10468",
+  "origins": [
+    "current-discovery-shared-keyboard-context"
+  ],
+  "groups": [
+    "keyboard-device"
+  ],
+  "prior_snapshots": [],
+  "repository": "omacom/omarchy",
+  "number": 10468,
+  "checked_at": "2026-09-21T12:00:08.180437+00:00",
+  "title": "Name keycode bindings after the layout the keyboard is using",
+  "author": "seletz",
+  "head_sha": "a0b98c6707dba8d0ac4c749958a08a936f7ad972",
+  "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T20:43:38Z",
+  "state": "open",
+  "body": "Fixes #8999\n\n```\nbefore (every layout):  SUPER + MINUS \u2192 Expand window left\nafter  (de):            SUPER + \u00df     \u2192 Expand window left\nafter  (es):            SUPER + '     \u2192 Expand window left\nafter  (us):            SUPER + MINUS \u2192 Expand window left   (unchanged, byte-identical)\n```\n\nThe menu runs `xkbcli compile-keymap` with no arguments, which compiles the US keymap, so every `code:` bind is named after a key non-US keyboards don't have. The binds fire correctly; only the menu names the wrong key. Confirmed on `es` (#8999) and `de(mac)`.\n\nStacked on #12676 (the first commit here until that merges), then:\n\n- **Compile the layout Hyprland is using** \u2014 `kb_layout`/`kb_variant` from `hyprctl getoption`; with several layouts, the main keyboard's active index. Names are only interpolated if they match `^[A-Za-z0-9_-]+$` (awk runs the command through a shell); anything else, or no Hyprland, leaves today's behaviour. Layout switches already change the cache key, so the menu re-renders.\n- **Name keysyms no keyboard prints** \u2014 cosmetic: `\u00df`/`\u00b4` instead of `SSHARP`/`DEAD_ACUTE`. Droppable without affecting the commit above.\n\nTests: default fallback, `de`/`mac`, second of `us,de`. `test/shell.d/keybindings-menu-test.sh` passes at every commit. `./test/all` has six failing files that fail identically on a clean `quattro` (`bar-icon-geometry`, `config`, `locate`, `omarchy-kernel-migration`, `snapper`, `unowned-system-paths`); none touch these files.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01QCZZN7iuwHavrgZSYStFDo\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "7d992b2730f787ba058993b934ab5063f6af8954",
+      "filename": "bin/omarchy-menu-keybindings",
+      "status": "modified",
+      "additions": 82,
+      "deletions": 6,
+      "changes": 88,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a0b98c6707dba8d0ac4c749958a08a936f7ad972/bin%2Fomarchy-menu-keybindings",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a0b98c6707dba8d0ac4c749958a08a936f7ad972/bin%2Fomarchy-menu-keybindings",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-menu-keybindings?ref=a0b98c6707dba8d0ac4c749958a08a936f7ad972",
+      "patch": "@@ -9,33 +9,109 @@ declare -A LUA_BIND_KEY_MAP\n declare -A LUA_BIND_DISPATCHER_MAP\n declare -A LUA_BIND_ARG_MAP\n \n+# Compile the keymap Hyprland is actually using. Called with no arguments,\n+# `xkbcli compile-keymap` compiles the default US keymap, which names every\n+# code: binding after a key a non-US layout does not have: code:20 reads MINUS\n+# everywhere, while a German keyboard prints \u00df there and a Spanish one '.\n+active_keymap_command() {\n+  local layouts variants index layout variant command\n+\n+  layouts=$(hyprctl getoption input:kb_layout 2>/dev/null | awk '/^str:/ { sub(/^str:[[:space:]]*/, \"\"); print; exit }')\n+  variants=$(hyprctl getoption input:kb_variant 2>/dev/null | awk '/^str:/ { sub(/^str:[[:space:]]*/, \"\"); print; exit }')\n+\n+  # kb_layout may name several layouts; the keyboard says which one is live.\n+  # Switching layouts rewrites the `active keymap:` line the cache keys on, so\n+  # the menu re-renders against the layout the user just switched to.\n+  index=$(hyprctl devices 2>/dev/null | awk '\n+    /active layout index:/ { current = $NF; if (first == \"\") first = current }\n+    /main: yes/ { print current; found = 1; exit }\n+    END { if (!found) print first }\n+  ')\n+  [[ $index =~ ^[0-9]+$ ]] || index=0\n+\n+  layout=$(cut -d, -f$((index + 1)) <<<\"$layouts\")\n+  variant=$(cut -d, -f$((index + 1)) <<<\"$variants\")\n+  [[ -z $layout ]] && layout=$(cut -d, -f1 <<<\"$layouts\")\n+\n+  command=\"xkbcli compile-keymap\"\n+\n+  # awk runs this through a shell, so only pass on what an RMLVO name is made\n+  # of. Anything else leaves the command bare and the default keymap compiled.\n+  if [[ $layout =~ ^[A-Za-z0-9_-]+$ ]]; then\n+    command+=\" --layout $layout\"\n+\n+    if [[ $variant =~ ^[A-Za-z0-9_-]+$ ]]; then\n+      command+=\" --variant $variant\"\n+    fi\n+  fi\n+\n+  # </dev/null keeps xkbcli from consuming the binding records on stdin\n+  printf '%s </dev/null\\n' \"$command\"\n+}\n+\n # Hyprland reports XKB keycodes for code: bindings. Resolve them to symbols\n # via the compiled keymap, with a small fallback for common keys so the menu\n # remains readable if xkbcli cannot resolve a symbol.\n parse_keycodes() {\n-  awk '\n+  awk -v keymap_cmd=\"$(active_keymap_command)\" '\n     BEGIN {\n       split(\"10=1 11=2 12=3 13=4 14=5 15=6 16=7 17=8 18=9 19=0 20=MINUS 21=EQUAL 59=COMMA 60=PERIOD 61=SLASH\", fallbacks, \" \")\n       for (i in fallbacks) {\n         separator = index(fallbacks[i], \"=\")\n         keycode_symbol[substr(fallbacks[i], 1, separator - 1)] = substr(fallbacks[i], separator + 1)\n       }\n \n-      # </dev/null keeps xkbcli from consuming the binding records on stdin\n-      keymap_cmd = \"xkbcli compile-keymap </dev/null\"\n+      # Keysym names no keyboard prints on its keys. Uppercasing these puts\n+      # SSHARP and DEAD_ACUTE in the menu for keys labelled \u00df and \u00b4, so name\n+      # them by the character instead. Keys a US layout already reaches, like\n+      # minus and equal, keep the words the menu has always shown for them.\n+      split(\"ssharp=\u00df adiaeresis=\u00e4 odiaeresis=\u00f6 udiaeresis=\u00fc aring=\u00e5 ae=\u00e6 oslash=\u00f8 \" \\\n+            \"eacute=\u00e9 egrave=\u00e8 agrave=\u00e0 ugrave=\u00f9 iacute=\u00ed oacute=\u00f3 uacute=\u00fa \" \\\n+            \"ccedilla=\u00e7 ntilde=\u00f1 ccaron=\u010d scaron=\u0161 zcaron=\u017e \" \\\n+            \"dead_acute=\u00b4 dead_grave=` dead_circumflex=^ dead_diaeresis=\u00a8 \" \\\n+            \"dead_tilde=~ dead_caron=\u02c7 dead_breve=\u02d8 dead_cedilla=\u00b8 dead_abovering=\u00b0 \" \\\n+            \"exclamdown=\u00a1 questiondown=\u00bf masculine=\u00ba ordfeminine=\u00aa degree=\u00b0 \" \\\n+            \"section=\u00a7 currency=\u00a4 mu=\u00b5 plus=+ numbersign=# apostrophe=\\047 \" \\\n+            \"asterisk=* bar=| less=< greater=> at=@\", named_symbols, \" \")\n+      for (i in named_symbols) {\n+        separator = index(named_symbols[i], \"=\")\n+        symbol_character[substr(named_symbols[i], 1, separator - 1)] = substr(named_symbols[i], separator + 1)\n+      }\n+\n       section = \"\"\n       while ((keymap_cmd | getline line) > 0) {\n         if (line ~ /xkb_keycodes/) { section = \"codes\"; continue }\n         if (line ~ /xkb_symbols/)  { section = \"syms\";  continue }\n         if (section == \"codes\" && match(line, /<([A-Za-z0-9_]+)>\\s*=\\s*([0-9]+)\\s*;/, m)) code_by_name[m[1]] = m[2]\n-        if (section == \"syms\" && match(line, /key\\s*<([A-Za-z0-9_]+)>\\s*\\{\\s*\\[\\s*([^, \\]]+)/, m)) sym_by_name[m[1]] = m[2]\n+\n+        # A key whose type xkbcli spells out puts its symbols on a line of\n+        # their own, so remember the key the block opened on and read them off\n+        # when they arrive. Only the compact one-line form was matched before,\n+        # which left every key carrying an explicit type unresolved.\n+        if (section == \"syms\") {\n+          if (match(line, /key\\s*<([A-Za-z0-9_]+)>\\s*\\{\\s*\\[\\s*([^, \\]]+)/, m)) {\n+            sym_by_name[m[1]] = m[2]\n+            open_key = \"\"\n+          } else if (match(line, /key\\s*<([A-Za-z0-9_]+)>\\s*\\{/, m)) {\n+            open_key = m[1]\n+          } else if (open_key != \"\" && match(line, /symbols\\[[^\\]]*\\]\\s*=\\s*\\[\\s*([^, \\]]+)/, m)) {\n+            sym_by_name[open_key] = m[1]\n+            open_key = \"\"\n+          }\n+        }\n       }\n       close(keymap_cmd)\n \n       for (name in code_by_name) {\n         code = code_by_name[name]\n         symbol = sym_by_name[name]\n-        if (code != \"\" && symbol != \"\" && symbol != \"NoSymbol\") keycode_symbol[code] = toupper(symbol)\n+        if (code == \"\" || symbol == \"\" || symbol == \"NoSymbol\") continue\n+\n+        if (symbol in symbol_character) {\n+          keycode_symbol[code] = symbol_character[symbol]\n+        } else {\n+          keycode_symbol[code] = toupper(symbol)\n+        }\n       }\n \n       # Read off the keysym rather than the keycode, so the key left of 1 reads\n@@ -530,7 +606,7 @@ output_binding_records_uncached() {\n \n keybindings_cache_key() {\n   {\n-    printf 'v13\\n'\n+    printf 'v16\\n'\n     hyprctl devices 2>/dev/null | grep -F 'active keymap:'\n     hyprctl binds 2>/dev/null\n   } | sha256sum | awk '{ print $1 }'"
+    },
+    {
+      "sha": "1547ac7701e188c83cd4a3eae261ac13dbd1cc99",
+      "filename": "test/shell.d/keybindings-menu-test.sh",
+      "status": "modified",
+      "additions": 103,
+      "deletions": 1,
+      "changes": 104,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a0b98c6707dba8d0ac4c749958a08a936f7ad972/test%2Fshell.d%2Fkeybindings-menu-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a0b98c6707dba8d0ac4c749958a08a936f7ad972/test%2Fshell.d%2Fkeybindings-menu-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fkeybindings-menu-test.sh?ref=a0b98c6707dba8d0ac4c749958a08a936f7ad972",
+      "patch": "@@ -26,15 +26,27 @@ exec_bind() {\n   printf 'bind\\n\\tmodmask: %s\\n\\tsubmap: \\n\\tkey: %s\\n\\tkeycode: 0\\n\\tcatchall: false\\n\\tdescription: %s\\n\\tdispatcher: exec\\n\\targ: %s\\n' \"$1\" \"$2\" \"$3\" \"$4\"\n }\n \n+# The menu asks Hyprland which layout is live before it resolves keycodes.\n+# Leaving these empty stands in for a keyboard Hyprland reports nothing about,\n+# which is what sends the menu back to the default keymap.\n+stub_kb_layout=\"\"\n+stub_kb_variant=\"\"\n+stub_layout_index=0\n+\n stub_hyprctl() {\n   {\n     echo '#!/bin/bash'\n+    printf 'case \"$1 $2\" in\\n'\n+    printf '  \"getoption input:kb_layout\") echo \"str: %s\"; exit ;;\\n' \"$stub_kb_layout\"\n+    printf '  \"getoption input:kb_variant\") echo \"str: %s\"; exit ;;\\n' \"$stub_kb_variant\"\n+    printf 'esac\\n'\n     echo 'case \"$1\" in'\n     echo '  binds) cat <<'\"'\"'BINDS'\"'\"''\n     cat\n     echo 'BINDS'\n     echo '  ;;'\n-    echo '  devices) echo \"active keymap: English (US)\" ;;'\n+    printf '  devices) echo \"active layout index: %s\"; echo \"active keymap: %s\"; echo \"main: yes\" ;;\\n' \\\n+      \"$stub_layout_index\" \"${stub_kb_layout:-English (US)}\"\n     echo 'esac'\n   } >\"$stub_bin/hyprctl\"\n   chmod +x \"$stub_bin/hyprctl\"\n@@ -131,6 +143,96 @@ grep -q 'SUPER + ~  *\u2192 Toggle scratchpad' <<<\"$rendered\" ||\n   fail \"a keycode resolves to the symbol printed on the key too\" \"$rendered\"\n pass \"a keycode resolves to the symbol printed on the key too\"\n \n+keycode_bind() {\n+  printf 'bind\\n\\tmodmask: %s\\n\\tsubmap: \\n\\tkey: \\n\\tkeycode: %s\\n\\tcatchall: false\\n\\tdescription: %s\\n\\tdispatcher: exec\\n\\targ: true\\n' \"$1\" \"$2\" \"$3\"\n+}\n+\n+# xkbcli writes a key whose type it spells out over several lines, with the\n+# symbols on a line of their own. Stand in for it with a keymap that puts\n+# something other than minus on code:20, since the fallback table says MINUS\n+# there and would hide a key that never resolved.\n+cat >\"$stub_bin/xkbcli\" <<'XKBCLI'\n+#!/bin/bash\n+cat <<'KEYMAP'\n+xkb_keymap {\n+xkb_keycodes \"stub\" {\n+\t<AE11>               = 20;\n+};\n+xkb_symbols \"stub\" {\n+\tkey <AE11>               {\n+\t\ttype= \"FOUR_LEVEL\",\n+\t\tsymbols[1]= [       semicolon,           colon,       backslash,    questiondown ]\n+\t};\n+};\n+};\n+KEYMAP\n+XKBCLI\n+chmod +x \"$stub_bin/xkbcli\"\n+\n+stub_hyprctl <<BINDS\n+$(keycode_bind 64 20 \"Key with its type spelled out\")\n+BINDS\n+\n+rendered=$(keybindings)\n+rm \"$stub_bin/xkbcli\"\n+\n+grep -q 'SUPER + SEMICOLON  *\u2192 Key with its type spelled out' <<<\"$rendered\" ||\n+  fail \"a key whose type is spelled out resolves to its symbol\" \"$rendered\"\n+pass \"a key whose type is spelled out resolves to its symbol\"\n+\n+# A keycode is a position on the keyboard, not a key. code:20 sits right of 0,\n+# where a US layout prints - and a German one \u00df, so the menu has to resolve it\n+# against the layout in use rather than the one xkbcli compiles by default.\n+stub_hyprctl <<BINDS\n+$(keycode_bind 64 20 \"Expand window left\")\n+$(keycode_bind 64 21 \"Shrink window left\")\n+BINDS\n+\n+rendered=$(keybindings)\n+grep -q 'SUPER + MINUS  *\u2192 Expand window left' <<<\"$rendered\" ||\n+  fail \"a keyboard Hyprland says nothing about still reads as the default keymap\" \"$rendered\"\n+pass \"a keyboard Hyprland says nothing about still reads as the default keymap\"\n+\n+stub_kb_layout=\"de\"\n+stub_kb_variant=\"mac\"\n+stub_hyprctl <<BINDS\n+$(keycode_bind 64 20 \"Expand window left\")\n+$(keycode_bind 64 21 \"Shrink window left\")\n+BINDS\n+\n+rendered=$(keybindings)\n+grep -q 'SUPER + \u00df  *\u2192 Expand window left' <<<\"$rendered\" ||\n+  fail \"a keycode reads as the key the active layout prints there\" \"$rendered\"\n+! grep -qE 'MINUS|EQUAL' <<<\"$rendered\" ||\n+  fail \"no entry still names the key a US layout would have\" \"$rendered\"\n+pass \"a keycode reads as the key the active layout prints there\"\n+\n+# \u00df and \u00b4 are what the keys say. SSHARP and DEAD_ACUTE are what xkb calls them,\n+# and no keyboard prints either.\n+grep -q 'SUPER + \u00b4  *\u2192 Shrink window left' <<<\"$rendered\" ||\n+  fail \"a keysym with no printable name reads as the character instead\" \"$rendered\"\n+! grep -qE 'SSHARP|DEAD_ACUTE' <<<\"$rendered\" ||\n+  fail \"no entry falls back to the xkb name of a key\" \"$rendered\"\n+pass \"a keysym with no printable name reads as the character instead\"\n+\n+# kb_layout can list several layouts. The one the keyboard reports as active is\n+# the one the menu has to name keys after, not simply the first in the list.\n+stub_kb_layout=\"us,de\"\n+stub_kb_variant=\",\"\n+stub_layout_index=1\n+stub_hyprctl <<BINDS\n+$(keycode_bind 64 20 \"Expand window left\")\n+BINDS\n+\n+rendered=$(keybindings)\n+grep -q 'SUPER + \u00df  *\u2192 Expand window left' <<<\"$rendered\" ||\n+  fail \"the active layout wins over the first one listed\" \"$rendered\"\n+pass \"the active layout wins over the first one listed\"\n+\n+stub_kb_layout=\"\"\n+stub_kb_variant=\"\"\n+stub_layout_index=0\n+\n # A chord refused for width opens a row of its own, and the next chord tries\n # that row rather than reaching back past it and printing out of order.\n stub_hyprctl <<BINDS"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5752535621",
+      "html_url": "https://github.com/omacom/omarchy/pull/10468#issuecomment-5752535621",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10468",
+      "id": 5752535621,
+      "node_id": "IC_kwDOO0Cobs8AAAABVuC6RQ",
+      "user": {
+        "login": "seletz",
+        "id": 26406,
+        "node_id": "MDQ6VXNlcjI2NDA2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/26406?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/seletz",
+        "html_url": "https://github.com/seletz",
+        "followers_url": "https://api.github.com/users/seletz/followers",
+        "following_url": "https://api.github.com/users/seletz/following{/other_user}",
+        "gists_url": "https://api.github.com/users/seletz/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/seletz/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/seletz/subscriptions",
+        "organizations_url": "https://api.github.com/users/seletz/orgs",
+        "repos_url": "https://api.github.com/users/seletz/repos",
+        "events_url": "https://api.github.com/users/seletz/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/seletz/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-20T20:43:38Z",
+      "updated_at": "2026-09-20T20:43:38Z",
+      "body": "Rebased onto current `quattro` and split for easier review: the parser bug this uncovered is now its own small PR, #12676 (visible on US keyboards too \u2014 a `code:67` bind shows as `code:67` instead of `F1`). This PR keeps the layout fix and the cosmetic naming as two commits on top. Tests pass at every commit.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5752535621/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,11 @@
+{
+  "seed": ".state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-083146-synthetic-efi-seed/apple-efi-seed.qcow2",
+  "manifest": ".state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-083146-synthetic-efi-seed/efi-seed.sha256",
+  "files": [
+    "bdd743daa650ef6e295224504191d65ecc8157407fd77715880cf545840b1f04  EFI/APPLE/EMBEDDEDOS/EmbeddedOSFirmware.im4p",
+    "30d1e297883f116f3a9a1de79285c9c7fbc127bb30c39f2f34715f155bb8b8bd  EFI/APPLE/EMBEDDEDOS/FDRData",
+    "4a4c656d38c410a12898c7ed027ec713a113c505f4d8b8d49dfe71c57a06ce7e  EFI/APPLE/EXTENSIONS/Firmware.scap"
+  ],
+  "qualification": "Synthetic fixture only, prepared inside disposable KVM guest; no real Apple firmware or host disk. Fresh-install round trip pending.",
+  "earlier_attempt": "20260921-083017 failed on cleanup because the shell was still inside the mount; corrected trap changes directory before unmounting, and fresh attempt passed."
+}

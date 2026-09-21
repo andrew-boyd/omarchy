@@ -1,0 +1,69 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9211",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "lid-wake"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "8fbd1db44baf6e1e167b908f75b32044a37b623b",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9211,
+  "checked_at": "2026-09-21T11:56:47.065053+00:00",
+  "title": "Wake the lock screen on resume and keep wake keys out of the password",
+  "author": "phedoreanu",
+  "head_sha": "8fbd1db44baf6e1e167b908f75b32044a37b623b",
+  "base_sha": "f38eb4204137d1360ca892f244c9ca7f21f54913",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-09T12:37:40Z",
+  "state": "open",
+  "body": "## Summary\n\nTwo things made the first unlock after resume slower than it needed to be:\n\n- When the lock had blanked the panel before the machine went to sleep, it stayed dark after resume until the user touched something. The lock now runs a one-second timer while locked; the first tick after resume sees the wall clock jump the frozen shell missed and wakes the panel itself, so the lock screen is lit by the time the user looks at it.\n- The key pressed to wake a dark panel went straight into the password field, so the first attempt failed. The lock already tracks that it blanked the panel (`displaysBlank`, set by `runBlank()`, cleared by `runWake()`, on unlock, or when a display comes back) and hands that to the view: a key pressed while the panel is dark requests the wake and is consumed, the way hyprlock behaves. The view reads the flag before it asks for the wake, since the wake clears it.\n\n`test/shell.d/lock-wake-after-resume-test.sh` pins both behaviours.\n\n## Verification\n\n- `bash test/shell.d/lock-wake-after-resume-test.sh` and the existing `lock-*`, `sleep-*` and `system-lock` tests (68 passing)\n- Run as a cloned plugin on a MacBookPro16,1 across several suspend cycles: keys hit while the panel is still dark no longer land in the password field, and the panel wakes on its own after resume without touching the keyboard.\n\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b42cdf5f111a144f219d06729e26f53f33372e81",
+      "filename": "shell/plugins/lock/LockView.qml",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8fbd1db44baf6e1e167b908f75b32044a37b623b/shell%2Fplugins%2Flock%2FLockView.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8fbd1db44baf6e1e167b908f75b32044a37b623b/shell%2Fplugins%2Flock%2FLockView.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FLockView.qml?ref=8fbd1db44baf6e1e167b908f75b32044a37b623b",
+      "patch": "@@ -177,7 +177,14 @@ Item {\n         }\n \n         Keys.onPressed: function(event) {\n+          // A key hit at a dark panel is there to wake it, not to type. The\n+          // wake clears displaysBlank, so read it first.\n+          var wasBlank = root.displaysBlank\n           root.wakeRequested()\n+          if (wasBlank) {\n+            event.accepted = true\n+            return\n+          }\n           if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {\n             root.passwordTextEdited(\"\")\n             event.accepted = true"
+    },
+    {
+      "sha": "27e8bf0e184db83a3d7cbe12f3d6f6533f86d3f0",
+      "filename": "shell/plugins/lock/Service.qml",
+      "status": "modified",
+      "additions": 21,
+      "deletions": 0,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8fbd1db44baf6e1e167b908f75b32044a37b623b/shell%2Fplugins%2Flock%2FService.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8fbd1db44baf6e1e167b908f75b32044a37b623b/shell%2Fplugins%2Flock%2FService.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FService.qml?ref=8fbd1db44baf6e1e167b908f75b32044a37b623b",
+      "patch": "@@ -497,6 +497,27 @@ Item {\n     }\n   }\n \n+  // Suspend freezes the shell, so the first tick after resume sees the clock\n+  // jump. Wake the panel right away instead of leaving the user at a dark\n+  // lock screen pressing keys to bring it back.\n+  Timer {\n+    id: resumeWatchTimer\n+    interval: 1000\n+    repeat: true\n+    running: root.lockRequested\n+    property double lastTick: 0\n+    onRunningChanged: lastTick = 0\n+    onTriggered: {\n+      var now = Date.now()\n+      var resumed = lastTick > 0 && now - lastTick > interval + 2000\n+      lastTick = now\n+      if (resumed) {\n+        root.logEvent(\"resume-detected\")\n+        root.runWake()\n+      }\n+    }\n+  }\n+\n   Timer {\n     id: sessionLockStabilizeTimer\n     interval: 500"
+    },
+    {
+      "sha": "ce539568f6dacaea68c33bbcd44166800df5662c",
+      "filename": "test/shell.d/lock-wake-after-resume-test.sh",
+      "status": "added",
+      "additions": 37,
+      "deletions": 0,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8fbd1db44baf6e1e167b908f75b32044a37b623b/test%2Fshell.d%2Flock-wake-after-resume-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8fbd1db44baf6e1e167b908f75b32044a37b623b/test%2Fshell.d%2Flock-wake-after-resume-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Flock-wake-after-resume-test.sh?ref=8fbd1db44baf6e1e167b908f75b32044a37b623b",
+      "patch": "@@ -0,0 +1,37 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+run_node_test <<'JS'\n+const fs = require('fs')\n+const serviceQml = fs.readFileSync(path.join(root, 'shell/plugins/lock/Service.qml'), 'utf8')\n+const viewQml = fs.readFileSync(path.join(root, 'shell/plugins/lock/LockView.qml'), 'utf8')\n+\n+// The lock knows when it blanked the panel and when a wake brought it back.\n+assert(/property bool displaysBlank: false/.test(serviceQml), 'the lock tracks whether it blanked the panel')\n+assert(\n+  /function runBlank\\(\\) \\{\\s*root\\.displaysBlank = true/.test(serviceQml),\n+  'blanking the panel marks the displays as blank'\n+)\n+assert(\n+  /function runWake\\(\\) \\{\\s*root\\.displaysBlank = false/.test(serviceQml),\n+  'a wake clears the blank state'\n+)\n+\n+// Keys hit at a dark panel wake it instead of landing in the password field.\n+assert(/property bool displaysBlank: false/.test(viewQml), 'the lock view knows when the panel is blank')\n+assert(/displaysBlank: root\\.screenBlank\\(/.test(serviceQml), 'the lock view is told when its panel is blank')\n+assert(\n+  /Keys\\.onPressed: function\\(event\\) \\{[\\s\\S]*?var wasBlank = root\\.displaysBlank\\s*root\\.wakeRequested\\(\\)\\s*if \\(wasBlank\\) \\{\\s*event\\.accepted = true\\s*return\\s*\\}/.test(viewQml),\n+  'a key pressed at a blank panel is consumed after requesting the wake, judged before the wake clears the state'\n+)\n+\n+// Resume is detected from the clock jump the frozen shell sees on its first\n+// tick back, and the panel is woken without waiting for input.\n+assert(\n+  /id: resumeWatchTimer[\\s\\S]*?running: root\\.lockRequested[\\s\\S]*?now - lastTick > interval \\+ 2000[\\s\\S]*?if \\(resumed\\) \\{[\\s\\S]*?root\\.runWake\\(\\)/.test(serviceQml),\n+  'the lock wakes the panel on its own after resume'\n+)\n+JS"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

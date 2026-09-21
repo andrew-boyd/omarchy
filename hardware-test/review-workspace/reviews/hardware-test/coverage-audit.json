@@ -1,0 +1,463 @@
+{
+  "original_plan_coverage": {
+    "original_prs": 130,
+    "additional_prs": 33,
+    "compared_prs": 163,
+    "extra_dependency_prs": 1,
+    "jev_families": 74,
+    "detailed_plans": 14
+  },
+  "full_group_inventory_unique_prs": 163,
+  "published_unique_prs": 73,
+  "original_groups_assigned_to_14_plans": 22,
+  "unique_members_of_those_groups": 69,
+  "assigned_group_members_missing_from_all_published_bodies": 13,
+  "all_group_inventory_missing_from_published": 106,
+  "qualification": "These are reference/disposition gaps, not a conclusion that all implementations should be included. Other inventory groups require separate scope-disposition accounting.",
+  "by_plan": [
+    {
+      "plan": "P01",
+      "groups": [
+        "keyboard-device"
+      ],
+      "group_inventory_count": 2,
+      "published_body_count": 2,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P02",
+      "groups": [
+        "kernel-headers"
+      ],
+      "group_inventory_count": 12,
+      "published_body_count": 9,
+      "absent_from_relevant_body": [
+        "https://github.com/omacom/omarchy/pull/10797",
+        "https://github.com/omacom/omarchy/pull/11897",
+        "https://github.com/omacom/omarchy/pull/11898"
+      ],
+      "absent_from_all_published_bodies": [
+        {
+          "url": "https://github.com/omacom/omarchy/pull/10797",
+          "title": "Install DKMS headers for the kernel that actually boots",
+          "group": "kernel-headers"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/11897",
+          "title": "Use Omarchy kernel headers for hardware DKMS drivers",
+          "group": "kernel-headers"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/11898",
+          "title": "[4.0.4] Use Omarchy kernel headers for hardware DKMS drivers",
+          "group": "kernel-headers"
+        }
+      ]
+    },
+    {
+      "plan": "P03",
+      "groups": [
+        "pci-detection"
+      ],
+      "group_inventory_count": 5,
+      "published_body_count": 5,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P04",
+      "groups": [
+        "touchbar-lid-lock",
+        "lid-wake",
+        "lid-debounce"
+      ],
+      "group_inventory_count": 5,
+      "published_body_count": 12,
+      "absent_from_relevant_body": [
+        "https://github.com/omacom/omarchy/pull/9211",
+        "https://github.com/omacom/omarchy/pull/9637"
+      ],
+      "absent_from_all_published_bodies": [
+        {
+          "url": "https://github.com/omacom/omarchy/pull/9211",
+          "title": "Wake the lock screen on resume and keep wake keys out of the password",
+          "group": "lid-wake"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/9637",
+          "title": "Restore brightness when the laptop lid opens",
+          "group": "lid-wake"
+        }
+      ]
+    },
+    {
+      "plan": "P05",
+      "groups": [
+        "display-enumeration"
+      ],
+      "group_inventory_count": 1,
+      "published_body_count": 3,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P06",
+      "groups": [
+        "spi-retirement"
+      ],
+      "group_inventory_count": 3,
+      "published_body_count": 4,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P07",
+      "groups": [
+        "spi-pio"
+      ],
+      "group_inventory_count": 1,
+      "published_body_count": 2,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P08",
+      "groups": [
+        "facetime-pcie"
+      ],
+      "group_inventory_count": 2,
+      "published_body_count": 2,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P09",
+      "groups": [
+        "nvme-target"
+      ],
+      "group_inventory_count": 2,
+      "published_body_count": 3,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P10",
+      "groups": [
+        "wifi-nvram",
+        "wifi-pre-t2-resume"
+      ],
+      "group_inventory_count": 13,
+      "published_body_count": 7,
+      "absent_from_relevant_body": [
+        "https://github.com/omacom/omarchy-pkgs/pull/422",
+        "https://github.com/omacom/omarchy/pull/10314",
+        "https://github.com/omacom/omarchy/pull/10332",
+        "https://github.com/omacom/omarchy/pull/11623",
+        "https://github.com/omacom/omarchy/pull/7180",
+        "https://github.com/omacom/omarchy/pull/7333",
+        "https://github.com/omacom/omarchy/pull/7589"
+      ],
+      "absent_from_all_published_bodies": [
+        {
+          "url": "https://github.com/omacom/omarchy-pkgs/pull/422",
+          "title": "fix: add Apple BCM43602 resume kernel",
+          "group": "wifi-pre-t2-resume"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/10314",
+          "title": "Disable MacBook10,1 BCM4350 wakeup through S3",
+          "group": "wifi-pre-t2-resume"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/10332",
+          "title": "Fix Wi-Fi dying after suspend on BCM43602 MacBooks",
+          "group": "wifi-pre-t2-resume"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/11623",
+          "title": "Fix MacBook Pro 2015-2017: WiFi signal (-90 dBm) and audio (CS8409)",
+          "group": "wifi-nvram"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/7180",
+          "title": "Work around Apple BCM4350 suspend failures",
+          "group": "wifi-pre-t2-resume"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/7333",
+          "title": "Reset Apple BCM4350/BCM43602 Wi-Fi around sleep",
+          "group": "wifi-pre-t2-resume"
+        },
+        {
+          "url": "https://github.com/omacom/omarchy/pull/7589",
+          "title": "Fix Mac suspend loop after the first resume from sleep",
+          "group": "wifi-pre-t2-resume"
+        }
+      ]
+    },
+    {
+      "plan": "P11",
+      "groups": [
+        "cs8409",
+        "macbook-cs4208",
+        "imac-cs4208"
+      ],
+      "group_inventory_count": 11,
+      "published_body_count": 12,
+      "absent_from_relevant_body": [
+        "https://github.com/omacom/omarchy/pull/11064"
+      ],
+      "absent_from_all_published_bodies": [
+        {
+          "url": "https://github.com/omacom/omarchy/pull/11064",
+          "title": "Add pre-T2 MacBook Cirrus CS8409 speaker fix",
+          "group": "cs8409"
+        }
+      ]
+    },
+    {
+      "plan": "P12",
+      "groups": [
+        "t1-touchbar",
+        "t1-als",
+        "t1bridge",
+        "fingerprint-ui"
+      ],
+      "group_inventory_count": 9,
+      "published_body_count": 19,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P13",
+      "groups": [
+        "kernel-policy"
+      ],
+      "group_inventory_count": 2,
+      "published_body_count": 2,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    },
+    {
+      "plan": "P14",
+      "groups": [
+        "suspend-diagnostics"
+      ],
+      "group_inventory_count": 1,
+      "published_body_count": 1,
+      "absent_from_relevant_body": [],
+      "absent_from_all_published_bodies": []
+    }
+  ],
+  "unassigned_inventory_groups": [
+    {
+      "group": "alpine-ridge",
+      "members": 8
+    },
+    {
+      "group": "apple-fnmode",
+      "members": 1
+    },
+    {
+      "group": "applesmc-fans",
+      "members": 1
+    },
+    {
+      "group": "baffin-capture",
+      "members": 1
+    },
+    {
+      "group": "battery-limits",
+      "members": 2
+    },
+    {
+      "group": "bcm5974-trackpad",
+      "members": 2
+    },
+    {
+      "group": "bluetooth-audio",
+      "members": 2
+    },
+    {
+      "group": "bluetooth-discovery",
+      "members": 3
+    },
+    {
+      "group": "brightness-range",
+      "members": 2
+    },
+    {
+      "group": "brightness-routing",
+      "members": 4
+    },
+    {
+      "group": "cpu-instructions",
+      "members": 2
+    },
+    {
+      "group": "cpu-power",
+      "members": 4
+    },
+    {
+      "group": "efi-preservation",
+      "members": 1
+    },
+    {
+      "group": "external-modes",
+      "members": 1
+    },
+    {
+      "group": "gmux-brightness",
+      "members": 3
+    },
+    {
+      "group": "haswell-voxtype",
+      "members": 1
+    },
+    {
+      "group": "imac-5k",
+      "members": 1
+    },
+    {
+      "group": "imac-gpu-boot",
+      "members": 1
+    },
+    {
+      "group": "image-picker",
+      "members": 1
+    },
+    {
+      "group": "intel-video",
+      "members": 1
+    },
+    {
+      "group": "keyboard-backlight-state",
+      "members": 2
+    },
+    {
+      "group": "keyboard-backlight-steps",
+      "members": 3
+    },
+    {
+      "group": "legacy-gpu",
+      "members": 1
+    },
+    {
+      "group": "mbp131-bundle",
+      "members": 2
+    },
+    {
+      "group": "mbp133-bundle",
+      "members": 1
+    },
+    {
+      "group": "model-docs",
+      "members": 4
+    },
+    {
+      "group": "older-macs",
+      "members": 2
+    },
+    {
+      "group": "outside-scope",
+      "members": 1
+    },
+    {
+      "group": "pre-t2-hibernation",
+      "members": 1
+    },
+    {
+      "group": "sandy-idle",
+      "members": 1
+    },
+    {
+      "group": "sd-reader",
+      "members": 1
+    },
+    {
+      "group": "session-start",
+      "members": 1
+    },
+    {
+      "group": "t1-lid-gpu",
+      "members": 1
+    },
+    {
+      "group": "t1-pcie",
+      "members": 1
+    },
+    {
+      "group": "t2-alsa",
+      "members": 1
+    },
+    {
+      "group": "t2-ethernet",
+      "members": 2
+    },
+    {
+      "group": "t2-gmux",
+      "members": 1
+    },
+    {
+      "group": "t2-hibernation",
+      "members": 1
+    },
+    {
+      "group": "t2-imac-framebuffer",
+      "members": 1
+    },
+    {
+      "group": "t2-installation",
+      "members": 1
+    },
+    {
+      "group": "t2-power-docs",
+      "members": 1
+    },
+    {
+      "group": "t2-repository",
+      "members": 3
+    },
+    {
+      "group": "t2-suspend",
+      "members": 5
+    },
+    {
+      "group": "t2-trackpad",
+      "members": 3
+    },
+    {
+      "group": "thunderbolt-kernel",
+      "members": 1
+    },
+    {
+      "group": "trackpad-defaults",
+      "members": 1
+    },
+    {
+      "group": "wifi-country",
+      "members": 1
+    },
+    {
+      "group": "wifi-firmware",
+      "members": 1
+    },
+    {
+      "group": "wifi-legacy",
+      "members": 3
+    },
+    {
+      "group": "wifi-scanning",
+      "members": 1
+    },
+    {
+      "group": "wifi-t2-combo",
+      "members": 2
+    },
+    {
+      "group": "wifi-t2-connectivity",
+      "members": 1
+    }
+  ]
+}

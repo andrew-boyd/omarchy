@@ -1,0 +1,146 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11434",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "wifi-pre-t2-resume"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "state": "open"
+    },
+    {
+      "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "state": "open",
+      "updated_at": "2026-09-12T09:01:06Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11434,
+  "checked_at": "2026-09-21T11:57:43.372373+00:00",
+  "title": "apple: reload brcmfmac after resume, some Broadcom Wi-Fi parts don't survive S3",
+  "author": "TheoAndersen",
+  "head_sha": "f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:45:38Z",
+  "state": "closed",
+  "body": "Affects any Mac whose Wi-Fi brcmfmac drives over PCIe, but in practice mostly hits **older MacBook Pros**: BCM43602 (2015-2017 models) is the part most commonly affected. Reproduced on a **MacBookPro11,5 (15-inch MacBook Pro, Mid 2015, BCM43602)** simply by closing and reopening the lid, which is this machine's default S3 suspend/resume trigger.\n\nThe PCIe/msgbuf brcmfmac parts (BCM43602, BCM4350/4355/4364, BCM4377/4378/4387) can leave the firmware unresponsive after S3: every command times out (`brcmf_msgbuf_query_dcmd: Timeout on response for query command`) until the driver is unbound and rebound. Same signature and chipset family as Debian #849381, open since kernel 4.8, no real upstream fix.\n\nDetection reuses the exact chip allowlist from `fix-brcmfmac-supplicant.sh` (sourced from brcmfmac's own `brcm_hw_ids.h`), which deliberately excludes the BCM4360 in 2013-2015 Macs: it runs the out-of-tree `wl` driver instead of brcmfmac, so it never hits this bug. Scoping is three layers deep: the installer only runs on a T2 Mac or an Apple machine with one of these specific Broadcom IDs; the runtime helper re-scans for the same allowlist; and even then it only acts if the matched device is currently bound to `brcmfmac` \u2014 never touching anything else.\n\nUnbind/bind is used rather than `modprobe -r`/`modprobe`: something (an open NetworkManager netdev, a cfg80211 wdev reference) reliably keeps the module in use across resume, so `modprobe -r` never actually removes it, and `modprobe` afterward is then a no-op that never re-probes a device manually detached via sysfs \u2014 confirmed on hardware, the device stayed unbound and Wi-Fi never came back.\n\nA systemd unit runs the reload after every sleep target (suspend/hibernate/hybrid-sleep/suspend-then-hibernate), installed both on fresh setup and via a migration for existing installs. Covered by a shell test that simulates the sysfs unbind/bind cycle and exercises the T2/non-T2 detection matrix.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "c0ac744de3651c5f9a11f830e83324391a1596ef",
+      "filename": "bin/omarchy-brcmfmac-resume-fix",
+      "status": "added",
+      "additions": 66,
+      "deletions": 0,
+      "changes": 66,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/bin%2Fomarchy-brcmfmac-resume-fix",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/bin%2Fomarchy-brcmfmac-resume-fix",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brcmfmac-resume-fix?ref=f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "patch": "@@ -0,0 +1,66 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Reload brcmfmac after resume; some Broadcom parts never recover from S3 on their own\n+# omarchy:requires-sudo=true\n+# omarchy:hidden=true\n+\n+# The PCIe/msgbuf brcmfmac parts (BCM43602, BCM4350/4355/4364, BCM4377/4378/4387)\n+# are known to leave the firmware unresponsive after S3 on some machines: every\n+# command times out (`brcmf_msgbuf_query_dcmd: Timeout on response for query\n+# command`) until the driver is unloaded and reloaded. This is a long-standing\n+# upstream bug with no real fix (same signature as Debian #849381, open since\n+# kernel 4.8); unbinding and rebinding the PCI device is the standard\n+# workaround. Unbind/bind is used rather than `modprobe -r`/`modprobe`, because\n+# something (NetworkManager's open netdev, a cfg80211 wdev reference) reliably\n+# keeps the module in use across resume, so it can never actually be unloaded --\n+# calling modprobe again in that state is a no-op, since the module was never\n+# removed from the kernel and modprobe will not re-probe a device that was\n+# manually detached via sysfs.\n+\n+set -u\n+\n+lspci=\"${OMARCHY_LSPCI:-lspci}\"\n+sysfs=\"${OMARCHY_PCI_SYSFS:-/sys/bus/pci}\"\n+\n+# Every Broadcom part brcmfmac drives over PCIe with the msgbuf protocol --\n+# the same table fix-brcmfmac-supplicant.sh matches, since it's exactly the\n+# population that can hit this resume bug.\n+wifi=$(\"$lspci\" -Dnn 2>/dev/null | grep -E '14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)' | head -1 | cut -d' ' -f1)\n+\n+if [[ -z $wifi ]]; then\n+  echo \"omarchy-brcmfmac-resume-fix: no matching Broadcom Wi-Fi device found, nothing to do\"\n+  exit 0\n+fi\n+\n+driver_link=\"$sysfs/devices/$wifi/driver\"\n+driver=$(basename \"$(readlink -f \"$driver_link\" 2>/dev/null)\" 2>/dev/null)\n+\n+if [[ $driver != brcmfmac ]]; then\n+  echo \"omarchy-brcmfmac-resume-fix: driver bound to $wifi is '${driver:-none}', not brcmfmac -- nothing to do\"\n+  exit 0\n+fi\n+\n+echo \"omarchy-brcmfmac-resume-fix: reloading brcmfmac after resume ($wifi)\"\n+\n+if ! echo \"$wifi\" >\"$sysfs/drivers/brcmfmac/unbind\" 2>/dev/null; then\n+  echo \"omarchy-brcmfmac-resume-fix: PCI unbind failed\"\n+  exit 1\n+fi\n+\n+sleep 1\n+\n+if ! echo \"$wifi\" >\"$sysfs/drivers/brcmfmac/bind\" 2>/dev/null; then\n+  echo \"omarchy-brcmfmac-resume-fix: PCI bind failed\"\n+  exit 1\n+fi\n+\n+# The bind write itself is synchronous, but give the firmware a moment to\n+# settle before reporting the verdict.\n+for _ in 1 2 3 4 5; do\n+  [[ -e $driver_link ]] && break\n+  sleep 1\n+done\n+\n+now=$(basename \"$(readlink -f \"$driver_link\" 2>/dev/null)\" 2>/dev/null)\n+echo \"omarchy-brcmfmac-resume-fix: done, driver now bound: ${now:-none}\"\n+[[ $now == brcmfmac ]]"
+    },
+    {
+      "sha": "58b0ba9351a5207f44d9e97f424d66eb75f8107b",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "patch": "@@ -42,6 +42,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-resume.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "6bcc54f69b98d2ec4a93f16643fec89e9bea0260",
+      "filename": "install/hardware/apple/fix-brcmfmac-resume.sh",
+      "status": "added",
+      "additions": 32,
+      "deletions": 0,
+      "changes": 32,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/install%2Fhardware%2Fapple%2Ffix-brcmfmac-resume.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/install%2Fhardware%2Fapple%2Ffix-brcmfmac-resume.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-brcmfmac-resume.sh?ref=f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "patch": "@@ -0,0 +1,32 @@\n+# Some Broadcom Wi-Fi parts brcmfmac drives never recover from suspend: every\n+# firmware command times out after resume until the driver is unbound and\n+# rebound. Same population as fix-brcmfmac-supplicant.sh, since it's the\n+# PCIe/msgbuf chips that hit this -- confirmed on a MacBookPro11,5 with\n+# BCM43602, where every command after resume logs\n+# `brcmf_msgbuf_query_dcmd: Timeout on response for query command` in a loop\n+# until the machine is rebooted.\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+\n+if lspci -nn | grep \"106b:180[12]\" >/dev/null ||\n+  { [[ $sys_vendor == Apple* ]] &&\n+    lspci -nn | grep -E \"14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)\" >/dev/null; }; then\n+  echo \"Detected a Mac with Broadcom Wi-Fi; installing the post-resume reload fix\"\n+\n+  sudo tee /etc/systemd/system/omarchy-brcmfmac-resume-fix.service >/dev/null <<'EOF'\n+[Unit]\n+Description=Reload brcmfmac after resume (some Broadcom Wi-Fi parts don't survive S3)\n+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target\n+ConditionPathExists=/sys/bus/pci\n+\n+[Service]\n+Type=oneshot\n+# Let the resume settle a bit before poking the PCI/driver state.\n+ExecStartPre=/usr/bin/sleep 3\n+ExecStart=/usr/bin/omarchy-brcmfmac-resume-fix\n+\n+[Install]\n+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target\n+EOF\n+\n+  sudo systemctl enable omarchy-brcmfmac-resume-fix.service\n+fi"
+    },
+    {
+      "sha": "0bab43da0a393b2f7a9327b0d8ee21917983008c",
+      "filename": "migrations/1789203245.sh",
+      "status": "added",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/migrations%2F1789203245.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/migrations%2F1789203245.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789203245.sh?ref=f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "patch": "@@ -0,0 +1,9 @@\n+echo \"Install the brcmfmac post-resume reload fix on affected Broadcom Wi-Fi\"\n+\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+\n+if lspci -nn | grep \"106b:180[12]\" >/dev/null ||\n+  { [[ $sys_vendor == Apple* ]] &&\n+    lspci -nn | grep -E \"14e4:(43ba|43bb|43bc|43a3|43dc|4464|4488|4425|4433)\" >/dev/null; }; then\n+  source \"$OMARCHY_PATH/install/hardware/apple/fix-brcmfmac-resume.sh\"\n+fi"
+    },
+    {
+      "sha": "d099729a9cba4f67b6436b8ad93a8b17a1e05a2c",
+      "filename": "test/shell.d/brcmfmac-resume-fix-test.sh",
+      "status": "added",
+      "additions": 220,
+      "deletions": 0,
+      "changes": 220,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/test%2Fshell.d%2Fbrcmfmac-resume-fix-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f03ca3ea59b1179320579750da6c9eeeb7dd5a2f/test%2Fshell.d%2Fbrcmfmac-resume-fix-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrcmfmac-resume-fix-test.sh?ref=f03ca3ea59b1179320579750da6c9eeeb7dd5a2f",
+      "patch": "@@ -0,0 +1,220 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-brcmfmac-resume.sh\"\n+helper=\"$ROOT/bin/omarchy-brcmfmac-resume-fix\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=$(grep -l \"fix-brcmfmac-resume.sh\" \"$ROOT\"/migrations/*.sh | head -1)\n+\n+grep -q 'apple/fix-brcmfmac-resume.sh' \"$all\" ||\n+  fail \"the brcmfmac resume fix runs during hardware setup\"\n+pass \"the brcmfmac resume fix runs during hardware setup\"\n+\n+grep -Fq 'After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target' \"$leaf\" ||\n+  fail \"the resume unit is ordered after every sleep target\"\n+grep -Fq 'WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target' \"$leaf\" ||\n+  fail \"the resume unit is wanted by every sleep target\"\n+grep -Fq 'ExecStart=/usr/bin/omarchy-brcmfmac-resume-fix' \"$leaf\" ||\n+  fail \"the resume unit runs the reload helper\"\n+pass \"the resume unit is wired to every sleep target and the reload helper\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+unit=\"$test_tmp/etc/systemd/system/omarchy-brcmfmac-resume-fix.service\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no such hardware\" (#6608).\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+if [[ -n ${WIFI_ID:-} ]]; then\n+  # Domain-qualified, matching real `lspci -Dnn` output -- the helper parses\n+  # this address and must match the sysfs fixture's PCI address below.\n+  echo \"0000:04:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]\"\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\" t2=\"${3:-0}\"\n+  rm -rf \"$test_tmp/etc\"\n+  mkdir -p \"$test_tmp/etc/systemd/system\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  local script=\"$test_tmp/leaf.sh\"\n+  sed -e \"s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g\" \\\n+      -e \"s|/etc/systemd/system|$test_tmp/etc/systemd/system|g\" \\\n+      \"$leaf\" >\"$script\"\n+\n+  WIFI_ID=\"$wifi_id\" T2_HARDWARE=\"$t2\" TEST_LOG=\"$calls\" PATH=\"$stub_bin:$PATH\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+# The same population fix-brcmfmac-supplicant.sh matches: T2 Macs, and every\n+# Broadcom part brcmfmac drives over PCIe on a Mac without a T2.\n+run_leaf \"Apple Inc.\" 4488 1 >/dev/null\n+[[ -f $unit ]] || fail \"a T2 Mac gets the resume unit installed\"\n+grep -Fq $'systemctl\\tenable\\tomarchy-brcmfmac-resume-fix.service' \"$calls\" ||\n+  fail \"a T2 Mac gets the resume unit enabled\"\n+pass \"a T2 Mac gets the resume unit\"\n+\n+for wifi_id in 43ba 43bb 43bc 43a3 43dc 4464 4425 4433; do\n+  run_leaf \"Apple Inc.\" \"$wifi_id\" 0 >/dev/null\n+  [[ -f $unit ]] || fail \"a Mac without a T2 gets the resume unit\" \"14e4:$wifi_id\"\n+done\n+pass \"every affected Broadcom part on a Mac without a T2 gets the resume unit\"\n+\n+# BCM4360 Macs run the out-of-tree wl driver, unaffected by this msgbuf-only bug.\n+run_leaf \"Apple Inc.\" 43a0 0 >/dev/null\n+[[ ! -f $unit ]] || fail \"a Mac whose Wi-Fi brcmfmac does not drive is left alone\"\n+pass \"a Mac whose Wi-Fi brcmfmac does not drive is left alone\"\n+\n+run_leaf \"LENOVO\" 43ba 0 >/dev/null\n+[[ ! -f $unit ]] || fail \"non-Apple hardware is left alone\"\n+pass \"non-Apple hardware is left alone\"\n+\n+# Installs that predate the fix never ran the leaf, so the migration has to\n+# reach them.\n+run_migration() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\" t2=\"${3:-0}\"\n+  rm -rf \"$test_tmp/etc\"\n+  mkdir -p \"$test_tmp/etc/systemd/system\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  local script=\"$test_tmp/migration.sh\"\n+  sed \"s|\\$OMARCHY_PATH/install/hardware/apple/fix-brcmfmac-resume.sh|$test_tmp/leaf.sh|\" \\\n+    \"$migration\" >\"$script\"\n+  sed -e \"s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g\" \\\n+      -e \"s|/etc/systemd/system|$test_tmp/etc/systemd/system|g\" \\\n+      \"$leaf\" >\"$test_tmp/leaf.sh\"\n+\n+  WIFI_ID=\"$wifi_id\" T2_HARDWARE=\"$t2\" TEST_LOG=\"$calls\" PATH=\"$stub_bin:$PATH\" \\\n+    bash -euo pipefail \"$script\" >/dev/null\n+}\n+\n+run_migration \"Apple Inc.\" 43ba 0\n+[[ -f $unit ]] || fail \"the migration installs the resume unit on an existing Mac\" \"$(ls -R \"$test_tmp/etc\" 2>&1)\"\n+pass \"the migration installs the resume unit on an existing Mac\"\n+\n+run_migration \"Apple Inc.\" 43a0 0\n+[[ ! -f $unit ]] || fail \"the migration skips a Mac brcmfmac does not drive\" \"$(cat \"$unit\" 2>&1)\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on unaffected Macs\" \"$(cat \"$calls\")\"\n+pass \"the migration skips hardware brcmfmac does not drive\"\n+\n+# --- the reload helper itself ----------------------------------------------\n+#\n+# Exercises the exact defect this fix was written for: modprobe -r reliably\n+# fails post-resume (\"Module brcmfmac is in use\"), and the earlier version of\n+# this fix fell back to a PCI unbind followed by `modprobe brcmfmac` to bring\n+# it back -- a no-op, since the module was never actually removed from the\n+# kernel, so modprobe never re-probes a device that was manually unbound via\n+# sysfs. Confirmed on hardware 2026-09-11: the device stayed unbound and Wi-Fi\n+# never came back. The fix drives the PCI unbind/bind cycle directly, with no\n+# modprobe involved. A real unbind/bind is synchronous in the kernel, so the\n+# sysfs fixture below simulates that: a background reader on each pseudo-file\n+# updates the driver symlink the same write() call would.\n+sysfs=\"$test_tmp/sysfs\"\n+addr=\"0000:04:00.0\"\n+sysfs_reader_pids=()\n+\n+stop_sysfs_readers() {\n+  local pid\n+  for pid in \"${sysfs_reader_pids[@]:-}\"; do\n+    [[ -n $pid ]] && kill \"$pid\" 2>/dev/null\n+  done\n+  sysfs_reader_pids=()\n+}\n+\n+# A real unbind/bind is synchronous in the kernel -- the write() to bind\n+# doesn't return until the probe completes. Simulate that here: a background\n+# reader on each pseudo-file updates the driver symlink the same write()\n+# would, so the helper's post-bind poll sees a real transition instead of a\n+# static fixture.\n+setup_sysfs() {\n+  stop_sysfs_readers\n+  local bound_driver=\"$1\"\n+  rm -rf \"$sysfs\"\n+  mkdir -p \"$sysfs/devices/$addr\" \"$sysfs/drivers/brcmfmac\"\n+\n+  if [[ -n $bound_driver ]]; then\n+    mkdir -p \"$sysfs/drivers/$bound_driver\"\n+    ln -sfn \"../../drivers/$bound_driver\" \"$sysfs/devices/$addr/driver\"\n+  fi\n+\n+  mkfifo \"$sysfs/drivers/brcmfmac/unbind\" \"$sysfs/drivers/brcmfmac/bind\"\n+\n+  (\n+    while read -r _ <\"$sysfs/drivers/brcmfmac/unbind\"; do\n+      rm -f \"$sysfs/devices/$addr/driver\"\n+    done\n+  ) 2>/dev/null &\n+  sysfs_reader_pids+=(\"$!\")\n+\n+  (\n+    while read -r _ <\"$sysfs/drivers/brcmfmac/bind\"; do\n+      ln -sfn \"../../drivers/brcmfmac\" \"$sysfs/devices/$addr/driver\"\n+    done\n+  ) 2>/dev/null &\n+  sysfs_reader_pids+=(\"$!\")\n+}\n+trap 'stop_sysfs_readers; rm -rf \"$test_tmp\"' EXIT\n+\n+run_helper() {\n+  local wifi_id=\"${1:-43ba}\"\n+  WIFI_ID=\"$wifi_id\" OMARCHY_LSPCI=\"$stub_bin/lspci\" OMARCHY_PCI_SYSFS=\"$sysfs\" \\\n+    bash \"$helper\"\n+}\n+\n+setup_sysfs \"\"\n+run_helper \"\" >/dev/null || fail \"no matching Wi-Fi device is a clean no-op (nonzero exit)\"\n+[[ ! -e $sysfs/devices/$addr/driver ]] || fail \"no matching device is left untouched\"\n+pass \"no matching Wi-Fi device is a clean no-op\"\n+stop_sysfs_readers\n+\n+setup_sysfs \"other_driver\"\n+run_helper >/dev/null\n+[[ $(basename \"$(readlink \"$sysfs/devices/$addr/driver\")\") == other_driver ]] ||\n+  fail \"a device bound to another driver is left alone\"\n+pass \"a device driven by something other than brcmfmac is left alone\"\n+stop_sysfs_readers\n+\n+setup_sysfs \"brcmfmac\"\n+run_helper\n+[[ $(basename \"$(readlink \"$sysfs/devices/$addr/driver\")\") == brcmfmac ]] ||\n+  fail \"the device is bound to brcmfmac again after the reload\"\n+pass \"the reload cycles the device through unbind and bind and ends up bound to brcmfmac\"\n+stop_sysfs_readers"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758504747",
+      "html_url": "https://github.com/omacom/omarchy/pull/11434#issuecomment-5758504747",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/11434",
+      "id": 5758504747,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzvPKw",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:45:37Z",
+      "updated_at": "2026-09-21T09:45:37Z",
+      "body": "Automated duplication check: this pull request looks similar to #10332, which covers the same brcmfmac resume reload. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758504747/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

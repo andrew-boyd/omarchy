@@ -1,0 +1,451 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8560",
+  "origins": [
+    "explicit-successor-of-9181"
+  ],
+  "groups": [
+    "lid-wake"
+  ],
+  "prior_snapshots": [],
+  "repository": "omacom/omarchy",
+  "number": 8560,
+  "checked_at": "2026-09-21T12:00:11.003777+00:00",
+  "title": "Restore lock screen password focus lost on suspend",
+  "author": "robouk",
+  "head_sha": "624e6c036646e9e4311713c8fedf591e508dd74c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:30Z",
+  "state": "open",
+  "body": "Suspending drops keyboard focus from the lock screen password field, and nothing puts it back. Focus is only taken in `Component.onCompleted` and when `inputEnabled` changes, and `inputEnabled` is bound to `lockRequested`, which is already true by the time the machine suspends and stays true across resume. The only remaining path was the background `MouseArea`'s `onClicked` handler, so the machine woke to a lock screen that ignored the keyboard until it was clicked.\n\nReclaim focus when the field loses it while the lock is up.\n\nTraced on a 4.0 desktop, timestamps from journalctl:\n\n```\n11:09:39.982  activeFocus=true       field focused at lock\n11:09:39.992  secure=true\n11:09:40.086  kernel: PM: suspend entry (deep)\n11:09:40.099  activeFocus=false      focus dropped\n11:09:40.099  activeFocus=true       reclaimed by this change\n11:10:07.577  kernel: PM: suspend exit\n```\n\nA plain lock without a suspend does not drop focus, so reproducing this needs an actual suspend rather than just locking the session. Verified on hardware: with the change, the machine wakes with the field focused and accepts typing without a click.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "32f65a0e520aae4204edce21f2515c209b42b939",
+      "filename": "shell/plugins/lock/LockView.qml",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/624e6c036646e9e4311713c8fedf591e508dd74c/shell%2Fplugins%2Flock%2FLockView.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/624e6c036646e9e4311713c8fedf591e508dd74c/shell%2Fplugins%2Flock%2FLockView.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FLockView.qml?ref=624e6c036646e9e4311713c8fedf591e508dd74c",
+      "patch": "@@ -160,6 +160,15 @@ Item {\n           visible: passwordInput.cursorVisible\n         }\n \n+        // Suspending drops keyboard focus from this field while the lock is\n+        // still up, and nothing puts it back: focus is only taken in\n+        // Component.onCompleted and when inputEnabled changes, and inputEnabled\n+        // is already true by then. Take it back so the machine wakes ready to\n+        // type instead of needing a click first.\n+        onActiveFocusChanged: {\n+          if (!activeFocus && root.inputEnabled) Qt.callLater(root.forcePasswordFocus)\n+        }\n+\n         onTextChanged: {\n           if (!root.syncingPasswordText) root.passwordTextEdited(text)\n           if (text.length > 0) {"
+    },
+    {
+      "sha": "4c9b62a79e8bc90657663e8bcea8f47fcae98b89",
+      "filename": "test/shell.d/lock-focus-recovery-test.sh",
+      "status": "added",
+      "additions": 27,
+      "deletions": 0,
+      "changes": 27,
+      "blob_url": "https://github.com/omacom/omarchy/blob/624e6c036646e9e4311713c8fedf591e508dd74c/test%2Fshell.d%2Flock-focus-recovery-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/624e6c036646e9e4311713c8fedf591e508dd74c/test%2Fshell.d%2Flock-focus-recovery-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Flock-focus-recovery-test.sh?ref=624e6c036646e9e4311713c8fedf591e508dd74c",
+      "patch": "@@ -0,0 +1,27 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+run_node_test <<'JS'\n+const fs = require('fs')\n+const lockView = fs.readFileSync(path.join(root, 'shell/plugins/lock/LockView.qml'), 'utf8')\n+\n+// Suspending drops focus from the field while the lock is still up. Focus is\n+// otherwise only taken in Component.onCompleted and when inputEnabled changes,\n+// and inputEnabled follows lockRequested, which is already true by then, so\n+// without this handler the machine wakes to a lock screen that ignores the\n+// keyboard until it is clicked.\n+assert(\n+  /onActiveFocusChanged: \\{\\s*if \\(!activeFocus && root\\.inputEnabled\\) Qt\\.callLater\\(root\\.forcePasswordFocus\\)/.test(lockView),\n+  'the password field reclaims focus when it loses it while the lock is up'\n+)\n+\n+// Gating on inputEnabled keeps the unlocked preview surface, which builds the\n+// same view with inputEnabled false, from fighting the compositor for focus.\n+assert(\n+  !/onActiveFocusChanged: \\{\\s*if \\(!activeFocus\\) /.test(lockView),\n+  'focus recovery only runs while the lock is accepting input'\n+)\n+JS"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5439163731",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#issuecomment-5439163731",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8560",
+      "id": 5439163731,
+      "node_id": "IC_kwDOO0Cobs8AAAABRDMNUw",
+      "user": {
+        "login": "omarchybot",
+        "id": 317366263,
+        "node_id": "U_kgDOEuqf9w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317366263?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/omarchybot",
+        "html_url": "https://github.com/omarchybot",
+        "followers_url": "https://api.github.com/users/omarchybot/followers",
+        "following_url": "https://api.github.com/users/omarchybot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/omarchybot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/omarchybot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/omarchybot/subscriptions",
+        "organizations_url": "https://api.github.com/users/omarchybot/orgs",
+        "repos_url": "https://api.github.com/users/omarchybot/repos",
+        "events_url": "https://api.github.com/users/omarchybot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/omarchybot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-27T12:30:54Z",
+      "updated_at": "2026-08-27T12:30:54Z",
+      "body": "Reviewed by Claude Opus 5 in Claude Code, with an independent second opinion from Codex at xhigh reasoning. No defect found in the production change. Two things worth writing down, plus one note on the test.\n\n**What was actually run.** Everything ran on a disposable VM with a real compositor serving this branch, never on the review machine: `lock-focus-recovery-test.sh`, `lock-fingerprint-indicator-test.sh`, `lock-password-overflow-test.sh`, `lock-stranded-recovery-test.sh`, `lock-blank-fingerprint-test.sh`, `sleep-lock-test.sh`, `system-lock-test.sh` \u2014 42 assertions, 0 failures. The two fixtures that build a LockView in a live Quickshell process ran rather than skipping, so the file loads with the handler in place. Locking that machine's real session over IPC reached `secure=true` and the shell burned 0 CPU ticks over the following 10 seconds with the lock screen up. An actual suspend is not reproducible on a VM, so that the handler fires on real hardware rests on your journal trace rather than on anything measured here.\n\n**The failure mode worth hunting was a focus fight** \u2014 something else takes focus, this handler takes it straight back, and the session spins with an unusable lock screen. It cannot happen in the current tree, and that was measured rather than assumed. I built a probe that hosts LockView in a mapped window with exclusive keyboard focus, once from the base file and once from this branch, counting the field's `activeFocus` transitions:\n\n- Field disabled by `authenticatingPassword` (`enabled: root.inputEnabled && !root.authenticatingPassword`): identical on both \u2014 one transition, no loop. Codex explained why: on Qt 6.11 the window's `activeFocusItem` falls back to the enclosing focus scope, so forcing focus onto a disabled item is silently declined, and Qt still restores the field on its own when PAM finishes.\n- Destroying the LockView in the same event loop pass as a focus loss, with a `Qt.callLater` queued against it: survived on both, no crash, no warning. `Qt.callLater` is lifetime-guarded for a QML method reference like this one, and `finishUnlock()` clears `lockRequested` before tearing the surface down, so the teardown disable sees `inputEnabled` false and schedules nothing.\n- A second focusable item taking focus: base leaves it there, this branch takes focus back off it. Nothing focusable exists on the lock surface today \u2014 the field is the only keyboard target, the fingerprint indicator is a `Text`, and `fingerprintPam` has no UI at all \u2014 so there is nothing to fight. Worth knowing for whoever next adds a control there; #7680's reveal toggle is fine because it hands focus back deliberately.\n\n**One thing the change does not do, which matters for which issues it closes.** The handler repairs Qt's internal item-focus chain; it never asks the compositor for the lock surface's keyboard focus. Measured: on a plain window deactivation and reactivation, base and this branch behave identically, because Qt restores the selected child unaided. Codex supplied the reconciling detail \u2014 when Qt has no current `focusWindow`, a transitional state during suspend, a window can establish internal active focus without holding Wayland keyboard focus, which is why your trace shows `activeFocus` back to true in the same millisecond. So this fixes the reports where the internal chain was broken (#8520 and #8361 read exactly that way), and cannot reach the ones where the compositor never returns keyboard focus. It is also edge-triggered by nature: `activeFocusChanged` cannot fire for a field whose `activeFocus` was never true, so a lock that never got focus at first map is untouched \u2014 which is how #7467, #6858 and #7811 read. Not something to change here; just not the whole of the bug, and the maintainer should not expect those to close.\n\n**The test.** `lock-focus-recovery-test.sh` matches a regex against LockView.qml's source text, including the brace and whitespace layout, so it proves the string is present and nothing about focus. It still passes if `forcePasswordFocus()` becomes a no-op or the handler is attached to the wrong object, and it fails on a reformat that splits the `if` across lines with behaviour unchanged. The negative assertion catches one exact ungated spelling and misses the other ways of writing an ungated one. Source-grep tests are a house norm in this area \u2014 `lock-stranded-recovery-test.sh` is fourteen of them \u2014 so this is not out of keeping, and it has not been changed on the branch. But the invariant here is directly testable, unlike stranded-lock recovery: the probe above is the shape of it, and the same fixture would cover the disabled-during-PAM case and the `inputEnabled: false` gate as real behaviour. The reason it was not pushed is that such a fixture needs a mapped window actually holding keyboard focus, which is a heavier dependency than any existing lock fixture takes, so swapping the regex for one is a call about the suite's shape rather than a defect fix.\n\n**Where this stands.** Nothing pushed to the branch, nothing to fix. It is waiting on the maintainer, and on a decision this PR cannot make for itself: #7164, #7471 and #7592 are all open against the same defect in the same file, #7592 being the closest \u2014 same bug, level-triggered with a retry timer where this is edge-triggered. This one is the smallest of the four and the only one with no timer. #8561 and #8531 touch only Service.qml and do not conflict.\n",
+      "author_association": "COLLABORATOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5439163731/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5467381751",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#issuecomment-5467381751",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8560",
+      "id": 5467381751,
+      "node_id": "IC_kwDOO0Cobs8AAAABReGf9w",
+      "user": {
+        "login": "rdoupe",
+        "id": 1207041,
+        "node_id": "MDQ6VXNlcjEyMDcwNDE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1207041?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rdoupe",
+        "html_url": "https://github.com/rdoupe",
+        "followers_url": "https://api.github.com/users/rdoupe/followers",
+        "following_url": "https://api.github.com/users/rdoupe/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rdoupe/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rdoupe/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rdoupe/subscriptions",
+        "organizations_url": "https://api.github.com/users/rdoupe/orgs",
+        "repos_url": "https://api.github.com/users/rdoupe/repos",
+        "events_url": "https://api.github.com/users/rdoupe/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rdoupe/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-30T07:26:27Z",
+      "updated_at": "2026-08-30T07:26:27Z",
+      "body": "Confirmed on hardware. AMD laptop, single eDP panel, Hyprland, omarchy 4.0.1. Before: suspend from the menu, resume, screen lit by trackpad movement, typed password ignored until a click. After applying this patch alone onto the installed 4.0.1 tree and rebooting: suspend, resume, type \u2014 accepted with no click and no trackpad contact.\n\nMechanism matches the comment in the diff: `omarchy-system-sleep-lock` locks before suspend, the lock surface outlives the sleep (journal shows no second `secure=true` on resume), so `Component.onCompleted` never re-runs and only a click restored focus.\n\nOne offer: the test here asserts on the source text with a regex, so it passes on code that does not work and breaks on a reformat. I have a headless fixture that loads the real `LockView`, drops focus while the view stays alive, and asserts it comes back \u2014 verified to fail without this change. Happy to hand it over if you want it.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5467381751/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5468713104",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#issuecomment-5468713104",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8560",
+      "id": 5468713104,
+      "node_id": "IC_kwDOO0Cobs8AAAABRfXwkA",
+      "user": {
+        "login": "omarchybot",
+        "id": 317366263,
+        "node_id": "U_kgDOEuqf9w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317366263?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/omarchybot",
+        "html_url": "https://github.com/omarchybot",
+        "followers_url": "https://api.github.com/users/omarchybot/followers",
+        "following_url": "https://api.github.com/users/omarchybot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/omarchybot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/omarchybot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/omarchybot/subscriptions",
+        "organizations_url": "https://api.github.com/users/omarchybot/orgs",
+        "repos_url": "https://api.github.com/users/omarchybot/repos",
+        "events_url": "https://api.github.com/users/omarchybot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/omarchybot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-30T12:34:09Z",
+      "updated_at": "2026-08-30T12:34:09Z",
+      "body": "Re-reviewed at 624e6c03, which has not moved. The production change still looks right, so this pass went at the testing question in the thread above and tried to settle it by measurement rather than argument. Reviewed by Claude Opus 5 in Claude Code, with an independent second opinion from Codex at xhigh reasoning \u2014 with the caveat that Codex's independence is not currently guaranteed, since it can read this session's own working notes.\n\n**@robouk's claim is correct, and now measured.** I built a probe that hosts `LockView` exactly the way `lock-password-overflow` and `lock-fingerprint-indicator` do \u2014 a bare `Item` under `ShellRoot`, no window anywhere in the parent chain \u2014 and read the password field's `focus` and `activeFocus` back on a real compositor. After `forcePasswordFocus()`: `focus=true`, `activeFocus=false`, identical on this branch and on the base file. That is the claim verbatim. `onActiveFocusChanged` cannot fire there because `activeFocus` never becomes true in the first place, so the test @Copilot asked for cannot be written against those fixtures as they stand. Worth adding in support: nothing under `test/shell.d/fixtures/` hosts anything in a window today, and no fixture asserts `activeFocus` anywhere, so this is not an established pattern that was skipped.\n\n**The conclusion that it therefore needs `test/acceptance.d` does not hold, though.** The blocker is having a `QQuickWindow` at all, not having the compositor's keyboard. I ran the same probe with the host inside a `PanelWindow`, once with `WlrKeyboardFocus.Exclusive` and once with `WlrLayershell.keyboardFocus: WlrKeyboardFocus.None`, which takes the keyboard from nobody. In both, the field reaches `activeFocus=true`. Then the exact sequence @Copilot described \u2014 move active focus to a sibling while `inputEnabled` is true, wait for `Qt.callLater`, re-read the field:\n\n    keyboardFocus None, this branch:  baseline activeFocus=true -> sibling steals -> after callLater: field=true,  sibling=false\n    keyboardFocus None, base file:    baseline activeFocus=true -> sibling steals -> after callLater: field=false, sibling=true\n\nSo a `test/shell.d` fixture can assert this behaviourally, it fails with the handler removed, and it does not steal the developer's keyboard mid-run. That makes @rdoupe's offered fixture worth taking, or a small addition to this one. I have not pushed a fixture myself: introducing the suite's first window-hosting fixture is a decision about the shape of the suite rather than a defect fix, and two of you already have code for it.\n\n**On the handler itself.** Codex checked the two things a focus grab could plausibly break and agreed with what I had found by reading, supplying the mechanism for each. It cannot take focus from an application the user is typing into, because the `WlSessionLockSurface` and its `LockView` do not exist at all until `sessionLock.locked` becomes true (`Service.qml:76`), and `forceActiveFocus()` moves focus within its own Qt scene without requesting compositor activation. It is a no-op on the preview surface, which pins `inputEnabled: false` (`Service.qml:307`). And it cannot loop: `finishUnlock()` clears `lockRequested` at `Service.qml:151` before releasing the lock at line 157, so the gate is already false when teardown drops focus, and a successful recovery re-fires the handler with `activeFocus` true, where the `!activeFocus` guard stops it.\n\n**What was run.** On a disposable VM with a real compositor serving this branch: `lock-focus-recovery-test.sh`, `lock-password-overflow-test.sh` and `lock-fingerprint-indicator-test.sh` all pass, with the two live-Quickshell fixtures running rather than skipping. The probes above ran on that same machine, which was destroyed afterwards. Nothing ran on the review host.\n\nVerdict is unchanged from the last pass: no defect in the production change, and it is waiting on the maintainer, who has four open PRs against this same bug to choose between. @rdoupe's hardware report is the first end-to-end confirmation on real hardware from someone other than the author, which the previous review could not supply, because a VM cannot suspend.\n",
+      "author_association": "COLLABORATOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5468713104/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5039413224,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLF9X6A",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nRestores password-field focus when the compositor takes focus during lock activation.\n\n**Changes:**\n- Detects lost active focus while input is enabled.\n- Defers reclaiming password focus through `Qt.callLater`.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#pullrequestreview-5039413224",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8560",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8560#pullrequestreview-5039413224"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8560"
+        }
+      },
+      "submitted_at": "2026-08-27T09:46:42Z",
+      "commit_id": "e94ba45856cf2e5c7cf28873f9f01eb8b6e8e2d7"
+    },
+    {
+      "id": 5039565286,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLGGp5g",
+      "user": {
+        "login": "robouk",
+        "id": 4245309,
+        "node_id": "MDQ6VXNlcjQyNDUzMDk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4245309?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/robouk",
+        "html_url": "https://github.com/robouk",
+        "followers_url": "https://api.github.com/users/robouk/followers",
+        "following_url": "https://api.github.com/users/robouk/following{/other_user}",
+        "gists_url": "https://api.github.com/users/robouk/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/robouk/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/robouk/subscriptions",
+        "organizations_url": "https://api.github.com/users/robouk/orgs",
+        "repos_url": "https://api.github.com/users/robouk/repos",
+        "events_url": "https://api.github.com/users/robouk/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/robouk/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#pullrequestreview-5039565286",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8560",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8560#pullrequestreview-5039565286"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8560"
+        }
+      },
+      "submitted_at": "2026-08-27T10:05:57Z",
+      "commit_id": "2eb43dd552075c29443aa04189cc071308edbd41"
+    },
+    {
+      "id": 5050063147,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLQHZKw",
+      "user": {
+        "login": "Andreasgdp",
+        "id": 39928082,
+        "node_id": "MDQ6VXNlcjM5OTI4MDgy",
+        "avatar_url": "https://avatars.githubusercontent.com/u/39928082?u=1faeef2c07159817fcb11bb7b94c2e44031936ca&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Andreasgdp",
+        "html_url": "https://github.com/Andreasgdp",
+        "followers_url": "https://api.github.com/users/Andreasgdp/followers",
+        "following_url": "https://api.github.com/users/Andreasgdp/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Andreasgdp/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Andreasgdp/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Andreasgdp/subscriptions",
+        "organizations_url": "https://api.github.com/users/Andreasgdp/orgs",
+        "repos_url": "https://api.github.com/users/Andreasgdp/repos",
+        "events_url": "https://api.github.com/users/Andreasgdp/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Andreasgdp/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "APPROVED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#pullrequestreview-5050063147",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8560",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8560#pullrequestreview-5050063147"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8560"
+        }
+      },
+      "submitted_at": "2026-08-28T10:03:42Z",
+      "commit_id": "624e6c036646e9e4311713c8fedf591e508dd74c"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3870587307",
+      "pull_request_review_id": 5039413224,
+      "id": 3870587307,
+      "node_id": "PRRC_kwDOO0Cobs7mtHmr",
+      "diff_hunk": "@@ -160,6 +160,14 @@ Item {\n           visible: passwordInput.cursorVisible\n         }\n \n+        // The compositor hands the lock surface keyboard focus a moment after the\n+        // session goes secure, which drops focus from this field. Nothing else\n+        // in the lock is focusable, so take it straight back rather than making\n+        // the user click before they can type.\n+        onActiveFocusChanged: {\n+          if (!activeFocus && root.inputEnabled) Qt.callLater(root.forcePasswordFocus)\n+        }",
+      "path": "shell/plugins/lock/LockView.qml",
+      "commit_id": "624e6c036646e9e4311713c8fedf591e508dd74c",
+      "original_commit_id": "e94ba45856cf2e5c7cf28873f9f01eb8b6e8e2d7",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This focus-recovery regression is untested even though `LockView.qml` already has compositor-backed shell fixtures. Please add a shell test that moves active focus to a sibling while `inputEnabled` is true, waits for `Qt.callLater`, and verifies that the password field regains active focus; otherwise this timing-sensitive behavior can regress silently.",
+      "created_at": "2026-08-27T09:46:42Z",
+      "updated_at": "2026-08-27T09:46:42Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#discussion_r3870587307",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8560",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3870587307"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8560#discussion_r3870587307"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8560"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3870587307/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 168,
+      "original_start_line": 167,
+      "start_side": "RIGHT",
+      "line": 170,
+      "original_line": 169,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 10,
+      "position": 83,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3870719511",
+      "pull_request_review_id": 5039565286,
+      "id": 3870719511,
+      "node_id": "PRRC_kwDOO0Cobs7mtn4X",
+      "diff_hunk": "@@ -160,6 +160,14 @@ Item {\n           visible: passwordInput.cursorVisible\n         }\n \n+        // The compositor hands the lock surface keyboard focus a moment after the\n+        // session goes secure, which drops focus from this field. Nothing else\n+        // in the lock is focusable, so take it straight back rather than making\n+        // the user click before they can type.\n+        onActiveFocusChanged: {\n+          if (!activeFocus && root.inputEnabled) Qt.callLater(root.forcePasswordFocus)\n+        }",
+      "path": "shell/plugins/lock/LockView.qml",
+      "commit_id": "624e6c036646e9e4311713c8fedf591e508dd74c",
+      "original_commit_id": "e94ba45856cf2e5c7cf28873f9f01eb8b6e8e2d7",
+      "user": {
+        "login": "robouk",
+        "id": 4245309,
+        "node_id": "MDQ6VXNlcjQyNDUzMDk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4245309?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/robouk",
+        "html_url": "https://github.com/robouk",
+        "followers_url": "https://api.github.com/users/robouk/followers",
+        "following_url": "https://api.github.com/users/robouk/following{/other_user}",
+        "gists_url": "https://api.github.com/users/robouk/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/robouk/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/robouk/subscriptions",
+        "organizations_url": "https://api.github.com/users/robouk/orgs",
+        "repos_url": "https://api.github.com/users/robouk/repos",
+        "events_url": "https://api.github.com/users/robouk/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/robouk/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The fixtures exist, but they cannot assert `activeFocus`. Both `lock-password-overflow` and `lock-fingerprint-indicator` host `LockView` in a windowless `Item`, and Qt only propagates `activeFocus` from an active window. I checked against a live quickshell: after `forcePasswordFocus()`, `focus` is true and `activeFocus` is false. So `onActiveFocusChanged` never fires there and the suggested test would pass without exercising anything.\n\nGetting real focus needs a focused window, and `test/shell.d` runs against the developer's live compositor, so that would steal the keyboard mid-run. Per `agents/skills/acceptance-tests.md` that belongs in `test/acceptance.d`, which I cannot run here without the `omarchy-iso` repo.\n\nAdded `lock-focus-recovery-test.sh` instead, in the same source-assertion idiom `lock-blank-fingerprint-test.sh` uses for the blank timer. It covers the handler and its `inputEnabled` gate, and fails with the fix removed. Happy to add the acceptance variant if you would rather have it there.",
+      "created_at": "2026-08-27T10:05:57Z",
+      "updated_at": "2026-08-27T10:05:57Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8560#discussion_r3870719511",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8560",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3870719511"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8560#discussion_r3870719511"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8560"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3870719511/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 168,
+      "original_start_line": 167,
+      "start_side": "RIGHT",
+      "line": 170,
+      "original_line": 169,
+      "side": "RIGHT",
+      "in_reply_to_id": 3870587307,
+      "author_association": "NONE",
+      "original_position": 10,
+      "position": 83,
+      "subject_type": "line"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-09-21T14:08:26.970035+00:00",
+  "iso_sha256": "9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252",
+  "original_run": ".state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-095548-hardware-candidate-runtime",
+  "original_aggregate_exit": 1,
+  "original_failed_checks": [
+    "password-lock",
+    "desktop",
+    "recovery"
+  ],
+  "recheck_run": ".state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-100614-hardware-runtime-clean-rechecks",
+  "recheck_exits": {
+    "password-lock": 0,
+    "desktop": 0,
+    "recovery": 0
+  },
+  "same_installed_payload_verified": true,
+  "production_changes": false,
+  "cause": "The failed guest journal records repeated NetworkManager network-control Polkit authentication failures at 14:00:42 UTC and pam_faillock temporarily locking omarchy during the full source suite, before the installed checks at 14:02. Booting a new overlay of the preserved failed guest restored sudo; a local comparison verified the original test password is unchanged. The exact individual source test initiating those requests was not isolated.",
+  "scope": "Only the three failed installed checks rerun in a fresh overlay from the same installed ISO base.",
+  "cause_confirmed": true,
+  "inspection_run": ".state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-100826-hardware-runtime-failure-inspection"
+}

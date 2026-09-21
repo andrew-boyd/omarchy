@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10886",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t1-pcie"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "146bc866c430e2d6dd3fc03698032179a21e5d26",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10886,
+  "checked_at": "2026-09-21T11:57:11.819149+00:00",
+  "title": "Repair T1 Mac PCIe hotplug defaults",
+  "author": "Drecullith",
+  "head_sha": "146bc866c430e2d6dd3fc03698032179a21e5d26",
+  "base_sha": "a73bcbfc0a9570ba7072791639dc97eb567b6f41",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T16:07:21Z",
+  "state": "open",
+  "body": "## Summary\r\n\r\nRepair existing T1 Mac installations whose Limine configuration still contains `pcie_ports=compat`.\r\n\r\nThe earlier T2 migration replaces this parameter with:\r\n\r\n`pm_async=off mem_sleep_default=deep`\r\n\r\nbut it is gated specifically on T2 hardware and operates on `t2-mac.conf`. Existing T1 MacBook installations can instead retain `/etc/limine-entry-tool.d/macbook-t1.conf` with the obsolete `pcie_ports=compat` setting.\r\n\r\nOn affected machines, that setting disables native PCIe hotplug and can prevent PCIe-tunneled devices behind a Thunderbolt dock from appearing even though the dock itself is authorized and DisplayPort passthrough works.\r\n\r\nThis adds a new migration rather than modifying the previous T2 migration, since systems that already completed that migration would not rerun it.\r\n\r\nThe new migration:\r\n\r\n- acts only when `macbook-t1.conf` exists;\r\n- replaces only `pcie_ports=compat`;\r\n- preserves all unrelated kernel parameters;\r\n- rebuilds the Limine boot image after changing the configuration;\r\n- records successful repair with a machine-wide marker;\r\n- retries the rebuild if configuration repair succeeded but the previous rebuild was interrupted;\r\n- leaves systems without the T1 configuration untouched;\r\n- leaves already-current systems untouched.\r\n\r\nFixes #10638.\r\n\r\n## Tests\r\n\r\nAdded `test/shell.d/t1-pcie-hotplug-test.sh` covering:\r\n\r\n- stale T1 configuration is migrated;\r\n- unrelated kernel parameters are preserved;\r\n- `pcie_ports=compat` is removed;\r\n- the Limine boot image is rebuilt;\r\n- repeated execution before reboot is idempotent;\r\n- an interrupted rebuild is retried without editing the configuration again;\r\n- systems without `macbook-t1.conf` are skipped;\r\n- already-current/running configurations are left unchanged.\r\n\r\nFocused regression suite: 5/5 passing.\r\n\r\nAlso verified:\r\n\r\n- `bash -n migrations/1788906000.sh`\r\n- `bash -n test/shell.d/t1-pcie-hotplug-test.sh`\r\n\r\nNo physical T1 MacBook hardware was available for live verification. The issue reporter independently reports successful recovery after applying the equivalent kernel-command-line change and rebuilding Limine.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "31062e9e8252be8d7468b7112d7183f090ba3ebd",
+      "filename": "migrations/1788906000.sh",
+      "status": "added",
+      "additions": 34,
+      "deletions": 0,
+      "changes": 34,
+      "blob_url": "https://github.com/omacom/omarchy/blob/146bc866c430e2d6dd3fc03698032179a21e5d26/migrations%2F1788906000.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/146bc866c430e2d6dd3fc03698032179a21e5d26/migrations%2F1788906000.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788906000.sh?ref=146bc866c430e2d6dd3fc03698032179a21e5d26",
+      "patch": "@@ -0,0 +1,34 @@\n+echo \"Update T1 Mac suspend and PCIe hotplug defaults\"\n+\n+limine_conf=\"${OMARCHY_T1_LIMINE_CONF:-/etc/limine-entry-tool.d/macbook-t1.conf}\"\n+running_cmdline=\"${OMARCHY_T1_RUNNING_CMDLINE:-/proc/cmdline}\"\n+repair_marker=\"${OMARCHY_T1_REPAIR_MARKER:-/var/lib/omarchy/migrations/1788906000}\"\n+needs_limine_rebuild=0\n+\n+# T1 MacBook installs used pcie_ports=compat, which disables native PCIe\n+# hotplug and prevents Thunderbolt PCIe devices from appearing after attach.\n+# Match the suspend defaults already used by current T2 Mac installs.\n+if [[ -f $limine_conf ]] && grep -q 'pcie_ports=compat' \"$limine_conf\"; then\n+  sudo sed -i \\\n+    's/pcie_ports=compat/pm_async=off mem_sleep_default=deep/' \\\n+    \"$limine_conf\"\n+  needs_limine_rebuild=1\n+fi\n+\n+# If the config was already repaired but a previous rebuild was interrupted,\n+# retry while the running kernel still lacks either replacement parameter. The\n+# marker prevents repeated rebuilds before the next reboot.\n+if [[ -f $limine_conf ]] &&\n+  [[ ! -e $repair_marker ]] &&\n+  grep -q 'pm_async=off' \"$limine_conf\" &&\n+  grep -q 'mem_sleep_default=deep' \"$limine_conf\" &&\n+  { [[ ! -r $running_cmdline ]] ||\n+    ! grep -Eq '(^| )pm_async=off( |$)' \"$running_cmdline\" ||\n+    ! grep -Eq '(^| )mem_sleep_default=deep( |$)' \"$running_cmdline\"; }; then\n+  needs_limine_rebuild=1\n+fi\n+\n+if (( needs_limine_rebuild )); then\n+  sudo limine-mkinitcpio\n+  sudo install -Dm644 /dev/null \"$repair_marker\"\n+fi"
+    },
+    {
+      "sha": "a51fc66c3c5647a7e4de3c5302a643035e0bd886",
+      "filename": "test/shell.d/t1-pcie-hotplug-test.sh",
+      "status": "added",
+      "additions": 90,
+      "deletions": 0,
+      "changes": 90,
+      "blob_url": "https://github.com/omacom/omarchy/blob/146bc866c430e2d6dd3fc03698032179a21e5d26/test%2Fshell.d%2Ft1-pcie-hotplug-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/146bc866c430e2d6dd3fc03698032179a21e5d26/test%2Fshell.d%2Ft1-pcie-hotplug-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft1-pcie-hotplug-test.sh?ref=146bc866c430e2d6dd3fc03698032179a21e5d26",
+      "patch": "@@ -0,0 +1,90 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+migration=\"$ROOT/migrations/1788906000.sh\"\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+limine_conf=\"$test_tmp/macbook-t1.conf\"\n+running_cmdline=\"$test_tmp/cmdline\"\n+repair_marker=\"$test_tmp/t1-repair-complete\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+chmod +x \"$stub_bin\"/*\n+\n+run_migration() {\n+  PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_T1_LIMINE_CONF=\"$limine_conf\" \\\n+    OMARCHY_T1_RUNNING_CMDLINE=\"$running_cmdline\" \\\n+    OMARCHY_T1_REPAIR_MARKER=\"$repair_marker\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+cat >\"$limine_conf\" <<'EOF'\n+# Generated for an Intel MacBook with a T1 chip\n+KERNEL_CMDLINE[default]+=\" quiet pcie_ports=compat apple_gmux.force_igd=y\"\n+EOF\n+echo 'quiet pcie_ports=compat apple_gmux.force_igd=y' >\"$running_cmdline\"\n+\n+run_migration\n+\n+grep -Fq 'quiet pm_async=off mem_sleep_default=deep apple_gmux.force_igd=y' \"$limine_conf\" ||\n+  fail \"T1 migration replaces the obsolete PCIe mode without dropping other parameters\"\n+! grep -q 'pcie_ports=compat' \"$limine_conf\" ||\n+  fail \"T1 migration removes pcie_ports=compat\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"T1 migration rebuilds the boot image\"\n+[[ -f $repair_marker ]] || fail \"T1 migration records the machine-wide repair\"\n+pass \"T1 migration restores native PCIe hotplug defaults\"\n+\n+: >\"$calls\"\n+run_migration\n+[[ ! -s $calls ]] ||\n+  fail \"T1 migration does not repeatedly rebuild before reboot\" \"$(cat \"$calls\")\"\n+pass \"T1 migration is machine-idempotent before reboot\"\n+\n+rm -f \"$repair_marker\"\n+: >\"$calls\"\n+run_migration\n+\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"T1 migration retries an interrupted boot image rebuild\"\n+[[ -f $repair_marker ]] || fail \"retried T1 repair records completion\"\n+! grep -Eq $'sudo\\tsed(\\t|$)' \"$calls\" ||\n+  fail \"T1 rebuild retry leaves the repaired config unchanged\" \"$(cat \"$calls\")\"\n+pass \"T1 migration retries an interrupted boot image rebuild\"\n+\n+rm -f \"$repair_marker\" \"$limine_conf\"\n+: >\"$calls\"\n+run_migration\n+[[ ! -s $calls ]] ||\n+  fail \"systems without the T1 Limine config are left unchanged\" \"$(cat \"$calls\")\"\n+pass \"T1 migration skips systems without macbook-t1.conf\"\n+\n+cat >\"$limine_conf\" <<'EOF'\n+KERNEL_CMDLINE[default]+=\" quiet pm_async=off mem_sleep_default=deep apple_gmux.force_igd=y\"\n+EOF\n+echo 'quiet pm_async=off mem_sleep_default=deep apple_gmux.force_igd=y' >\"$running_cmdline\"\n+: >\"$calls\"\n+run_migration\n+[[ ! -s $calls ]] ||\n+  fail \"an already-running repaired T1 configuration is left unchanged\" \"$(cat \"$calls\")\"\n+pass \"T1 migration leaves already-current systems alone\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

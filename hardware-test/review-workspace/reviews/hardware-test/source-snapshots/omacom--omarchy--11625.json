@@ -1,0 +1,134 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11625",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "state": "open"
+    },
+    {
+      "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "state": "open",
+      "updated_at": "2026-09-15T20:03:25Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11625,
+  "checked_at": "2026-09-21T11:56:17.598526+00:00",
+  "title": "Fix audio on MacBook Pro 2015-2017 (Cirrus Logic CS8409)",
+  "author": "andyholst",
+  "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:32:30Z",
+  "state": "closed",
+  "body": "## Problem\n\nMacBook Pro 2015-2017 with Cirrus Logic CS8409 audio codec has no speaker output. The in-tree snd_hda_codec_cs8409 driver doesn't properly configure the CS8409's speaker pins.\n\n## Fix\n\nInstall the community snd_hda_macbookpro driver from https://github.com/davidjo/snd_hda_macbookpro using DKMS.\n\n## Changes\n\n| File | What it does |\n|------|-------------|\n| install/hardware/apple/fix-snd-hda-macbookpro.sh | Detects CS8409, clones driver, installs via DKMS |\n| install/hardware/all.sh | Runs the new fix during hardware setup |\n| migrations/1786391102.sh | Applies fix to existing Omarchy installs |\n| test/shell.d/snd-hda-macbookpro-test.sh | 9 tests, all passing |\n\nFixes #11619",
+  "draft": false,
+  "files": [
+    {
+      "sha": "0a252d115b33f57e69394e1a2139e88c3aaf714d",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "patch": "@@ -35,6 +35,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-snd-hda-macbookpro.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "ec497d6ca2b1e3ba10dd27d413c09fdfee274937",
+      "filename": "install/hardware/apple/fix-snd-hda-macbookpro.sh",
+      "status": "added",
+      "additions": 42,
+      "deletions": 0,
+      "changes": 42,
+      "blob_url": "https://github.com/omacom/omarchy/blob/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/install%2Fhardware%2Fapple%2Ffix-snd-hda-macbookpro.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/install%2Fhardware%2Fapple%2Ffix-snd-hda-macbookpro.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-snd-hda-macbookpro.sh?ref=707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "patch": "@@ -0,0 +1,42 @@\n+# Fix audio on MacBook Pro with Cirrus Logic CS8409 (snd_hda_macbookpro)\n+#\n+# The CS8409 codec on MacBook Pro 2015-2017 needs the community snd_hda_macbookpro\n+# driver to enable speakers, headphone jack, and microphone. The in-tree driver\n+# (snd_hda_codec_cs8409) only provides basic functionality.\n+#\n+# Source: https://github.com/davidjo/snd_hda_macbookpro\n+\n+# Detect Cirrus Logic CS8409 audio codec (Apple subsystem 106b:3900)\n+if lspci -nn | grep -q \"106b:3900\" || grep -rq \"CS8409\" /proc/asound/card*/codec* 2>/dev/null; then\n+  echo \"Cirrus Logic CS8409 detected, installing snd_hda_macbookpro driver\"\n+\n+  # Install build dependencies\n+  omarchy-pkg-add linux-headers gcc make patch wget git dkms\n+\n+  # Clone the driver source for DKMS\n+  driver_dir=\"/usr/src/snd_hda_macbookpro\"\n+  if [[ ! -d $driver_dir/.git ]]; then\n+    echo \"Cloning snd_hda_macbookpro from GitHub...\"\n+    sudo git clone https://github.com/davidjo/snd_hda_macbookpro.git \"$driver_dir\" 2>&1\n+  else\n+    echo \"Driver source already exists, pulling latest...\"\n+    sudo git -C \"$driver_dir\" pull 2>&1\n+  fi\n+\n+  # Install via DKMS (auto-rebuilds on kernel updates)\n+  echo \"Installing DKMS driver...\"\n+  (\n+    cd \"$driver_dir\"\n+    sudo ./install.cirrus.driver.sh -i 2>&1\n+  )\n+\n+  # Rebuild initramfs\n+  echo \"Rebuilding initramfs...\"\n+  if command -v limine-mkinitcpio &>/dev/null; then\n+    sudo limine-mkinitcpio 2>&1 || sudo mkinitcpio -P 2>&1\n+  elif command -v mkinitcpio &>/dev/null; then\n+    sudo mkinitcpio -P 2>&1\n+  fi\n+\n+  echo \"snd_hda_macbookpro driver installed. Reboot to apply.\"\n+fi"
+    },
+    {
+      "sha": "dd9c8c19a694f970f5e5f61933775c83ade0f996",
+      "filename": "migrations/1786391102.sh",
+      "status": "added",
+      "additions": 55,
+      "deletions": 0,
+      "changes": 55,
+      "blob_url": "https://github.com/omacom/omarchy/blob/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/migrations%2F1786391102.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/migrations%2F1786391102.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786391102.sh?ref=707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "patch": "@@ -0,0 +1,55 @@\n+echo \"Fix audio on MacBook Pro with Cirrus Logic CS8409\"\n+\n+# The install-time audio driver fix only reaches machines set up after it shipped,\n+# so an existing install on one still has no speaker output. See\n+# install/hardware/apple/fix-snd-hda-macbookpro.sh for the failure it fixes.\n+\n+# Skip on non-Mac hardware\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+[[ $sys_vendor == Apple* ]] || exit 0\n+\n+# Skip if no Cirrus Logic CS8409 is detected\n+lspci -nn | grep -q \"106b:3900\" || exit 0\n+\n+# Skip if DKMS module is already installed\n+if dkms status 2>/dev/null | grep -q \"snd_hda_macbookpro\"; then\n+  echo \"snd_hda_macbookpro already installed via DKMS\"\n+  exit 0\n+fi\n+\n+echo \"Installing snd_hda_macbookpro for Cirrus Logic CS8409...\"\n+\n+# Install build dependencies\n+if (( EUID == 0 )); then\n+  pacman -S --noconfirm --needed linux-headers gcc make patch wget git dkms 2>&1\n+else\n+  sudo pacman -S --noconfirm --needed linux-headers gcc make patch wget git dkms 2>&1\n+fi\n+\n+# Clone the driver source to /usr/src for DKMS\n+driver_dir=\"/usr/src/snd_hda_macbookpro\"\n+if [[ ! -d $driver_dir/.git ]]; then\n+  echo \"Cloning snd_hda_macbookpro from GitHub...\"\n+  sudo git clone https://github.com/davidjo/snd_hda_macbookpro.git \"$driver_dir\" 2>&1\n+else\n+  echo \"Driver source already exists, pulling latest...\"\n+  sudo git -C \"$driver_dir\" pull 2>&1\n+fi\n+\n+# Install via DKMS (auto-rebuilds on kernel updates)\n+echo \"Installing DKMS driver...\"\n+(\n+  cd \"$driver_dir\"\n+  sudo ./install.cirrus.driver.sh -i 2>&1\n+)\n+\n+# Rebuild initramfs\n+echo \"Rebuilding initramfs...\"\n+if command -v limine-mkinitcpio &>/dev/null; then\n+  sudo limine-mkinitcpio 2>&1 || sudo mkinitcpio -P 2>&1\n+elif command -v mkinitcpio &>/dev/null; then\n+  sudo mkinitcpio -P 2>&1\n+fi\n+\n+echo \"snd_hda_macbookpro driver installed. Reboot to apply.\"\n+omarchy-state set reboot-required"
+    },
+    {
+      "sha": "5ffa994158ed5d3b383defbf933bc55ecc5e1fcd",
+      "filename": "test/shell.d/snd-hda-macbookpro-test.sh",
+      "status": "added",
+      "additions": 42,
+      "deletions": 0,
+      "changes": 42,
+      "blob_url": "https://github.com/omacom/omarchy/blob/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/test%2Fshell.d%2Fsnd-hda-macbookpro-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/707ed1c084fbfd0a7d32ee98ed26846c4052ba3e/test%2Fshell.d%2Fsnd-hda-macbookpro-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fsnd-hda-macbookpro-test.sh?ref=707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+      "patch": "@@ -0,0 +1,42 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-snd-hda-macbookpro.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+\n+# Test 1: Script exists and has proper structure\n+[[ -f $leaf ]] || fail \"the audio fix script exists\"\n+pass \"the audio fix script exists\"\n+\n+grep -q '106b:3900\\|CS8409' \"$leaf\" || fail \"script detects Cirrus Logic CS8409\"\n+pass \"script detects Cirrus Logic CS8409\"\n+\n+grep -q 'snd_hda_macbookpro' \"$leaf\" || fail \"script references snd_hda_macbookpro driver\"\n+pass \"script references snd_hda_macbookpro driver\"\n+\n+grep -q 'dkms' \"$leaf\" || fail \"script uses DKMS for auto-rebuild on kernel updates\"\n+pass \"script uses DKMS for auto-rebuild on kernel updates\"\n+\n+grep -q 'omarchy-pkg-add' \"$leaf\" || fail \"script uses omarchy-pkg-add for dependencies\"\n+pass \"script uses omarchy-pkg-add for dependencies\"\n+\n+# Test 2: Included in hardware setup\n+grep -q 'apple/fix-snd-hda-macbookpro.sh' \"$all\" || fail \"the audio fix runs during hardware setup\"\n+pass \"the audio fix runs during hardware setup\"\n+\n+# Test 3: Script uses variable for driver dir\n+grep -q 'driver_dir=' \"$leaf\" || fail \"script uses variable for driver directory\"\n+pass \"script uses variable for driver directory\"\n+\n+# Test 4: Script checks for existing installation before re-running\n+grep -q 'dkms status\\|already installed\\|\\.git' \"$leaf\" || fail \"script checks if already installed\"\n+pass \"script checks if already installed\"\n+\n+# Test 5: Script rebuilds initramfs after install\n+grep -q 'limine-mkinitcpio\\|mkinitcpio' \"$leaf\" || fail \"script rebuilds initramfs\"\n+pass \"script rebuilds initramfs\"\n+\n+echo \"all tests passed\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758345579",
+      "html_url": "https://github.com/omacom/omarchy/pull/11625#issuecomment-5758345579",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/11625",
+      "id": 5758345579,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzlhaw",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:32:29Z",
+      "updated_at": "2026-09-21T09:32:29Z",
+      "body": "Automated duplication check: this pull request looks similar to #11064, which covers the same pre-T2 CS8409 speaker fix. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758345579/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,261 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8812",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-legacy"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "f4304d9106902a724487ae512e1d4867ea5eb383",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8812,
+  "checked_at": "2026-09-21T11:57:37.490888+00:00",
+  "title": "Fix legacy Broadcom wl conflict on BCM4350 Macs upgrading to Quattro",
+  "author": "rsharma1157",
+  "head_sha": "f4304d9106902a724487ae512e1d4867ea5eb383",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:28Z",
+  "state": "open",
+  "body": "Fixes #8810\n\nQuattro already uses brcmfmac for Apple BCM4350 (14e4:43a3), but legacy Omarchy 3.x installs can retain broadcom-wl or broadcom-wl-dkms during upgrade.\n\nThose legacy wl packages blacklist brcmfmac, which can leave the upgraded system without a Wi-Fi interface when wl fails to initialize.\n\nThis change removes legacy broadcom-wl/broadcom-wl-dkms only on Apple BCM4350 systems before the Quattro package transaction.\n\nOther Broadcom devices that intentionally use wl are unchanged.\n\nValidation:\n- bash syntax checks pass\n- full upgrade-to-quattro shell test passes\n- regression test verifies cleanup is limited to Apple BCM4350 systems",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f05b9d01e56eb13cb3f5d7b3805b6fd2c104de9b",
+      "filename": "bin/omarchy-upgrade-to-quattro",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f4304d9106902a724487ae512e1d4867ea5eb383/bin%2Fomarchy-upgrade-to-quattro",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f4304d9106902a724487ae512e1d4867ea5eb383/bin%2Fomarchy-upgrade-to-quattro",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-upgrade-to-quattro?ref=f4304d9106902a724487ae512e1d4867ea5eb383",
+      "patch": "@@ -700,6 +700,27 @@ remove_conflicting_legacy_packages() {\n   done\n }\n \n+remove_legacy_bcm4350_wl_driver() {\n+  local sys_vendor\n+  sys_vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\n+\n+  [[ $sys_vendor == Apple* ]] || return 0\n+  lspci -nn | grep -F '14e4:43a3' >/dev/null || return 0\n+\n+  local pkg\n+  local legacy_wl_packages=()\n+  for pkg in broadcom-wl broadcom-wl-dkms; do\n+    package_installed_exact \"$pkg\" && legacy_wl_packages+=(\"$pkg\")\n+  done\n+\n+  ((${#legacy_wl_packages[@]})) || return 0\n+\n+  log \"Removing legacy Broadcom wl driver for Apple BCM4350\"\n+  # BCM4350 uses the in-kernel brcmfmac driver. The legacy wl packages blacklist\n+  # it, so remove only those packages while ignoring pre-quattro dependency edges.\n+  as_root pacman -Rdd --noconfirm \"${legacy_wl_packages[@]}\" || warn \"Could not remove legacy Broadcom driver(s) ${legacy_wl_packages[*]}; continuing.\"\n+}\n+\n migrate_1password_beta_package() {\n   if ! package_installed_exact 1password-beta && ! package_installed_exact 1password-beta-bin; then\n     return 0\n@@ -2322,6 +2343,7 @@ install_keyrings\n remove_legacy_installer_package\n remove_legacy_limine_configs\n remove_conflicting_legacy_packages\n+remove_legacy_bcm4350_wl_driver\n install_omarchy_quattro_packages\n install_hardware_transition_packages\n normalize_limine_config"
+    },
+    {
+      "sha": "b5a04fc56efd7511fdd70042341b27a75c8353c2",
+      "filename": "test/shell.d/upgrade-to-quattro-test.sh",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f4304d9106902a724487ae512e1d4867ea5eb383/test%2Fshell.d%2Fupgrade-to-quattro-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f4304d9106902a724487ae512e1d4867ea5eb383/test%2Fshell.d%2Fupgrade-to-quattro-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fupgrade-to-quattro-test.sh?ref=f4304d9106902a724487ae512e1d4867ea5eb383",
+      "patch": "@@ -132,6 +132,28 @@ grep -F 'apply_user_hardware_transition' \"$upgrade_to_quattro\" >/dev/null\n grep -F 'DX13260' \"$upgrade_to_quattro\" >/dev/null\n pass \"Omarchy 4 upgrade backfills hardware support from the legacy release\"\n \n+bcm4350_body=$(function_body remove_legacy_bcm4350_wl_driver)\n+grep -F '[[ $sys_vendor == Apple* ]]' <<<\"$bcm4350_body\" >/dev/null ||\n+  fail \"Omarchy 4 upgrade limits BCM4350 wl cleanup to Apple hardware\"\n+grep -F \"lspci -nn | grep -F '14e4:43a3'\" <<<\"$bcm4350_body\" >/dev/null ||\n+  fail \"Omarchy 4 upgrade limits BCM4350 wl cleanup to PCI ID 14e4:43a3\"\n+for package in broadcom-wl broadcom-wl-dkms; do\n+  grep -F \"package_installed_exact \\\"\\$pkg\\\"\" <<<\"$bcm4350_body\" >/dev/null ||\n+    fail \"Omarchy 4 upgrade makes BCM4350 wl cleanup idempotent\"\n+  grep -F \"$package\" <<<\"$bcm4350_body\" >/dev/null ||\n+    fail \"Omarchy 4 upgrade removes legacy package $package from Apple BCM4350 systems\"\n+done\n+grep -F 'pacman -Rdd --noconfirm \"${legacy_wl_packages[@]}\" ||' <<<\"$bcm4350_body\" >/dev/null ||\n+  fail \"Omarchy 4 upgrade survives a failed legacy wl removal\"\n+! function_body remove_retired_default_packages | grep -F 'broadcom-wl' >/dev/null ||\n+  fail \"Omarchy 4 upgrade does not retire broadcom-wl globally\"\n+bcm4350_line=$(grep -n '^remove_legacy_bcm4350_wl_driver$' \"$upgrade_to_quattro\" | cut -d: -f1)\n+packages_line=$(grep -n '^install_omarchy_quattro_packages$' \"$upgrade_to_quattro\" | cut -d: -f1)\n+[[ -n $bcm4350_line && -n $packages_line ]] || fail \"BCM4350 cleanup and package install calls exist\"\n+(( bcm4350_line < packages_line )) ||\n+  fail \"BCM4350 cleanup runs before the Quattro package transaction\"\n+pass \"Omarchy 4 upgrade removes legacy wl packages only from Apple BCM4350 systems\"\n+\n grep -F 'omarchy-refresh-applications' \"$upgrade_to_quattro\" >/dev/null\n pass \"Omarchy 4 upgrade refreshes application launchers\"\n "
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5462476144",
+      "html_url": "https://github.com/omacom/omarchy/pull/8812#issuecomment-5462476144",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8812",
+      "id": 5462476144,
+      "node_id": "IC_kwDOO0Cobs8AAAABRZbFcA",
+      "user": {
+        "login": "omarchybot",
+        "id": 317366263,
+        "node_id": "U_kgDOEuqf9w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317366263?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/omarchybot",
+        "html_url": "https://github.com/omarchybot",
+        "followers_url": "https://api.github.com/users/omarchybot/followers",
+        "following_url": "https://api.github.com/users/omarchybot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/omarchybot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/omarchybot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/omarchybot/subscriptions",
+        "organizations_url": "https://api.github.com/users/omarchybot/orgs",
+        "repos_url": "https://api.github.com/users/omarchybot/repos",
+        "events_url": "https://api.github.com/users/omarchybot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/omarchybot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-29T12:42:08Z",
+      "updated_at": "2026-08-29T12:42:08Z",
+      "body": "Reviewed by Claude Opus 5 in Claude Code, with an independent second opinion from Codex at xhigh reasoning. The diagnosis holds up and the gate is right. One real defect, and a push problem that needs you.\n\n**The premise checks out.** I pulled the Arch package apart on a disposable VM rather than taking it on trust. `broadcom-wl` ships `/usr/lib/modprobe.d/broadcom-wl.conf`, which contains `blacklist brcmfmac` among six others, and because that path is package-owned, `pacman -Rdd` genuinely removes the blacklist \u2014 there is no leftover conf to clean up, and Omarchy itself never writes a brcmfmac blacklist anywhere in the tree. `wl.ko`'s only modalias is `pci:v*d*sv*sd*bc02sc80i*`, a PCI *class* match rather than a device list, which is why `wl` grabs a BCM4350 it cannot drive and then fails in probe \u2014 exactly the `wl driver 6.30.223.271 failed with code 1` in #8810. So on `14e4:43a3` this removes a driver that was never working, which is the thing that most needed ruling out on a one-shot upgrade path.\n\n**One defect, and it is the reverse of the expected one.** At `bin/omarchy-upgrade-to-quattro:721` the removal was unguarded. The script runs under `set -euo pipefail`, so any non-zero exit from that `pacman` call aborted the entire upgrade between `remove_conflicting_legacy_packages` and `install_omarchy_quattro_packages` \u2014 precisely where `cleanup_on_exit` prints *\"Upgrade incomplete - do NOT reboot\"* and the machine is part Omarchy 3 and part quattro. A legacy Wi-Fi driver that will not uninstall is not worth that outcome. The neighbouring removal at line 698 does the same `-Rdd --noconfirm` for the same reason and ends with `|| warn \"...; continuing.\"`, and your own proposal in #8810 had `|| warn` too \u2014 it looks like it was dropped in the move to `-Rdd`.\n\nI could not push the fix: your fork `rsharma1157/omarchy` is **archived**, so it is read-only and returns 403. That also blocks the maintainer, despite \"allow edits by maintainers\" being on. Unarchiving it in your repository settings would let a fix land. The patch:\n\n```diff\n-  as_root pacman -Rdd --noconfirm \"${legacy_wl_packages[@]}\"\n+  as_root pacman -Rdd --noconfirm \"${legacy_wl_packages[@]}\" ||\n+    warn \"Could not remove ${legacy_wl_packages[*]}; brcmfmac stays blacklisted and this Mac may have no Wi-Fi. Continuing.\"\n```\n\n**On the tests.** Codex demonstrated that deleting the `pacman -Rdd` line from the function left every one of your new assertions passing \u2014 they check that the source contains certain words, not that anything happens. That is the file's established convention and not something to hold against this PR; the script has no main guard and executes its sequence at top level, so no single function can be sourced and exercised without restructuring it, which is a bigger change than this fix. Worth one assertion with teeth, though, which I added alongside the guard and mutation-tested both ways \u2014 dropping the guard and deleting the removal outright each fail it:\n\n```bash\ngrep -F 'pacman -Rdd --noconfirm \"${legacy_wl_packages[@]}\" ||' <<<\"$bcm4350_body\" >/dev/null ||\n  fail \"Omarchy 4 upgrade survives a failed legacy wl removal\"\n```\n\n**Things I checked and cleared, so they do not come back in a later review.** `lspci` cannot be missing: `pciutils` is a hard dependency of `base`, so the gate cannot silently no-op on the hardware it targets. The `lspci -nn | grep -F ... >/dev/null` form avoids the SIGPIPE-141 bug that `migrations/1786137597.sh` records, because `grep` without `-q` consumes all its input \u2014 Codex measured 0 for this form against 141 for the `grep -q` equivalent. The `package_installed_exact \"$pkg\" && legacy_wl_packages+=(\"$pkg\")` AND-list does not trip `set -e` when neither package is installed; I ran that case rather than reasoning about it. `broadcom-wl-dkms` conflicts with `broadcom-wl`, so the array only ever holds one element. Ordering before `install_omarchy_quattro_packages` is right, and re-running after a failure is safe because `package_installed_exact` skips the removal the second time.\n\n**Left open, for the maintainer rather than you.** A user-written `/etc/modprobe.d` blacklist would survive the removal and still outrank `/usr/lib/modprobe.d`; the function does not look for one, and deciding whether the upgrade should delete a file the user wrote is not a call for a review to make. `linux-firmware`, which pulls in the `linux-firmware-broadcom` split package holding `brcmfmac4350-pcie.bin`, appears only in `install/omarchy-other.packages` (ISO-builder availability) and not in `omarchy-base.packages`, so the upgrade relies on it already being present rather than installing it \u2014 true on any machine where brcmfmac worked before, as yours did. And non-Apple machines carrying the same `14e4:43a3` keep the bug, which matches the vendor gate in `install/hardware/apple/fix-brcmfmac-supplicant.sh` and is deliberate as far as I can tell; widening a hardware gate is a maintainer decision, so I have not touched it.\n\n**What ran.** `./test/shell.d/upgrade-to-quattro-test.sh` on a disposable VM with a real session, 23 passed 0 failed before my change and 24 passed 0 failed after, plus `bash -n`. Nothing was executed on real Mac hardware, and the upgrade script itself was never run \u2014 the hardware evidence here is yours from #8810, not mine. Where Codex agreed with conclusions I had already reached, its independence is not currently guaranteed, since its sandbox restricts writes but not reads; the mutation result on the assertions and the SIGPIPE measurement were its own contributions and stand on their own.\n\nWaiting on you to unarchive the fork so the guard can land, then on the maintainer for the merge decision and the three open questions above.\n",
+      "author_association": "COLLABORATOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5462476144/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5478375621",
+      "html_url": "https://github.com/omacom/omarchy/pull/8812#issuecomment-5478375621",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8812",
+      "id": 5478375621,
+      "node_id": "IC_kwDOO0Cobs8AAAABRolgxQ",
+      "user": {
+        "login": "omarchybot",
+        "id": 317366263,
+        "node_id": "U_kgDOEuqf9w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317366263?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/omarchybot",
+        "html_url": "https://github.com/omarchybot",
+        "followers_url": "https://api.github.com/users/omarchybot/followers",
+        "following_url": "https://api.github.com/users/omarchybot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/omarchybot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/omarchybot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/omarchybot/subscriptions",
+        "organizations_url": "https://api.github.com/users/omarchybot/orgs",
+        "repos_url": "https://api.github.com/users/omarchybot/repos",
+        "events_url": "https://api.github.com/users/omarchybot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/omarchybot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-31T12:29:41Z",
+      "updated_at": "2026-08-31T12:29:41Z",
+      "body": "Re-reviewed at `ca9d7757` by Claude Opus 5 in Claude Code, with an independent second opinion from Codex at xhigh reasoning. The guard landed and it is the right one, so the defect from the last review is closed. Three things are new since then, and one of them decides whether this actually finishes #8810.\n\n**The fix is correct.** `bin/omarchy-upgrade-to-quattro:721` now ends in `|| warn \"...; continuing.\"`, which matches the neighbouring `remove_conflicting_legacy_packages` at line 698 doing the same `-Rdd --noconfirm` for the same reason. A stubborn Wi-Fi driver no longer aborts the upgrade between `remove_conflicting_legacy_packages` and `install_omarchy_quattro_packages`, which is where `cleanup_on_exit` prints *\"Upgrade incomplete - do NOT reboot\"* over a machine that is part Omarchy 3 and part Quattro. Re-running still retries the removal, because `package_installed_exact` is the only gate and nothing writes a completion marker for this step \u2014 I checked for one rather than assuming.\n\n**Pushed one commit, `f4304d91`,** adding the assertion the last review said was missing:\n\n```bash\ngrep -F 'pacman -Rdd --noconfirm \"${legacy_wl_packages[@]}\" ||' <<<\"$bcm4350_body\" >/dev/null ||\n  fail \"Omarchy 4 upgrade survives a failed legacy wl removal\"\n```\n\nBoth mutations now fail on a worker where before they passed: dropping the `|| warn` gives `not ok - Omarchy 4 upgrade survives a failed legacy wl removal`, and so does deleting the `as_root pacman -Rdd` line outright. Codex found the same gap by reading the assertions; I ran it. One weakness left in your own loop, small enough that I left it alone: `grep -F \"$package\"` on the `broadcom-wl` iteration matches the substring inside `broadcom-wl-dkms`, so dropping the standalone `broadcom-wl` token would not fail that check \u2014 Codex's catch.\n\n**The thing that needs you: this does not repair a Mac that has already upgraded.** The hook is in the upgrade script, so it only runs for someone still on 3.x. #8810 reports the opposite machine \u2014 its pre-upgrade snapshot shows `brcmfmac` driving `wlp2s0`, and the post-upgrade state shows `broadcom-wl-dkms 6.30.223.271-48 installed` and `wl driver 6.30.223.271 failed with code 1`. That machine is on Quattro now and nothing in this PR reaches it. `omarchy-migrate` and `migrations/*.sh` are the mechanism for existing installs, and this PR adds no migration, so merging it with `Fixes #8810` closes the issue while the reporter still has no Wi-Fi. Whether to write that migration is a call for the maintainer rather than something a review should push, but the body's closing keyword is worth a second look either way. #6972, which happens to edit the same two files, is the shape of doing both: an upgrade-script change plus a migration for the machines that already went through.\n\n**Two smaller things about the failure path, both judgement calls I have not touched.** The warning names the packages but not the symptom, so a user reading `Could not remove legacy Broadcom driver(s) broadcom-wl-dkms; continuing.` at the end of a long upgrade has nothing connecting it to the Wi-Fi that stops working after the reboot. And with `--reboot` there is nobody to read it: line 2383 reboots automatically, and the `WARNING: You must address any errors in the above` banner scrolls past. The script already has the precedent for this \u2014 `boot_cmdline_unsafe` suppresses the automatic reboot for exactly that reason. Codex's own suggestion, which I had not reasoned about and think is the better shape if you want one: re-query both packages after the `pacman` call and continue only when they are genuinely absent, so a nonzero exit from a hook that removed the packages anyway is tolerated while a package that actually survived is not silently accepted.\n\n**Things checked and cleared, so they do not come back.** The gate is genuinely specific: `[[ $sys_vendor == Apple* ]]` plus `lspci -nn` containing `14e4:43a3` matches an Apple machine with a BCM4350 and nothing else \u2014 not `14e4:43a0` (BCM4360) or `14e4:4331` (BCM4331), the two devices `install/hardware/fix-bcm43xx.sh` deliberately installs `broadcom-wl` for. It is the same predicate shape `install/hardware/apple/fix-brcmfmac-supplicant.sh` already uses, whose comment names `43a3` as a BCM4350 that brcmfmac drives and names the BCM4360 as deliberately absent because it runs wl. Nothing later in the sequence puts the driver back: `install_omarchy_quattro_packages` reads only `omarchy-base.packages`, `install_hardware_transition_packages` is audio and GPU only, `install/omarchy-other.packages` is an ISO list the upgrade never reads, and `install/hardware/all.sh` is reached through `omarchy-apply-hardware`, which the upgrade does not call. Idempotence holds on a second pass: `package_installed_exact \"$pkg\" && legacy_wl_packages+=(\"$pkg\")` is exempt from `set -e` as the non-final command of an `&&` list, and `((${#legacy_wl_packages[@]}))` returning 1 on an empty array sits on the left of `|| return 0`. And #6972 edits `bin/omarchy-upgrade-to-quattro` and `test/shell.d/upgrade-to-quattro-test.sh` too, but `git merge-tree` merges the two heads with no conflict \u2014 the hunks are 1600 lines apart in the script, and the maintainer can take them in either order.\n\n**What ran.** `./test/shell.d/upgrade-to-quattro-test.sh` through the session wrapper on a disposable VM, 23 passed 0 failed at `ca9d7757` and again after my commit, plus both mutations above and `./test/cli` at 116 ok, 0 failures. Nothing was run on real Mac hardware and the upgrade script itself was never executed \u2014 the hardware evidence here is still yours from #8810. Where Codex agreed with conclusions already reached, its independence is not currently guaranteed, since its sandbox restricts writes but not reads; the `--reboot` bypass, the re-query proposal and the `broadcom-wl` substring were its own and stand on their own.\n\nWaiting on the maintainer for the merge decision, for whether an already-upgraded machine gets a migration, and for the two failure-path questions above.\n",
+      "author_association": "COLLABORATOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5478375621/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5054782514,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLUncMg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds targeted cleanup of legacy Broadcom `wl` packages that disable Wi-Fi on BCM4350 Macs during Quattro upgrades.\n\n**Changes:**\n- Detects Apple BCM4350 hardware before package installation.\n- Removes installed `broadcom-wl` variants.\n- Adds static regression checks; runtime behavior still needs coverage.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated 1 comment.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-upgrade-to-quattro` | Adds hardware-gated legacy driver cleanup. |\n| `test/shell.d/upgrade-to-quattro-test.sh` | Adds cleanup and ordering checks. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8812#pullrequestreview-5054782514",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8812",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8812#pullrequestreview-5054782514"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8812"
+        }
+      },
+      "submitted_at": "2026-08-28T20:19:08Z",
+      "commit_id": "8811f05a044d80bb3066db18da33cb333ad788b3"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3883774743",
+      "pull_request_review_id": 5054782514,
+      "id": 3883774743,
+      "node_id": "PRRC_kwDOO0Cobs7nfbMX",
+      "diff_hunk": "@@ -132,6 +132,26 @@ grep -F 'apply_user_hardware_transition' \"$upgrade_to_quattro\" >/dev/null\n grep -F 'DX13260' \"$upgrade_to_quattro\" >/dev/null\n pass \"Omarchy 4 upgrade backfills hardware support from the legacy release\"\n \n+bcm4350_body=$(function_body remove_legacy_bcm4350_wl_driver)\n+grep -F '[[ $sys_vendor == Apple* ]]' <<<\"$bcm4350_body\" >/dev/null ||\n+  fail \"Omarchy 4 upgrade limits BCM4350 wl cleanup to Apple hardware\"\n+grep -F \"lspci -nn | grep -F '14e4:43a3'\" <<<\"$bcm4350_body\" >/dev/null ||\n+  fail \"Omarchy 4 upgrade limits BCM4350 wl cleanup to PCI ID 14e4:43a3\"\n+for package in broadcom-wl broadcom-wl-dkms; do\n+  grep -F \"package_installed_exact \\\"\\$pkg\\\"\" <<<\"$bcm4350_body\" >/dev/null ||\n+    fail \"Omarchy 4 upgrade makes BCM4350 wl cleanup idempotent\"\n+  grep -F \"$package\" <<<\"$bcm4350_body\" >/dev/null ||\n+    fail \"Omarchy 4 upgrade removes legacy package $package from Apple BCM4350 systems\"",
+      "path": "test/shell.d/upgrade-to-quattro-test.sh",
+      "commit_id": "f4304d9106902a724487ae512e1d4867ea5eb383",
+      "original_commit_id": "8811f05a044d80bb3066db18da33cb333ad788b3",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This regression only searches for source tokens; it never invokes the cleanup or asserts the `pacman -Rdd` call. Deleting the actual removal at line 721 would therefore still pass. Please execute the extracted function with stubbed vendor, `lspci`, package state, and `as_root`, then assert the exact removal for an Apple BCM4350 and no removal for non-Apple, another PCI ID, or no installed legacy package.",
+      "created_at": "2026-08-28T20:19:07Z",
+      "updated_at": "2026-08-28T20:19:08Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8812#discussion_r3883774743",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8812",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3883774743"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8812#discussion_r3883774743"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8812"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3883774743/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 140,
+      "original_start_line": 140,
+      "start_side": "RIGHT",
+      "line": 144,
+      "original_line": 144,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 13,
+      "position": 156,
+      "subject_type": "line"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+[
+  {
+    "id": "omarchy-integration",
+    "exit": 1,
+    "result": "c3b6f5a212df7f74b61224a2698a3d1bba28c29e\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging docs/file-layout.md\nAuto-merging shell/plugins/lock/LockView.qml\nAuto-merging shell/plugins/lock/Service.qml\nAuto-merging test/shell.d/factory-reset-accounts-test.sh\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "omarchy-pkgs-integration",
+    "exit": 0,
+    "result": "c58e86073531844a2719fdc275a29c8e5a31067a\n"
+  },
+  {
+    "id": "P01",
+    "exit": 0,
+    "result": "6b29cc715dc0d520265b1f86e634aa9d3e2ea983\n"
+  },
+  {
+    "id": "P02",
+    "exit": 0,
+    "result": "bc8b9d2e9ed5d1b8a1f8d1f42e1ba1f839ed9231\n"
+  },
+  {
+    "id": "P03",
+    "exit": 1,
+    "result": "7d346808e1b1541bc10d478a667963a01d624698\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P04",
+    "exit": 0,
+    "result": "cc0e3102ee9c631e57682a046098195319f69fec\n"
+  },
+  {
+    "id": "P05",
+    "exit": 1,
+    "result": "66413e7ea9006931709793fab4b93d192efc5b77\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P06",
+    "exit": 1,
+    "result": "bb9655bef72ac816d07890b78953e2a686f4bf7e\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P07",
+    "exit": 1,
+    "result": "fc7c6445e9c8185d748cbf9cbb43d21df17abb5c\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P08-packages",
+    "exit": 0,
+    "result": "b5784366608ae1ecba71c6de5da1c94189aebdb9\n"
+  },
+  {
+    "id": "P08",
+    "exit": 0,
+    "result": "6c25fdc5be3b809ee87f02958f24671343812da2\n"
+  },
+  {
+    "id": "P09",
+    "exit": 1,
+    "result": "b1ea8fbb089e79c26438c2faaf021d1915c75c13\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P10",
+    "exit": 1,
+    "result": "90dd2a99161ffee61c5b295a3f5160e743ac4258\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging docs/file-layout.md\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P11-packages",
+    "exit": 0,
+    "result": "93232e71656a17cbc9bb71159caf3e5e7cda68c1\n"
+  },
+  {
+    "id": "P11",
+    "exit": 1,
+    "result": "b89d5b22d5d564324dd89a5ca85cd9d5fda77804\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P12-packages",
+    "exit": 0,
+    "result": "1f1a57d6a79e387bda0b1efd647ebbcee208fc64\n"
+  },
+  {
+    "id": "P12",
+    "exit": 0,
+    "result": "c79cfebe66d541c019e280eed39a7ede8552eb29\n"
+  },
+  {
+    "id": "P13",
+    "exit": 1,
+    "result": "af7d5468dbc00e061b26b5b4929d5ca91ecdfd2a\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  },
+  {
+    "id": "P14",
+    "exit": 1,
+    "result": "46919c957dbe858f5769fdf1854a67bfb7791b86\ntest/shell.d/locate-test.sh\ntest/shell.d/omarchy-kernel-migration-test.sh\n\nAuto-merging test/shell.d/locate-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/locate-test.sh\nAuto-merging test/shell.d/omarchy-kernel-migration-test.sh\nCONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh\n"
+  }
+]

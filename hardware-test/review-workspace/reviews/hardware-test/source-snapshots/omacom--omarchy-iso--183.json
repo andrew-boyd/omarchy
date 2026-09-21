@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy-iso/pull/183",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+      "state": "open"
+    },
+    {
+      "head_sha": "f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+      "state": "open",
+      "updated_at": "2026-09-15T02:37:39Z"
+    }
+  ],
+  "repository": "omacom/omarchy-iso",
+  "number": 183,
+  "checked_at": "2026-09-21T11:56:31.801122+00:00",
+  "title": "Install matching kernel headers before hardware setup",
+  "author": "spencerbull",
+  "head_sha": "f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+  "base_sha": "47426693de2e6dd776d1433642948b92d731293e",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T02:37:39Z",
+  "state": "open",
+  "body": "Fresh installs with `linux-omarchy` omitted its matching headers. On an XPS 14 installation, `linux-omarchy 7.2.5-3` was paired with stock `linux-headers 7.2.3.arch1-3`, so the camera package's DKMS hook skipped its modules and the camera failed after boot.\n\nInstall `<kernel>-headers` for each configured target kernel immediately after the base system, before hardware packages trigger DKMS. This also covers T2 and multiple-kernel configurations, in both full-disk and pre-mounted installs. The camera package is unchanged.\n\nAll fast shell checks and 66 Python tests passed. The regression test rejects the original behavior in all six kernel/layout cases. A local RC ISO was built and its embedded installer, package hashes, and checksum verified. In a disposable offline container, the matching `7.2.5-3` kernel/header pair allowed the existing `intel-ipu7-camera 1.0.6-1` package to install `intel-cvs`, IPU7 including PSYS, and `v4l2loopback` successfully.\n\nHardware camera/audio testing on the XPS with the locally built RC ISO is pending. The existing camera package still pulls unused stock Arch headers and logs missing-stock-kernel-tree errors; the required modules for the Omarchy kernel installed successfully in the container.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "231c2811a19514003544cecd976d9c708f4c6b03",
+      "filename": "configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/f3c540ba0afff4ed6a6a218df08919e29a48cc7d/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/f3c540ba0afff4ed6a6a218df08919e29a48cc7d/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py?ref=f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+      "patch": "@@ -269,6 +269,10 @@ def arch_install_system(ctx: InstallContext) -> None:\n                 pacman_config=config.pacman_config,\n             )\n \n+            # DKMS needs headers for the target kernels, not the live ISO's\n+            # kernel or the stock linux-headers pulled in by hardware packages.\n+            installer.add_additional_packages([f\"{kernel}-headers\" for kernel in config.kernels])\n+\n             if not configure_keyboard(installer.target, kb_layout):\n                 error(f\"Invalid keyboard language specified: {kb_layout}\")\n "
+    },
+    {
+      "sha": "234f46b155862990562b1430a34f93f314001d35",
+      "filename": "test/unit/test_kernel_selection.py",
+      "status": "modified",
+      "additions": 41,
+      "deletions": 0,
+      "changes": 41,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/f3c540ba0afff4ed6a6a218df08919e29a48cc7d/test%2Funit%2Ftest_kernel_selection.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/f3c540ba0afff4ed6a6a218df08919e29a48cc7d/test%2Funit%2Ftest_kernel_selection.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/test%2Funit%2Ftest_kernel_selection.py?ref=f3c540ba0afff4ed6a6a218df08919e29a48cc7d",
+      "patch": "@@ -20,6 +20,47 @@\n \n \n class KernelSelectionTest(unittest.TestCase):\n+    def test_installs_target_kernel_headers_before_hardware_packages(self):\n+        for kernels in ([\"linux-omarchy\"], [\"linux-t2\"], [\"linux\", \"linux-lts\"]):\n+            for pre_mounted in (False, True):\n+                with self.subTest(kernels=kernels, pre_mounted=pre_mounted):\n+                    config = types.SimpleNamespace(\n+                        kernels=kernels, mirror_config=None, locale_config=None,\n+                        hostname=\"test\", pacman_config=None, swap=None,\n+                        auth_config=None, app_config=None, timezone=None, ntp=False,\n+                    )\n+                    ctx = types.SimpleNamespace(\n+                        state={\"arch_config_handler\": types.SimpleNamespace(config=config),\n+                               \"mirror_handler\": None},\n+                        target=Path(\"/mnt\"), tailscale_authkey_path=None,\n+                    )\n+                    installer = mock.MagicMock()\n+                    arch = mock.MagicMock()\n+                    arch.is_pre_mount.return_value = pre_mounted\n+                    arch.is_encrypted.return_value = False\n+                    arch.root_user.return_value = None\n+                    arch.open_installer.return_value.__enter__.return_value = installer\n+                    with mock.patch.object(phases_impl, \"arch\", arch), \\\n+                         mock.patch.object(phases_impl, \"_mount_offline_package_cache\"), \\\n+                         mock.patch.object(phases_impl, \"_unmount_offline_package_cache\"), \\\n+                         mock.patch.object(phases_impl, \"_mask_mkinitcpio_pacman_hooks\"), \\\n+                         mock.patch.object(phases_impl, \"_unmask_mkinitcpio_pacman_hooks\"), \\\n+                         mock.patch.object(phases_impl, \"configure_keyboard\", return_value=True), \\\n+                         mock.patch.object(phases_impl, \"_install_early_packages\"), \\\n+                         mock.patch.object(phases_impl, \"_configure_limine_boot\"), \\\n+                         mock.patch.object(phases_impl, \"_write_pre_mounted_fstab\"), \\\n+                         mock.patch.object(phases_impl, \"_runtime_package_list\", return_value=[\"omarchy\"]):\n+                        phases_impl.arch_install_system(ctx)\n+\n+                    installer.add_additional_packages.assert_has_calls([\n+                        mock.call([f\"{kernel}-headers\" for kernel in kernels]),\n+                        mock.call([\"omarchy\"]),\n+                    ])\n+                    calls = installer.method_calls\n+                    base = next(i for i, call in enumerate(calls) if call[0] == \"minimal_installation\")\n+                    headers = next(i for i, call in enumerate(calls) if call[0] == \"add_additional_packages\")\n+                    self.assertLess(base, headers)\n+\n     def test_hardware_detection(self):\n         # Run the configurator's actual probe without starting its disk wizard.\n         configurator = (ROOT / \"configs/airootfs/root/configurator\").read_text()"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,168 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6533",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "keyboard-backlight-steps"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "dfc83370b7423a9c2922d18e6bd1ab3a81cec200",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 6533,
+  "checked_at": "2026-09-21T11:56:44.199894+00:00",
+  "title": "Make keyboard backlight steps consistent in both directions",
+  "author": "merdiofriviaisherebitch",
+  "head_sha": "dfc83370b7423a9c2922d18e6bd1ab3a81cec200",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:46Z",
+  "state": "open",
+  "body": "## Summary\n\nFixes #5414.\n\nOn keyboards whose `max_brightness` is not a multiple of the step (e.g. 102 on a MacBook Air), adding and subtracting a fixed raw step walks *different* rungs in each direction. The reporter saw:\n\n- up: `0, 9, 19, 29, 39, 49, 58, 68, 78, 88, 98, 100`\n- down: `100, 90, 80, 70, 60, 50, 41, 31, 21, 11, 1, 0`\n\nso the minimal level was only reachable by going to full brightness first and carefully stepping down, and the same key press produced a different level depending on direction.\n\n## Change\n\n`omarchy-brightness-keyboard` now walks a fixed ladder of step indices instead of adding/subtracting a raw value:\n\n1. Snap the current brightness to the nearest rung (so an arbitrary starting value still lands on the ladder).\n2. Move one rung for `up`/`down` (or advance-and-wrap for `cycle`).\n3. Convert the rung back to a raw value with rounding, so the bottom rung is exactly off and the top rung reaches max.\n4. Report the rung's percentage to the OSD, which is stable in both directions, instead of deriving it from the raw value (the old truncating `raw * 100 / max` is what made the readout drift).\n\nKeyboards with fewer levels than steps (e.g. 3) fall back to one step per level, preserving the previous behavior there. Both directions now hit the same fixed levels, and 0 and 100 are exact endpoints.\n\nA small `OMARCHY_LEDS_CLASS` seam (default `/sys/class/leds`) makes device detection testable, matching the existing `OMARCHY_*` override pattern used elsewhere in `bin/`.\n\n## Testing\n\nAdded `test/shell.d/brightness-keyboard-test.sh`, which stubs `brightnessctl`/`omarchy-osd` and covers the 102-level and 3-level cases: symmetric up/down rungs, up-then-down round-trips, cycle wrap, and exact 0/100 endpoints. Full `./test/all` suite shows no regressions.\n\ncc maintainers \u2014 happy to tune the number of steps (currently 10, i.e. 10% rungs) if you'd prefer a coarser or finer ladder.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "6d3df8041652ef85deb06e82eba95c3d30cc8c8e",
+      "filename": "bin/omarchy-brightness-keyboard",
+      "status": "modified",
+      "additions": 31,
+      "deletions": 13,
+      "changes": 44,
+      "blob_url": "https://github.com/omacom/omarchy/blob/dfc83370b7423a9c2922d18e6bd1ab3a81cec200/bin%2Fomarchy-brightness-keyboard",
+      "raw_url": "https://github.com/omacom/omarchy/raw/dfc83370b7423a9c2922d18e6bd1ab3a81cec200/bin%2Fomarchy-brightness-keyboard",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-keyboard?ref=dfc83370b7423a9c2922d18e6bd1ab3a81cec200",
+      "patch": "@@ -12,8 +12,9 @@ fi\n direction=\"${1:-up}\"\n \n # Find keyboard backlight device (look for *kbd_backlight* pattern in leds class).\n+leds_class=\"${OMARCHY_LEDS_CLASS:-/sys/class/leds}\"\n device=\"\"\n-for candidate in /sys/class/leds/*kbd_backlight*; do\n+for candidate in \"$leds_class\"/*kbd_backlight*; do\n   if [[ -e $candidate ]]; then\n     device=\"$(basename \"$candidate\")\"\n     break\n@@ -37,22 +38,39 @@ fi\n max_brightness=\"$(brightnessctl -d \"$device\" max)\"\n current_brightness=\"$(brightnessctl -d \"$device\" get)\"\n \n-# Calculate step as 10% of max brightness. Keyboards with many levels (e.g. 512)\n-# need larger steps; keyboards with few levels (e.g. 3) fall back to step=1.\n-step=$(( max_brightness / 10 ))\n-(( step < 1 )) && step=1\n+if (( max_brightness < 1 )); then\n+  echo \"Invalid keyboard backlight max brightness\" >&2\n+  exit 1\n+fi\n+\n+# Walk a fixed ladder of steps so the same levels are hit going up and down.\n+# Keyboards with many levels (e.g. 512) use 10% steps; keyboards with few\n+# levels (e.g. 3) fall back to one step per level.\n+steps=10\n+(( steps > max_brightness )) && steps=$max_brightness\n+\n+# Snap the current brightness to the nearest rung so an arbitrary starting\n+# value still lands on the ladder.\n+current_step=$(( (current_brightness * steps + max_brightness / 2) / max_brightness ))\n+(( current_step > steps )) && current_step=$steps\n \n if [[ $direction == \"cycle\" ]]; then\n-  new_brightness=$(( current_brightness + step ))\n-  (( new_brightness > max_brightness )) && new_brightness=0\n+  current_step=$(( (current_step + 1) % (steps + 1) ))\n elif [[ $direction == \"up\" ]]; then\n-  new_brightness=$(( current_brightness + step ))\n-  (( new_brightness > max_brightness )) && new_brightness=$max_brightness\n+  if (( current_step < steps )); then\n+    (( ++current_step ))\n+  fi\n else\n-  new_brightness=$(( current_brightness - step ))\n-  (( new_brightness < 0 )) && new_brightness=0\n+  if (( current_step > 0 )); then\n+    (( --current_step ))\n+  fi\n fi\n \n-# Set the new brightness.\n+# Convert the rung back to a raw brightness value, rounding to the nearest\n+# level so the bottom rung is off and the top rung reaches max.\n+new_brightness=$(( (current_step * max_brightness + steps / 2) / steps ))\n+\n+# Set the new brightness. Report the rung's percentage, which is stable in\n+# both directions, rather than deriving it from the raw value.\n brightnessctl -d \"$device\" set \"$new_brightness\" >/dev/null\n-(( no_osd )) || omarchy-osd -i keyboard -p \"$(( new_brightness * 100 / max_brightness ))\"\n+(( no_osd )) || omarchy-osd -i keyboard -p \"$(( current_step * 100 / steps ))\""
+    },
+    {
+      "sha": "a15f717f69efd15506751143dc29a660ae5e08ea",
+      "filename": "test/shell.d/brightness-keyboard-test.sh",
+      "status": "added",
+      "additions": 124,
+      "deletions": 0,
+      "changes": 124,
+      "blob_url": "https://github.com/omacom/omarchy/blob/dfc83370b7423a9c2922d18e6bd1ab3a81cec200/test%2Fshell.d%2Fbrightness-keyboard-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/dfc83370b7423a9c2922d18e6bd1ab3a81cec200/test%2Fshell.d%2Fbrightness-keyboard-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrightness-keyboard-test.sh?ref=dfc83370b7423a9c2922d18e6bd1ab3a81cec200",
+      "patch": "@@ -0,0 +1,124 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(dirname \"$0\")/base-test.sh\"\n+\n+TMPDIR=$(mktemp -d)\n+trap 'rm -rf \"$TMPDIR\"' EXIT\n+\n+stub_bin=\"$TMPDIR/bin\"\n+mkdir -p \"$stub_bin\"\n+\n+# Emulate a keyboard backlight device. The max and current values are injected\n+# per case; every `set` writes the requested raw level to SET_LOG.\n+cat >\"$stub_bin/brightnessctl\" <<'STUB'\n+#!/bin/bash\n+if [[ $* == *\" max\" ]]; then\n+  printf '%s\\n' \"${KBD_MAX:-102}\"\n+elif [[ $* == *\" get\" ]]; then\n+  printf '%s\\n' \"${KBD_CURRENT:-0}\"\n+elif [[ $* == *\" set\"* ]]; then\n+  printf '%s\\n' \"${*: -1}\" >>\"${SET_LOG:?}\"\n+fi\n+exit 0\n+STUB\n+\n+cat >\"$stub_bin/omarchy-osd\" <<'STUB'\n+#!/bin/bash\n+while [[ $# -gt 0 ]]; do\n+  if [[ $1 == \"-p\" ]]; then printf '%s\\n' \"$2\" >>\"${OSD_LOG:?}\"; fi\n+  shift\n+done\n+exit 0\n+STUB\n+\n+chmod +x \"$stub_bin\"/*\n+\n+# A fixture leds class so device detection succeeds without real hardware.\n+leds=\"$TMPDIR/leds\"\n+mkdir -p \"$leds/input::kbd_backlight\"\n+\n+set_log=\"$TMPDIR/set.log\"\n+osd_log=\"$TMPDIR/osd.log\"\n+\n+run_kbd() {\n+  : >\"$set_log\"\n+  : >\"$osd_log\"\n+  KBD_MAX=\"$max\" KBD_CURRENT=\"$current\" SET_LOG=\"$set_log\" OSD_LOG=\"$osd_log\" \\\n+    OMARCHY_LEDS_CLASS=\"$leds\" PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+    bash \"$ROOT/bin/omarchy-brightness-keyboard\" \"$@\" >/dev/null ||\n+    fail \"brightness-keyboard $* exits clean\"\n+}\n+\n+last_set() { tail -n 1 \"$set_log\"; }\n+last_osd() { tail -n 1 \"$osd_log\"; }\n+\n+# A laptop with 102 raw levels (e.g. a MacBook) used to climb 0,9,19,29,... on\n+# the way up but 100,90,80,...,1 on the way down. Both directions must now walk\n+# the same fixed rungs.\n+max=102\n+\n+current=0 run_kbd up\n+[[ $(last_set) == \"10\" && $(last_osd) == \"10\" ]] ||\n+  fail \"up from off lands on the first rung\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"up from off lands on the first rung\"\n+\n+current=10 run_kbd up\n+[[ $(last_set) == \"20\" && $(last_osd) == \"20\" ]] ||\n+  fail \"up climbs one fixed rung\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"up climbs one fixed rung\"\n+\n+current=92 run_kbd up\n+[[ $(last_set) == \"102\" && $(last_osd) == \"100\" ]] ||\n+  fail \"up reaches full brightness at the top rung\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"up reaches full brightness at the top rung\"\n+\n+current=102 run_kbd down\n+[[ $(last_set) == \"92\" && $(last_osd) == \"90\" ]] ||\n+  fail \"down from full lands on the rung below\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"down from full lands on the rung below\"\n+\n+current=92 run_kbd down\n+[[ $(last_set) == \"82\" && $(last_osd) == \"80\" ]] ||\n+  fail \"down descends the same rungs as up\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"down descends the same rungs as up\"\n+\n+current=10 run_kbd down\n+[[ $(last_set) == \"0\" && $(last_osd) == \"0\" ]] ||\n+  fail \"down reaches off at the bottom rung\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"down reaches off at the bottom rung\"\n+\n+# Up and down are inverses: a step up followed by a step down returns to the\n+# starting level.\n+current=51 run_kbd up\n+up_level=$(last_set)\n+current=$up_level run_kbd down\n+[[ $(last_set) == \"51\" ]] ||\n+  fail \"up then down returns to the starting level\" \"up=$up_level down=$(last_set)\"\n+pass \"up then down returns to the starting level\"\n+\n+# Cycle wraps from full back to off, and from off up to the first rung.\n+current=102 run_kbd cycle\n+[[ $(last_set) == \"0\" && $(last_osd) == \"0\" ]] ||\n+  fail \"cycle wraps from full to off\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"cycle wraps from full to off\"\n+\n+current=0 run_kbd cycle\n+[[ $(last_set) == \"10\" && $(last_osd) == \"10\" ]] ||\n+  fail \"cycle advances from off to the first rung\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"cycle advances from off to the first rung\"\n+\n+# A coarse keyboard with only 3 levels falls back to one step per level instead\n+# of rounding everything away.\n+max=3\n+\n+current=0 run_kbd up\n+[[ $(last_set) == \"1\" && $(last_osd) == \"33\" ]] ||\n+  fail \"coarse keyboard steps one level at a time\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"coarse keyboard steps one level at a time\"\n+\n+current=3 run_kbd down\n+[[ $(last_set) == \"2\" && $(last_osd) == \"66\" ]] ||\n+  fail \"coarse keyboard descends one level at a time\" \"set=$(last_set) osd=$(last_osd)\"\n+pass \"coarse keyboard descends one level at a time\""
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4844354814,
+      "node_id": "PRR_kwDOO0Cobs8AAAABIL78_g",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nIntroduces fixed keyboard-backlight brightness rungs for consistent up/down behavior and testable device detection.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n**Changes:**\n- Replaces raw brightness deltas with rounded fixed-step traversal.\n- Adds an override for the LED device path.\n- Adds tests for symmetry, endpoints, cycling, and coarse devices.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated 1 comment.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-brightness-keyboard` | Implements fixed brightness rungs and stable OSD percentages. |\n| `test/shell.d/brightness-keyboard-test.sh` | Tests keyboard-backlight stepping behavior. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/instructions/*.instructions.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add Copilot custom instructions</a> for smarter, more guided reviews. <a href=\"https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn how to get started</a>.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6533#pullrequestreview-4844354814",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6533",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6533#pullrequestreview-4844354814"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6533"
+        }
+      },
+      "submitted_at": "2026-08-03T13:12:18Z",
+      "commit_id": "dfc83370b7423a9c2922d18e6bd1ab3a81cec200"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3704151590",
+      "pull_request_review_id": 4844354814,
+      "id": 3704151590,
+      "node_id": "PRRC_kwDOO0Cobs7cyN4m",
+      "diff_hunk": "@@ -0,0 +1,124 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(dirname \"$0\")/base-test.sh\"\n+\n+TMPDIR=$(mktemp -d)\n+trap 'rm -rf \"$TMPDIR\"' EXIT\n+\n+stub_bin=\"$TMPDIR/bin\"\n+mkdir -p \"$stub_bin\"\n+\n+# Emulate a keyboard backlight device. The max and current values are injected\n+# per case; every `set` writes the requested raw level to SET_LOG.\n+cat >\"$stub_bin/brightnessctl\" <<'STUB'\n+#!/bin/bash\n+if [[ $* == *\" max\" ]]; then\n+  printf '%s\\n' \"${KBD_MAX:-102}\"\n+elif [[ $* == *\" get\" ]]; then\n+  printf '%s\\n' \"${KBD_CURRENT:-0}\"\n+elif [[ $* == *\" set\"* ]]; then\n+  printf '%s\\n' \"${*: -1}\" >>\"${SET_LOG:?}\"\n+fi\n+exit 0\n+STUB\n+\n+cat >\"$stub_bin/omarchy-osd\" <<'STUB'\n+#!/bin/bash\n+while [[ $# -gt 0 ]]; do",
+      "path": "test/shell.d/brightness-keyboard-test.sh",
+      "commit_id": "dfc83370b7423a9c2922d18e6bd1ab3a81cec200",
+      "original_commit_id": "dfc83370b7423a9c2922d18e6bd1ab3a81cec200",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Use an arithmetic conditional for the numeric argument-count test, as required by the repository's Bash style (`(( ))` for numeric tests).",
+      "created_at": "2026-08-03T13:12:18Z",
+      "updated_at": "2026-08-03T13:12:18Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6533#discussion_r3704151590",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6533",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3704151590"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6533#discussion_r3704151590"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6533"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3704151590/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 29,
+      "original_line": 29,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 29,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

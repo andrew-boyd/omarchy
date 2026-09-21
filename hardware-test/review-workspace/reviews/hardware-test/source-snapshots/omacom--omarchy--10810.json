@@ -1,0 +1,122 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10810",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "pci-detection"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "88cdd1508ad0a031602e56ab814948e56445c1d6",
+      "state": "closed"
+    },
+    {
+      "head_sha": "88cdd1508ad0a031602e56ab814948e56445c1d6",
+      "state": "closed",
+      "updated_at": "2026-09-16T08:24:36Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10810,
+  "checked_at": "2026-09-21T11:57:00.628302+00:00",
+  "title": "Detect BCM4360/BCM4331 from sysfs instead of lspci",
+  "author": "Chessing234",
+  "head_sha": "88cdd1508ad0a031602e56ab814948e56445c1d6",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T08:24:36Z",
+  "state": "closed",
+  "body": "## Summary\n- `fix-bcm43xx.sh` dumped `lspci -nn` then grepped the same snapshot twice.\n- `omarchy-hw-bcm43xx` matches 14e4:43a0/4331 from sysfs. Newer Broadcom parts stay on brcmfmac.\n\n## Test plan\n- [x] `test/shell.d/hw-bcm43xx-test.sh`\n- [ ] A 2013\u20132015 MacBook still gets broadcom-wl-dkms\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "8711d3cb086c8bca58065a5ffe961edd1bd98cef",
+      "filename": "bin/omarchy-hw-bcm43xx",
+      "status": "added",
+      "additions": 18,
+      "deletions": 0,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/88cdd1508ad0a031602e56ab814948e56445c1d6/bin%2Fomarchy-hw-bcm43xx",
+      "raw_url": "https://github.com/omacom/omarchy/raw/88cdd1508ad0a031602e56ab814948e56445c1d6/bin%2Fomarchy-hw-bcm43xx",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-bcm43xx?ref=88cdd1508ad0a031602e56ab814948e56445c1d6",
+      "patch": "@@ -0,0 +1,18 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect Broadcom BCM4360/BCM4331 Wi-Fi that needs the wl driver.\n+# omarchy:hidden=true\n+\n+pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n+\n+shopt -s nullglob\n+\n+for device in \"$pci_devices_path\"/*; do\n+  [[ -r $device/vendor && -r $device/device ]] || continue\n+  [[ $(<\"$device/vendor\") == \"0x14e4\" ]] || continue\n+  case $(<\"$device/device\") in\n+    0x43a0 | 0x4331) exit 0 ;;\n+  esac\n+done\n+\n+exit 1"
+    },
+    {
+      "sha": "146977cb6d17e18a2614b5b16318fad10e6ef001",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 3,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/88cdd1508ad0a031602e56ab814948e56445c1d6/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/88cdd1508ad0a031602e56ab814948e56445c1d6/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=88cdd1508ad0a031602e56ab814948e56445c1d6",
+      "patch": "@@ -2,9 +2,7 @@\n # - BCM4360 (2013\u20132015 MacBooks)\n # - BCM4331 (2012, early 2013 MacBooks)\n \n-pci_info=$(lspci -nn)\n-\n-if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n+if omarchy-hw-bcm43xx; then\n   echo \"BCM4360 / BCM4331 detected\"\n   omarchy-pkg-add broadcom-wl-dkms linux-headers\n fi"
+    },
+    {
+      "sha": "096e1c0263a57b5163aa267855a48d7f13097cc5",
+      "filename": "test/shell.d/hw-bcm43xx-test.sh",
+      "status": "added",
+      "additions": 47,
+      "deletions": 0,
+      "changes": 47,
+      "blob_url": "https://github.com/omacom/omarchy/blob/88cdd1508ad0a031602e56ab814948e56445c1d6/test%2Fshell.d%2Fhw-bcm43xx-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/88cdd1508ad0a031602e56ab814948e56445c1d6/test%2Fshell.d%2Fhw-bcm43xx-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhw-bcm43xx-test.sh?ref=88cdd1508ad0a031602e56ab814948e56445c1d6",
+      "patch": "@@ -0,0 +1,47 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp=$(mktemp -d)\n+trap 'rm -rf \"$tmp\"' EXIT\n+\n+write_pci() {\n+  rm -rf \"$tmp/devices\"\n+  mkdir -p \"$tmp/devices\"\n+  local index=0 spec slot\n+  for spec in \"$@\"; do\n+    slot=$(printf '0000:%02x:00.0' \"$index\")\n+    mkdir -p \"$tmp/devices/$slot\"\n+    printf '%s\\n' \"${spec%%:*}\" >\"$tmp/devices/$slot/vendor\"\n+    printf '%s\\n' \"$(cut -d: -f2 <<<\"$spec\")\" >\"$tmp/devices/$slot/device\"\n+    index=$((index + 1))\n+  done\n+}\n+\n+hw() {\n+  OMARCHY_PCI_DEVICES_PATH=\"$tmp/devices\" \"$ROOT/bin/omarchy-hw-bcm43xx\"\n+}\n+\n+write_pci 0x14e4:0x43a0\n+hw || fail \"BCM4360 is detected\"\n+pass \"BCM4360 is detected from sysfs\"\n+\n+write_pci 0x14e4:0x4331\n+hw || fail \"BCM4331 is detected\"\n+pass \"BCM4331 is detected from sysfs\"\n+\n+write_pci 0x14e4:0x43ba\n+hw && fail \"a brcmfmac part is not the wl driver\"\n+pass \"newer Broadcom Wi-Fi is left to brcmfmac\"\n+\n+write_pci\n+hw && fail \"empty PCI space is not bcm43xx\"\n+pass \"a machine with no PCI devices is not bcm43xx\"\n+\n+grep -Fq 'omarchy-hw-bcm43xx' \"$ROOT/install/hardware/fix-bcm43xx.sh\" ||\n+  fail \"Broadcom wl install uses omarchy-hw-bcm43xx\"\n+! grep -q lspci \"$ROOT/install/hardware/fix-bcm43xx.sh\" ||\n+  fail \"Broadcom wl install no longer greps lspci twice\"\n+pass \"Broadcom wl install does not parse a full lspci dump\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5694412382",
+      "html_url": "https://github.com/omacom/omarchy/pull/10810#issuecomment-5694412382",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10810",
+      "id": 5694412382,
+      "node_id": "IC_kwDOO0Cobs8AAAABU2nWXg",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-16T08:24:35Z",
+      "updated_at": "2026-09-16T08:24:35Z",
+      "body": "folded into #12076 \u2014 same sysfs hardware detect work, easier as one review.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5694412382/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

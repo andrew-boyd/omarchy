@@ -1,0 +1,162 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9899",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "alpine-ridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "0fc6f980850517b33e85220ac4229d8bda3e9f07",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9899,
+  "checked_at": "2026-09-21T11:55:58.020241+00:00",
+  "title": "fix(hardware): prevent ~130s sleep wake stall on MacBook Pro 2016-2017",
+  "author": "tcholewa",
+  "head_sha": "0fc6f980850517b33e85220ac4229d8bda3e9f07",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-13T18:38:21Z",
+  "state": "open",
+  "body": "### Summary\n\nFixes a ~130-second system freeze on wake from ACPI S3 (`deep`) sleep on MacBook Pro 2016\u20132017 models (MacBookPro13,x and MacBookPro14,x).\n\n### Root Cause\nOn MacBook Pro 2016\u20132017 models equipped with Intel Alpine Ridge Thunderbolt 3 controllers (`8086:15d2` NHI / `8086:15d4` integrated xHCI), Apple firmware cuts power to the controller during S3 sleep. On wake, `xhci_hcd` polls the unpowered PCIe device (`0000:07:00.0`), hitting exponential backoff timeouts (`1023ms` -> `2047ms` -> ... -> `65535ms`) totalling ~130 seconds before `pciehp` drops the dead device.\n\n### Solution\n1. Adds `install/hardware/apple/fix-suspend-thunderbolt.sh` to remove unpowered `8086:15d4` PCIe devices prior to S3 sleep.\n2. Unloads `thunderbolt` and `facetimehd` before sleep to prevent kernel call traces and unneeded sensor power-on.\n3. Automatically dispatches `hl.dsp.dpms({ action = \"enable\" })` upon resume across active Hyprland user sessions so the display backlight lights up immediately.\n4. Rescans the Thunderbolt root port (`0000:00:1c.4`) after resume.\n5. Updates `manual/44-mac-support.md` with documentation.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "6e49825690cd898d57363d7ad699c5dedb40e5cb",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0fc6f980850517b33e85220ac4229d8bda3e9f07/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0fc6f980850517b33e85220ac4229d8bda3e9f07/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=0fc6f980850517b33e85220ac4229d8bda3e9f07",
+      "patch": "@@ -37,6 +37,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-thunderbolt.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n "
+    },
+    {
+      "sha": "f315f6bff8862f853f77704973659815ec318ae4",
+      "filename": "install/hardware/apple/fix-suspend-thunderbolt.sh",
+      "status": "added",
+      "additions": 49,
+      "deletions": 0,
+      "changes": 49,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0fc6f980850517b33e85220ac4229d8bda3e9f07/install%2Fhardware%2Fapple%2Ffix-suspend-thunderbolt.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0fc6f980850517b33e85220ac4229d8bda3e9f07/install%2Fhardware%2Fapple%2Ffix-suspend-thunderbolt.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-suspend-thunderbolt.sh?ref=0fc6f980850517b33e85220ac4229d8bda3e9f07",
+      "patch": "@@ -0,0 +1,49 @@\n+# Fix Thunderbolt/xHCI sleep stall on MacBook Pro models (2016-2017)\n+# In ACPI S3 sleep, Apple firmware cuts power to the Alpine Ridge controller (8086:15d2/15d4).\n+# Removing the unpowered xHCI controller before sleep prevents xhci_hcd from freezing for ~130s on wake.\n+macbook_model=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+\n+if [[ $macbook_model =~ MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n+  echo \"Detected MacBook Pro with Alpine Ridge Thunderbolt ($macbook_model)\"\n+  echo \"Applying Thunderbolt and display sleep fixes...\"\n+\n+  sudo mkdir -p /etc/systemd/system-sleep\n+  sudo tee /etc/systemd/system-sleep/omarchy-macbook-sleep.sh >/dev/null <<'EOF'\n+#!/bin/bash\n+case \"$1/$2\" in\n+  pre/*)\n+    for dev in /sys/bus/pci/devices/*; do\n+      if [[ -f \"$dev/vendor\" && -f \"$dev/device\" ]]; then\n+        if [[ $(cat \"$dev/vendor\" 2>/dev/null) == \"0x8086\" && $(cat \"$dev/device\" 2>/dev/null) == \"0x15d4\" ]]; then\n+          echo 1 > \"$dev/remove\" 2>/dev/null || true\n+        fi\n+      fi\n+    done\n+    [[ -d /sys/bus/pci/devices/0000:07:00.0 ]] && echo 1 > /sys/bus/pci/devices/0000:07:00.0/remove 2>/dev/null || true\n+\n+    [[ -d /sys/module/thunderbolt ]] && modprobe -r thunderbolt 2>/dev/null || true\n+    [[ -d /sys/module/facetimehd ]] && modprobe -r facetimehd 2>/dev/null || true\n+    ;;\n+\n+  post/*)\n+    for user_dir in /run/user/*; do\n+      if [[ -d \"$user_dir/hypr\" ]]; then\n+        uid=$(basename \"$user_dir\")\n+        uname=$(id -nu \"$uid\" 2>/dev/null)\n+        sig=$(ls -td \"$user_dir/hypr/\"* 2>/dev/null | head -1 | xargs basename 2>/dev/null)\n+        if [[ -n \"$uname\" && -n \"$sig\" ]]; then\n+          ( runuser -u \"$uname\" -- env XDG_RUNTIME_DIR=\"$user_dir\" HYPRLAND_INSTANCE_SIGNATURE=\"$sig\" hyprctl dispatch 'hl.dsp.dpms({ action = \"enable\" })' >/dev/null 2>&1 || true ) &\n+        fi\n+      fi\n+    done\n+\n+    [[ -d /sys/bus/pci/devices/0000:00:1c.4 ]] && ( sleep 2 && echo 1 > /sys/bus/pci/devices/0000:00:1c.4/rescan ) >/dev/null 2>&1 &\n+    ;;\n+esac\n+EOF\n+\n+  sudo chmod 755 /etc/systemd/system-sleep/omarchy-macbook-sleep.sh\n+\n+  sudo mkdir -p /etc/modprobe.d\n+  echo \"blacklist thunderbolt\" | sudo tee /etc/modprobe.d/disable-thunderbolt.conf >/dev/null\n+fi"
+    },
+    {
+      "sha": "28ce4a13bb11aaace4a681be1030a37d8b7d5ac9",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0fc6f980850517b33e85220ac4229d8bda3e9f07/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0fc6f980850517b33e85220ac4229d8bda3e9f07/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=0fc6f980850517b33e85220ac4229d8bda3e9f07",
+      "patch": "@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, an NVMe suspend fix, and an Alpine Ridge Thunderbolt sleep hook to prevent wake stalls.\n \n ### Known Limitations\n "
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5534141797",
+      "html_url": "https://github.com/omacom/omarchy/pull/9899#issuecomment-5534141797",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9899",
+      "id": 5534141797,
+      "node_id": "IC_kwDOO0Cobs8AAAABSdxNZQ",
+      "user": {
+        "login": "ari-ahm",
+        "id": 154451491,
+        "node_id": "U_kgDOCTS-Iw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/154451491?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ari-ahm",
+        "html_url": "https://github.com/ari-ahm",
+        "followers_url": "https://api.github.com/users/ari-ahm/followers",
+        "following_url": "https://api.github.com/users/ari-ahm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ari-ahm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ari-ahm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ari-ahm/subscriptions",
+        "organizations_url": "https://api.github.com/users/ari-ahm/orgs",
+        "repos_url": "https://api.github.com/users/ari-ahm/repos",
+        "events_url": "https://api.github.com/users/ari-ahm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ari-ahm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-04T00:58:10Z",
+      "updated_at": "2026-09-04T00:58:10Z",
+      "body": "Tested this on a **MacBookPro14,1** (Omarchy 4.0.2, systemd 261.2, kernel 7.1.9-arch1-2). The diagnosis matches what I see here, and with the hook actually running the xHCI backoff and the `tb_cfg_read` trace disappear and the USB-C ports survive sleep.\n\nWorth noting this is not covered by `fix-suspend-nvme.sh`: that service was installed and applied (`d3cold_allowed=0`) on a machine that still hung hard on resume from S3 and needed a power cycle.\n\nThree notes on the patch as written \u2014 the first prevented it from running on my system.\n\n### 1. The hook directory isn't scanned on systemd 261\n\n`fix-suspend-thunderbolt.sh` writes to `/etc/systemd/system-sleep/`. On systemd 261.2 that directory doesn't appear to be searched: `systemd-sleep(8)` documents only `/usr/lib/systemd/system-sleep/`, and that's the only such path in the shipped binaries:\n\n```console\n$ strings /usr/lib/systemd/systemd-sleep /usr/lib/systemd/libsystemd-shared-261.2-1.so \\\n    | grep -o '[/A-Za-z0-9._-]*system-sleep[/A-Za-z0-9._-]*' | sort -u\n/usr/lib/systemd/system-sleep\n```\n\nWith the script in `/etc/...` the hook silently never ran here \u2014 the xHCI was still present going into S3, and resume showed the full backoff plus a call trace:\n\n```\nxhci_hcd 0000:07:00.0: not ready 1023ms after resume; waiting\n  ... 2047 / 4095 / 8191 / 16383 / 32767 ...\nxhci_hcd 0000:07:00.0: not ready 65535ms after resume; giving up\nthunderbolt 0000:06:00.0: not ready 1023ms after resume; giving up\nWARNING: drivers/thunderbolt/ctl.c:1131 at tb_cfg_read+0x94/0xf0 [thunderbolt]\n```\n\nMoving the identical script to `/usr/lib/systemd/system-sleep/` fixed it \u2014 those messages and the `tb_cfg_read` trace both went to zero, and the USB-C ports survived sleep instead of staying dead until reboot. That's also where the repo's existing `unmount-fuse` hook already lives, so it may be worth matching it regardless of which systemd versions searched `/etc`.\n\n### 2. The `dpms` dispatch blocks resume for ~5.4s\n\nsystemd keeps `user.slice` frozen until every `post` hook returns, so the `runuser ... hyprctl dispatch` call delays the session coming back:\n\n```\n04:15:33.128  post hook starts\n04:15:33.140  runuser session opened\n04:15:33.199  systemd: Cannot start frozen unit Session 3 of User <user>.\n04:15:33.200  pam_systemd: CreateSession failed: io.systemd.Login.UnitAllocationFailed\n04:15:38.530  runuser session closed          <- 5.33s\n04:15:40.617  user.slice thawed\n```\n\nNote pam fails immediately (60 ms) \u2014 the 5.33s is `hyprctl` waiting on a Hyprland that is itself frozen and cannot reply. `systemd-sleep(8)` warns about precisely this:\n\n> user.slice will be frozen while the executables are running, so they should not attempt to communicate with any user services expecting a reply.\n\nThis repo's own `unmount-fuse` hook already documents the hazard and backgrounds its work for that reason.\n\nThe dispatch also wasn't necessary here \u2014 ACPI restores the panel on its own (`acpi LNXVIDEO:00: Restoring backlight state`). Dropping it, and making the `sleep 2` + rescan conditional, took the frozen window from **7.49s to 0.057s** across two otherwise identical sleep cycles:\n\n```\nsuspend exit -> user.slice thawed\n  with dpms + unconditional sleep 2 : 7.490s\n  without                           : 0.057s\n```\n\nThe unconditional `sleep 2` before the rescan is likewise unnecessary on the happy path: after a clean pre-removal the xHCI re-enumerates by itself, so the rescan only earns its keep as a fallback.\n\n### 3. The hardcoded `0000:07:00.0` removal is redundant and risky\n\n```bash\n[[ -d /sys/bus/pci/devices/0000:07:00.0 ]] && echo 1 > /sys/bus/pci/devices/0000:07:00.0/remove 2>/dev/null || true\n```\n\nThe loop above it already removes every `8086:15d4`. On this machine `07:00.0` *is* that device, so the line is a no-op; on other hardware that address can be an unrelated device, which would then be removed before every suspend. Suggest dropping it.\n\n### A data point supporting the approach\n\nOnce a resume has wedged the controller it cannot be recovered without a power cycle \u2014 I tried rescanning the root port, the xHCI's immediate parent bridge (`0000:05:02.0`), and a global `/sys/bus/pci/rescan`, and none brought it back. That supports the PR's core premise of removing the device *before* firmware cuts power rather than trying to restore it afterwards.\n\nMinor: `blacklist thunderbolt` in `/etc/modprobe.d` disables Thunderbolt devices entirely. Since the `pre` hook already unloads the module, reloading it in `post` instead keeps docks/eGPU usable while awake and still avoids the NHI traces.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5534141797/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5655268965",
+      "html_url": "https://github.com/omacom/omarchy/pull/9899#issuecomment-5655268965",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9899",
+      "id": 5655268965,
+      "node_id": "IC_kwDOO0Cobs8AAAABURSOZQ",
+      "user": {
+        "login": "orospakr",
+        "id": 16714,
+        "node_id": "MDQ6VXNlcjE2NzE0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/16714?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/orospakr",
+        "html_url": "https://github.com/orospakr",
+        "followers_url": "https://api.github.com/users/orospakr/followers",
+        "following_url": "https://api.github.com/users/orospakr/following{/other_user}",
+        "gists_url": "https://api.github.com/users/orospakr/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/orospakr/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/orospakr/subscriptions",
+        "organizations_url": "https://api.github.com/users/orospakr/orgs",
+        "repos_url": "https://api.github.com/users/orospakr/repos",
+        "events_url": "https://api.github.com/users/orospakr/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/orospakr/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-13T18:38:21Z",
+      "updated_at": "2026-09-13T18:38:21Z",
+      "body": "Hi @tcholewa, @ari-ahm \u2014 I've been chasing exactly this failure on a MacBookPro14,1 for the last two weeks and I think it's worth cross-linking, because we ended up at a different diagnosis and a different fix. The log signature you both posted (`xhci_hcd 0000:07:00.0: not ready 1023ms \u2026 65535ms after resume; giving up`, `thunderbolt 0000:06:00.0: not ready 1023ms`, the `tb_cfg_read` WARNING at `ctl.c:1131`) is line-for-line what I captured on the stock kernel, so it is the same bug.\n\nWrite-up: #10593. Patches: omacom/omarchy-pkgs#349 (`tb-ar-shim-dkms`, the kernel-side fix) and #10758 (detection, install and a migration that depend on it).\n\n### Root cause is a PCI save-ordering hazard, not a firmware power cut\n\nInstrumented on the machine (config-space reads from a shim module at each PM phase):\n\n1. `dpm_suspend_noirq` runs children before parents. The NHI (`06:00.0`) is the deepest child, and its `nhi_suspend_noirq \u2192 tb_switch_suspend \u2192 tb_lc_set_sleep` puts the Alpine Ridge router into LC sleep. From that moment config reads of *the whole chip* \u2014 the downstream bridges **and the upstream bridge `04:00.0`** \u2014 return `ffffffff`. (This is the \"Unable to change power state from D0 to D3hot, device inaccessible\" trio on 05:02.0 / 05:00.0 / 04:00.0 in the stock suspend log.)\n2. Only after that does `pci_pm_suspend_noirq` run for the bridges and call `pci_save_state()`. It saves all-ones.\n3. Across S3 the platform resets and re-powers the chip on its own \u2014 the rails are up and RP05's link is retrained to Gen3 x4 before the first noirq resume callback. Nothing needs to (or does) cut power.\n4. `pci_pm_resume_noirq(04:00.0)` restores the all-ones snapshot into the fresh chip: bus numbers `ff`, so every downstream bridge is \"inaccessible\", the NHI's `pci_dev_wait` gives up after 1 s, the xHCI's after 65 s, and pciehp removes it. That is the ~130 s.\n\nFor S3, saving the bridge and its subtree in `suspend_late` \u2014 i.e. before the NHI's noirq callback \u2014 is the entire fix. With that alone, resume of the subtree takes 1.3 s and the NHI, the Thunderbolt domain and the xHCI all survive. (Under s2idle there is a second, mirror-image bug: the PCI core's `skip_bus_pm` policy skips the restore entirely, on the assumption that devices keep their config space across s2idle, which this chip doesn't. So the module also has to do the parents-first restore itself in `resume_noirq`.) 28/28 cycles on 14,1 with both in place.\n\nA supporting data point: **hibernate works on the stock kernel.** The thunderbolt driver's `freeze_noirq` deliberately does not LC-sleep (\"we just disable hotplug, the pci-tunnels stay alive\"), so the snapshot that goes into the image is valid, and restore writes it back into the cold-reset chip. That is the same ordering the shim manufactures for S3.\n\n### Why this hook works, and what it costs\n\n`modprobe -r thunderbolt` in the pre hook means `tb_lc_set_sleep` is never called, so the core's own `pci_save_state()` in noirq sees a readable chip. That is the operative line; the `remove` of the `15d4` xHCI is most likely redundant once the NHI driver is gone. The cost is that `blacklist thunderbolt` disables Thunderbolt for good \u2014 docks, tunneled PCIe, eGPUs \u2014 and, as @ari-ahm found, even the reload-in-post variant keeps the driver off for the whole sleep window.\n\n### The second failure mode this hook does not reach\n\nThere is a separate, worse failure that only happens when **something is physically present on a Thunderbolt port at S3 entry**: the Mac's EFI S3 resume boot script function-disables the PCH root port `00:1c.4` (RP05) itself, ~4\u20136 ms after \"Waking up from system sleep state S3\" and before the kernel runs a single instruction. RP05 reads `ffffffff` from then on and nothing short of a power cycle brings it back \u2014 rescanning the root port, its parent, and a global `/sys/bus/pci/rescan` all do nothing. Reproduced 8/8; we eliminated 11 OS-side countermeasures one at a time (wake-source disarming, D-state pinning, driver unbinding, link-state forcing, PD-controller mailbox commands, \u2026). Unbinding the xHCI driver before suspend in particular does *not* help: the SuperSpeed link stays trained at U0 with nothing bound, and it is physical presence, not the driver, that trips the firmware. I'd expect `echo 1 > remove` to behave the same. @ari-ahm's \"still hung hard on resume from S3 and needed a power cycle\" looks like this mode.\n\nSince s2idle never executes the EFI S3 boot script, that firmware behaviour cannot fire at all \u2014 which is why #10758 defaults these models to `mem_sleep_default=s2idle` via a limine cmdline drop-in. That is an honest trade: s2idle draws more in the bag than S3 does (no firmware S0ix assist on this platform). In exchange, both failure modes are gone (validated with a hub + stick attached, lid-close with Wi-Fi loaded, and cold-boot persistence), and Thunderbolt keeps working. macOS clearly slept in S3 with devices attached, so there is presumably a pre-sleep handshake it performs that we haven't found; that is the open research item in the issue.\n\n### Scope notes\n\n- The DKMS module is ~200 lines and gates on the on-board controller only (ACPI path `DSB0.NHI0.SXFP` under the bridge). The in-tree version is being prepared as a `drivers/pci/quirks.c` fixup for linux-pci; module, patch and CI live at https://github.com/orospakr/linux-apple-alpine-ridge-suspend.\n- I've only validated on MacBookPro14,1. The mechanism should be identical on 13,x/14,2/14,3 (same DSL6540 controller, same ACPI shape), but I haven't had one to test.\n\nHappy to compare notes or logs \u2014 the full account, including the experiments that ruled things out, is in the issue. If the project would rather ship a hook-based workaround in the short term, the one-line takeaway from the above is that unloading `thunderbolt` is what makes it work, and the SS-device-attached case still needs s2idle.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_014SjBV8RAyo6et6LMmurU9W\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5655268965/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

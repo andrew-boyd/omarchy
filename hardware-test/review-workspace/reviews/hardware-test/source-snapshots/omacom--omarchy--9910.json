@@ -1,0 +1,164 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9910",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "gmux-brightness"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9910,
+  "checked_at": "2026-09-21T11:56:26.547194+00:00",
+  "title": "Persist apple-gmux panel brightness across reboots",
+  "author": "shawnyeager",
+  "head_sha": "3024e60a5a8458c588c55b2f82eda73c5b880751",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:41:38Z",
+  "state": "closed",
+  "body": "## Why\n\nPanel brightness on pre-T2 dual-GPU Macs (`gmux_backlight`) resets on reboot. Keyboard backlight on the same machine persists.\n\nStock systemd udev (`/usr/lib/udev/rules.d/99-systemd.rules`) attaches `systemd-backlight@` with `IMPORT{builtin}=\"path_id\"` on the same line as `SYSTEMD_WANTS`. `apple-gmux` lives on PNP `APP000b`; `path_id` fails (`No such file or directory`), so the rest of the rule is skipped. No unit, no file under `/var/lib/systemd/backlight/`, nothing to restore.\n\nThe keyboard LED is on PCI/SPI, so `path_id` works and `systemd-backlight@leds:spi::kbd_backlight` already saves/loads.\n\n`systemd-backlight` itself can persist without `ID_PATH` (it names the state file `backlight:gmux_backlight`). It is never asked.\n\nVerified on MacBookPro14,3. Detector is the sysfs node, not a DMI list \u2014 T2 Macs expose PNP `APP000b` but never create `gmux_backlight`. Independent of Touch Bar, CS8409, and the 15\" lid/idle work.\n\n## What\n\n- `omarchy-hw-apple-gmux` matches `/sys/class/backlight/gmux_backlight`.\n- Packaged udev rule tags that device for systemd **without** importing `path_id`.\n- Install hook + migration copy the rule, reload udev, start the unit, and snapshot the current level so the next boot has something to restore.\n\n## Test plan\n\n- [x] `test/shell.d/gmux-backlight-test.sh`\n- [x] `./test/cli` metadata for the new hidden detector\n- [x] MacBookPro14,3: after installing the rule, `systemd-backlight@backlight:gmux_backlight` is active and `/var/lib/systemd/backlight/backlight:gmux_backlight` matches live sysfs (471). Reboot still needed to confirm load-on-boot.\n\n---\n\nDiagnosed with Compound Engineering `/ce-debug`.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b4044617de24a92f5f1d52749db3d59ae829d5ee",
+      "filename": "bin/omarchy-hw-apple-gmux",
+      "status": "added",
+      "additions": 10,
+      "deletions": 0,
+      "changes": 10,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/bin%2Fomarchy-hw-apple-gmux",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/bin%2Fomarchy-hw-apple-gmux",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-gmux?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -0,0 +1,10 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect the old IO-port apple-gmux panel backlight\n+# omarchy:hidden=true\n+\n+# Pre-T2 dual-GPU Macs register gmux_backlight on PNP APP000b. T2 Macs also\n+# expose that HID, but apple-gmux does not bind there (no IORESOURCE_IO) and\n+# never creates this class device \u2014 so the sysfs node is the discriminator,\n+# not the PNP id. Observed on MacBookPro14,3.\n+[[ -e ${OMARCHY_GMUX_BACKLIGHT:-/sys/class/backlight/gmux_backlight} ]]"
+    },
+    {
+      "sha": "1851610a0a9e661fed0f568d689a2fae13cb63e0",
+      "filename": "default/udev/apple-gmux-backlight.rules",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/default%2Fudev%2Fapple-gmux-backlight.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/default%2Fudev%2Fapple-gmux-backlight.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Fapple-gmux-backlight.rules?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -0,0 +1,8 @@\n+# apple-gmux registers gmux_backlight on the PNP bus (APP000b). systemd's\n+# 99-systemd.rules imports path_id on the same line as SYSTEMD_WANTS, and\n+# that builtin fails for PNP, so the whole rule is skipped.\n+# Keyboard backlight on PCI/SPI is unaffected. systemd-backlight already\n+# falls back to backlight:<name> when ID_PATH is missing \u2014 it just never\n+# gets asked to.\n+ACTION==\"add\", SUBSYSTEM==\"backlight\", KERNEL==\"gmux_backlight\", \\\n+  TAG+=\"systemd\", ENV{SYSTEMD_WANTS}+=\"systemd-backlight@backlight:gmux_backlight.service\""
+    },
+    {
+      "sha": "879fcedb936ae5249b344766593c3d50b9bc5140",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -39,6 +39,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-gmux-backlight.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "c7996d944cf57d7eb13566d2918d2b734967bb1e",
+      "filename": "install/hardware/apple/fix-gmux-backlight.sh",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/install%2Fhardware%2Fapple%2Ffix-gmux-backlight.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/install%2Fhardware%2Fapple%2Ffix-gmux-backlight.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-gmux-backlight.sh?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -0,0 +1,16 @@\n+# Persist panel brightness on Macs whose backlight is apple-gmux.\n+#\n+# systemd-backlight never attaches to gmux_backlight: udev path_id cannot\n+# name the PNP bus, so 99-systemd.rules skips SYSTEMD_WANTS. Drop a rule\n+# that does not import path_id. Keyboard backlight is on PCI/SPI and is\n+# already persisted by stock systemd.\n+\n+if omarchy-hw-apple-gmux; then\n+  echo \"Detected apple-gmux panel backlight\"\n+\n+  # shellcheck source=gmux-backlight.sh\n+  source \"$OMARCHY_INSTALL/hardware/apple/gmux-backlight.sh\"\n+\n+  gmux_install_rule\n+  gmux_activate\n+fi"
+    },
+    {
+      "sha": "085cac3f468af78dcc3fa2aa42fbab253d742baf",
+      "filename": "install/hardware/apple/gmux-backlight.sh",
+      "status": "added",
+      "additions": 30,
+      "deletions": 0,
+      "changes": 30,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/install%2Fhardware%2Fapple%2Fgmux-backlight.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/install%2Fhardware%2Fapple%2Fgmux-backlight.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Fgmux-backlight.sh?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -0,0 +1,30 @@\n+# Shared apple-gmux backlight helpers. Sourced; no shebang, no work on source.\n+\n+gmux_udev_src() {\n+  printf '%s\\n' \"${OMARCHY_GMUX_UDEV_SRC:-$OMARCHY_PATH/default/udev/apple-gmux-backlight.rules}\"\n+}\n+\n+gmux_udev_dest() {\n+  printf '%s\\n' \"${OMARCHY_GMUX_UDEV_DEST:-/etc/udev/rules.d/90-apple-gmux-backlight.rules}\"\n+}\n+\n+gmux_install_rule() {\n+  local src dest\n+  src=$(gmux_udev_src)\n+  dest=$(gmux_udev_dest)\n+  mkdir -p \"$(dirname \"$dest\")\"\n+  /usr/bin/install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+# Attach systemd-backlight and snapshot the current level so the next boot\n+# has something to restore. Tests retarget dest away from /etc and skip this.\n+gmux_activate() {\n+  local dest\n+  dest=$(gmux_udev_dest)\n+  [[ $dest == /etc/udev/rules.d/* ]] || return 0\n+\n+  /usr/bin/udevadm control --reload\n+  /usr/bin/udevadm trigger --action=add --subsystem-match=backlight --sysname-match=gmux_backlight\n+  systemctl start systemd-backlight@backlight:gmux_backlight.service\n+  /usr/lib/systemd/systemd-backlight save backlight:gmux_backlight\n+}"
+    },
+    {
+      "sha": "871fc391558f4116b0c1d4fbfc5602ec7728785e",
+      "filename": "migrations/1788392890.sh",
+      "status": "added",
+      "additions": 21,
+      "deletions": 0,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/migrations%2F1788392890.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/migrations%2F1788392890.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788392890.sh?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -0,0 +1,21 @@\n+echo \"Persist apple-gmux panel brightness across reboots\"\n+\n+# systemd-backlight never attaches to gmux_backlight (PNP path_id failure).\n+# See install/hardware/apple/gmux-backlight.sh. Idempotent: install -Dm644\n+# rewrites the same static rule, and a second user finds it already in place.\n+if ! omarchy-hw-apple-gmux; then\n+  exit 0\n+fi\n+\n+# shellcheck source=../install/hardware/apple/gmux-backlight.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/gmux-backlight.sh\"\n+\n+# Real dest lives under /etc. Tests override OMARCHY_GMUX_UDEV_DEST to a\n+# writable tmp tree and skip the privilege hop.\n+if (( $(id -u) != 0 )) && [[ $(gmux_udev_dest) == /etc/* ]]; then\n+  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_GMUX_UDEV_DEST,OMARCHY_GMUX_UDEV_SRC,OMARCHY_GMUX_BACKLIGHT \\\n+    /bin/bash -euo pipefail \"$BASH_SOURCE\"\n+fi\n+\n+gmux_install_rule\n+gmux_activate"
+    },
+    {
+      "sha": "be8a947927252b60d4c765eaf1597895dcc033c5",
+      "filename": "test/shell.d/gmux-backlight-test.sh",
+      "status": "added",
+      "additions": 133,
+      "deletions": 0,
+      "changes": 133,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3024e60a5a8458c588c55b2f82eda73c5b880751/test%2Fshell.d%2Fgmux-backlight-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3024e60a5a8458c588c55b2f82eda73c5b880751/test%2Fshell.d%2Fgmux-backlight-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fgmux-backlight-test.sh?ref=3024e60a5a8458c588c55b2f82eda73c5b880751",
+      "patch": "@@ -0,0 +1,133 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw=\"$ROOT/bin/omarchy-hw-apple-gmux\"\n+helpers=\"$ROOT/install/hardware/apple/gmux-backlight.sh\"\n+fix=\"$ROOT/install/hardware/apple/fix-gmux-backlight.sh\"\n+udev_src=\"$ROOT/default/udev/apple-gmux-backlight.rules\"\n+migration=\"$ROOT/migrations/1788392890.sh\"\n+\n+assert_hw() {\n+  local path=$1 expect=$2 description=$3\n+  if OMARCHY_GMUX_BACKLIGHT=\"$path\" \"$hw\"; then\n+    [[ $expect == yes ]] || fail \"$description\"\n+  else\n+    [[ $expect == no ]] || fail \"$description\"\n+  fi\n+  pass \"$description\"\n+}\n+\n+missing=$(mktemp -u)\n+assert_hw \"$missing\" no \"missing gmux_backlight is not apple-gmux\"\n+present=$(mktemp)\n+assert_hw \"$present\" yes \"present gmux_backlight is apple-gmux\"\n+rm -f \"$present\"\n+\n+grep -Fq 'IMPORT{builtin}=\"path_id\"' \"$udev_src\" && fail \"udev rule must not import path_id\"\n+grep -Fq 'systemd-backlight@backlight:gmux_backlight.service' \"$udev_src\" ||\n+  fail \"udev rule attaches systemd-backlight to gmux_backlight\"\n+grep -Fq 'TAG+=\"systemd\"' \"$udev_src\" || fail \"udev rule tags the device for systemd\"\n+pass \"udev rule attaches systemd-backlight without path_id\"\n+\n+grep -Fq 'fix-gmux-backlight.sh' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"hardware install runs the gmux backlight hook with the other Apple hooks\"\n+pass \"gmux backlight install hook is wired\"\n+\n+# shellcheck source=../../install/hardware/apple/gmux-backlight.sh\n+OMARCHY_PATH=\"$ROOT\" source \"$helpers\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+etc=\"$test_tmp/etc\"\n+mkdir -p \"$etc/udev/rules.d\"\n+OMARCHY_PATH=\"$ROOT\"\n+OMARCHY_GMUX_UDEV_SRC=\"$udev_src\"\n+OMARCHY_GMUX_UDEV_DEST=\"$etc/udev/rules.d/90-apple-gmux-backlight.rules\"\n+\n+gmux_install_rule\n+cmp -s \"$udev_src\" \"$OMARCHY_GMUX_UDEV_DEST\" || fail \"install copies the packaged udev rule\"\n+pass \"helper installs the packaged udev rule\"\n+\n+gmux_activate\n+pass \"activate is a no-op when dest is not under /etc/udev/rules.d\"\n+\n+dmi_missing=\"$test_tmp/no-gmux\"\n+PATH=\"$ROOT/bin:$PATH\" \\\n+  OMARCHY_GMUX_BACKLIGHT=\"$dmi_missing\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_GMUX_UDEV_DEST=\"$test_tmp/should-not-exist.rules\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+[[ ! -e $test_tmp/should-not-exist.rules ]] || fail \"non-gmux install hook wrote a udev rule\"\n+pass \"install hook no-ops without gmux_backlight\"\n+\n+stub_bin=\"$test_tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+cat >\"$stub_bin/omarchy-hw-apple-gmux\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+chmod +x \"$stub_bin\"/*\n+\n+install_etc=\"$test_tmp/install-etc\"\n+mkdir -p \"$install_etc/udev/rules.d\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_GMUX_UDEV_SRC=\"$udev_src\" \\\n+  OMARCHY_GMUX_UDEV_DEST=\"$install_etc/udev/rules.d/90-apple-gmux-backlight.rules\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+cmp -s \"$udev_src\" \"$install_etc/udev/rules.d/90-apple-gmux-backlight.rules\" ||\n+  fail \"install hook writes the udev rule on gmux hardware\"\n+pass \"install hook writes the udev rule on gmux hardware\"\n+\n+cat >\"$stub_bin/omarchy-hw-apple-gmux\" <<'SH'\n+#!/bin/bash\n+exit 1\n+SH\n+calls=\"$test_tmp/calls.log\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  bash -euo pipefail \"$migration\"\n+[[ ! -s $calls ]] || fail \"non-gmux migration is a no-op\" \"$(cat \"$calls\")\"\n+pass \"migration skips unrelated hardware\"\n+\n+cat >\"$stub_bin/omarchy-hw-apple-gmux\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo %s\\n' \"$*\" >>\"$CALLS\"\n+exec \"$@\"\n+SH\n+chmod +x \"$stub_bin/sudo\"\n+\n+migrate_etc=\"$test_tmp/migrate-etc\"\n+mkdir -p \"$migrate_etc/udev/rules.d\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  CALLS=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_GMUX_UDEV_SRC=\"$udev_src\" \\\n+  OMARCHY_GMUX_UDEV_DEST=\"$migrate_etc/udev/rules.d/90-apple-gmux-backlight.rules\" \\\n+  bash -euo pipefail \"$migration\"\n+cmp -s \"$udev_src\" \"$migrate_etc/udev/rules.d/90-apple-gmux-backlight.rules\" ||\n+  fail \"migration writes the udev rule on gmux hardware\"\n+[[ ! -s $calls ]] || fail \"migration does not sudo when dest is not under /etc\" \"$(cat \"$calls\")\"\n+pass \"migration installs the udev rule without a privilege hop in tests\"\n+\n+# Second run is a no-op copy of the same bytes.\n+PATH=\"$stub_bin:$PATH\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_GMUX_UDEV_SRC=\"$udev_src\" \\\n+  OMARCHY_GMUX_UDEV_DEST=\"$migrate_etc/udev/rules.d/90-apple-gmux-backlight.rules\" \\\n+  bash -euo pipefail \"$migration\"\n+cmp -s \"$udev_src\" \"$migrate_etc/udev/rules.d/90-apple-gmux-backlight.rules\" ||\n+  fail \"migration changes an already installed rule\"\n+pass \"migration is idempotent\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758454390",
+      "html_url": "https://github.com/omacom/omarchy/pull/9910#issuecomment-5758454390",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9910",
+      "id": 5758454390,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzsKdg",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:41:37Z",
+      "updated_at": "2026-09-21T09:41:37Z",
+      "body": "Automated duplication check: this pull request looks similar to #8371, which covers the same GMUX backlight persist. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758454390/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

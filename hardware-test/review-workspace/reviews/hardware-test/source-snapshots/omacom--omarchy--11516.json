@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11516",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "touchbar-lid-lock"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+      "state": "open"
+    },
+    {
+      "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+      "state": "open",
+      "updated_at": "2026-09-12T16:52:46Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11516,
+  "checked_at": "2026-09-21T11:57:32.178355+00:00",
+  "title": "Ignore USB Touch Bar DRM when detecting external displays",
+  "author": "hanscnelson",
+  "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T16:52:46Z",
+  "state": "open",
+  "body": "## Summary\n\n`omarchy-hw-external-monitors` walks `/sys/class/drm/card*-*/status` and treats every connected connector that is not `eDP`/`LVDS`/`DSI` as a desktop display.\n\nOn a T1 MacBook the Touch Bar is a real DRM device (`card0-USB-1`, always `connected`, `ID_SEAT=seat-touchbar`). Hyprland does not list it as a monitor. The helper still returned true with **no HDMI/DP attached**, so:\n\n- `omarchy-system-lid-close` skipped the lock (`lid closed && ! external`)\n- `omarchy-hw-clamshell` was true whenever the lid was shut\n- logind never took the undocked suspend path (`HandleLidSwitchDocked=ignore`)\n\nReproduced on MacBookPro14,2 (Omarchy 4.0.3, T1Bridge Touch Bar). With a local override of this helper, undocked lid-close locks immediately. A real DP/HDMI dock still counts.\n\nThis does **not** change lid-open bindings or suspend/resume backlight. A long lid-close that actually reaches S3 can still take a while to light the panel; that is separate.\n\n## Test plan\n\n- [x] `bash test/shell.d/hw-external-monitors-test.sh` (existing cases plus USB-1 alone, split-card eDP+USB, DP still found with Touch Bar, HDMI still found)\n- [x] `bash test/shell.d/lid-close-test.sh`\n- [x] Live undocked lid-close on MacBookPro14,2: lock starts as soon as the lid shuts\n- [ ] Reviewer: USB-C DP-alt / DisplayLink still show up as `DP-*` / `HDMI-*` / `DVI-*`, not `USB-*`\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b9fc27a5bb13ad3d88cff971af4a8adc89d070e9",
+      "filename": "bin/omarchy-hw-external-monitors",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 1,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/07e254fae7c1f5119b3965fdaa577b2a405adee5/bin%2Fomarchy-hw-external-monitors",
+      "raw_url": "https://github.com/omacom/omarchy/raw/07e254fae7c1f5119b3965fdaa577b2a405adee5/bin%2Fomarchy-hw-external-monitors",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-external-monitors?ref=07e254fae7c1f5119b3965fdaa577b2a405adee5",
+      "patch": "@@ -6,7 +6,8 @@ drm_path=\"${OMARCHY_DRM_PATH:-/sys/class/drm}\"\n \n for status in \"$drm_path\"/card*-*/status; do\n   [[ -e $status ]] || continue\n-  [[ $status =~ -(eDP|LVDS|DSI)-[^/]+/status$ ]] && continue\n+  # Internal laptop panels. USB is the T1/iBridge Touch Bar DRM connector, not a desktop head.\n+  [[ $status =~ -(eDP|LVDS|DSI|USB)-[^/]+/status$ ]] && continue\n   [[ $(< $status) == \"connected\" ]] && exit 0\n done\n exit 1"
+    },
+    {
+      "sha": "b3d68eeb3493cc69fa888fe8265fbb77b6dd3ee6",
+      "filename": "test/shell.d/hw-external-monitors-test.sh",
+      "status": "modified",
+      "additions": 31,
+      "deletions": 0,
+      "changes": 31,
+      "blob_url": "https://github.com/omacom/omarchy/blob/07e254fae7c1f5119b3965fdaa577b2a405adee5/test%2Fshell.d%2Fhw-external-monitors-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/07e254fae7c1f5119b3965fdaa577b2a405adee5/test%2Fshell.d%2Fhw-external-monitors-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhw-external-monitors-test.sh?ref=07e254fae7c1f5119b3965fdaa577b2a405adee5",
+      "patch": "@@ -59,3 +59,34 @@ pass \"physical monitor detection ignores disconnected external displays\"\n write_connectors DP-1 connected\n has_external_monitor || fail \"external-only systems still report a connected display\"\n pass \"physical monitor detection still supports external-only systems\"\n+\n+write_connectors USB-1 connected\n+if has_external_monitor; then\n+  fail \"a Touch Bar USB DRM connector is not an external display\"\n+fi\n+pass \"physical monitor detection ignores a USB Touch Bar connector\"\n+\n+write_named_connectors() {\n+  rm -rf \"$drm_path\"\n+  mkdir -p \"$drm_path\"\n+\n+  while (( $# )); do\n+    mkdir -p \"$drm_path/$1\"\n+    printf '%s\\n' \"$2\" >\"$drm_path/$1/status\"\n+    shift 2\n+  done\n+}\n+\n+write_named_connectors card1-eDP-1 connected card0-USB-1 connected\n+if has_external_monitor; then\n+  fail \"a Touch Bar on a second DRM card is not an external display\"\n+fi\n+pass \"physical monitor detection ignores a USB Touch Bar alongside an internal panel\"\n+\n+write_named_connectors card1-eDP-1 connected card0-USB-1 connected card1-DP-1 connected\n+has_external_monitor || fail \"a real DP display still counts when a Touch Bar is present\"\n+pass \"physical monitor detection still finds DP when a Touch Bar is present\"\n+\n+write_named_connectors card1-eDP-1 connected card0-USB-1 disconnected card1-HDMI-A-1 connected\n+has_external_monitor || fail \"HDMI still counts when the Touch Bar is disconnected\"\n+pass \"physical monitor detection still finds HDMI when a Touch Bar is disconnected\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

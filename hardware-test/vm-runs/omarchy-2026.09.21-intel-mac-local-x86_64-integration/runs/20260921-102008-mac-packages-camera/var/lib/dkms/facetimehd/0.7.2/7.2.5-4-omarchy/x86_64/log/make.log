@@ -1,0 +1,30 @@
+DKMS (dkms-3.4.3) make.log for facetimehd/0.7.2 for kernel 7.2.5-4-omarchy (x86_64)
+Mon Sep 21 14:20:32 UTC 2026
+
+Building module(s)
+# command: make -j8 KERNELRELEASE=7.2.5-4-omarchy -C /usr/lib/modules/7.2.5-4-omarchy/build M=/var/lib/dkms/facetimehd/0.7.2/build
+make: Entering directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[1]: Entering directory '/var/lib/dkms/facetimehd/0.7.2/build'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+  CC [M]  fthd_ddr.o
+  CC [M]  fthd_hw.o
+  CC [M]  fthd_drv.o
+  CC [M]  fthd_ringbuf.o
+  CC [M]  fthd_isp.o
+  CC [M]  fthd_v4l2.o
+  CC [M]  fthd_buffer.o
+  CC [M]  fthd_debugfs.o
+  LD [M]  facetimehd.o
+  MODPOST Module.symvers
+  CC [M]  facetimehd.mod.o
+  CC [M]  .module-common.o
+  LD [M]  facetimehd.ko
+  BTF [M] facetimehd.ko
+make[1]: Leaving directory '/var/lib/dkms/facetimehd/0.7.2/build'
+make: Leaving directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+
+# exit code: 0
+# elapsed time: 00:00:03
+----------------------------------------------------------------

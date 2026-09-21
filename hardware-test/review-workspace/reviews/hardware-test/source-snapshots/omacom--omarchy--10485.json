@@ -1,0 +1,117 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10485",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "bluetooth-audio"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10485,
+  "checked_at": "2026-09-21T11:56:03.946218+00:00",
+  "title": "Send Broadcom's ACL-priority command to fix Bluetooth A2DP stutter on T2 Macs",
+  "author": "csk-grit42",
+  "head_sha": "5193d9cc32e29e5561ceed1968ff1144399d39c1",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:11Z",
+  "state": "open",
+  "body": "## Why\n\nBlueZ never sends Broadcom's vendor-specific `Write_High_Priority_Connection` HCI command (OGF `0x3f` / OCF `0x57`) for an A2DP link. Android and macOS send this automatically; without it, BCM43xx firmware treats the A2DP ACL handle as no-priority, so it loses out the instant a concurrent scan/inquiry competes for airtime, and audio stutters badly.\n\nThis is most visible on T2 Macs whenever the omarchy Bluetooth widget is open: its `discoveryRetry` timer (`shell/plugins/panels/bluetooth/Panel.qml`) intentionally keeps BlueZ discovery running continuously while the panel is open, so it constantly collides with this starvation. But the widget is only exposing a pre-existing condition \u2014 the same stutter reproduces with the widget fully closed by running `bluetoothctl scan on` directly, and clears the instant scan stops.\n\nIsolated and confirmed on a T2 MacBook Pro (`hci_bcm4377`) with a root `btmon` capture during `scan on`: BlueZ sets `LE Set Scan Parameters` to `Interval = Window = 11.25ms` (its own `DISCOV_LE_SCAN_INTERVAL_FAST`/`WIN_FAST` constants \u2014 100% duty-cycle scanning) and runs a 5.12s classic BR/EDR General Inquiry. No command errors or abnormal statuses anywhere in the capture \u2014 this is stock BlueZ discovery behavior, not something specific to `hci_bcm4377`.\n\nThe real fix belongs in BlueZ itself (see [jonas2515/bluez@b7ca931](https://github.com/jonas2515/bluez/commit/b7ca931d7f6ffb5f788bf80d0c8557f8607017dc), which hooks the command into `profiles/audio/avdtp.c` at A2DP stream open), but that has sat unmerged. This PR ships the userspace workaround from [bluez/bluez#1976](https://github.com/bluez/bluez/issues/1976) / [christian-korneck/asahi-bt-a2dp-fix](https://github.com/christian-korneck/asahi-bt-a2dp-fix) (same root cause, reported on BCM4377/4378/4388 under Asahi) instead, ported from their Fedora/AUR-based install to Arch's own packaging.\n\n> **Model note:** diagnosed and verified on one T2 MacBook Pro. The fix targets the PCI ID Omarchy already uses to gate `fix-t2.sh`, so it applies to every T2 Mac (all of which use this same Broadcom family via `hci_bcm4377`), but only field-tested on this one unit.\n\n## What\n\n- `bin/omarchy-hw-apple-bt-a2dp-priority` \u2014 watches `bluetoothctl --monitor` for an audio-sink device connecting, then sends the ACL-priority command via `hcitool cmd` for that connection's handle. `bluetoothctl --monitor` reads its own stdin as commands and treats EOF there as an implicit `quit`; under a plain systemd `ExecStart` stdin is closed, so this holds it open on a pipe that never closes.\n- `install/hardware/apple/bt-a2dp-priority.sh` \u2014 shared `needed`/`installed`/`install` helpers (install leaf + migration), gated on the same T2 PCI ID `fix-t2.sh` already detects.\n- `install/hardware/apple/fix-bt-a2dp-priority.sh` \u2014 install-time hook, wired into `install/hardware/all.sh` right after the Broadcom Wi-Fi supplicant fix (same chip family).\n- `default/systemd/system/omarchy-bt-a2dp-priority.service` \u2014 runs the watcher, gated on `hci_bcm4377` being loaded, skips cleanly if `bluetoothd` isn't up (same `ExecCondition` idiom as `bt-agent.service`).\n- Migration `1788703723` does the same for existing installs.\n- `test/shell.d/apple-bt-a2dp-priority-test.sh` covers the hardware gate, the watcher against a stubbed `bluetoothctl`/`hcitool`, and the install/migration wiring.\n\n## Test plan\n\n- [x] `./test/shell` (224/228 files pass; the 4 pre-existing failures \u2014 `bin-style-test.sh` on unrelated older scripts, `config-test.sh`, `snapper-test.sh`, `unowned-system-paths-test.sh` \u2014 are environment-dependent on this live desktop and untouched by this change)\n- [x] `./test/cli`\n- [x] `test/shell.d/apple-bt-a2dp-priority-test.sh`\n- [x] T2 MacBook Pro: reproduced the stutter with `bluetoothctl scan on` while A2DP audio played, installed the fix, confirmed the same test is clean afterward; journal shows the command firing on reconnect with `Command Complete ... status 00 (Success)`",
+  "draft": false,
+  "files": [
+    {
+      "sha": "3b3c6365fffa352010924da84ace1e3aa9b7ce27",
+      "filename": "bin/omarchy-hw-apple-bt-a2dp-priority",
+      "status": "added",
+      "additions": 28,
+      "deletions": 0,
+      "changes": 28,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/bin%2Fomarchy-hw-apple-bt-a2dp-priority",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/bin%2Fomarchy-hw-apple-bt-a2dp-priority",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-bt-a2dp-priority?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -0,0 +1,28 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Send the Broadcom ACL-priority command for A2DP audio\n+# omarchy:hidden=true\n+\n+# BlueZ never sends Broadcom's vendor-specific Write_High_Priority_Connection\n+# command (OGF 0x3f / OCF 0x57) for an A2DP link. Android and macOS send it\n+# automatically; without it, BCM43xx firmware treats the A2DP ACL handle as\n+# no-priority, so it loses out the instant a concurrent scan/inquiry competes\n+# for airtime, and audio stutters badly. See\n+# https://github.com/bluez/bluez/issues/1976 and\n+# https://github.com/christian-korneck/asahi-bt-a2dp-fix (same root cause,\n+# reported on BCM4377/4378/4388 under Asahi).\n+#\n+# bluetoothctl --monitor reads its own stdin as commands and treats EOF there\n+# as an implicit \"quit\" \u2014 under a plain systemd ExecStart, stdin is closed, so\n+# it would quit immediately and the unit would sit in a restart loop. Holding\n+# stdin open on a pipe that never closes keeps it running as an event feed.\n+settle_seconds=${BT_A2DP_PRIORITY_CONNECT_SETTLE_SECONDS:-2}\n+\n+stdbuf -oL bluetoothctl --monitor < <(sleep infinity) | while read -r line; do\n+  [[ $line =~ Device.*([0-9A-F:]{17}).*Connected:\\ yes ]] || continue\n+  mac=${BASH_REMATCH[1]}\n+  sleep \"$settle_seconds\"\n+  bluetoothctl info \"$mac\" | grep -q \"Audio Sink\" || continue\n+  handle=$(hcitool con | grep -i \"$mac\" | grep -oP 'handle \\K[0-9]+')\n+  [[ -n $handle ]] && hcitool cmd 0x3f 0x57 \"$(printf '0x%02X' \"$handle\")\" 0x00 0x01\n+done"
+    },
+    {
+      "sha": "b83fa056006da613c17d087a157f04c9826567fd",
+      "filename": "default/systemd/system/omarchy-bt-a2dp-priority.service",
+      "status": "added",
+      "additions": 17,
+      "deletions": 0,
+      "changes": 17,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/default%2Fsystemd%2Fsystem%2Fomarchy-bt-a2dp-priority.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/default%2Fsystemd%2Fsystem%2Fomarchy-bt-a2dp-priority.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem%2Fomarchy-bt-a2dp-priority.service?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -0,0 +1,17 @@\n+[Unit]\n+Description=Bluetooth A2DP ACL-priority fix for Broadcom BCM43xx (hci_bcm4377)\n+Documentation=https://github.com/bluez/bluez/issues/1976\n+ConditionPathIsDirectory=/sys/module/hci_bcm4377\n+After=bluetooth.target\n+Wants=bluetooth.target\n+\n+[Service]\n+Type=simple\n+# If bluetoothd is unavailable, skip cleanly instead of entering a restart loop.\n+ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service\n+ExecStart=/usr/bin/omarchy-hw-apple-bt-a2dp-priority\n+Restart=on-failure\n+RestartSec=2\n+\n+[Install]\n+WantedBy=multi-user.target"
+    },
+    {
+      "sha": "af2227cb3e6396379d4b8390301568cdb29f0ae7",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -39,6 +39,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-bt-a2dp-priority.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "6a54e6552fdba2027002b210ac5762bc9082590c",
+      "filename": "install/hardware/apple/bt-a2dp-priority.sh",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/install%2Fhardware%2Fapple%2Fbt-a2dp-priority.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/install%2Fhardware%2Fapple%2Fbt-a2dp-priority.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Fbt-a2dp-priority.sh?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -0,0 +1,22 @@\n+# Shared helpers for the Broadcom A2DP ACL-priority fix (install leaf + migration).\n+#\n+# BlueZ never sends Broadcom's vendor-specific Write_High_Priority_Connection\n+# command for an A2DP link, so audio stutters badly under any concurrent\n+# scan/inquiry. See bin/omarchy-hw-apple-bt-a2dp-priority for the fix itself.\n+#\n+# Gated on the same PCI ID Omarchy already uses to detect a T2 Mac (see\n+# fix-t2.sh) \u2014 every T2 Mac's Bluetooth is a member of this Broadcom family,\n+# driven by hci_bcm4377.\n+\n+bt_a2dp_priority_needed() {\n+  lspci -nn 2>/dev/null | grep -q \"106b:180[12]\"\n+}\n+\n+bt_a2dp_priority_installed() {\n+  systemctl is-enabled --quiet omarchy-bt-a2dp-priority.service 2>/dev/null\n+}\n+\n+bt_a2dp_priority_install() {\n+  omarchy-pkg-add bluez-deprecated-tools\n+  sudo systemctl enable --now omarchy-bt-a2dp-priority.service\n+}"
+    },
+    {
+      "sha": "fd81d95fe6580503e7ad17e558245433e3296402",
+      "filename": "install/hardware/apple/fix-bt-a2dp-priority.sh",
+      "status": "added",
+      "additions": 18,
+      "deletions": 0,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/install%2Fhardware%2Fapple%2Ffix-bt-a2dp-priority.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/install%2Fhardware%2Fapple%2Ffix-bt-a2dp-priority.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-bt-a2dp-priority.sh?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -0,0 +1,18 @@\n+# BlueZ never sends Broadcom's vendor-specific ACL-priority command for A2DP\n+# links, so audio stutters badly under any concurrent scan/inquiry. See\n+# bt-a2dp-priority.sh for the mechanism.\n+\n+: \"${OMARCHY_PATH:=/usr/share/omarchy}\"\n+: \"${OMARCHY_INSTALL:=$OMARCHY_PATH/install}\"\n+# shellcheck source=bt-a2dp-priority.sh\n+source \"$OMARCHY_INSTALL/hardware/apple/bt-a2dp-priority.sh\"\n+\n+if ! bt_a2dp_priority_needed; then\n+  return 0\n+fi\n+if bt_a2dp_priority_installed; then\n+  return 0\n+fi\n+\n+echo \"Wiring up the Bluetooth A2DP ACL-priority fix\"\n+bt_a2dp_priority_install"
+    },
+    {
+      "sha": "99f9dbe0b999c3310bbd61d2999994bb1ef79eeb",
+      "filename": "migrations/1788703723.sh",
+      "status": "added",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/migrations%2F1788703723.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/migrations%2F1788703723.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788703723.sh?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -0,0 +1,15 @@\n+echo \"Wire up the Bluetooth A2DP ACL-priority fix for existing installs\"\n+\n+: \"${OMARCHY_PATH:=/usr/share/omarchy}\"\n+: \"${OMARCHY_INSTALL:=$OMARCHY_PATH/install}\"\n+# shellcheck source=../install/hardware/apple/bt-a2dp-priority.sh\n+source \"$OMARCHY_INSTALL/hardware/apple/bt-a2dp-priority.sh\"\n+\n+if ! bt_a2dp_priority_needed; then\n+  exit 0\n+fi\n+if bt_a2dp_priority_installed; then\n+  exit 0\n+fi\n+\n+bt_a2dp_priority_install"
+    },
+    {
+      "sha": "13542b1bc55c31642768fd0948a306d7d97abfd3",
+      "filename": "test/shell.d/apple-bt-a2dp-priority-test.sh",
+      "status": "added",
+      "additions": 183,
+      "deletions": 0,
+      "changes": 183,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5193d9cc32e29e5561ceed1968ff1144399d39c1/test%2Fshell.d%2Fapple-bt-a2dp-priority-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5193d9cc32e29e5561ceed1968ff1144399d39c1/test%2Fshell.d%2Fapple-bt-a2dp-priority-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-bt-a2dp-priority-test.sh?ref=5193d9cc32e29e5561ceed1968ff1144399d39c1",
+      "patch": "@@ -0,0 +1,183 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+watcher=\"$ROOT/bin/omarchy-hw-apple-bt-a2dp-priority\"\n+helpers=\"$ROOT/install/hardware/apple/bt-a2dp-priority.sh\"\n+fix=\"$ROOT/install/hardware/apple/fix-bt-a2dp-priority.sh\"\n+service=\"$ROOT/default/systemd/system/omarchy-bt-a2dp-priority.service\"\n+migration=\"$ROOT/migrations/1788703723.sh\"\n+\n+[[ -x $watcher ]] || fail \"the watcher script is executable\"\n+\n+grep -Fq 'ExecStart=/usr/bin/omarchy-hw-apple-bt-a2dp-priority' \"$service\" ||\n+  fail \"service runs the watcher script\"\n+grep -Fq 'ConditionPathIsDirectory=/sys/module/hci_bcm4377' \"$service\" ||\n+  fail \"service is gated on the hci_bcm4377 driver being loaded\"\n+pass \"service runs the watcher script only where hci_bcm4377 is loaded\"\n+\n+grep -Fq 'fix-bt-a2dp-priority.sh' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"hardware install runs the A2DP priority fix hook\"\n+pass \"A2DP priority fix hook is wired into the installer\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+\n+# --- hardware gate ---\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+cat \"$LSPCI_OUTPUT\"\n+SH\n+chmod +x \"$stub_bin/lspci\"\n+\n+# shellcheck source=../../install/hardware/apple/bt-a2dp-priority.sh\n+source \"$helpers\"\n+\n+assert_needed() {\n+  local pci_line=$1 expect=$2 description=$3\n+  local tmp\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$pci_line\" >\"$tmp\"\n+  if PATH=\"$stub_bin:$PATH\" LSPCI_OUTPUT=\"$tmp\" bt_a2dp_priority_needed; then\n+    [[ $expect == yes ]] || fail \"$description\"\n+  else\n+    [[ $expect == no ]] || fail \"$description\"\n+  fi\n+  rm -f \"$tmp\"\n+  pass \"$description\"\n+}\n+\n+assert_needed \"00:1f.3 Bluetooth: Broadcom Inc. and subsidiaries [106b:1802] (rev 40)\" yes \"T2 iBridge (1802) is detected\"\n+assert_needed \"00:1f.3 Bluetooth: Broadcom Inc. and subsidiaries [106b:1801] (rev 40)\" yes \"T2 iBridge (1801) is detected\"\n+assert_needed \"00:1f.3 Ethernet controller [8086:15d8]\" no \"non-T2 hardware is not detected\"\n+\n+# --- watcher script picks A2DP connects out of bluetoothctl --monitor ---\n+cat >\"$stub_bin/bluetoothctl\" <<'SH'\n+#!/bin/bash\n+if [[ $1 == \"--monitor\" ]]; then\n+  cat \"$MONITOR_FEED\"\n+  exit 0\n+fi\n+if [[ $1 == \"info\" ]]; then\n+  grep -q \"$2\" \"$AUDIO_SINK_DEVICES\" && echo \"UUID: Audio Sink\"\n+  exit 0\n+fi\n+SH\n+cat >\"$stub_bin/hcitool\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$HCITOOL_LOG\"\n+[[ $1 == \"con\" ]] && cat \"$HCITOOL_CON_OUTPUT\"\n+SH\n+chmod +x \"$stub_bin\"/*\n+\n+feed=\"$test_tmp/monitor-feed\"\n+con_out=\"$test_tmp/con-out\"\n+sink_devices=\"$test_tmp/sink-devices\"\n+hcitool_log=\"$test_tmp/hcitool.log\"\n+printf '< ACL AA:BB:CC:DD:EE:FF handle 11 state 1 lm MASTER\\n' >\"$con_out\"\n+\n+# The stub feed ends after one line, unlike the real bluetoothctl --monitor,\n+# which never exits \u2014 the loop's last `read` then hits EOF and returns 1,\n+# which becomes the whole script's exit status. That's a property of this\n+# stub, not a bug in the watcher, so the exit status itself isn't asserted on.\n+run_watcher() {\n+  PATH=\"$stub_bin:$PATH\" \\\n+    MONITOR_FEED=\"$feed\" \\\n+    AUDIO_SINK_DEVICES=\"$sink_devices\" \\\n+    HCITOOL_CON_OUTPUT=\"$con_out\" \\\n+    HCITOOL_LOG=\"$hcitool_log\" \\\n+    BT_A2DP_PRIORITY_CONNECT_SETTLE_SECONDS=0 \\\n+    \"$watcher\" || true\n+}\n+\n+printf '[CHG] Device AA:BB:CC:DD:EE:FF Connected: yes\\n' >\"$feed\"\n+printf 'AA:BB:CC:DD:EE:FF\\n' >\"$sink_devices\"\n+: >\"$hcitool_log\"\n+run_watcher\n+grep -Fq 'cmd 0x3f 0x57 0x0B 0x00 0x01' \"$hcitool_log\" ||\n+  fail \"watcher sends the ACL-priority command for a connected audio sink\" \"$(cat \"$hcitool_log\")\"\n+pass \"watcher sends the ACL-priority command for a connected audio sink\"\n+\n+printf '[CHG] Device 11:22:33:44:55:66 Connected: yes\\n' >\"$feed\"\n+: >\"$sink_devices\"\n+: >\"$hcitool_log\"\n+run_watcher\n+[[ ! -s $hcitool_log ]] || fail \"watcher ignores a connect from a non-audio device\" \"$(cat \"$hcitool_log\")\"\n+pass \"watcher ignores a connect from a non-audio device\"\n+\n+# --- install hook + migration wiring ---\n+calls=\"$test_tmp/calls.log\"\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+[[ $1 == \"is-enabled\" ]] && [[ -f $SERVICE_ENABLED_MARKER ]]\n+SH\n+chmod +x \"$stub_bin\"/*\n+\n+t2_pci=\"$test_tmp/pci-t2\"\n+non_t2_pci=\"$test_tmp/pci-non-t2\"\n+printf '00:1f.3 Bluetooth: Broadcom Inc. and subsidiaries [106b:1802]\\n' >\"$t2_pci\"\n+printf '00:1f.3 Ethernet controller [8086:15d8]\\n' >\"$non_t2_pci\"\n+enabled_marker=\"$test_tmp/service-enabled\"\n+\n+run_fix_or_migration() {\n+  local script=$1 pci=$2\n+  PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    LSPCI_OUTPUT=\"$pci\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_INSTALL=\"$ROOT/install\" \\\n+    SERVICE_ENABLED_MARKER=\"$enabled_marker\" \\\n+    bash -c 'source \"$1\"' _ \"$script\"\n+}\n+\n+: >\"$calls\"; rm -f \"$enabled_marker\"\n+run_fix_or_migration \"$fix\" \"$non_t2_pci\"\n+[[ ! -s $calls ]] || fail \"install hook no-ops on non-T2 hardware\" \"$(cat \"$calls\")\"\n+pass \"install hook no-ops on non-T2 hardware\"\n+\n+: >\"$calls\"; rm -f \"$enabled_marker\"\n+run_fix_or_migration \"$fix\" \"$t2_pci\"\n+grep -Fq $'omarchy-pkg-add\\tbluez-deprecated-tools' \"$calls\" ||\n+  fail \"install hook installs bluez-deprecated-tools\" \"$(cat \"$calls\")\"\n+grep -Fq $'sudo\\tsystemctl\\tenable\\t--now\\tomarchy-bt-a2dp-priority.service' \"$calls\" ||\n+  fail \"install hook enables the priority-fix service\" \"$(cat \"$calls\")\"\n+pass \"install hook wires the A2DP priority fix on T2 hardware\"\n+\n+touch \"$enabled_marker\"\n+: >\"$calls\"\n+run_fix_or_migration \"$fix\" \"$t2_pci\"\n+grep -Fq $'sudo\\tsystemctl\\tenable\\t--now\\tomarchy-bt-a2dp-priority.service' \"$calls\" &&\n+  fail \"install hook is a no-op once already enabled\" \"$(cat \"$calls\")\"\n+pass \"install hook is a no-op once already enabled\"\n+\n+rm -f \"$enabled_marker\"\n+: >\"$calls\"\n+run_fix_or_migration \"$migration\" \"$t2_pci\"\n+grep -Fq $'sudo\\tsystemctl\\tenable\\t--now\\tomarchy-bt-a2dp-priority.service' \"$calls\" ||\n+  fail \"migration enables the priority-fix service on existing T2 installs\" \"$(cat \"$calls\")\"\n+pass \"migration wires the A2DP priority fix on existing T2 installs\"\n+\n+: >\"$calls\"\n+run_fix_or_migration \"$migration\" \"$non_t2_pci\"\n+[[ ! -s $calls ]] || fail \"migration skips unrelated hardware\" \"$(cat \"$calls\")\"\n+pass \"migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

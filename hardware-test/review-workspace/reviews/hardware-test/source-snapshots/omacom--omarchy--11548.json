@@ -1,0 +1,81 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11548",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "legacy-gpu"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5d337b7a58073a73e12457e99a33242036ee6b81",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11548,
+  "checked_at": "2026-09-21T11:56:44.875659+00:00",
+  "title": "Arbitrate MacBookPro11,5 dGPU to radeon",
+  "author": "rand0mdud3",
+  "head_sha": "5d337b7a58073a73e12457e99a33242036ee6b81",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T18:14:53Z",
+  "state": "open",
+  "body": "Related to #11382 (does not close it -- the power story stays open).\n\nThe 11,5's Venus XT is Southern Islands, claimed by both radeon and amdgpu. amdgpu's experimental SI support freezes these machines (hard hangs under normal use, black screen on switcheroo OFF -- both observed live), while radeon binds cleanly (2.51.0, zero errors) and survives suspend/resume cycles with working Wi-Fi.\n\n- install/hardware/apple/fix-radeon-si.sh, gated on MacBookPro11,5: writes a limine drop-in with radeon.si_support=1 amdgpu.si_support=0. 11,4 carries the same dGPU and is the evident next candidate on field report; the gate stays narrow until one arrives.\n- Wired into all.sh; migration 1789165591.sh sources the leaf for existing installs and rebuilds the boot image plus sets reboot-required only when this run changed the drop-in.\n- test/shell.d/apple-radeon-si-test.sh 9/9 (gating, no-clobber, idempotent migration with change-guarded rebuild).\n\nProven live on MacBookPro11,5 across multiple boots and lid cycles, not just mocked -- including the failure modes that motivated it.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "878e043243cd978a3c8a32ac25b280b755d690d5",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d337b7a58073a73e12457e99a33242036ee6b81/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d337b7a58073a73e12457e99a33242036ee6b81/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=5d337b7a58073a73e12457e99a33242036ee6b81",
+      "patch": "@@ -42,6 +42,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-radeon-si.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "0f0c8aad4ae58070b41fdaca04c375870534354f",
+      "filename": "install/hardware/apple/fix-radeon-si.sh",
+      "status": "added",
+      "additions": 24,
+      "deletions": 0,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d337b7a58073a73e12457e99a33242036ee6b81/install%2Fhardware%2Fapple%2Ffix-radeon-si.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d337b7a58073a73e12457e99a33242036ee6b81/install%2Fhardware%2Fapple%2Ffix-radeon-si.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-radeon-si.sh?ref=5d337b7a58073a73e12457e99a33242036ee6b81",
+      "patch": "@@ -0,0 +1,24 @@\n+# MacBookPro11,5's Venus XT dGPU is Southern Islands: both radeon and\n+# amdgpu claim it, and amdgpu's experimental SI support freezes these\n+# machines (hard hangs running normally, black screen on switcheroo OFF).\n+# Pin the arbitration to radeon, which binds cleanly and survives suspend\n+# cycles. Verified on MacBookPro11,5 with radeon 2.51.0; MacBookPro11,4\n+# carries the same dGPU and is the evident next candidate on field report.\n+dmi_product=\"${OMARCHY_DMI_PRODUCT:-/sys/class/dmi/id/product_name}\"\n+limine_dir=\"${OMARCHY_LIMINE_ENTRY_TOOL_D:-/etc/limine-entry-tool.d}\"\n+dropin=\"$limine_dir/radeon-si.conf\"\n+\n+product_name=\"$(cat \"$dmi_product\" 2>/dev/null || true)\"\n+\n+if [[ $product_name == \"MacBookPro11,5\" ]]; then\n+  echo \"Detected MacBookPro11,5 dGPU; arbitrating Southern Islands to radeon\"\n+\n+  [[ -d $limine_dir ]] || sudo mkdir -p \"$limine_dir\"\n+  if [[ ! -f $dropin ]]; then\n+    sudo tee \"$dropin\" >/dev/null <<'EOF'\n+# MacBookPro11,5: Venus XT is Southern Islands; amdgpu's experimental SI\n+# support hangs these machines, so pin the arbitration to radeon.\n+KERNEL_CMDLINE[default]+=\" radeon.si_support=1 amdgpu.si_support=0\"\n+EOF\n+  fi\n+fi"
+    },
+    {
+      "sha": "208cc19d3e00ae6b199c77e0a85dfd6437895c91",
+      "filename": "migrations/1789165591.sh",
+      "status": "added",
+      "additions": 28,
+      "deletions": 0,
+      "changes": 28,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d337b7a58073a73e12457e99a33242036ee6b81/migrations%2F1789165591.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d337b7a58073a73e12457e99a33242036ee6b81/migrations%2F1789165591.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789165591.sh?ref=5d337b7a58073a73e12457e99a33242036ee6b81",
+      "patch": "@@ -0,0 +1,28 @@\n+echo \"Arbitrate MacBookPro11,5 dGPU to radeon\"\n+\n+# See install/hardware/apple/fix-radeon-si.sh: amdgpu's experimental SI\n+# support hangs these machines, so pin Southern Islands to radeon. The flags\n+# only take effect in a rebuilt boot image, which is also what applies them\n+# on fresh installs, so rebuild here -- but only when this run changed the\n+# drop-in, and only ask for the reboot then.\n+dmi_product=\"${OMARCHY_DMI_PRODUCT:-/sys/class/dmi/id/product_name}\"\n+limine_dir=\"${OMARCHY_LIMINE_ENTRY_TOOL_D:-/etc/limine-entry-tool.d}\"\n+dropin=\"$limine_dir/radeon-si.conf\"\n+\n+product_name=\"$(cat \"$dmi_product\" 2>/dev/null || true)\"\n+[[ $product_name == \"MacBookPro11,5\" ]] || exit 0\n+\n+before=\"\"\n+[[ -f $dropin ]] && before=$(md5sum <\"$dropin\" 2>/dev/null || true)\n+\n+source \"$OMARCHY_PATH/install/hardware/apple/fix-radeon-si.sh\"\n+\n+after=\"\"\n+[[ -f $dropin ]] && after=$(md5sum <\"$dropin\" 2>/dev/null || true)\n+\n+if [[ -n $after && $before != \"$after\" ]]; then\n+  if omarchy-cmd-present limine-mkinitcpio; then\n+    sudo limine-mkinitcpio\n+  fi\n+  omarchy-state set reboot-required\n+fi"
+    },
+    {
+      "sha": "7f9bb164635306b5c07f0cb55c0b095062620eb3",
+      "filename": "test/shell.d/apple-radeon-si-test.sh",
+      "status": "added",
+      "additions": 126,
+      "deletions": 0,
+      "changes": 126,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d337b7a58073a73e12457e99a33242036ee6b81/test%2Fshell.d%2Fapple-radeon-si-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d337b7a58073a73e12457e99a33242036ee6b81/test%2Fshell.d%2Fapple-radeon-si-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-radeon-si-test.sh?ref=5d337b7a58073a73e12457e99a33242036ee6b81",
+      "patch": "@@ -0,0 +1,126 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-radeon-si.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1789165591.sh\"\n+\n+grep -Fq 'apple/fix-radeon-si.sh' \"$all\" ||\n+  fail \"the radeon SI quirk runs during hardware setup\"\n+pass \"the radeon SI quirk runs during hardware setup\"\n+\n+grep -Fq 'fix-radeon-si.sh' \"$migration\" ||\n+  fail \"the migration applies the radeon SI quirk\" \"$migration\"\n+pass \"the migration applies the radeon SI quirk\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+limine_dir=\"$test_tmp/etc/limine-entry-tool.d\"\n+conf=\"$limine_dir/radeon-si.conf\"\n+dmi_product=\"$test_tmp/dmi/product_name\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\" \"$limine_dir\"\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-cmd-present\" <<'SH'\n+#!/bin/bash\n+\n+[[ $1 == limine-mkinitcpio ]] && (( ${LIMINE_MKINITCPIO:-1} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local product=\"$1\" keep=\"${2:-0}\"\n+  if (( keep == 0 )); then\n+    rm -rf \"$test_tmp/etc\"\n+    mkdir -p \"$limine_dir\"\n+  fi\n+  printf '%s' \"$product\" >\"$dmi_product\"\n+  : >\"$calls\"\n+\n+  OMARCHY_DMI_PRODUCT=\"$dmi_product\" \\\n+    OMARCHY_LIMINE_ENTRY_TOOL_D=\"$limine_dir\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\" </dev/null\n+}\n+\n+run_leaf \"MacBookPro11,5\" >/dev/null\n+[[ -f $conf ]] || fail \"an 11,5 gets the SI arbitration drop-in\"\n+grep -Fq 'radeon.si_support=1 amdgpu.si_support=0' \"$conf\" ||\n+  fail \"the drop-in pins SI to radeon\" \"$(cat \"$conf\")\"\n+pass \"an 11,5 gets the SI arbitration drop-in\"\n+\n+printf 'custom\\n' >\"$conf\"\n+run_leaf \"MacBookPro11,5\" 1 >/dev/null\n+[[ $(<\"$conf\") == \"custom\" ]] || fail \"an existing drop-in is not overwritten\"\n+pass \"an existing drop-in is left in place\"\n+\n+run_leaf \"MacBookPro14,3\" >/dev/null\n+[[ ! -e $conf ]] || fail \"other Macs are left alone\"\n+[[ ! -s $calls ]] || fail \"other Macs escalate nothing\" \"$(cat \"$calls\")\"\n+pass \"other Macs are left alone\"\n+\n+run_leaf \"ThinkPad X1\" >/dev/null\n+[[ ! -e $conf ]] || fail \"non-Apple hardware is left alone\"\n+[[ ! -s $calls ]] || fail \"non-Apple hardware escalates nothing\" \"$(cat \"$calls\")\"\n+pass \"non-Apple hardware is left alone\"\n+\n+run_migration() {\n+  local product=\"$1\"\n+  printf '%s' \"$product\" >\"$dmi_product\"\n+  : >\"$calls\"\n+\n+  OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_DMI_PRODUCT=\"$dmi_product\" \\\n+    OMARCHY_LIMINE_ENTRY_TOOL_D=\"$limine_dir\" \\\n+    LIMINE_MKINITCPIO=\"${LIMINE_MKINITCPIO:-1}\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+rm -rf \"$test_tmp/etc\"\n+mkdir -p \"$limine_dir\"\n+run_migration \"MacBookPro11,5\"\n+[[ -f $conf ]] || fail \"the migration writes the drop-in on an 11,5\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"the migration rebuilds the boot image when it changed the drop-in\" \"$(cat \"$calls\")\"\n+grep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"the migration asks for the reboot that applies it\" \"$(cat \"$calls\")\"\n+pass \"the migration installs and rebuilds on an 11,5\"\n+\n+: >\"$calls\"\n+run_migration \"MacBookPro11,5\"\n+[[ ! -s $calls ]] || fail \"a second run touches nothing\" \"$(cat \"$calls\")\"\n+pass \"the migration is idempotent\"\n+\n+run_migration \"MacBookPro14,3\"\n+[[ ! -s $calls ]] || fail \"the migration leaves other hardware alone\" \"$(cat \"$calls\")\"\n+pass \"the migration leaves other hardware alone\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

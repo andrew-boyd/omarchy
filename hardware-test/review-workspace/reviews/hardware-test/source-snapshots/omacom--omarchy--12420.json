@@ -1,0 +1,46 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12420",
+  "origins": [
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "t1bridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "939ab0b65da61edeeb01bea9baf9f2f86acc837f",
+      "state": "open",
+      "updated_at": "2026-09-18T16:01:07Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12420,
+  "checked_at": "2026-09-21T11:57:51.666718+00:00",
+  "title": "lock: stop fingerprint scans while the display is blanked",
+  "author": "slr01",
+  "head_sha": "939ab0b65da61edeeb01bea9baf9f2f86acc837f",
+  "base_sha": "d174d4aa279ea7393d4fad4a80fed147866106b9",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-18T16:01:07Z",
+  "state": "open",
+  "body": "## What and why\n\nWhile a display is blanked, the lock screen keeps the fingerprint reader running scan cycles against an empty pad. On fingerprint readers that thermally self-disable (Broadcom CV3 / `0a5c:5843`, Goodix `27c6:533c`, Elan `04f3:0c4b`, all `libfprint-tod`), that cycles the driver into `Device disabled to prevent overheating` refusals: 31,534 `PAM_AUTHINFO_UNAVAIL` / code 9 returns in under four hours on a CV3, in a 205 s-refusing / 122 s-available cycle. Each refusal re-arms the 250 ms retry timer, so the reader stays in the storm.\n\nThis PR stops new scans while the display is blanked and re-arms on wake. With it, a CV3 logged **0 refusals across a 15-minute lock** and read on the first touch after wake ([measurement thread](/omacom/omarchy/pull/12201#issuecomment-5721534266)).\n\n## Changes (3 lines-worth of gating, purely additive vs stock)\n\n- `runBlank()`: stop `fingerprintRetryTimer` so a blanked display is not re-arming scan cycles\n- `startFingerprint()`: return early while `displaysBlank`\n- `runWake()`: re-arm a scan if a lock is active\n\nNo `abort()`: an in-flight scan is allowed to finish; on readers where `power/wakeup` is disabled, the reader cannot wake the compositor, so aborting on blank can strand it with nothing to re-arm it.\n\n## Notes\n\n- Composes with the libfprint temperature/backoff model in libfprint#7179 rather than colliding with it.\n- Purely additive against `quattro`; no behavior change while the display is awake.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "0380ade5a0b2da8b97749cf38f9707356f289ced",
+      "filename": "shell/plugins/lock/Service.qml",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/939ab0b65da61edeeb01bea9baf9f2f86acc837f/shell%2Fplugins%2Flock%2FService.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/939ab0b65da61edeeb01bea9baf9f2f86acc837f/shell%2Fplugins%2Flock%2FService.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FService.qml?ref=939ab0b65da61edeeb01bea9baf9f2f86acc837f",
+      "patch": "@@ -179,11 +179,13 @@ Item {\n     root.monitorDpmsKnown = false\n     if (!wakeProcess.running) wakeProcess.running = true\n     if (lockRequested) armBlankTimer()\n+    if (lockRequested && fingerprintConfigured && !authenticatingPassword) root.startFingerprint()\n   }\n \n   function runBlank() {\n     root.displaysBlank = true\n     root.monitorDpmsKnown = false\n+    fingerprintRetryTimer.stop()\n     if (!blankProcess.running) blankProcess.running = true\n   }\n \n@@ -246,6 +248,7 @@ Item {\n \n   function startFingerprint() {\n     if (!lockRequested || !sessionLock.secure || !fingerprintConfigured) return\n+    if (displaysBlank) return\n     if (fingerprintPam.active || fingerprintAuthenticating) return\n \n     fingerprintAuthenticating = true"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

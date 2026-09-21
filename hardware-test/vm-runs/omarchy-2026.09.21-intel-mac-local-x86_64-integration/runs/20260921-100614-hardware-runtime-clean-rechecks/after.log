@@ -1,0 +1,111 @@
+omarchy:
+When                Type  Source                                           Valid
+Sep 21 14:06:48 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy idle 2026-09-21T14:06:48.504Z stay-awake: disabled state-file
+Sep 21 14:06:48 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy idle 2026-09-21T14:06:48.647Z idle-monitor: active
+Sep 21 14:06:51 omarchy-test sshd-session[2283]: Received disconnect from 10.0.2.2 port 45292:11: disconnected by user
+Sep 21 14:06:51 omarchy-test sshd-session[2283]: Disconnected from user omarchy 10.0.2.2 port 45292
+Sep 21 14:06:53 omarchy-test sshd-session[2305]: Received disconnect from 10.0.2.2 port 45308:11: disconnected by user
+Sep 21 14:06:53 omarchy-test sshd-session[2305]: Disconnected from user omarchy 10.0.2.2 port 45308
+Sep 21 14:06:53 omarchy-test sudo[2316]:  omarchy : PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c 'true; journalctl -b --no-pager | grep -E "pam_|faillock|sudo" || true'
+Sep 21 14:06:53 omarchy-test sudo[2316]: pam_unix(sudo:session): session opened for user root(uid=0) by omarchy(uid=1000)
+Sep 21 14:06:53 omarchy-test sudo[2316]: pam_unix(sudo:session): session closed for user root
+Sep 21 14:06:53 omarchy-test sshd-session[2313]: Received disconnect from 10.0.2.2 port 45318:11: disconnected by user
+Sep 21 14:06:53 omarchy-test sshd-session[2313]: Disconnected from user omarchy 10.0.2.2 port 45318
+Sep 21 14:06:53 omarchy-test sshd-session[2327]: Received disconnect from 10.0.2.2 port 45324:11: disconnected by user
+Sep 21 14:06:53 omarchy-test sshd-session[2327]: Disconnected from user omarchy 10.0.2.2 port 45324
+Sep 21 14:06:54 omarchy-test sshd-session[2333]: Received disconnect from 10.0.2.2 port 45334:11: disconnected by user
+Sep 21 14:06:54 omarchy-test sshd-session[2333]: Disconnected from user omarchy 10.0.2.2 port 45334
+Sep 21 14:06:54 omarchy-test sshd-session[2387]: Received disconnect from 10.0.2.2 port 45344:11: disconnected by user
+Sep 21 14:06:54 omarchy-test sshd-session[2387]: Disconnected from user omarchy 10.0.2.2 port 45344
+Sep 21 14:06:54 omarchy-test sshd-session[2432]: Received disconnect from 10.0.2.2 port 45352:11: disconnected by user
+Sep 21 14:06:54 omarchy-test sshd-session[2432]: Disconnected from user omarchy 10.0.2.2 port 45352
+Sep 21 14:06:54 omarchy-test fcitx5[1107]: I2026-09-21 14:06:54.715169 waylandmodule.cpp:668] Wayland self diagnose information
+Sep 21 14:06:54 omarchy-test fcitx5[1107]: I2026-09-21 14:06:54.715214 waylandmodule.cpp:669] Using Wayland native input method protocol: 1
+Sep 21 14:06:54 omarchy-test fcitx5[1107]: I2026-09-21 14:06:54.715224 waylandmodule.cpp:671] Toolkit specific environment variable detected by process:
+Sep 21 14:06:54 omarchy-test fcitx5[1107]: I2026-09-21 14:06:54.715231 waylandmodule.cpp:673] GTK_IM_MODULE=
+Sep 21 14:06:54 omarchy-test fcitx5[1107]: I2026-09-21 14:06:54.715238 waylandmodule.cpp:674] QT_IM_MODULE=fcitx
+Sep 21 14:06:54 omarchy-test fcitx5[1107]: I2026-09-21 14:06:54.715245 waylandmodule.cpp:675] QT_IM_MODULES=
+Sep 21 14:06:54 omarchy-test sshd-session[2513]: Received disconnect from 10.0.2.2 port 45368:11: disconnected by user
+Sep 21 14:06:54 omarchy-test sshd-session[2513]: Disconnected from user omarchy 10.0.2.2 port 45368
+Sep 21 14:06:55 omarchy-test sshd-session[2574]: Received disconnect from 10.0.2.2 port 45382:11: disconnected by user
+Sep 21 14:06:55 omarchy-test sshd-session[2574]: Disconnected from user omarchy 10.0.2.2 port 45382
+Sep 21 14:06:55 omarchy-test qs[2652]: Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+                                       Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+                                       If this causes problems, reconfigure your locale. See the locale(1) manual
+                                       for more information.
+Sep 21 14:06:55 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:06:55.303Z lock-requested
+Sep 21 14:06:55 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:06:55.303Z lock-pending: screen-stabilizing
+Sep 21 14:06:55 omarchy-test sshd-session[2636]: Received disconnect from 10.0.2.2 port 45392:11: disconnected by user
+Sep 21 14:06:55 omarchy-test sshd-session[2636]: Disconnected from user omarchy 10.0.2.2 port 45392
+Sep 21 14:06:55 omarchy-test sshd-session[2671]: Received disconnect from 10.0.2.2 port 45408:11: disconnected by user
+Sep 21 14:06:55 omarchy-test sshd-session[2671]: Disconnected from user omarchy 10.0.2.2 port 45408
+Sep 21 14:06:55 omarchy-test uwsm_hyprland.desktop[906]: DEBUG from start-hyprland ]: got an event from hyprland
+Sep 21 14:06:56 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:06:56.071Z secure=true
+Sep 21 14:06:56 omarchy-test owed[1088]: 14:06:56.383 owed[1088] INFO ../owe-0.2.3/src/daemon/policy.c:107: policy pause=1 poster=0 reason=locked
+Sep 21 14:06:56 omarchy-test owed[1164]: 14:06:56.383 owe-render[1164] INFO ../owe-0.2.3/src/render/mpv.c:254: mpv paused
+Sep 21 14:06:56 omarchy-test sshd-session[2760]: Received disconnect from 10.0.2.2 port 45422:11: disconnected by user
+Sep 21 14:06:56 omarchy-test sshd-session[2760]: Disconnected from user omarchy 10.0.2.2 port 45422
+Sep 21 14:06:59 omarchy-test omarchy-shell[3002]: quickshell.service.pam.subprocess: Waiting for parent confirmation...
+Sep 21 14:06:59 omarchy-test omarchy-shell[3002]: quickshell.service.pam.subprocess: Starting pam session for user "omarchy" with config "omarchy-lock-password" in dir "/etc/pam.d"
+Sep 21 14:06:59 omarchy-test omarchy-shell[3002]: quickshell.service.pam.subprocess: Relaying pam message: "Password: " echo: 0 error: 0 responseRequired: 1
+Sep 21 14:06:59 omarchy-test unix_chkpwd[3012]: password check failed for user (omarchy)
+Sep 21 14:06:59 omarchy-test quickshell[3002]: pam_unix(omarchy-lock-password:auth): authentication failure; logname=omarchy uid=1000 euid=1000 tty= ruser= rhost=  user=omarchy
+Sep 21 14:07:02 omarchy-test omarchy-shell[3002]: quickshell.service.pam.subprocess: Got response for request.quickshell.service.pam.subprocess: Failed to authenticate.
+Sep 21 14:07:04 omarchy-test sshd-session[3095]: Received disconnect from 10.0.2.2 port 50068:11: disconnected by user
+Sep 21 14:07:04 omarchy-test sshd-session[3095]: Disconnected from user omarchy 10.0.2.2 port 50068
+Sep 21 14:07:06 omarchy-test sshd-session[3576]: Received disconnect from 10.0.2.2 port 50076:11: disconnected by user
+Sep 21 14:07:06 omarchy-test sshd-session[3576]: Disconnected from user omarchy 10.0.2.2 port 50076
+Sep 21 14:07:06 omarchy-test omarchy-shell[3625]: quickshell.service.pam.subprocess: Waiting for parent confirmation...
+Sep 21 14:07:06 omarchy-test omarchy-shell[3625]: quickshell.service.pam.subprocess: Starting pam session for user "omarchy" with config "omarchy-lock-password" in dir "/etc/pam.d"
+Sep 21 14:07:06 omarchy-test omarchy-shell[3625]: quickshell.service.pam.subprocess: Relaying pam message: "Password: " echo: 0 error: 0 responseRequired: 1
+Sep 21 14:07:06 omarchy-test omarchy-shell[3625]: quickshell.service.pam.subprocess: Got response for request.quickshell.service.pam.subprocess: Authenticated successfully.
+Sep 21 14:07:06 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:07:06.203Z secure=false
+Sep 21 14:07:06 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:07:06.205Z session-locked=false
+Sep 21 14:07:06 omarchy-test uwsm_hyprland.desktop[906]: DEBUG from start-hyprland ]: got an event from hyprland
+Sep 21 14:07:06 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:07:06.211Z session-locked=false
+Sep 21 14:07:06 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy lock 2026-09-21T14:07:06.211Z unlocked
+Sep 21 14:07:07 omarchy-test sshd-session[3666]: Received disconnect from 10.0.2.2 port 50090:11: disconnected by user
+Sep 21 14:07:07 omarchy-test sshd-session[3666]: Disconnected from user omarchy 10.0.2.2 port 50090
+Sep 21 14:07:07 omarchy-test owed[1088]: 14:07:07.362 owed[1088] INFO ../owe-0.2.3/src/daemon/policy.c:107: policy pause=0 poster=0 reason=visible
+Sep 21 14:07:07 omarchy-test owed[1164]: 14:07:07.362 owe-render[1164] INFO ../owe-0.2.3/src/render/mpv.c:254: mpv resumed
+Sep 21 14:07:12 omarchy-test qs[4021]: Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+                                       Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+                                       If this causes problems, reconfigure your locale. See the locale(1) manual
+                                       for more information.
+Sep 21 14:07:15 omarchy-test qs[4059]: Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+                                       Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+                                       If this causes problems, reconfigure your locale. See the locale(1) manual
+                                       for more information.
+Sep 21 14:07:15 omarchy-test owed[1088]: 14:07:15.214 owed[1088] INFO ../owe-0.2.3/src/daemon/shell.c:54: shell background enabled
+Sep 21 14:07:15 omarchy-test owed[1088]: 14:07:15.214 owed[1088] INFO ../owe-0.2.3/src/daemon/main.c:520: engine: shell
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: The XKEYBOARD keymap compiler (xkbcomp) reports:
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: > Warning:          Unsupported maximum keycode 709, clipping.
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: >                   X11 cannot support keycodes above 255.
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: > Warning:          Virtual modifier Hyper multiply defined
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: >                   Using 0, ignoring 0
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: > Warning:          Virtual modifier ScrollLock multiply defined
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: >                   Using 0, ignoring 0
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: > Error:            Key <LFSH> added to map for multiple modifiers
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: >                   Using Lock, ignoring Shift.
+Sep 21 14:07:15 omarchy-test uwsm_hyprland.desktop[4081]: Errors from xkbcomp are not fatal to the X server
+Sep 21 14:07:16 omarchy-test owed[1088]: 14:07:16.515 owed[1088] INFO ../owe-0.2.3/src/daemon/main.c:247: renderer stopped, the shell draws the still
+Sep 21 14:07:16 omarchy-test owed[1164]: 14:07:16.516 owe-render[1164] INFO ../owe-0.2.3/src/render/main.c:287: shutdown
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: The XKEYBOARD keymap compiler (xkbcomp) reports:
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: > Warning:          Unsupported maximum keycode 709, clipping.
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: >                   X11 cannot support keycodes above 255.
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: > Warning:          Virtual modifier Hyper multiply defined
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: >                   Using 0, ignoring 0
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: > Warning:          Virtual modifier ScrollLock multiply defined
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: >                   Using 0, ignoring 0
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: > Error:            Key <LFSH> added to map for multiple modifiers
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: >                   Using Lock, ignoring Shift.
+Sep 21 14:07:25 omarchy-test uwsm_hyprland.desktop[4166]: Errors from xkbcomp are not fatal to the X server
+Sep 21 14:07:25 omarchy-test sshd-session[3682]: Received disconnect from 10.0.2.2 port 50100:11: disconnected by user
+Sep 21 14:07:25 omarchy-test sshd-session[3682]: Disconnected from user omarchy 10.0.2.2 port 50100
+Sep 21 14:07:25 omarchy-test sshd-session[4207]: Received disconnect from 10.0.2.2 port 59184:11: disconnected by user
+Sep 21 14:07:25 omarchy-test sshd-session[4207]: Disconnected from user omarchy 10.0.2.2 port 59184
+Sep 21 14:07:26 omarchy-test sudo[4216]:  omarchy : PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c 'bash /home/omarchy/guest-runtime-recovery.sh'
+Sep 21 14:07:26 omarchy-test sudo[4216]: pam_unix(sudo:session): session opened for user root(uid=0) by omarchy(uid=1000)
+Sep 21 14:07:37 omarchy-test sudo[4216]: pam_unix(sudo:session): session closed for user root
+Sep 21 14:07:37 omarchy-test sshd-session[4213]: Received disconnect from 10.0.2.2 port 59198:11: disconnected by user
+Sep 21 14:07:37 omarchy-test sshd-session[4213]: Disconnected from user omarchy 10.0.2.2 port 59198

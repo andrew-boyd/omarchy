@@ -1,0 +1,105 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7180",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-pre-t2-resume"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7180,
+  "checked_at": "2026-09-21T11:57:45.507453+00:00",
+  "title": "Work around Apple BCM4350 suspend failures",
+  "author": "doctor",
+  "head_sha": "9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:41Z",
+  "state": "open",
+  "body": "## Summary\n\n- Install a sleep service only on Apple systems with the BCM4350 PCI device (`14e4:43a3`).\n- Unbind that device from `brcmfmac` before sleep and bind it again after wake, forcing a clean firmware initialization.\n- Add an idempotent migration for existing installs and focused coverage for hardware gating, service ordering, recovery state, and installation.\n\n## Failure\n\nThis was reproduced twice on a MacBook10,1 with kernel 7.1.8 and the in-tree `brcmfmac` driver.\n\nAfter a successful S3 suspend, the BCM4350 firmware stopped answering as soon as the machine resumed. The journal then repeated:\n\n```\nbrcmf_msgbuf_query_dcmd: Timeout on response for query command\nCouldn't initialize supplicant interface: Timeout was reached\nbrcmf_cfg80211_scan: scan error (-5)\n```\n\nToggling Wi-Fi could not recover the device because that only changes NetworkManager/rfkill state. A later suspend attempt also failed when the already-unresponsive firmware did not acknowledge its D3 transition:\n\n```\nbrcmf_pcie_pm_enter_D3: Timeout on response for entering D3 substate\npci_pm_suspend(): brcmf_pcie_pm_enter_D3 [brcmfmac] returns -5\n```\n\nA reboot recovered Wi-Fi by initializing the firmware again.\n\n## Approach\n\nThe service keeps this exact PCI device unbound for the sleep transaction. It therefore avoids relying on the unresponsive firmware power transition and binds the device after resume so NetworkManager receives a freshly initialized radio.\n\nThe workaround is deliberately limited to Apple hardware with PCI ID `14e4:43a3`; it does not cycle other `brcmfmac` radios.\n\n## Testing\n\n- `bash -n` on the helper, installer, migration, and test\n- `test/shell.d/brcmfmac-suspend-test.sh`\n- `test/shell.d/brcmfmac-supplicant-test.sh`\n- `test/shell.d/unowned-system-paths-test.sh`\n- `test/shell.d/systemd-test.sh`\n- `test/cli`\n- `systemd-analyze verify install/hardware/apple/omarchy-brcmfmac-suspend.service`\n- Live PCI unbind/bind: the device stayed detached and NetworkManager reconnected after binding\n- Live deep-suspend integration with the actual unit ordering:\n  - service started before `sleep.target`\n  - S3 suspend ran from 13:10:07 to 13:10:43\n  - service stopped and firmware initialization began at 13:10:43\n  - Wi-Fi activated at 13:10:47\n  - zero `brcmfmac` response timeouts and zero post-resume scan failures\n\nAn earlier exploratory module-unload approach was discarded because udev immediately reloaded the module before suspend. That exploratory cycle also coincided with an `snd_hda_codec` kernel oops and a hard lock. The final implementation does not unload modules; both the corrected detached-device cycle and the actual service integration cycle completed cleanly.\n",
+  "draft": true,
+  "files": [
+    {
+      "sha": "59385885900014b198725bbcb0ee25d5b0914362",
+      "filename": "bin/omarchy-hw-brcmfmac-suspend",
+      "status": "added",
+      "additions": 66,
+      "deletions": 0,
+      "changes": 66,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/bin%2Fomarchy-hw-brcmfmac-suspend",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/bin%2Fomarchy-hw-brcmfmac-suspend",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-brcmfmac-suspend?ref=9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "patch": "@@ -0,0 +1,66 @@\n+#!/bin/bash\n+\n+# omarchy:hidden=true\n+# omarchy:summary=Unbind affected Broadcom Wi-Fi around system sleep\n+# omarchy:args=<pre|post>\n+# omarchy:requires-sudo=true\n+\n+set -euo pipefail\n+\n+driver_path=\"${OMARCHY_BRCMFMAC_DRIVER_PATH:-/sys/bus/pci/drivers/brcmfmac}\"\n+device_root=\"${OMARCHY_BRCMFMAC_DEVICE_ROOT:-/sys/bus/pci/devices}\"\n+state_file=\"${OMARCHY_BRCMFMAC_SUSPEND_STATE:-/run/omarchy-brcmfmac-suspend.devices}\"\n+\n+case \"${1:-}\" in\n+  pre)\n+    install -d -m755 \"$(dirname \"$state_file\")\"\n+    : >\"$state_file\"\n+\n+    for bound_device in \"$driver_path\"/????:??:??.?; do\n+      [[ -e $bound_device/vendor && -e $bound_device/device ]] || continue\n+      [[ $(<\"$bound_device/vendor\") == \"0x14e4\" ]] || continue\n+      [[ $(<\"$bound_device/device\") == \"0x43a3\" ]] || continue\n+\n+      pci_address=\"${bound_device##*/}\"\n+      if ! printf '%s' \"$pci_address\" >\"$driver_path/unbind\"; then\n+        rm -f \"$state_file\"\n+        exit 1\n+      fi\n+      printf '%s\\n' \"$pci_address\" >>\"$state_file\"\n+    done\n+\n+    if [[ ! -s $state_file ]]; then\n+      rm -f \"$state_file\"\n+      echo \"No bound Apple BCM4350 Wi-Fi device found\" >&2\n+      exit 1\n+    fi\n+    ;;\n+  post)\n+    [[ -f $state_file ]] || exit 0\n+    bind_failed=false\n+\n+    while IFS= read -r pci_address; do\n+      [[ -n $pci_address ]] || continue\n+      if [[ ! -e $device_root/$pci_address ]]; then\n+        echo \"Broadcom Wi-Fi device $pci_address disappeared\" >&2\n+        bind_failed=true\n+        continue\n+      fi\n+      if [[ ! -L $device_root/$pci_address/driver ]] &&\n+        ! printf '%s' \"$pci_address\" >\"$driver_path/bind\"; then\n+        echo \"Failed to rebind Broadcom Wi-Fi device $pci_address\" >&2\n+        bind_failed=true\n+      fi\n+    done <\"$state_file\"\n+\n+    if [[ $bind_failed == true ]]; then\n+      exit 1\n+    fi\n+\n+    rm -f \"$state_file\"\n+    ;;\n+  *)\n+    echo \"Usage: omarchy-hw-brcmfmac-suspend <pre|post>\" >&2\n+    exit 2\n+    ;;\n+esac"
+    },
+    {
+      "sha": "11f83f528950a004082b77936a56331a99b3f38c",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "patch": "@@ -36,6 +36,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "2b07154a9e899bff25e6182bec050fd9b4ef5309",
+      "filename": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "status": "added",
+      "additions": 18,
+      "deletions": 0,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh?ref=9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "patch": "@@ -0,0 +1,18 @@\n+# BCM4350 firmware can stop answering after S3 resume on Apple hardware. Once\n+# that happens, brcmfmac times out entering D3, NetworkManager cannot initialize\n+# its supplicant interface, and every scan fails until the firmware is reloaded.\n+#\n+# Unbind the device before sleep so its unreliable firmware power transition is\n+# bypassed, then bind it after wake so NetworkManager gets a freshly initialized\n+# radio. Keep this on the confirmed Apple BCM4350 PCI ID instead of resetting\n+# unrelated brcmfmac devices on every suspend.\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]] && lspci -nn | grep \"14e4:43a3\" >/dev/null; then\n+  echo \"Detected Apple BCM4350 Wi-Fi; resetting its driver around sleep\"\n+\n+  sudo install -Dm644 \\\n+    \"$OMARCHY_PATH/install/hardware/apple/omarchy-brcmfmac-suspend.service\" \\\n+    /etc/systemd/system/omarchy-brcmfmac-suspend.service\n+  sudo systemctl enable omarchy-brcmfmac-suspend.service\n+fi"
+    },
+    {
+      "sha": "25a4c0d127d5bf547b8098ab18a08caf94541800",
+      "filename": "install/hardware/apple/omarchy-brcmfmac-suspend.service",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/install%2Fhardware%2Fapple%2Fomarchy-brcmfmac-suspend.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/install%2Fhardware%2Fapple%2Fomarchy-brcmfmac-suspend.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Fomarchy-brcmfmac-suspend.service?ref=9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "patch": "@@ -0,0 +1,16 @@\n+[Unit]\n+Description=Reset Broadcom Wi-Fi around sleep on affected Apple hardware\n+Before=sleep.target\n+StopWhenUnneeded=yes\n+ConditionPathExists=/sys/bus/pci/drivers/brcmfmac\n+\n+[Service]\n+Type=oneshot\n+RemainAfterExit=yes\n+ExecStart=/usr/bin/omarchy-hw-brcmfmac-suspend pre\n+ExecStop=/usr/bin/omarchy-hw-brcmfmac-suspend post\n+TimeoutStartSec=10s\n+TimeoutStopSec=10s\n+\n+[Install]\n+WantedBy=sleep.target"
+    },
+    {
+      "sha": "1c524898cdbe717e6da272d6b6c95169e9ec6f5b",
+      "filename": "migrations/1786907783.sh",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/migrations%2F1786907783.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/migrations%2F1786907783.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786907783.sh?ref=9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "patch": "@@ -0,0 +1,22 @@\n+echo \"Reset Apple BCM4350 Wi-Fi around sleep\"\n+\n+# The installer only reaches new systems. Existing Apple BCM4350 installs can\n+# leave the radio firmware unresponsive after resume, which also makes later\n+# suspend attempts fail in brcmf_pcie_pm_enter_D3 until the machine reboots.\n+dmi_vendor=\"${OMARCHY_BRCMFMAC_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+service_source=\"${OMARCHY_BRCMFMAC_SUSPEND_SERVICE_SOURCE:-$OMARCHY_PATH/install/hardware/apple/omarchy-brcmfmac-suspend.service}\"\n+service_target=\"${OMARCHY_BRCMFMAC_SUSPEND_SERVICE_TARGET:-/etc/systemd/system/omarchy-brcmfmac-suspend.service}\"\n+\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor != Apple* ]] || ! lspci -nn | grep \"14e4:43a3\" >/dev/null; then\n+  exit 0\n+fi\n+\n+if ! cmp -s \"$service_source\" \"$service_target\"; then\n+  sudo install -Dm644 \"$service_source\" \"$service_target\"\n+fi\n+\n+if ! systemctl is-enabled --quiet omarchy-brcmfmac-suspend.service 2>/dev/null; then\n+  sudo systemctl enable omarchy-brcmfmac-suspend.service\n+fi"
+    },
+    {
+      "sha": "82672ba459eae6b0693c49b6cf6215d5c6c34162",
+      "filename": "test/shell.d/brcmfmac-suspend-test.sh",
+      "status": "added",
+      "additions": 200,
+      "deletions": 0,
+      "changes": 200,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9c5408ff69dc4d510b372f9f32ff97ff86f321a6/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh?ref=9c5408ff69dc4d510b372f9f32ff97ff86f321a6",
+      "patch": "@@ -0,0 +1,200 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-brcmfmac-suspend.sh\"\n+helper=\"$ROOT/bin/omarchy-hw-brcmfmac-suspend\"\n+service=\"$ROOT/install/hardware/apple/omarchy-brcmfmac-suspend.service\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1786907783.sh\"\n+\n+grep -q 'apple/fix-brcmfmac-suspend.sh' \"$all\" ||\n+  fail \"the BCM4350 suspend fix runs during hardware setup\"\n+grep -Fx 'Before=sleep.target' \"$service\" >/dev/null ||\n+  fail \"the BCM4350 service detaches the device before sleep\"\n+grep -Fx 'StopWhenUnneeded=yes' \"$service\" >/dev/null ||\n+  fail \"the BCM4350 service stops after the sleep transaction\"\n+grep -Fx 'ConditionPathExists=/sys/bus/pci/drivers/brcmfmac' \"$service\" >/dev/null ||\n+  fail \"the BCM4350 service only runs when the driver is available\"\n+grep -Fx 'ExecStart=/usr/bin/omarchy-hw-brcmfmac-suspend pre' \"$service\" >/dev/null ||\n+  fail \"the BCM4350 service runs the pre-sleep recovery helper\"\n+grep -Fx 'ExecStop=/usr/bin/omarchy-hw-brcmfmac-suspend post' \"$service\" >/dev/null ||\n+  fail \"the BCM4350 service runs the post-wake recovery helper\"\n+grep -Fx 'WantedBy=sleep.target' \"$service\" >/dev/null ||\n+  fail \"the BCM4350 service joins every sleep transaction\"\n+pass \"the BCM4350 service resets the driver around sleep\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+target=\"$test_tmp/etc/systemd/system/omarchy-brcmfmac-suspend.service\"\n+enabled=\"$test_tmp/enabled\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+if [[ -n ${WIFI_ID:-} ]]; then\n+  echo \"02:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]\"\n+fi\n+for _ in {1..4096}; do\n+  echo '00:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+\n+if [[ $1 == \"is-enabled\" ]]; then\n+  [[ -e $ENABLED_MARKER ]]\n+  exit\n+fi\n+\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+[[ $1 != \"enable\" ]] || touch \"$ENABLED_MARKER\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+driver_path=\"$test_tmp/sys/bus/pci/drivers/brcmfmac\"\n+device_root=\"$test_tmp/sys/bus/pci/devices\"\n+state_file=\"$test_tmp/run/omarchy-brcmfmac-suspend.devices\"\n+pci_address=\"0000:02:00.0\"\n+mkdir -p \"$driver_path\" \"$device_root/$pci_address\"\n+printf '0x14e4' >\"$device_root/$pci_address/vendor\"\n+printf '0x43a3' >\"$device_root/$pci_address/device\"\n+ln -s \"$device_root/$pci_address\" \"$driver_path/$pci_address\"\n+ln -s \"$driver_path\" \"$device_root/$pci_address/driver\"\n+: >\"$driver_path/unbind\"\n+: >\"$driver_path/bind\"\n+\n+OMARCHY_BRCMFMAC_DRIVER_PATH=\"$driver_path\" \\\n+  OMARCHY_BRCMFMAC_DEVICE_ROOT=\"$device_root\" \\\n+  OMARCHY_BRCMFMAC_SUSPEND_STATE=\"$state_file\" \\\n+  \"$helper\" pre\n+[[ $(<\"$driver_path/unbind\") == \"$pci_address\" ]] ||\n+  fail \"the pre-sleep helper unbinds the BCM4350 PCI device\"\n+[[ $(<\"$state_file\") == \"$pci_address\" ]] ||\n+  fail \"the pre-sleep helper records the device for wake\"\n+pass \"the pre-sleep helper detaches the affected PCI device\"\n+\n+rm \"$driver_path/$pci_address\" \"$device_root/$pci_address/driver\"\n+OMARCHY_BRCMFMAC_DRIVER_PATH=\"$driver_path\" \\\n+  OMARCHY_BRCMFMAC_DEVICE_ROOT=\"$device_root\" \\\n+  OMARCHY_BRCMFMAC_SUSPEND_STATE=\"$state_file\" \\\n+  \"$helper\" post\n+[[ $(<\"$driver_path/bind\") == \"$pci_address\" ]] ||\n+  fail \"the post-wake helper rebinds the BCM4350 PCI device\"\n+[[ ! -e $state_file ]] || fail \"the post-wake helper clears its device state\"\n+pass \"the post-wake helper reattaches the affected PCI device\"\n+\n+missing_address=\"0000:04:00.0\"\n+printf '%s\\n' \"$missing_address\" >\"$state_file\"\n+if OMARCHY_BRCMFMAC_DRIVER_PATH=\"$driver_path\" \\\n+  OMARCHY_BRCMFMAC_DEVICE_ROOT=\"$device_root\" \\\n+  OMARCHY_BRCMFMAC_SUSPEND_STATE=\"$state_file\" \\\n+  \"$helper\" post 2>/dev/null; then\n+  fail \"the post-wake helper reports a missing PCI device\"\n+fi\n+[[ -e $state_file ]] || fail \"failed recovery keeps its device state for retry\"\n+rm \"$state_file\"\n+pass \"failed recovery remains visible and retryable\"\n+\n+other_address=\"0000:03:00.0\"\n+mkdir -p \"$device_root/$other_address\"\n+printf '0x14e4' >\"$device_root/$other_address/vendor\"\n+printf '0x43ba' >\"$device_root/$other_address/device\"\n+ln -s \"$device_root/$other_address\" \"$driver_path/$other_address\"\n+: >\"$driver_path/unbind\"\n+if OMARCHY_BRCMFMAC_DRIVER_PATH=\"$driver_path\" \\\n+  OMARCHY_BRCMFMAC_DEVICE_ROOT=\"$device_root\" \\\n+  OMARCHY_BRCMFMAC_SUSPEND_STATE=\"$state_file\" \\\n+  \"$helper\" pre 2>/dev/null; then\n+  fail \"the pre-sleep helper rejects a different Broadcom PCI device\"\n+fi\n+[[ ! -s $driver_path/unbind ]] || fail \"the pre-sleep helper leaves other devices bound\"\n+pass \"the pre-sleep helper only detaches BCM4350 hardware\"\n+\n+run_leaf() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\"\n+  local script=\"$test_tmp/leaf.sh\"\n+\n+  rm -rf \"$test_tmp/etc\"\n+  mkdir -p \"$test_tmp/etc\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  sed \\\n+    -e \"s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g\" \\\n+    -e \"s|/etc/systemd/system/omarchy-brcmfmac-suspend.service|$target|g\" \\\n+    \"$leaf\" >\"$script\"\n+\n+  WIFI_ID=\"$wifi_id\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" ENABLED_MARKER=\"$enabled\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+run_leaf \"Apple Inc.\" 43a3 >/dev/null\n+cmp -s \"$service\" \"$target\" ||\n+  fail \"Apple BCM4350 setup installs the sleep service\"\n+grep -Fq $'systemctl\\tenable\\tomarchy-brcmfmac-suspend.service' \"$calls\" ||\n+  fail \"Apple BCM4350 setup enables the sleep service\" \"$(cat \"$calls\")\"\n+pass \"Apple BCM4350 setup installs and enables the sleep service\"\n+\n+run_leaf \"Apple Inc.\" 43ba >/dev/null\n+[[ ! -e $target ]] || fail \"other Apple Broadcom radios are left alone\"\n+[[ ! -s $calls ]] || fail \"other Apple Broadcom radios change no system state\" \"$(cat \"$calls\")\"\n+pass \"other Apple Broadcom radios are left alone\"\n+\n+run_leaf \"LENOVO\" 43a3 >/dev/null\n+[[ ! -e $target ]] || fail \"non-Apple BCM4350 hardware is left alone\"\n+[[ ! -s $calls ]] || fail \"non-Apple BCM4350 hardware changes no system state\" \"$(cat \"$calls\")\"\n+pass \"non-Apple BCM4350 hardware is left alone\"\n+\n+run_migration() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\"\n+\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  WIFI_ID=\"$wifi_id\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    ENABLED_MARKER=\"$enabled\" OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_BRCMFMAC_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    OMARCHY_BRCMFMAC_SUSPEND_SERVICE_SOURCE=\"$service\" \\\n+    OMARCHY_BRCMFMAC_SUSPEND_SERVICE_TARGET=\"$target\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+rm -rf \"$test_tmp/etc\"\n+rm -f \"$enabled\"\n+run_migration \"Apple Inc.\" 43a3\n+cmp -s \"$service\" \"$target\" ||\n+  fail \"the migration installs the service on an existing Apple BCM4350 system\"\n+[[ -e $enabled ]] || fail \"the migration enables the BCM4350 sleep service\"\n+pass \"the migration repairs an existing Apple BCM4350 system\"\n+\n+run_migration \"Apple Inc.\" 43a3\n+[[ ! -s $calls ]] || fail \"the migration is idempotent\" \"$(cat \"$calls\")\"\n+pass \"the migration leaves a repaired system untouched\"\n+\n+rm -rf \"$test_tmp/etc\"\n+rm -f \"$enabled\"\n+run_migration \"Apple Inc.\" 43ba\n+[[ ! -e $target ]] || fail \"the migration skips other Apple Broadcom radios\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on unaffected hardware\" \"$(cat \"$calls\")\"\n+pass \"the migration skips unaffected hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

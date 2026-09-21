@@ -1,0 +1,81 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10758",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "alpine-ridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "3149440b975314b91f9d6117a87ec8542efb7ac1",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10758,
+  "checked_at": "2026-09-21T11:55:55.057282+00:00",
+  "title": "Fix Thunderbolt suspend on the MacBookPro14,1",
+  "author": "orospakr",
+  "head_sha": "3149440b975314b91f9d6117a87ec8542efb7ac1",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-11T02:36:25Z",
+  "state": "open",
+  "body": "Enables working lid-close suspend on the 2017 13\u2033 MacBook Pro (MacBookPro14,1), non-Touchbar so no T1. Companion to the `tb-ar-shim-dkms` package PR in omarchy-pkgs; full investigation in #10593.\r\n\r\n**The problem:** every suspend breaks Thunderbolt on this machine \u2014 two Linux PCI bugs (garbage config-space restore after S3; skipped restore on s2idle), plus an Apple EFI behavior where entering S3 with anything in a Thunderbolt port makes the firmware disable the Thunderbolt root port until the next **cold boot**. The EFI part is unfixable from the OS, which is why the machine must default to s2idle (s2idle never executes the EFI S3 resume script).\r\n\r\n**What this adds:**\r\n\r\n- `bin/omarchy-hw-macbookpro14-1` \u2014 detector: exact DMI product match + `lspci` check for the Alpine Ridge bridge (8086:1578). Gates on 14,1 alone because that's the validated machine; 14,2/14,3 share the controller and can be added once tested.\r\n- `install/hardware/apple/fix-thunderbolt-suspend.sh` (+ `all.sh` entry) \u2014 installs `linux-headers` + `tb-ar-shim-dkms`, loads the module immediately (the modalias coldplug has already passed on a live system), and writes a limine cmdline drop-in with `mem_sleep_default=s2idle` (the `fix-t2.sh` mechanism).\r\n- `migrations/1788811585.sh` \u2014 same for already-installed machines, with the `limine-mkinitcpio` rebuild guard so the cmdline reaches the boot entries.\r\n\r\n**Validation:** this exact flow ran end-to-end on a MacBookPro14,1 \u2014 package install, dkms build, detector match, drop-in + UKI rebuild, then a cold boot: module autoloaded by modalias, `mem_sleep` came up `[s2idle]`, and suspend cycles are clean at ~1.3 s resume (vs 75\u2013107 s with dead Thunderbolt before). `test/shell` passes (the two failures on this machine, locate/snapper, pre-exist on master).\r\n\r\n**Depends on** the omarchy-pkgs PR publishing `tb-ar-shim-dkms` \u2014 draft until that lands.\r\n\r\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\r\n\r\nhttps://claude.ai/code/session_014SjBV8RAyo6et6LMmurU9W\r\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "1d8f6ea2d426aa695e9e0e7867b22d1a23d7be6f",
+      "filename": "bin/omarchy-hw-macbookpro14-1",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3149440b975314b91f9d6117a87ec8542efb7ac1/bin%2Fomarchy-hw-macbookpro14-1",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3149440b975314b91f9d6117a87ec8542efb7ac1/bin%2Fomarchy-hw-macbookpro14-1",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-macbookpro14-1?ref=3149440b975314b91f9d6117a87ec8542efb7ac1",
+      "patch": "@@ -0,0 +1,8 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Match the Apple MacBook Pro 14,1 (13-inch 2017, no Touch Bar) with its Alpine Ridge Thunderbolt controller.\n+\n+product_name=\"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\"\n+\n+grep -qix \"MacBookPro14,1\" \"$product_name\" 2>/dev/null &&\n+  lspci -n 2>/dev/null | grep -q \"8086:1578\""
+    },
+    {
+      "sha": "788e064daefc7738dd3a114e10db0d8ccdf43305",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3149440b975314b91f9d6117a87ec8542efb7ac1/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3149440b975314b91f9d6117a87ec8542efb7ac1/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=3149440b975314b91f9d6117a87ec8542efb7ac1",
+      "patch": "@@ -42,6 +42,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-thunderbolt-suspend.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "8dcec7aae5f67c3fe833834b888f2d835bf28f5f",
+      "filename": "install/hardware/apple/fix-thunderbolt-suspend.sh",
+      "status": "added",
+      "additions": 45,
+      "deletions": 0,
+      "changes": 45,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3149440b975314b91f9d6117a87ec8542efb7ac1/install%2Fhardware%2Fapple%2Ffix-thunderbolt-suspend.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3149440b975314b91f9d6117a87ec8542efb7ac1/install%2Fhardware%2Fapple%2Ffix-thunderbolt-suspend.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-thunderbolt-suspend.sh?ref=3149440b975314b91f9d6117a87ec8542efb7ac1",
+      "patch": "@@ -0,0 +1,45 @@\n+# The 2017 13\" MacBook Pro (MacBookPro14,1) breaks Thunderbolt on every\n+# lid-close suspend. Three separate causes, two of them Linux bugs, one Apple\n+# firmware behavior (details: https://github.com/omacom/omarchy/issues/10593):\n+#\n+#  - In the default deep (S3) sleep the PCI core saves the Alpine Ridge\n+#    bridges' config space after the thunderbolt driver has already put the\n+#    chip to sleep, so resume restores garbage: 75-107 s wakeups, dead\n+#    Thunderbolt and USB-C.\n+#  - Entering S3 with anything plugged into a Thunderbolt port makes the\n+#    Mac's EFI resume script disable the Thunderbolt root port entirely;\n+#    only a cold boot brings it back. No kernel change can prevent this,\n+#    which is why the machine must default to s2idle.\n+#  - In s2idle the PCI core skips config-space restore (skip_bus_pm), but\n+#    this controller genuinely loses its config space during sleep, so it\n+#    comes back dead there too.\n+#\n+# tb-ar-shim-dkms fixes the two kernel-side bugs (config saved early, restored\n+# on resume; being submitted upstream as PCI quirks), and the limine drop-in\n+# makes s2idle the default sleep mode so the EFI path can never fire.\n+# Validated on MacBookPro14,1: 28/28 suspend cycles, 1.3 s resume.\n+# MacBookPro14,2/14,3 share the controller but are unvalidated, so this gates\n+# on the exact model.\n+\n+if omarchy-hw-macbookpro14-1; then\n+  echo \"Detected MacBookPro14,1; fixing Thunderbolt suspend\"\n+\n+  omarchy-pkg-add linux-headers tb-ar-shim-dkms\n+\n+  # The module autoloads by PCI modalias at boot, but on a live system that\n+  # coldplug event has already passed \u2014 load it now so the first suspend\n+  # after this script is already protected.\n+  sudo modprobe tb_ar_shim || true\n+\n+  sudo mkdir -p /etc/limine-entry-tool.d\n+  sudo tee /etc/limine-entry-tool.d/macbookpro14-1-thunderbolt.conf >/dev/null <<'EOF'\n+# Generated by Omarchy installer for MacBookPro14,1 Thunderbolt support.\n+# Deep (S3) sleep with a Thunderbolt device attached lets the Mac's EFI\n+# resume script disable the Thunderbolt root port until the next cold boot;\n+# s2idle never runs that script.\n+KERNEL_CMDLINE[default]+=\" mem_sleep_default=s2idle\"\n+EOF\n+\n+  # Take effect before the next reboot too\n+  echo s2idle | sudo tee /sys/power/mem_sleep >/dev/null || true\n+fi"
+    },
+    {
+      "sha": "39e8928d9cbdd8ae526d9a2dc701d225db4eff5a",
+      "filename": "migrations/1788921301.sh",
+      "status": "added",
+      "additions": 34,
+      "deletions": 0,
+      "changes": 34,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3149440b975314b91f9d6117a87ec8542efb7ac1/migrations%2F1788921301.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3149440b975314b91f9d6117a87ec8542efb7ac1/migrations%2F1788921301.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788921301.sh?ref=3149440b975314b91f9d6117a87ec8542efb7ac1",
+      "patch": "@@ -0,0 +1,34 @@\n+# Fix Thunderbolt suspend on the MacBookPro14,1: install the tb-ar-shim DKMS\n+# module and default the machine to s2idle sleep, then rebuild boot images so\n+# the cmdline change reaches the Limine entries.\n+# Same logic as install/hardware/apple/fix-thunderbolt-suspend.sh; see\n+# https://github.com/omacom/omarchy/issues/10593 for the investigation.\n+\n+if omarchy-hw-macbookpro14-1; then\n+  echo \"Detected MacBookPro14,1; fixing Thunderbolt suspend\"\n+\n+  omarchy-pkg-add linux-headers tb-ar-shim-dkms\n+\n+  # The module autoloads by PCI modalias at boot, but on a live system that\n+  # coldplug event has already passed \u2014 load it now so the first suspend\n+  # after this migration is already protected.\n+  sudo modprobe tb_ar_shim || true\n+\n+  sudo mkdir -p /etc/limine-entry-tool.d\n+  sudo tee /etc/limine-entry-tool.d/macbookpro14-1-thunderbolt.conf >/dev/null <<'EOF'\n+# Generated by Omarchy installer for MacBookPro14,1 Thunderbolt support.\n+# Deep (S3) sleep with a Thunderbolt device attached lets the Mac's EFI\n+# resume script disable the Thunderbolt root port until the next cold boot;\n+# s2idle never runs that script.\n+KERNEL_CMDLINE[default]+=\" mem_sleep_default=s2idle\"\n+EOF\n+\n+  # Take effect before the reboot too\n+  echo s2idle | sudo tee /sys/power/mem_sleep >/dev/null || true\n+\n+  if ! grep -q \"mem_sleep_default=s2idle\" /proc/cmdline; then\n+    if command -v limine-mkinitcpio >/dev/null 2>&1; then\n+      sudo limine-mkinitcpio\n+    fi\n+  fi\n+fi"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

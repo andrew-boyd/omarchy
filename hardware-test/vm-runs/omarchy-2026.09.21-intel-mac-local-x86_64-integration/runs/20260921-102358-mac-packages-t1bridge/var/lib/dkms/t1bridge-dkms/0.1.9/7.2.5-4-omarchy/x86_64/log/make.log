@@ -1,0 +1,90 @@
+DKMS (dkms-3.4.3) make.log for t1bridge-dkms/0.1.9 for kernel 7.2.5-4-omarchy (x86_64)
+Mon Sep 21 14:24:25 UTC 2026
+
+Building module(s)
+# command: make -j8 KERNELRELEASE=7.2.5-4-omarchy -C kernel/dkms KDIR=/lib/modules/7.2.5-4-omarchy/build
+make: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/dkms'
+make -C /var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/t1-cfgsel KDIR=/lib/modules/7.2.5-4-omarchy/build
+make[1]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/t1-cfgsel'
+make -C /lib/modules/7.2.5-4-omarchy/build M=/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/t1-cfgsel modules
+make[2]: Entering directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[3]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/t1-cfgsel'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+  CC [M]  t1_cfgsel.o
+  MODPOST Module.symvers
+  CC [M]  t1_cfgsel.mod.o
+  CC [M]  .module-common.o
+  LD [M]  t1_cfgsel.ko
+  BTF [M] t1_cfgsel.ko
+make[3]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/t1-cfgsel'
+make[2]: Leaving directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[1]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/t1-cfgsel'
+make -C /var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/appletbdrm-t1 KDIR=/lib/modules/7.2.5-4-omarchy/build
+make[1]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/appletbdrm-t1'
+make -C /lib/modules/7.2.5-4-omarchy/build M=/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/appletbdrm-t1 modules
+make[2]: Entering directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[3]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/appletbdrm-t1'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+  CC [M]  appletbdrm.o
+  MODPOST Module.symvers
+  CC [M]  appletbdrm.mod.o
+  CC [M]  .module-common.o
+  LD [M]  appletbdrm.ko
+  BTF [M] appletbdrm.ko
+make[3]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/appletbdrm-t1'
+make[2]: Leaving directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[1]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/appletbdrm-t1'
+make -C /var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/apple-t1-ncm KDIR=/lib/modules/7.2.5-4-omarchy/build
+make[1]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/apple-t1-ncm'
+make -C /lib/modules/7.2.5-4-omarchy/build M=/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/apple-t1-ncm modules
+make[2]: Entering directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[3]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/apple-t1-ncm'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+  CC [M]  apple_t1_ncm.o
+  MODPOST Module.symvers
+  CC [M]  apple_t1_ncm.mod.o
+  CC [M]  .module-common.o
+  LD [M]  apple_t1_ncm.ko
+  BTF [M] apple_t1_ncm.ko
+make[3]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/apple-t1-ncm'
+make[2]: Leaving directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[1]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/apple-t1-ncm'
+make -C /var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/uvcvideo-t1 KDIR=/lib/modules/7.2.5-4-omarchy/build
+make[1]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/uvcvideo-t1'
+make -C /lib/modules/7.2.5-4-omarchy/build M=/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/uvcvideo-t1 modules
+make[2]: Entering directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[3]: Entering directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/uvcvideo-t1'
+warning: pahole version differs from the one used to build the kernel
+  The kernel was built with: 131
+  You are using:             132
+  CC [M]  uvc_driver.o
+  CC [M]  uvc_h264.o
+  CC [M]  uvc_queue.o
+  CC [M]  uvc_v4l2.o
+  CC [M]  uvc_video.o
+  CC [M]  uvc_ctrl.o
+  CC [M]  uvc_status.o
+  CC [M]  uvc_isight.o
+  CC [M]  uvc_debugfs.o
+  CC [M]  uvc_metadata.o
+  CC [M]  uvc_entity.o
+  LD [M]  uvcvideo.o
+  MODPOST Module.symvers
+  CC [M]  uvcvideo.mod.o
+  CC [M]  .module-common.o
+  LD [M]  uvcvideo.ko
+  BTF [M] uvcvideo.ko
+make[3]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/uvcvideo-t1'
+make[2]: Leaving directory '/usr/lib/modules/7.2.5-4-omarchy/build'
+make[1]: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/uvcvideo-t1'
+make: Leaving directory '/var/lib/dkms/t1bridge-dkms/0.1.9/build/kernel/dkms'
+
+# exit code: 0
+# elapsed time: 00:00:10
+----------------------------------------------------------------

@@ -1,0 +1,110 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11481",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "haswell-voxtype"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "b331033e27c70f4870f306cc1bde26ddbf728e11",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11481,
+  "checked_at": "2026-09-21T11:56:28.589793+00:00",
+  "title": "Keep Voxtype on CPU for Intel Haswell GPUs",
+  "author": "yashranaway",
+  "head_sha": "b331033e27c70f4870f306cc1bde26ddbf728e11",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-13T14:00:20Z",
+  "state": "open",
+  "body": "Keeps dictation on the CPU on Haswell machines where the Vulkan backend crashes during model loading. Addresses #11370.\n\n<<<< AI wording below >>>>\n\n## Problem\n\nThe dictation installer treats an installed Vulkan ICD as sufficient GPU support. On Haswell, the reported ggml backend aborts because the device lacks the required 16-bit storage, and the service restarts repeatedly.\n\nAddresses the Haswell crash loop in #11370.\n\n## Fix\n\nAdd a hidden hardware helper that identifies Intel Haswell display devices from PCI IDs. Select the CPU backend on those machines, including resetting an existing Vulkan selection during reinstall. Other devices keep the existing detection path.\n\nThe PCI pattern follows the [Linux Intel Haswell device definitions](https://github.com/torvalds/linux/blob/master/include/drm/intel/pciids.h). This conservatively selects CPU when Haswell is present alongside another GPU; it does not choose a specific Vulkan device.\n\n## Verification\n\n`bash test/shell.d/voxtype-gpu-selection-test.sh` covers several Haswell IDs, modern Intel, AMD and a non-display device. It verifies CPU reset through sudo and the existing GPU path for other hardware. `bash test/shell.d/voxtype-invitation-test.sh` and `bash test/cli` pass. Installation and service commands are stubbed. An affected Haswell machine was not available for live dictation testing.\n\n`git diff --check` passes. Changed shell files pass `bash -n`, and the command style checks pass.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "7cb3253ca707521e79d1add8aebf99bead6511e8",
+      "filename": "bin/omarchy-hw-intel-haswell-gpu",
+      "status": "added",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b331033e27c70f4870f306cc1bde26ddbf728e11/bin%2Fomarchy-hw-intel-haswell-gpu",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b331033e27c70f4870f306cc1bde26ddbf728e11/bin%2Fomarchy-hw-intel-haswell-gpu",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-intel-haswell-gpu?ref=b331033e27c70f4870f306cc1bde26ddbf728e11",
+      "patch": "@@ -0,0 +1,15 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Returns true when an Intel Haswell GPU is present\n+# omarchy:hidden=true\n+\n+for device in \"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"/*; do\n+  [[ -r $device/vendor && -r $device/device && -r $device/class ]] || continue\n+  [[ $(<\"$device/vendor\") == \"0x8086\" && $(<\"$device/class\") == \"0x03\"* ]] || continue\n+  # Intel's HSW GT1/GT2/GT3 PCI IDs, including ULT, SDV and Crystal Well.\n+  case \"$(<\"$device/device\")\" in\n+    0x0[4acd][012][26abe]) exit 0 ;;\n+  esac\n+done\n+\n+exit 1"
+    },
+    {
+      "sha": "4c8e2374977bb4a655df87b060f2db6d93210d53",
+      "filename": "bin/omarchy-voxtype-install",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 1,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b331033e27c70f4870f306cc1bde26ddbf728e11/bin%2Fomarchy-voxtype-install",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b331033e27c70f4870f306cc1bde26ddbf728e11/bin%2Fomarchy-voxtype-install",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-voxtype-install?ref=b331033e27c70f4870f306cc1bde26ddbf728e11",
+      "patch": "@@ -15,7 +15,12 @@ if gum confirm \"Install Voxtype + AI model (~150MB) to enable dictation?\"; then\n   cp \"$OMARCHY_PATH/default/voxtype/config.toml\" ~/.config/voxtype/\n \n   voxtype setup --download --no-post-install\n-  if omarchy-hw-vulkan; then\n+  if omarchy-hw-intel-haswell-gpu; then\n+    # hasvk advertises Vulkan, but ggml cannot load models without 16-bit\n+    # storage. Reset an existing Vulkan selection too when reinstalling.\n+    echo \"Using CPU dictation: Intel Haswell Vulkan lacks the required 16-bit storage.\"\n+    sudo voxtype setup gpu --disable\n+  elif omarchy-hw-vulkan; then\n     voxtype setup gpu --enable || true\n   fi\n   voxtype setup systemd"
+    },
+    {
+      "sha": "c7fa06edc9a2b4cde20f418cf981bacc76f98123",
+      "filename": "test/shell.d/voxtype-gpu-selection-test.sh",
+      "status": "added",
+      "additions": 47,
+      "deletions": 0,
+      "changes": 47,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b331033e27c70f4870f306cc1bde26ddbf728e11/test%2Fshell.d%2Fvoxtype-gpu-selection-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b331033e27c70f4870f306cc1bde26ddbf728e11/test%2Fshell.d%2Fvoxtype-gpu-selection-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fvoxtype-gpu-selection-test.sh?ref=b331033e27c70f4870f306cc1bde26ddbf728e11",
+      "patch": "@@ -0,0 +1,47 @@\n+#!/bin/bash\n+set -euo pipefail\n+source \"$(dirname \"$0\")/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+mkdir -p \"$test_tmp/bin\" \"$test_tmp/pci/gpu\" \"$test_tmp/home\"\n+export OMARCHY_PCI_DEVICES_PATH=\"$test_tmp/pci\" TEST_LOG=\"$test_tmp/calls\"\n+export HOME=\"$test_tmp/home\" OMARCHY_PATH=\"$ROOT\" PATH=\"$test_tmp/bin:$ROOT/bin:$PATH\"\n+for command in gum omarchy-pkg-add omarchy-restart-shell omarchy-notification-send hyprctl omarchy-hw-vulkan; do\n+  printf '#!/bin/bash\\nexit 0\\n' >\"$test_tmp/bin/$command\"\n+done\n+cat >\"$test_tmp/bin/voxtype\" <<'STUB'\n+#!/bin/bash\n+printf 'voxtype %s\\n' \"$*\" >>\"$TEST_LOG\"\n+STUB\n+cat >\"$test_tmp/bin/sudo\" <<'STUB'\n+#!/bin/bash\n+printf 'sudo %s\\n' \"$*\" >>\"$TEST_LOG\"\n+\"$@\"\n+STUB\n+chmod +x \"$test_tmp/bin/\"*\n+\n+printf '0x8086\\n' >\"$test_tmp/pci/gpu/vendor\"\n+printf '0x030000\\n' >\"$test_tmp/pci/gpu/class\"\n+for id in 0x0402 0x0416 0x0a26 0x0d26; do\n+  printf '%s\\n' \"$id\" >\"$test_tmp/pci/gpu/device\"\n+  omarchy-hw-intel-haswell-gpu || fail \"Haswell GPU $id is detected\"\n+done\n+bash \"$ROOT/bin/omarchy-voxtype-install\" >\"$test_tmp/output\"\n+grep -qx 'sudo voxtype setup gpu --disable' \"$TEST_LOG\" || fail \"Haswell switches to the CPU backend with privileges\"\n+if grep -q -- '--enable' \"$TEST_LOG\"; then fail \"Haswell must not enable Vulkan\"; fi\n+pass \"Haswell and Crystal Well keep CPU dictation even when Vulkan is installed\"\n+\n+printf '0x9a49\\n' >\"$test_tmp/pci/gpu/device\"\n+: >\"$TEST_LOG\"\n+bash \"$ROOT/bin/omarchy-voxtype-install\" >\"$test_tmp/output\"\n+grep -qx 'voxtype setup gpu --enable' \"$TEST_LOG\" || fail \"modern Intel retains GPU setup\"\n+pass \"modern Intel GPUs retain the existing acceleration path\"\n+\n+printf '0x0d26\\n' >\"$test_tmp/pci/gpu/device\"\n+printf '0x1002\\n' >\"$test_tmp/pci/gpu/vendor\"\n+if omarchy-hw-intel-haswell-gpu; then fail \"other vendors do not match Intel IDs\"; fi\n+printf '0x8086\\n' >\"$test_tmp/pci/gpu/vendor\"\n+printf '0x028000\\n' >\"$test_tmp/pci/gpu/class\"\n+if omarchy-hw-intel-haswell-gpu; then fail \"non-display devices do not match\"; fi\n+pass \"the detector requires both Intel ownership and a display-class device\""
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 5190956934,
+      "node_id": "PRR_kwDOO0Cobs8AAAABNWe3hg",
+      "user": {
+        "login": "csfh",
+        "id": 5760821,
+        "node_id": "MDQ6VXNlcjU3NjA4MjE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5760821?u=b8e619131f9b21daaa96bcdc8490d694b8c6bca4&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/csfh",
+        "html_url": "https://github.com/csfh",
+        "followers_url": "https://api.github.com/users/csfh/followers",
+        "following_url": "https://api.github.com/users/csfh/following{/other_user}",
+        "gists_url": "https://api.github.com/users/csfh/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/csfh/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/csfh/subscriptions",
+        "organizations_url": "https://api.github.com/users/csfh/orgs",
+        "repos_url": "https://api.github.com/users/csfh/repos",
+        "events_url": "https://api.github.com/users/csfh/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/csfh/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "@ryanrhughes \n\nThis looks good.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/11481#pullrequestreview-5190956934",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/11481",
+      "author_association": "MEMBER",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/11481#pullrequestreview-5190956934"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/11481"
+        }
+      },
+      "submitted_at": "2026-09-13T14:00:20Z",
+      "commit_id": "b331033e27c70f4870f306cc1bde26ddbf728e11"
+    }
+  ],
+  "inline": []
+}

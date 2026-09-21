@@ -1,0 +1,98 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7890",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cpu-instructions"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "a56adec49198b45e5ab976ea64a61bbcba3da8c3",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7890,
+  "checked_at": "2026-09-21T11:56:12.237463+00:00",
+  "title": "Reject Voxtype on CPUs without AVX2",
+  "author": "kx0101",
+  "head_sha": "a56adec49198b45e5ab976ea64a61bbcba3da8c3",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:35Z",
+  "state": "open",
+  "body": "Closes #7883\n\nChecks for AVX2 before showing the confirmation or downloading Voxtype and its model. CPUs that cannot execute the packaged `voxtype-avx2` binary now receive a clear error instead of reaching `voxtype setup` and failing with SIGILL.\n\nThe regression test runs the real installer with simulated CPU capabilities and verifies both paths:\n- non-AVX2 CPUs stop before prompting or installing\n- AVX2 CPUs retain the existing setup flow\n\nTests:\n- `bash test/shell.d/voxtype-install-test.sh`\n- `bash -n bin/omarchy-voxtype-install test/shell.d/voxtype-install-test.sh`",
+  "draft": false,
+  "files": [
+    {
+      "sha": "ee677b8c5146ee5a384c94cd568593d87d3bf633",
+      "filename": "bin/omarchy-voxtype-install",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a56adec49198b45e5ab976ea64a61bbcba3da8c3/bin%2Fomarchy-voxtype-install",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a56adec49198b45e5ab976ea64a61bbcba3da8c3/bin%2Fomarchy-voxtype-install",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-voxtype-install?ref=a56adec49198b45e5ab976ea64a61bbcba3da8c3",
+      "patch": "@@ -7,6 +7,11 @@ set -e\n \n # Install voxtype and configure it for use.\n \n+if ! grep -qw avx2 /proc/cpuinfo; then\n+  echo \"Voxtype Dictation requires AVX2 on this hardware and cannot be installed.\" >&2\n+  exit 1\n+fi\n+\n if gum confirm \"Install Voxtype + AI model (~150MB) to enable dictation?\"; then\n   omarchy-pkg-add wtype voxtype-bin\n "
+    },
+    {
+      "sha": "55039b1ad0f64e498016995394e02150abd29afd",
+      "filename": "test/shell.d/voxtype-install-test.sh",
+      "status": "added",
+      "additions": 61,
+      "deletions": 0,
+      "changes": 61,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a56adec49198b45e5ab976ea64a61bbcba3da8c3/test%2Fshell.d%2Fvoxtype-install-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a56adec49198b45e5ab976ea64a61bbcba3da8c3/test%2Fshell.d%2Fvoxtype-install-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fvoxtype-install-test.sh?ref=a56adec49198b45e5ab976ea64a61bbcba3da8c3",
+      "patch": "@@ -0,0 +1,61 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(dirname \"${BASH_SOURCE[0]}\")/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+mock_bin=\"$test_tmp/bin\"\n+call_log=\"$test_tmp/calls\"\n+mkdir -p \"$mock_bin\"\n+\n+export REAL_GREP\n+REAL_GREP=$(command -v grep)\n+\n+cat >\"$mock_bin/grep\" <<'SH'\n+#!/bin/bash\n+if [[ $* == *\"/proc/cpuinfo\"* ]]; then\n+  [[ ${OMARCHY_TEST_AVX2:-false} == \"true\" ]]\n+else\n+  exec \"$REAL_GREP\" \"$@\"\n+fi\n+SH\n+\n+for command in gum omarchy-pkg-add voxtype hyprctl omarchy-restart-shell omarchy-notification-send; do\n+  cat >\"$mock_bin/$command\" <<'SH'\n+#!/bin/bash\n+printf '%s:%s\\n' \"$(basename \"$0\")\" \"$*\" >>\"$OMARCHY_TEST_CALL_LOG\"\n+SH\n+done\n+cat >\"$mock_bin/omarchy-hw-vulkan\" <<'SH'\n+#!/bin/bash\n+exit 1\n+SH\n+chmod +x \"$mock_bin\"/*\n+\n+if HOME=\"$test_tmp/home\" OMARCHY_PATH=\"$ROOT\" OMARCHY_TEST_CALL_LOG=\"$call_log\" \\\n+  PATH=\"$mock_bin:$PATH\" bash \"$ROOT/bin/omarchy-voxtype-install\" \\\n+  >\"$test_tmp/output\" 2>&1; then\n+  fail \"Voxtype installer rejects CPUs without AVX2\"\n+fi\n+\n+grep -Fq \"Voxtype Dictation requires AVX2\" \"$test_tmp/output\" ||\n+  fail \"Voxtype installer explains the AVX2 requirement\" \"$(cat \"$test_tmp/output\")\"\n+[[ ! -s $call_log ]] ||\n+  fail \"Voxtype installer stops before prompting or installing on an incompatible CPU\" \"$(cat \"$call_log\")\"\n+pass \"Voxtype installer rejects incompatible CPUs before prompting or installing\"\n+\n+: >\"$call_log\"\n+HOME=\"$test_tmp/home\" OMARCHY_PATH=\"$ROOT\" OMARCHY_TEST_CALL_LOG=\"$call_log\" \\\n+  OMARCHY_TEST_AVX2=true PATH=\"$mock_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-voxtype-install\"\n+\n+grep -Fq \"gum:confirm Install Voxtype + AI model (~150MB) to enable dictation?\" \"$call_log\" ||\n+  fail \"Voxtype installer still prompts on compatible CPUs\" \"$(cat \"$call_log\")\"\n+grep -Fq \"omarchy-pkg-add:wtype voxtype-bin\" \"$call_log\" ||\n+  fail \"Voxtype installer still installs its packages on compatible CPUs\" \"$(cat \"$call_log\")\"\n+grep -Fq \"voxtype:setup --download --no-post-install\" \"$call_log\" ||\n+  fail \"Voxtype installer still downloads its model on compatible CPUs\" \"$(cat \"$call_log\")\"\n+pass \"Voxtype installer keeps the existing setup flow on AVX2 CPUs\""
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 5002527833,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKiyEWQ",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds an AVX2 compatibility gate to prevent installing an unusable Voxtype binary.\n\n**Changes:**\n- Rejects unsupported CPUs before prompting or downloading.\n- Tests both incompatible and AVX2-capable flows.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated no comments.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-voxtype-install` | Adds the AVX2 capability check and error. |\n| `test/shell.d/voxtype-install-test.sh` | Covers rejection and successful setup paths. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7890#pullrequestreview-5002527833",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7890",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7890#pullrequestreview-5002527833"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7890"
+        }
+      },
+      "submitted_at": "2026-08-23T13:48:30Z",
+      "commit_id": "a56adec49198b45e5ab976ea64a61bbcba3da8c3"
+    }
+  ],
+  "inline": []
+}

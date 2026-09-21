@@ -1,0 +1,162 @@
+{
+  "url": "https://github.com/omacom/omarchy-iso/pull/174",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "efi-preservation"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "401d775f1daeb0611438e4ff1d1ac920049ad99e",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy-iso",
+  "number": 174,
+  "checked_at": "2026-09-21T11:56:23.033588+00:00",
+  "title": "Preserve Apple EFI firmware folder across the install",
+  "author": "niconistal",
+  "head_sha": "401d775f1daeb0611438e4ff1d1ac920049ad99e",
+  "base_sha": "a23f8d464dcb0616a61bfaa8026e23d0533da209",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-19T16:08:47Z",
+  "state": "open",
+  "body": "## The problem\n\nOn 2016/2017 Touch Bar MacBook Pros the T1 coprocessor holds no firmware of its own: the Mac loads it from `EFI/APPLE/EMBEDDEDOS` on the EFI System Partition at every boot. The Touch Bar, Touch ID and the FaceTime camera are all behind that chip.\n\nA full-disk install recreates the ESP and the folder goes with it. The install succeeds and the machine boots fine, so nothing points at the installer \u2014 but those three pieces of hardware are dead until macOS is reinstalled to write the folder back. Reported as basecamp/omarchy#8271, \"Installer erases T1/T2 firmware on Apple hardware, permanently disabling Touch Bar / camera / Touch ID\". [t1bridge](https://github.com/standardagents/t1bridge) tells users to back the folder up by hand before installing Linux, which only helps the people who read that first.\n\n## What this does\n\nTwo hooks around the existing flow, in a new `orchestrator/apple_efi.py`:\n\n- `prepare_live`, before `omarchy-iso-cleanup-disk` touches the install disk: mount each vfat partition on that disk read-only, and copy `EFI/APPLE` into the state directory (tmpfs on the live ISO). Logs `preserved Apple coprocessor firmware`.\n- `_install_limine_omarchy`, after the new ESP is mounted under the target and before Limine is installed on it: copy the folder back and check file count and total size against the copy. Logs `restored Apple coprocessor firmware`.\n\nDetails worth calling out:\n\n- The folder is the only signal \u2014 no DMI model list to keep up to date. A disk that has one gets it preserved; a disk that has none costs one read-only mount of partitions the installer is about to erase, and logs one line.\n- More than one ESP on the disk: the one holding `EFI/APPLE/EMBEDDEDOS` wins over one that merely has an `EFI/APPLE`.\n- The source is only ever mounted read-only, and the copy lives in RAM because the disk it came from is the one being wiped. Size is checked against free memory first (the real folder is a few MB) and bounded.\n- Every failure path \u2014 no folder, a partition that will not mount, a copy error, a restore that does not verify \u2014 logs and returns. Nothing here can abort an install. A machine that boots with a dead Touch Bar is today's outcome; an install stopped over a firmware copy would be worse than the bug.\n\n## What it does not do\n\n- Protected / pre-mounted installs are untouched: they do not wipe the ESP, so the folder is already safe.\n- It preserves only `EFI/APPLE`. Nothing else on the old ESP is kept, and nothing is written to the source.\n- It cannot recover a folder already lost to an earlier install \u2014 this only helps installs that still have one to copy.\n- It does not make the Touch Bar work on Linux; it keeps the firmware the hardware needs from being destroyed.\n\n## Testing\n\n`./test/all` passes: 72 Python tests, including nine new ones in `test/unit/test_apple_efi.py` covering detection on a fake ESP tree, the silent skip when no folder is present, the preserve/restore round trip with content verification, the ESP preference rule, a partition that will not mount, an oversized folder, a short restore, and a copy failure warning without raising. The mount seam is replaced with directories, so the tests run unprivileged.\n\nThe QEMU integration scenarios under `test/integration.d/` were not run: they need a built ISO and a VM, which is out of reach here.\n\nThis has not been exercised on a real T1 install yet. I will test it on a MacBookPro14,3 and report back with the install log.\n\n## Open questions\n\n- The restore hook writes to `ctx.target / esp_mount.lstrip(\"/\")` because `efi_partition.mountpoint` is the installed system's mountpoint (`/boot`), matching what `_install_limine_efi` and `_write_limine_defaults` already do. Worth a check that this is the right handle on the ESP at that point in the phase.\n- The stash lives in `ctx.state_dir`, which is tmpfs on the live ISO but is overridable via `OMARCHY_INSTALL_STATE_DIR`. Happy to hard-code a `/run` path instead if that is preferred.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e9d24b5aee34df9b96f0cfeb97d4cb5cb08e7441",
+      "filename": "configs/airootfs/usr/share/omarchy-iso/orchestrator/apple_efi.py",
+      "status": "added",
+      "additions": 160,
+      "deletions": 0,
+      "changes": 160,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/401d775f1daeb0611438e4ff1d1ac920049ad99e/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fapple_efi.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/401d775f1daeb0611438e4ff1d1ac920049ad99e/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fapple_efi.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fapple_efi.py?ref=401d775f1daeb0611438e4ff1d1ac920049ad99e",
+      "patch": "@@ -0,0 +1,160 @@\n+\"\"\"Apple's coprocessor firmware folder, carried across a full-disk install.\n+\n+On 2016/2017 Touch Bar MacBook Pros the T1 coprocessor holds no firmware of\n+its own: the Mac loads it from `EFI/APPLE/EMBEDDEDOS` on the EFI System\n+Partition at every boot, and the Touch Bar, Touch ID and the FaceTime camera\n+are all behind that chip. Recreating the ESP deletes the folder, and nothing\n+in Linux puts it back \u2014 the machine installs and boots fine, with three pieces\n+of hardware permanently dead until macOS is reinstalled to write the folder\n+again (basecamp/omarchy#8271).\n+\n+So the folder is copied into the live system's RAM before the partition table\n+is touched, and written back onto the new ESP before the bootloader lands on\n+it. Everything here is best-effort by construction: a failure is logged and\n+the install carries on, because a machine that boots with a dead Touch Bar is\n+today's outcome, while an install aborted over a firmware copy is worse than\n+the bug it protects against.\n+\n+The folder is the whole signal \u2014 there is no hardware sniffing. A disk that\n+has one gets it preserved, and a disk that has none costs a read-only mount\n+of the partitions the installer is about to erase anyway.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import shutil\n+import tempfile\n+from collections.abc import Iterator\n+from contextlib import ExitStack, contextmanager\n+from pathlib import Path\n+\n+from .command import capture, require_text\n+from .ui import info\n+\n+# Relative to the root of the ESP, in the case the firmware itself uses.\n+APPLE_DIR = Path(\"EFI/APPLE\")\n+FIRMWARE_DIR = \"EMBEDDEDOS\"\n+\n+# The real folder is a few MB. These bound what a surprising one may cost the\n+# live system, whose RAM the install itself is also spending.\n+MAX_STASH_BYTES = 256 * 1024 * 1024\n+FREE_SPACE_MARGIN = 256 * 1024 * 1024\n+\n+\n+def preserve(disk: str, stash: Path) -> Path | None:\n+    \"\"\"Copy EFI/APPLE off `disk` into `stash` before the disk is wiped.\n+\n+    Returns the stash path, or None when there was nothing to preserve or the\n+    copy did not work out. Every mount is read-only: the source is never\n+    written, only read out of the way.\n+    \"\"\"\n+    try:\n+        with ExitStack() as mounts:\n+            candidates = []\n+            for partition in _vfat_partitions(disk):\n+                root = mounts.enter_context(_mounted_ro(partition))\n+                if root and (root / APPLE_DIR).is_dir():\n+                    candidates.append((partition, root / APPLE_DIR))\n+\n+            if not candidates:\n+                info(\"\u203a no Apple coprocessor firmware on the install disk\")\n+                return None\n+\n+            # More than one ESP can carry an EFI/APPLE; the one holding the\n+            # firmware itself is the one worth keeping.\n+            partition, source = max(\n+                candidates, key=lambda found: (found[1] / FIRMWARE_DIR).is_dir()\n+            )\n+            return _stash(partition, source, stash)\n+    except Exception as exc:  # noqa: BLE001 \u2014 never abort an install over this\n+        info(f\"\u203a warning: could not preserve Apple coprocessor firmware: {exc}\")\n+        return None\n+\n+\n+def restore(esp_root: Path, stash: Path) -> bool:\n+    \"\"\"Write the preserved folder back onto the freshly created ESP.\n+\n+    `esp_root` is the ESP as the live system sees it (the mount under the\n+    install target), not the mountpoint the installed system will use.\n+    \"\"\"\n+    if not stash.is_dir():\n+        return False\n+\n+    destination = esp_root / APPLE_DIR\n+    try:\n+        destination.parent.mkdir(parents=True, exist_ok=True)\n+        shutil.copytree(stash, destination, dirs_exist_ok=True)\n+        capture([\"sync\"])\n+\n+        expected = _tree_size(stash)\n+        written = _tree_size(destination)\n+        if written != expected:\n+            info(\n+                f\"\u203a warning: Apple coprocessor firmware landed on {destination} \"\n+                f\"as {written[0]} files / {written[1]} bytes, expected \"\n+                f\"{expected[0]} / {expected[1]}\"\n+            )\n+            return False\n+    except Exception as exc:  # noqa: BLE001 \u2014 never abort an install over this\n+        info(f\"\u203a warning: could not restore Apple coprocessor firmware: {exc}\")\n+        return False\n+\n+    info(\n+        f\"\u203a restored Apple coprocessor firmware to {destination} \"\n+        f\"({expected[0]} files, {expected[1] // 1024} KiB)\"\n+    )\n+    return True\n+\n+\n+def _stash(partition: str, source: Path, stash: Path) -> Path | None:\n+    files, size = _tree_size(source)\n+    stash.parent.mkdir(parents=True, exist_ok=True)\n+    free = shutil.disk_usage(stash.parent).free\n+    if size > MAX_STASH_BYTES or size + FREE_SPACE_MARGIN > free:\n+        info(\n+            f\"\u203a warning: not preserving Apple coprocessor firmware from \"\n+            f\"{partition}: {size} bytes does not fit in the live system's \"\n+            f\"memory ({free} bytes free)\"\n+        )\n+        return None\n+\n+    if stash.exists():\n+        shutil.rmtree(stash)\n+    shutil.copytree(source, stash)\n+    info(\n+        f\"\u203a preserved Apple coprocessor firmware from {partition} \"\n+        f\"({files} files, {size // 1024} KiB)\"\n+    )\n+    return stash\n+\n+\n+def _vfat_partitions(disk: str) -> list[str]:\n+    \"\"\"Partitions on `disk` that could be an ESP, in on-disk order.\"\"\"\n+    listing = capture([\"lsblk\", \"-nrpo\", \"PATH,FSTYPE\", disk])\n+    partitions = []\n+    for line in listing.stdout.splitlines():\n+        fields = line.split()\n+        if len(fields) == 2 and fields[1] == \"vfat\" and fields[0] != disk:\n+            # This is handed to mount, so a byte lost in decoding it must stop\n+            # the copy rather than mount something else.\n+            partitions.append(require_text(fields[0], \"the ESP device\"))\n+    return partitions\n+\n+\n+@contextmanager\n+def _mounted_ro(partition: str) -> Iterator[Path | None]:\n+    \"\"\"Mount `partition` read-only somewhere temporary, or yield None.\"\"\"\n+    with tempfile.TemporaryDirectory(prefix=\"omarchy-esp-\") as mountpoint:\n+        if capture([\"mount\", \"-o\", \"ro\", partition, mountpoint]).returncode != 0:\n+            yield None\n+            return\n+        try:\n+            yield Path(mountpoint)\n+        finally:\n+            capture([\"umount\", mountpoint])\n+\n+\n+def _tree_size(root: Path) -> tuple[int, int]:\n+    \"\"\"(file count, total bytes) under `root` \u2014 what a restore must match.\"\"\"\n+    files = [path for path in root.rglob(\"*\") if path.is_file()]\n+    return len(files), sum(path.stat().st_size for path in files)"
+    },
+    {
+      "sha": "9e3e1cd44d3154cdc62932d27f65e994ab749681",
+      "filename": "configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py",
+      "status": "modified",
+      "additions": 19,
+      "deletions": 1,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/401d775f1daeb0611438e4ff1d1ac920049ad99e/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/401d775f1daeb0611438e4ff1d1ac920049ad99e/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py?ref=401d775f1daeb0611438e4ff1d1ac920049ad99e",
+      "patch": "@@ -32,6 +32,7 @@\n from dataclasses import replace\n from pathlib import Path\n \n+from . import apple_efi\n from . import archinstall_adapter as arch\n from .command import capture, capture_identifier, require_text\n from .context import InstallContext\n@@ -181,6 +182,9 @@ def prepare_live(ctx: InstallContext) -> None:\n     else:\n         disk = _install_disk(ctx)\n         if disk:\n+            # An Apple ESP carries the T1/T2 coprocessor's firmware, and the\n+            # wipe below is the last moment it exists (omarchy#8271).\n+            apple_efi.preserve(disk, _apple_efi_stash(ctx))\n             info(f\"\u203a cleaning up holders on install disk: {disk}\")\n             subprocess.run([\"omarchy-iso-cleanup-disk\", disk], check=True)\n \n@@ -191,6 +195,13 @@ def prepare_live(ctx: InstallContext) -> None:\n     ctx.state[\"mirror_handler\"] = arch.make_mirror_handler(offline=True)\n \n \n+def _apple_efi_stash(ctx: InstallContext) -> Path:\n+    \"\"\"Where Apple's coprocessor firmware waits out the wipe: the state\n+    directory, which is tmpfs on the live ISO and so survives the disk but\n+    not the reboot.\"\"\"\n+    return ctx.state_dir / \"apple-efi\"\n+\n+\n def _install_disk(ctx: InstallContext) -> str | None:\n     \"\"\"Return the device path of the disk being wiped, or None for\n     pre_mounted / no-wipe configs.\"\"\"\n@@ -358,9 +369,16 @@ def _install_limine_omarchy(ctx: InstallContext, installer, config) -> None:\n         if not efi_partition.mountpoint:\n             raise RuntimeError(\"EFI partition is not mounted\")\n \n+        esp_mount = str(efi_partition.mountpoint)\n+\n+        # The ESP is new and empty here; Apple's coprocessor firmware goes\n+        # back on before anything else claims the partition. The mountpoint\n+        # is the installed system's, so read it through the target.\n+        apple_efi.restore(ctx.target / esp_mount.lstrip(\"/\"), _apple_efi_stash(ctx))\n+\n         _install_limine_efi(\n             ctx,\n-            esp_mount=str(efi_partition.mountpoint),\n+            esp_mount=esp_mount,\n             disk=arch.parent_device_path(efi_partition.safe_dev_path),\n             part=int(efi_partition.partn),\n             removable=bootloader_removable,"
+    },
+    {
+      "sha": "0d8d8f0cc239f104762be52f9267869ed9cae120",
+      "filename": "test/unit/test_apple_efi.py",
+      "status": "added",
+      "additions": 181,
+      "deletions": 0,
+      "changes": 181,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/401d775f1daeb0611438e4ff1d1ac920049ad99e/test%2Funit%2Ftest_apple_efi.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/401d775f1daeb0611438e4ff1d1ac920049ad99e/test%2Funit%2Ftest_apple_efi.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/test%2Funit%2Ftest_apple_efi.py?ref=401d775f1daeb0611438e4ff1d1ac920049ad99e",
+      "patch": "@@ -0,0 +1,181 @@\n+#!/usr/bin/python\n+\n+\"\"\"Carrying EFI/APPLE across a wipe, without the disk or the mounts.\n+\n+The mount seam (`_mounted_ro`) is replaced with directories on disk, so these\n+exercise the real copy, the real preference rule and the real verification \u2014\n+everything except the two commands that need a block device and root.\n+\"\"\"\n+\n+import sys\n+import tempfile\n+import unittest\n+from contextlib import contextmanager\n+from pathlib import Path\n+from unittest import mock\n+\n+ROOT = Path(__file__).resolve().parents[2]\n+sys.path.insert(0, str(ROOT / \"configs/airootfs/usr/share/omarchy-iso\"))\n+\n+from orchestrator import apple_efi  # noqa: E402\n+\n+# What a Touch Bar Mac's ESP actually holds, small enough to write per test.\n+FIRMWARE = {\n+    \"EFI/APPLE/EMBEDDEDOS/EmbeddedOSFirmware.im4p\": b\"\\x00im4p\" * 64,\n+    \"EFI/APPLE/EMBEDDEDOS/FDRData\": b\"fdr\" * 32,\n+    \"EFI/APPLE/EXTENSIONS/Firmware.scap\": b\"scap\" * 16,\n+}\n+OTHER_ESP = {\"EFI/BOOT/BOOTX64.EFI\": b\"MZ\", \"EFI/Microsoft/Boot/bootmgfw.efi\": b\"MZ\"}\n+\n+\n+def write_tree(root: Path, files: dict) -> Path:\n+    for name, contents in files.items():\n+        path = root / name\n+        path.parent.mkdir(parents=True, exist_ok=True)\n+        path.write_bytes(contents)\n+    return root\n+\n+\n+def read_tree(root: Path) -> dict:\n+    return {\n+        str(path.relative_to(root)): path.read_bytes()\n+        for path in sorted(root.rglob(\"*\"))\n+        if path.is_file()\n+    }\n+\n+\n+class AppleEfiTest(unittest.TestCase):\n+    def setUp(self):\n+        directory = tempfile.TemporaryDirectory()\n+        self.addCleanup(directory.cleanup)\n+        self.tmp = Path(directory.name)\n+        self.stash = self.tmp / \"state\" / \"apple-efi\"\n+\n+        self.logged = []\n+        self.patch(\"info\", self.logged.append)\n+\n+    def esp(self, name: str, files: dict) -> Path:\n+        \"\"\"A directory standing in for a mounted ESP.\"\"\"\n+        return write_tree(self.tmp / name, files)\n+\n+    def fake_disk(self, partitions: dict) -> None:\n+        \"\"\"Make /dev/... names resolve to those directories instead of mounts.\n+\n+        A None stands for a partition that would not mount.\n+        \"\"\"\n+        @contextmanager\n+        def mounted(partition):\n+            yield partitions[partition]\n+\n+        self.patch(\"_vfat_partitions\", lambda disk: list(partitions))\n+        self.patch(\"_mounted_ro\", mounted)\n+\n+    def patch(self, name, replacement):\n+        patcher = mock.patch.object(apple_efi, name, replacement)\n+        patcher.start()\n+        self.addCleanup(patcher.stop)\n+\n+    def log(self) -> str:\n+        return \"\\n\".join(self.logged)\n+\n+    def test_the_firmware_folder_is_found_and_copied_off_the_disk(self):\n+        self.fake_disk({\"/dev/sda1\": self.esp(\"sda1\", FIRMWARE)})\n+\n+        self.assertEqual(apple_efi.preserve(\"/dev/sda\", self.stash), self.stash)\n+        self.assertEqual(\n+            read_tree(self.stash),\n+            {\n+                \"EMBEDDEDOS/EmbeddedOSFirmware.im4p\": FIRMWARE[\n+                    \"EFI/APPLE/EMBEDDEDOS/EmbeddedOSFirmware.im4p\"\n+                ],\n+                \"EMBEDDEDOS/FDRData\": FIRMWARE[\"EFI/APPLE/EMBEDDEDOS/FDRData\"],\n+                \"EXTENSIONS/Firmware.scap\": FIRMWARE[\"EFI/APPLE/EXTENSIONS/Firmware.scap\"],\n+            },\n+        )\n+        self.assertIn(\"preserved Apple coprocessor firmware\", self.log())\n+\n+    def test_a_disk_with_no_apple_folder_is_left_alone(self):\n+        self.fake_disk({\"/dev/sda1\": self.esp(\"sda1\", OTHER_ESP)})\n+\n+        self.assertIsNone(apple_efi.preserve(\"/dev/sda\", self.stash))\n+        self.assertFalse(self.stash.exists())\n+        self.assertEqual(len(self.logged), 1)\n+        self.assertIn(\"no Apple coprocessor firmware\", self.log())\n+\n+    def test_the_esp_holding_the_firmware_wins_over_one_that_only_looks_apple(self):\n+        # A stale EFI/APPLE left by a macOS install that is no longer the one\n+        # the Mac boots its coprocessor from.\n+        decoy = self.esp(\"sda1\", {\"EFI/APPLE/README\": b\"stale\"})\n+        real = self.esp(\"sda2\", FIRMWARE)\n+        self.fake_disk({\"/dev/sda1\": decoy, \"/dev/sda2\": real})\n+\n+        apple_efi.preserve(\"/dev/sda\", self.stash)\n+\n+        self.assertTrue((self.stash / \"EMBEDDEDOS/FDRData\").is_file())\n+        self.assertFalse((self.stash / \"README\").exists())\n+        self.assertIn(\"/dev/sda2\", self.log())\n+\n+    def test_what_the_wipe_would_have_destroyed_is_on_the_new_esp(self):\n+        self.fake_disk({\"/dev/sda1\": self.esp(\"sda1\", FIRMWARE)})\n+        apple_efi.preserve(\"/dev/sda\", self.stash)\n+\n+        new_esp = self.tmp / \"mnt\" / \"boot\"\n+        new_esp.mkdir(parents=True)\n+\n+        self.assertTrue(apple_efi.restore(new_esp, self.stash))\n+        self.assertEqual(\n+            read_tree(new_esp / \"EFI/APPLE\"),\n+            read_tree(self.tmp / \"sda1\" / \"EFI/APPLE\"),\n+        )\n+        self.assertIn(\"restored Apple coprocessor firmware\", self.log())\n+\n+    def test_nothing_preserved_means_nothing_written_to_the_new_esp(self):\n+        new_esp = self.tmp / \"mnt\" / \"boot\"\n+        new_esp.mkdir(parents=True)\n+\n+        self.assertFalse(apple_efi.restore(new_esp, self.stash))\n+        self.assertEqual(read_tree(new_esp), {})\n+\n+    def test_a_short_restore_is_reported_rather_than_claimed(self):\n+        self.fake_disk({\"/dev/sda1\": self.esp(\"sda1\", FIRMWARE)})\n+        apple_efi.preserve(\"/dev/sda\", self.stash)\n+        new_esp = self.tmp / \"mnt\" / \"boot\"\n+        new_esp.mkdir(parents=True)\n+\n+        def half_a_copy(source, destination, dirs_exist_ok=False):\n+            Path(destination).mkdir(parents=True, exist_ok=True)\n+            (Path(destination) / \"FDRData\").write_bytes(b\"truncated\")\n+\n+        with mock.patch.object(apple_efi.shutil, \"copytree\", half_a_copy):\n+            self.assertFalse(apple_efi.restore(new_esp, self.stash))\n+\n+        self.assertNotIn(\"restored Apple coprocessor firmware\", self.log())\n+        self.assertIn(\"warning\", self.log())\n+\n+    def test_an_unreadable_source_warns_and_lets_the_install_continue(self):\n+        self.fake_disk({\"/dev/sda1\": self.esp(\"sda1\", FIRMWARE)})\n+\n+        with mock.patch.object(\n+            apple_efi.shutil, \"copytree\", side_effect=PermissionError(\"EFI/APPLE\")\n+        ):\n+            self.assertIsNone(apple_efi.preserve(\"/dev/sda\", self.stash))\n+\n+        self.assertIn(\"warning: could not preserve\", self.log())\n+\n+    def test_a_folder_too_big_for_the_live_system_is_not_copied(self):\n+        self.fake_disk({\"/dev/sda1\": self.esp(\"sda1\", FIRMWARE)})\n+        self.patch(\"MAX_STASH_BYTES\", 8)\n+\n+        self.assertIsNone(apple_efi.preserve(\"/dev/sda\", self.stash))\n+        self.assertFalse(self.stash.exists())\n+        self.assertIn(\"warning: not preserving\", self.log())\n+\n+    def test_a_partition_that_will_not_mount_is_skipped(self):\n+        self.fake_disk({\"/dev/sda1\": None, \"/dev/sda2\": self.esp(\"sda2\", FIRMWARE)})\n+\n+        self.assertEqual(apple_efi.preserve(\"/dev/sda\", self.stash), self.stash)\n+        self.assertIn(\"/dev/sda2\", self.log())\n+\n+\n+if __name__ == \"__main__\":\n+    unittest.main()"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy-iso/issues/comments/5706944758",
+      "html_url": "https://github.com/omacom/omarchy-iso/pull/174#issuecomment-5706944758",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy-iso/issues/174",
+      "id": 5706944758,
+      "node_id": "IC_kwDOPTlpN88AAAABVCkQ9g",
+      "user": {
+        "login": "ijt",
+        "id": 15530,
+        "node_id": "MDQ6VXNlcjE1NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ijt",
+        "html_url": "https://github.com/ijt",
+        "followers_url": "https://api.github.com/users/ijt/followers",
+        "following_url": "https://api.github.com/users/ijt/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ijt/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ijt/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ijt/subscriptions",
+        "organizations_url": "https://api.github.com/users/ijt/orgs",
+        "repos_url": "https://api.github.com/users/ijt/repos",
+        "events_url": "https://api.github.com/users/ijt/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ijt/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-17T01:18:06Z",
+      "updated_at": "2026-09-17T01:18:06Z",
+      "body": "This would have prevented the MacBookPro14,2 full-disk case in https://github.com/omacom/omarchy/issues/8271.\n\nOn that machine the installer recreated the ESP, `EFI/APPLE/EMBEDDEDOS` was gone, and the T1 enumerated as `05ac:1281` (recovery) with a dark Touch Bar. The host otherwise booted normally, so nothing pointed at the installer.\n\nThe two hooks look like the right place: copy `EFI/APPLE` in `prepare_live` before `omarchy-iso-cleanup-disk`, write it back in `_install_limine_omarchy` before Limine claims the new ESP, and never abort the install on a copy failure. I have not run a live ISO with this patch; the failure mode matches a wiped single-ESP 14,2 exactly.\n\nBest-effort is correct \u2014 aborting the install over a firmware copy would be worse. This still cannot help a machine that already lost the folder.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy-iso/issues/comments/5706944758/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy-iso/issues/comments/5743354247",
+      "html_url": "https://github.com/omacom/omarchy-iso/pull/174#issuecomment-5743354247",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy-iso/issues/174",
+      "id": 5743354247,
+      "node_id": "IC_kwDOPTlpN88AAAABVlShhw",
+      "user": {
+        "login": "niconistal",
+        "id": 899855,
+        "node_id": "MDQ6VXNlcjg5OTg1NQ==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/899855?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/niconistal",
+        "html_url": "https://github.com/niconistal",
+        "followers_url": "https://api.github.com/users/niconistal/followers",
+        "following_url": "https://api.github.com/users/niconistal/following{/other_user}",
+        "gists_url": "https://api.github.com/users/niconistal/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/niconistal/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/niconistal/subscriptions",
+        "organizations_url": "https://api.github.com/users/niconistal/orgs",
+        "repos_url": "https://api.github.com/users/niconistal/repos",
+        "events_url": "https://api.github.com/users/niconistal/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/niconistal/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-19T16:08:47Z",
+      "updated_at": "2026-09-19T16:08:47Z",
+      "body": "Thank you \u2014 an independent machine is exactly what this needed, and your reading of the two\nhooks is the design.\n\nTo say why each placement is load-bearing, since that is the part most likely to get moved in\nreview:\n\n- **`prepare_live`, before `omarchy-iso-cleanup-disk`.** It has to be before anything touches\n  the install disk, because the partition the folder lives on is the one about to be erased.\n  That is also why the stash goes to RAM rather than anywhere on that disk.\n- **`_install_limine_omarchy`, before Limine is installed.** The folder has to land on the new\n  ESP while the phase still holds a handle on it and before another writer is working in\n  `EFI/`. Restoring later means re-deriving the mountpoint and racing the bootloader install\n  for no benefit.\n- **Never abort.** You put it well: aborting an install over a firmware copy would be worse\n  than the bug. Every failure path logs and returns; the worst case is today's outcome.\n\nAnd the folder is the only trigger \u2014 no DMI allowlist to maintain. A disk with one gets it\npreserved; a disk without pays one read-only mount of partitions that are about to be erased.\nThat matters for a fleet-wide installer: nothing model-specific to keep up to date.\n\n**On your last line \u2014 \"this still cannot help a machine that already lost the folder.\"** That\nwas true when I filed this, and it is the reason I wrote the recovery side separately.\n[t1-revive](https://github.com/niconistal/t1-revive) regenerates the folder from Apple's own\nEmbeddedOS restore protocol on a machine that has already lost it, from Linux, without\nreinstalling macOS. Since 0.1.2 it has a confirmed wiped-ESP recovery on **all four** T1\nmodels \u2014 MacBookPro13,2, 13,3, 14,2 and 14,3 \u2014 each one persisting across a full power cycle,\nreported by testers on their own machines. So the two halves now exist: this PR stops the\ndamage, that tool repairs machines already damaged.\n\nWhich also sharpens what this PR is worth. Those recoveries take four to five minutes of\ntalking to Apple's signing service per machine, and they only work while Apple still signs\nthis firmware. Not destroying the folder in the first place is free and permanent; the\nrecovery path is neither.\n\nOn the evidence side, since this was filed the same failure has been reported on six machines\nacross all four models \u2014 wiped ESP, `EFI/APPLE/EMBEDDEDOS` gone, T1 sitting at `05ac:1281`\nwith a dark Touch Bar, and an install that otherwise looks completely normal (t1-revive issues\n[#4](https://github.com/niconistal/t1-revive/issues/4),\n[#5](https://github.com/niconistal/t1-revive/issues/5),\n[#7](https://github.com/niconistal/t1-revive/issues/7),\n[#9](https://github.com/niconistal/t1-revive/issues/9),\n[#10](https://github.com/niconistal/t1-revive/issues/10)). It is not a one-off.\n\nUnchanged from the description: this still has not been exercised on a real T1 install \u2014 the\nunit tests cover the seams, the QEMU scenarios need a built ISO. I am happy to run it on a\nMacBookPro14,3 and post the install log if that is what it takes to move; and the two open\nquestions at the bottom (the ESP handle at restore time, and `state_dir` versus a hard-coded\n`/run` path) are still genuinely open, so say the word if either should go a different way.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy-iso/issues/comments/5743354247/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

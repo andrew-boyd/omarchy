@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12590",
+  "origins": [
+    "current-discovery"
+  ],
+  "groups": [
+    "t2-fan-resume"
+  ],
+  "prior_snapshots": [],
+  "repository": "omacom/omarchy",
+  "number": 12590,
+  "checked_at": "2026-09-21T12:00:08.076820+00:00",
+  "title": "Restore t2fanrd fan control after suspend/resume on T2 Macs",
+  "author": "vivekchauhan",
+  "head_sha": "56175c188ed80eca568ca5dffabc7c7bdb666162",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T02:32:03Z",
+  "state": "open",
+  "body": "Fixes #12393.\n\n## Problem\nt2fanrd holds applesmc fan FDs open across suspend. After resume the sysfs nodes are recreated and the running daemon never reasserts manual control, leaving the SMC in failsafe full speed: fan1_manual=0 with the fan stuck at max while temperatures are low.\n\n## Evidence (iMac20,1, kernel 7.2.6-arch2-Watanare-T2-2-t2, t2fanrd r16.48baf96-1)\n- After deep-sleep resume: fan1_input ~3608 RPM (min 1200, max 3600), fan1_manual=0, fan1_output=3600, while CPU/GPU sat at ~40C (below the low_temp=55 curve start, so the fan should have been at ~1200).\n- fan1_manual/fan1_output mtimes frozen at boot time while all other applesmc attrs were recreated at resume; t2fanrd (PID 902) still running with zero log output after resume.\n- sudo systemctl restart t2fanrd flipped manual 0->1 and dropped the fan to ~1199 RPM. Same signature as #12393 (there: under-cooled at high temp; here: over-cooled at low temp).\n\n## Changes\n- default/systemd/system-sleep/t2fanrd: new post-resume hook running /usr/bin/systemctl try-restart t2fanrd.service (try-restart so it never starts a deliberately stopped daemon).\n- install/hardware/apple/fix-t2.sh: install the hook to /usr/lib/systemd/system-sleep/t2fanrd (0755, root-owned) on fresh T2 setups, following the existing hardware-conditional hook pattern (/usr/lib/systemd/system-sleep is already an allowed path in unowned-system-paths-test.sh).\n- migrations/1789870949.sh: same install for existing T2 installs; no-ops without the T2 PCI ID (106b:180[12]); idempotent.\n\n## Verification\n- bash -n passes on all three files; hook source is 0644 like its siblings.\n- The equivalent hook was installed manually on the affected iMac and the fan returned to ~1198 RPM with manual=1; the daemon now re-asserts control on every resume instead of needing a manual restart.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a62e8451146f29d3f822d0d1ff2d57a55b030605",
+      "filename": "default/systemd/system-sleep/t2fanrd",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/56175c188ed80eca568ca5dffabc7c7bdb666162/default%2Fsystemd%2Fsystem-sleep%2Ft2fanrd",
+      "raw_url": "https://github.com/omacom/omarchy/raw/56175c188ed80eca568ca5dffabc7c7bdb666162/default%2Fsystemd%2Fsystem-sleep%2Ft2fanrd",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem-sleep%2Ft2fanrd?ref=56175c188ed80eca568ca5dffabc7c7bdb666162",
+      "patch": "@@ -0,0 +1,8 @@\n+#!/bin/bash\n+# t2fanrd holds applesmc fan FDs open across suspend; after resume the sysfs\n+# nodes are recreated and the running daemon never reasserts manual control,\n+# leaving the SMC in failsafe full speed (fan1_manual=0, ~3600 RPM at 40C).\n+# Restart it on resume so fans return to the configured curve in /etc/t2fand.conf.\n+# See https://github.com/omacom/omarchy/issues/12393\n+[[ $1 == \"post\" ]] || exit 0\n+/usr/bin/systemctl try-restart t2fanrd.service"
+    },
+    {
+      "sha": "6af78ca7c8167712cd9e3846c0962654316bd81c",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/56175c188ed80eca568ca5dffabc7c7bdb666162/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/56175c188ed80eca568ca5dffabc7c7bdb666162/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=56175c188ed80eca568ca5dffabc7c7bdb666162",
+      "patch": "@@ -47,4 +47,11 @@ high_temp=75\n speed_curve=linear\n always_full_speed=false\n EOF\n+\n+  # t2fanrd holds applesmc fan FDs open across suspend; after resume it never\n+  # reasserts manual control (fan1_manual=0, failsafe full speed).\n+  # Restart it on resume so fans return to the configured curve.\n+  # See https://github.com/omacom/omarchy/issues/12393\n+  sudo install -Dm0755 \"$OMARCHY_PATH/default/systemd/system-sleep/t2fanrd\" \\\n+    /usr/lib/systemd/system-sleep/t2fanrd\n fi"
+    },
+    {
+      "sha": "fe7feb619bfb54a99c161b15639d3211527baf7d",
+      "filename": "migrations/1789870949.sh",
+      "status": "added",
+      "additions": 20,
+      "deletions": 0,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy/blob/56175c188ed80eca568ca5dffabc7c7bdb666162/migrations%2F1789870949.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/56175c188ed80eca568ca5dffabc7c7bdb666162/migrations%2F1789870949.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789870949.sh?ref=56175c188ed80eca568ca5dffabc7c7bdb666162",
+      "patch": "@@ -0,0 +1,20 @@\n+echo \"Restore t2fanrd fan control after suspend/resume\"\n+\n+# t2fanrd holds applesmc fan FDs open across suspend; after resume the sysfs\n+# nodes are recreated and the running daemon never reasserts manual control,\n+# leaving the SMC in failsafe full speed (fan1_manual=0).\n+# Fresh installs are covered by install/hardware/apple/fix-t2.sh; this repairs\n+# existing T2 machines. See https://github.com/omacom/omarchy/issues/12393\n+if ! lspci -nn 2>/dev/null | grep -q \"106b:180[12]\"; then\n+  exit 0\n+fi\n+\n+source=\"$OMARCHY_PATH/default/systemd/system-sleep/t2fanrd\"\n+dest=/usr/lib/systemd/system-sleep/t2fanrd\n+if [[ ! -f $source ]]; then\n+  echo \"Missing $source; rerun omarchy-migrate after updating.\" >&2\n+  exit 1\n+fi\n+\n+sudo mkdir -p \"${dest%/*}\"\n+sudo install -m 0755 -o root -g root -T \"$source\" \"$dest\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

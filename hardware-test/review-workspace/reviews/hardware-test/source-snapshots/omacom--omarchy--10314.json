@@ -1,0 +1,93 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10314",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-pre-t2-resume"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "f434d1bd172632e8d85113505592255c8f14695e",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10314,
+  "checked_at": "2026-09-21T11:57:42.629842+00:00",
+  "title": "Disable MacBook10,1 BCM4350 wakeup through S3",
+  "author": "Skeptomenos",
+  "head_sha": "f434d1bd172632e8d85113505592255c8f14695e",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:12Z",
+  "state": "open",
+  "body": "## Summary\n- Guarded on DMI `MacBook10,1` and PCI `14e4:43a3` (BCM4350). ACPI leaves Airport (`ARPT`) armed as a wake source, which keeps the radio powered for the whole S3 sleep.\n- Disable PCI `power/wakeup` on that device (udev + a boot/resume oneshot that also toggles `ARPT` if it is still enabled). Existing installs pick this up through a migration.\n- Does **not** change lid-close to hibernate. Hibernate on this chassis never reached S4: the lock screen came up and applespi stopped delivering keyboard and trackpad events. Lid stays `suspend`. The leaf removes a leftover hibernate-on-lid drop-in if one is present.\n\n## Test plan\n- [x] `bash test/shell.d/macbook10-sleep-drain-test.sh` (pass)\n- [x] Live on MacBook10,1: `acpi_arpt=disabled`, `0000:02:00.0 power/wakeup=disabled`, `ARPT *disabled` after apply and after reboot\n- [x] `HandleLidSwitch` remains `suspend`\n- [ ] Confirm the leaf is a no-op off MacBook10,1 (guard)\n- [ ] `omarchy update` on an existing MacBook10,1 runs the migration and enables the oneshot",
+  "draft": false,
+  "files": [
+    {
+      "sha": "553f2461ae374d9b4f6ceaec9e6e2ea951ac99a1",
+      "filename": "bin/omarchy-hw-macbook10-sleep-drain",
+      "status": "added",
+      "additions": 113,
+      "deletions": 0,
+      "changes": 113,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f434d1bd172632e8d85113505592255c8f14695e/bin%2Fomarchy-hw-macbook10-sleep-drain",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f434d1bd172632e8d85113505592255c8f14695e/bin%2Fomarchy-hw-macbook10-sleep-drain",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-macbook10-sleep-drain?ref=f434d1bd172632e8d85113505592255c8f14695e",
+      "patch": "@@ -0,0 +1,113 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Disable MacBook10,1 Wi-Fi wakeup so S3 does not keep the radio powered\n+# omarchy:args=[status]\n+# omarchy:hidden=true\n+# omarchy:requires-sudo=true\n+\n+set -euo pipefail\n+\n+WIFI_VENDOR=0x14e4\n+WIFI_DEVICE=0x43a3\n+\n+sysfs_root=${OMARCHY_SYSFS_ROOT:-}\n+acpi_wakeup=${OMARCHY_ACPI_WAKEUP:-/proc/acpi/wakeup}\n+\n+sysfs() {\n+  printf '%s%s' \"$sysfs_root\" \"$1\"\n+}\n+\n+product_name() {\n+  cat \"$(sysfs /sys/class/dmi/id/product_name)\" 2>/dev/null || true\n+}\n+\n+wifi_pci_dirs() {\n+  local vendor_file dir\n+\n+  shopt -s nullglob\n+  for vendor_file in \"$(sysfs /sys/bus/pci/devices)\"/*/vendor; do\n+    dir=$(dirname \"$vendor_file\")\n+    [[ $(<\"$vendor_file\") == \"$WIFI_VENDOR\" ]] || continue\n+    [[ -f $dir/device && $(<\"$dir/device\") == \"$WIFI_DEVICE\" ]] || continue\n+    printf '%s\\n' \"$dir\"\n+  done\n+  shopt -u nullglob\n+}\n+\n+acpi_arpt_state() {\n+  local line\n+\n+  [[ -f $acpi_wakeup ]] || {\n+    echo missing\n+    return 0\n+  }\n+\n+  line=$(grep -E '^ARPT[[:space:]]' \"$acpi_wakeup\" || true)\n+  [[ -n $line ]] || {\n+    echo missing\n+    return 0\n+  }\n+\n+  if [[ $line == *'*enabled'* ]]; then\n+    echo enabled\n+  else\n+    echo disabled\n+  fi\n+}\n+\n+print_status() {\n+  local dir wakeup\n+\n+  printf 'product=%s\\n' \"$(product_name)\"\n+  printf 'acpi_arpt=%s\\n' \"$(acpi_arpt_state)\"\n+\n+  wakeup=missing\n+  while IFS= read -r dir; do\n+    [[ -n $dir ]] || continue\n+    wakeup=$(cat \"$dir/power/wakeup\" 2>/dev/null || echo missing)\n+    printf 'pci=%s wakeup=%s\\n' \"$(basename \"$dir\")\" \"$wakeup\"\n+  done < <(wifi_pci_dirs)\n+\n+  if [[ $wakeup == missing ]]; then\n+    printf 'pci=missing wakeup=missing\\n'\n+  fi\n+}\n+\n+disable_acpi_arpt() {\n+  [[ -f $acpi_wakeup ]] || return 0\n+  [[ $(acpi_arpt_state) == enabled ]] || return 0\n+  printf 'ARPT\\n' >\"$acpi_wakeup\"\n+}\n+\n+apply_drain() {\n+  local dir\n+\n+  if [[ $(product_name) != \"MacBook10,1\" ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -z $sysfs_root ]] && ((EUID != 0)); then\n+    echo \"omarchy-hw-macbook10-sleep-drain must run as root\" >&2\n+    exit 1\n+  fi\n+\n+  while IFS= read -r dir; do\n+    [[ -n $dir && -f $dir/power/wakeup ]] || continue\n+    printf 'disabled\\n' >\"$dir/power/wakeup\"\n+  done < <(wifi_pci_dirs)\n+\n+  disable_acpi_arpt\n+}\n+\n+case \"${1:-apply}\" in\n+  status)\n+    print_status\n+    ;;\n+  apply | \"\")\n+    apply_drain\n+    ;;\n+  *)\n+    echo \"Usage: omarchy-hw-macbook10-sleep-drain [status]\" >&2\n+    exit 1\n+    ;;\n+esac"
+    },
+    {
+      "sha": "fc3984c8c0980782b25e5bbc30bcc16a9017bd24",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f434d1bd172632e8d85113505592255c8f14695e/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f434d1bd172632e8d85113505592255c8f14695e/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=f434d1bd172632e8d85113505592255c8f14695e",
+      "patch": "@@ -37,6 +37,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-macbook10-sleep-drain.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n "
+    },
+    {
+      "sha": "502d6c12486bb624c39d38f1ee74ceb3f0248a90",
+      "filename": "install/hardware/apple/fix-macbook10-sleep-drain.sh",
+      "status": "added",
+      "additions": 49,
+      "deletions": 0,
+      "changes": 49,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f434d1bd172632e8d85113505592255c8f14695e/install%2Fhardware%2Fapple%2Ffix-macbook10-sleep-drain.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f434d1bd172632e8d85113505592255c8f14695e/install%2Fhardware%2Fapple%2Ffix-macbook10-sleep-drain.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-macbook10-sleep-drain.sh?ref=f434d1bd172632e8d85113505592255c8f14695e",
+      "patch": "@@ -0,0 +1,49 @@\n+# The 2017 12-inch MacBook (MacBook10,1) leaks around a third of a watt in S3.\n+# ACPI leaves Airport (ARPT / BCM4350) armed as a wake source, which keeps the\n+# radio powered for the whole sleep. Disable that wakeup.\n+#\n+# Do not switch the lid to suspend-then-hibernate. On this chassis hibernate\n+# never reached S4: the session lock came up and applespi stopped delivering\n+# keyboard and trackpad events, so the only recovery was a force reboot.\n+\n+if omarchy-hw-match \"MacBook10,1\"; then\n+  echo \"Detected MacBook10,1; disabling Wi-Fi wakeup for S3\"\n+\n+  udev_rules=${OMARCHY_MACBOOK10_SLEEP_UDEV:-/etc/udev/rules.d/99-omarchy-macbook10-wifi-wakeup.rules}\n+  unit_path=${OMARCHY_MACBOOK10_SLEEP_UNIT:-/etc/systemd/system/omarchy-macbook10-sleep-drain.service}\n+  sleep_hook=${OMARCHY_MACBOOK10_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/omarchy-macbook10-sleep-drain}\n+  drain_bin=${OMARCHY_MACBOOK10_SLEEP_BIN:-${OMARCHY_PATH:-/usr/share/omarchy}/bin/omarchy-hw-macbook10-sleep-drain}\n+  logind_dropin=${OMARCHY_MACBOOK10_SLEEP_LOGIND:-/etc/systemd/logind.conf.d/30-macbook10-suspend-then-hibernate.conf}\n+  sleep_dropin=${OMARCHY_MACBOOK10_SLEEP_CONF:-/etc/systemd/sleep.conf.d/30-macbook10-hibernate-delay.conf}\n+\n+  sudo mkdir -p \"$(dirname \"$udev_rules\")\" \"$(dirname \"$unit_path\")\" \"$(dirname \"$sleep_hook\")\"\n+\n+  sudo tee \"$udev_rules\" >/dev/null <<'EOF'\n+# BCM4350 on MacBook10,1. Wake-on-WLAN keeps the radio powered through S3.\n+ACTION==\"add|change\", SUBSYSTEM==\"pci\", ATTR{vendor}==\"0x14e4\", ATTR{device}==\"0x43a3\", TEST==\"power/wakeup\", ATTR{power/wakeup}=\"disabled\"\n+EOF\n+\n+  sudo tee \"$unit_path\" >/dev/null <<EOF\n+[Unit]\n+Description=Omarchy MacBook10,1 Wi-Fi wakeup disable for S3\n+\n+[Service]\n+Type=oneshot\n+ExecStart=$drain_bin\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+  sudo tee \"$sleep_hook\" >/dev/null <<EOF\n+#!/bin/bash\n+exec \"$drain_bin\"\n+EOF\n+  sudo chmod 755 \"$sleep_hook\"\n+\n+  sudo rm -f \"$logind_dropin\" \"$sleep_dropin\"\n+  sudo systemctl reload systemd-logind >/dev/null 2>&1 || true\n+\n+  sudo systemctl daemon-reload\n+  sudo systemctl enable --now omarchy-macbook10-sleep-drain.service\n+fi"
+    },
+    {
+      "sha": "5d86a6d4e75e426f04e9d341ae750fbf2178c806",
+      "filename": "migrations/1788600200.sh",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f434d1bd172632e8d85113505592255c8f14695e/migrations%2F1788600200.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f434d1bd172632e8d85113505592255c8f14695e/migrations%2F1788600200.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788600200.sh?ref=f434d1bd172632e8d85113505592255c8f14695e",
+      "patch": "@@ -0,0 +1,3 @@\n+echo \"Cut MacBook10,1 S3 drain by disabling Wi-Fi wakeup; do not hibernate on lid close\"\n+\n+source \"$OMARCHY_PATH/install/hardware/apple/fix-macbook10-sleep-drain.sh\""
+    },
+    {
+      "sha": "d5e3389ffe062d88639e56d1737df284379ff9f5",
+      "filename": "test/shell.d/macbook10-sleep-drain-test.sh",
+      "status": "added",
+      "additions": 168,
+      "deletions": 0,
+      "changes": 168,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f434d1bd172632e8d85113505592255c8f14695e/test%2Fshell.d%2Fmacbook10-sleep-drain-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f434d1bd172632e8d85113505592255c8f14695e/test%2Fshell.d%2Fmacbook10-sleep-drain-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmacbook10-sleep-drain-test.sh?ref=f434d1bd172632e8d85113505592255c8f14695e",
+      "patch": "@@ -0,0 +1,168 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+apply=\"$ROOT/bin/omarchy-hw-macbook10-sleep-drain\"\n+leaf=\"$ROOT/install/hardware/apple/fix-macbook10-sleep-drain.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1788600200.sh\"\n+\n+grep -q 'apple/fix-macbook10-sleep-drain.sh' \"$all\" ||\n+  fail \"the MacBook10,1 sleep-drain fix runs during hardware setup\"\n+pass \"the MacBook10,1 sleep-drain fix runs during hardware setup\"\n+\n+grep -q 'fix-macbook10-sleep-drain.sh' \"$migration\" ||\n+  fail \"a migration applies the sleep-drain fix on existing installs\"\n+pass \"a migration applies the sleep-drain fix on existing installs\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-hw-match\" <<'SH'\n+#!/bin/bash\n+[[ ${TEST_PRODUCT_NAME:-} == *\"$1\"* ]]\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+fake_sysfs() {\n+  local root=$1 product=${2:-MacBook10,1} wakeup=${3:-enabled}\n+  mkdir -p \"$root/sys/class/dmi/id\" \\\n+    \"$root/sys/bus/pci/devices/0000:02:00.0/power\"\n+  printf '%s\\n' \"$product\" >\"$root/sys/class/dmi/id/product_name\"\n+  printf '0x14e4\\n' >\"$root/sys/bus/pci/devices/0000:02:00.0/vendor\"\n+  printf '0x43a3\\n' >\"$root/sys/bus/pci/devices/0000:02:00.0/device\"\n+  printf '%s\\n' \"$wakeup\" >\"$root/sys/bus/pci/devices/0000:02:00.0/power/wakeup\"\n+}\n+\n+sys=\"$test_tmp/sysfs\"\n+acpi=\"$test_tmp/acpi-wakeup\"\n+fake_sysfs \"$sys\"\n+cat >\"$acpi\" <<'EOF'\n+Device\tS-state\t  Status   Sysfs node\n+ARPT\t  S4\t*enabled   pci:0000:02:00.0\n+LID0\t  S4\t*enabled   platform:PNP0C0D:00\n+EOF\n+\n+OMARCHY_SYSFS_ROOT=\"$sys\" OMARCHY_ACPI_WAKEUP=\"$acpi\" bash \"$apply\"\n+[[ $(cat \"$sys/sys/bus/pci/devices/0000:02:00.0/power/wakeup\") == disabled ]] ||\n+  fail \"apply disables BCM4350 PCI wakeup\"\n+[[ $(cat \"$acpi\") == ARPT ]] || fail \"apply toggles ACPI ARPT when it was enabled\" \"$(cat \"$acpi\")\"\n+pass \"apply disables Wi-Fi PCI and ACPI wakeup\"\n+\n+fake_sysfs \"$sys\"\n+cat >\"$acpi\" <<'EOF'\n+Device\tS-state\t  Status   Sysfs node\n+ARPT\t  S4\t*disabled  pci:0000:02:00.0\n+EOF\n+before=$(cat \"$acpi\")\n+OMARCHY_SYSFS_ROOT=\"$sys\" OMARCHY_ACPI_WAKEUP=\"$acpi\" bash \"$apply\"\n+[[ $(cat \"$acpi\") == \"$before\" ]] || fail \"apply leaves ARPT alone when it is already disabled\"\n+pass \"apply is idempotent when ARPT is already disabled\"\n+\n+other=\"$test_tmp/other\"\n+fake_sysfs \"$other\" \"MacBookPro14,1\"\n+printf 'enabled\\n' >\"$other/sys/bus/pci/devices/0000:02:00.0/power/wakeup\"\n+OMARCHY_SYSFS_ROOT=\"$other\" OMARCHY_ACPI_WAKEUP=\"$acpi\" bash \"$apply\"\n+[[ $(cat \"$other/sys/bus/pci/devices/0000:02:00.0/power/wakeup\") == enabled ]] ||\n+  fail \"apply leaves unrelated hardware wakeup unchanged\"\n+pass \"apply is a no-op off MacBook10,1\"\n+\n+status=$(OMARCHY_SYSFS_ROOT=\"$sys\" OMARCHY_ACPI_WAKEUP=\"$acpi\" bash \"$apply\" status)\n+[[ $status == *wakeup=disabled* ]] || fail \"status reports disabled PCI wakeup\" \"$status\"\n+[[ $status == *acpi_arpt=disabled* ]] || fail \"status reports disabled ARPT\" \"$status\"\n+pass \"status reports the applied wakeup disable\"\n+\n+udev=\"$test_tmp/99-omarchy-macbook10-wifi-wakeup.rules\"\n+unit=\"$test_tmp/omarchy-macbook10-sleep-drain.service\"\n+hook=\"$test_tmp/sleep-hook\"\n+logind=\"$test_tmp/30-macbook10-suspend-then-hibernate.conf\"\n+sleep_conf=\"$test_tmp/30-macbook10-hibernate-delay.conf\"\n+resume=\"$test_tmp/omarchy_resume.conf\"\n+drain_copy=\"$test_tmp/omarchy-hw-macbook10-sleep-drain\"\n+cp \"$apply\" \"$drain_copy\"\n+chmod +x \"$drain_copy\"\n+\n+run_leaf() {\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+    TEST_PRODUCT_NAME=\"$1\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_MACBOOK10_SLEEP_UDEV=\"$udev\" \\\n+    OMARCHY_MACBOOK10_SLEEP_UNIT=\"$unit\" \\\n+    OMARCHY_MACBOOK10_SLEEP_HOOK=\"$hook\" \\\n+    OMARCHY_MACBOOK10_SLEEP_BIN=\"$drain_copy\" \\\n+    OMARCHY_MACBOOK10_SLEEP_LOGIND=\"$logind\" \\\n+    OMARCHY_MACBOOK10_SLEEP_CONF=\"$sleep_conf\" \\\n+    OMARCHY_MACBOOK10_RESUME_CONF=\"$2\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\"\n+}\n+\n+rm -f \"$udev\" \"$unit\" \"$hook\" \"$logind\" \"$sleep_conf\"\n+run_leaf \"MacBookPro14,1\" \"$resume\"\n+[[ ! -f $udev ]] || fail \"setup skips unrelated hardware\"\n+[[ ! -s $calls ]] || fail \"setup escalates nothing on unrelated hardware\" \"$(cat \"$calls\")\"\n+pass \"setup skips unrelated hardware\"\n+\n+run_leaf \"MacBook10,1\" \"$test_tmp/missing-resume.conf\"\n+[[ -f $udev ]] || fail \"setup writes the udev rule\"\n+grep -Fq 'ATTR{device}==\"0x43a3\"' \"$udev\" || fail \"the udev rule matches BCM4350\" \"$(cat \"$udev\")\"\n+[[ -f $unit ]] || fail \"setup writes the systemd unit\"\n+grep -Fq \"ExecStart=$drain_copy\" \"$unit\" ||\n+  fail \"the unit runs the sleep-drain command\" \"$(cat \"$unit\")\"\n+[[ -x $hook ]] || fail \"setup installs an executable sleep hook\"\n+grep -Fq \"exec \\\"$drain_copy\\\"\" \"$hook\" ||\n+  fail \"the sleep hook re-applies the wakeup disable\" \"$(cat \"$hook\")\"\n+[[ ! -f $logind ]] || fail \"setup does not change the lid action\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-macbook10-sleep-drain.service' \"$calls\" ||\n+  fail \"setup enables the sleep-drain service\" \"$(cat \"$calls\")\"\n+pass \"setup installs wakeup disable and leaves lid-close as S3\"\n+\n+printf 'HandleLidSwitch=suspend-then-hibernate\\n' >\"$logind\"\n+printf 'HibernateDelaySec=30min\\n' >\"$sleep_conf\"\n+run_leaf \"MacBook10,1\" \"$resume\"\n+[[ ! -f $logind ]] || fail \"setup removes a previous hibernate-on-lid drop-in\"\n+[[ ! -f $sleep_conf ]] || fail \"setup removes a previous hibernate delay drop-in\"\n+grep -Fq $'systemctl\\treload\\tsystemd-logind' \"$calls\" ||\n+  fail \"setup reloads logind after removing hibernate-on-lid\" \"$(cat \"$calls\")\"\n+pass \"setup removes a previous hibernate-on-lid policy\"\n+\n+: >\"$calls\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_PRODUCT_NAME=\"MacBook10,1\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_MACBOOK10_SLEEP_UDEV=\"$udev\" \\\n+  OMARCHY_MACBOOK10_SLEEP_UNIT=\"$unit\" \\\n+  OMARCHY_MACBOOK10_SLEEP_HOOK=\"$hook\" \\\n+  OMARCHY_MACBOOK10_SLEEP_BIN=\"$drain_copy\" \\\n+  OMARCHY_MACBOOK10_SLEEP_LOGIND=\"$logind\" \\\n+  OMARCHY_MACBOOK10_SLEEP_CONF=\"$sleep_conf\" \\\n+  OMARCHY_MACBOOK10_RESUME_CONF=\"$resume\" \\\n+  bash -euo pipefail \"$migration\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-macbook10-sleep-drain.service' \"$calls\" ||\n+  fail \"the migration runs hardware setup\" \"$(cat \"$calls\")\"\n+pass \"the migration runs hardware setup\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

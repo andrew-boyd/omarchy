@@ -1,0 +1,12 @@
+[1;35m==> Installing omarchy-2026.09.21-intel-mac-local-x86_64.iso unattended via cidata (headless)[0m
+[1;35m==> Waiting for the unattended install to finish (timeout 2400s)[0m
+    ... installing (0s)
+    ... installing (120s)
+[1;35m==> Install finished and rebooted into the installed system.[0m
+[1;35m==> Installed system is up. Saving base image.[0m
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+Fresh install preserved synthetic EFI files and wiped the unrelated marker: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-095217-apple-efi-fresh-install
+[1;35m==> Visual review: 3 screenshots in /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-095217-apple-efi-fresh-install[0m

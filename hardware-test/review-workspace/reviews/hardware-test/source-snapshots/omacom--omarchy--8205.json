@@ -1,0 +1,145 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8205",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "gmux-brightness"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "01a2bef4f37d9dce3fc006cbb91ca137dbb725ad",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8205,
+  "checked_at": "2026-09-21T11:56:25.926756+00:00",
+  "title": "Read actual gmux display brightness",
+  "author": "piotrsynowiec",
+  "head_sha": "01a2bef4f37d9dce3fc006cbb91ca137dbb725ad",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-11T18:55:11Z",
+  "state": "open",
+  "body": "## Summary\n\n- read `actual_brightness` for `gmux_backlight`, whose requested brightness can remain stale after GPU switching\n- use the hardware value as the starting point for brightness steps\n- preserve the existing `brightnessctl` path for every other backlight driver\n- add regression coverage for a stale 3% requested value with 80% hardware brightness\n\n## Hardware verification\n\nVerified on a 2019 Intel/T2 MacBook Pro with `apple-gmux`:\n\n```\nbrightness=1794\nactual_brightness=52428\nmax_brightness=65535\n```\n\nThe installed command reported 3%; this branch reports the hardware level of 80%.\n\n## Tests\n\n- `bash test/shell.d/brightness-display-test.sh`\n- `./test/cli`\n- `git diff --check`\n\nA full `./test/shell` run reached the unrelated checkout invariant requiring a local `omarchy-pkgs` checkout; the focused brightness suite passes.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "5d343f20581ec1fcd327e0e2d0d0307e7fc8d338",
+      "filename": "bin/omarchy-brightness-display",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 1,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/01a2bef4f37d9dce3fc006cbb91ca137dbb725ad/bin%2Fomarchy-brightness-display",
+      "raw_url": "https://github.com/omacom/omarchy/raw/01a2bef4f37d9dce3fc006cbb91ca137dbb725ad/bin%2Fomarchy-brightness-display",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display?ref=01a2bef4f37d9dce3fc006cbb91ca137dbb725ad",
+      "patch": "@@ -26,7 +26,19 @@ done\n \n # Get the brightness of the passed display\n backlight_brightness() {\n-  brightnessctl -d \"$1\" -m 2>/dev/null | awk -F, '{ gsub(\"%\", \"\", $4); print $4; found=1 } END{ exit !found }'\n+  local device=\"$1\"\n+  local backlight_path=\"${OMARCHY_BACKLIGHT_PATH:-/sys/class/backlight}\"\n+\n+  # apple-gmux can retain a stale requested value after switching GPUs while\n+  # the hardware keeps a different level. Its actual_brightness register uses\n+  # the same scale as max_brightness, so report the level the panel is using.\n+  if [[ $device == \"gmux_backlight\" && -r $backlight_path/$device/actual_brightness && -r $backlight_path/$device/max_brightness ]]; then\n+    awk 'NR == FNR { actual = $1; next } $1 > 0 { print int(actual * 100 / $1 + 0.5); found = 1 } END { exit !found }' \\\n+      \"$backlight_path/$device/actual_brightness\" \"$backlight_path/$device/max_brightness\"\n+    return\n+  fi\n+\n+  brightnessctl -d \"$device\" -m 2>/dev/null | awk -F, '{ gsub(\"%\", \"\", $4); print $4; found=1 } END{ exit !found }'\n }\n \n [[ -n $monitor ]] || monitor=\"$(omarchy-hyprland-monitor-focused 2>/dev/null || true)\""
+    },
+    {
+      "sha": "057fa1b7f67da39c6762e9059387e3dae112ec64",
+      "filename": "test/shell.d/brightness-display-test.sh",
+      "status": "modified",
+      "additions": 18,
+      "deletions": 3,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/01a2bef4f37d9dce3fc006cbb91ca137dbb725ad/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/01a2bef4f37d9dce3fc006cbb91ca137dbb725ad/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrightness-display-test.sh?ref=01a2bef4f37d9dce3fc006cbb91ca137dbb725ad",
+      "patch": "@@ -10,7 +10,8 @@ trap 'rm -rf \"$test_tmp\"' EXIT\n mock_bin=\"$test_tmp/bin\"\n call_log=\"$test_tmp/calls\"\n runtime_dir=\"$test_tmp/runtime\"\n-mkdir -p \"$mock_bin\" \"$runtime_dir\"\n+backlight_dir=\"$test_tmp/backlight\"\n+mkdir -p \"$mock_bin\" \"$runtime_dir\" \"$backlight_dir\"\n \n cat >\"$mock_bin/omarchy-hyprland-monitor-focused-apple\" <<'SH'\n #!/bin/bash\n@@ -24,7 +25,7 @@ SH\n \n cat >\"$mock_bin/omarchy-hw-display\" <<'SH'\n #!/bin/bash\n-printf 'mock_backlight\\n'\n+printf '%s\\n' \"${BACKLIGHT_DEVICE:-mock_backlight}\"\n SH\n \n cat >\"$mock_bin/brightnessctl\" <<'SH'\n@@ -54,7 +55,7 @@ SH\n chmod +x \"$mock_bin\"/*\n \n run_brightness() {\n-  CALL_LOG=\"$call_log\" XDG_RUNTIME_DIR=\"$runtime_dir\" PATH=\"$mock_bin:$ROOT/bin:$PATH\" \\\n+  CALL_LOG=\"$call_log\" XDG_RUNTIME_DIR=\"$runtime_dir\" OMARCHY_BACKLIGHT_PATH=\"$backlight_dir\" PATH=\"$mock_bin:$ROOT/bin:$PATH\" \\\n     \"$ROOT/bin/omarchy-brightness-display\" \"$@\"\n }\n \n@@ -86,6 +87,20 @@ grep -F 'brightnessctl -d mock_backlight -m' \"$call_log\" >/dev/null || \\\n   fail \"internal monitor queries brightnessctl\"\n pass \"internal monitor uses the kernel backlight\"\n \n+mkdir -p \"$backlight_dir/gmux_backlight\"\n+printf '1794\\n' >\"$backlight_dir/gmux_backlight/brightness\"\n+printf '52428\\n' >\"$backlight_dir/gmux_backlight/actual_brightness\"\n+printf '65535\\n' >\"$backlight_dir/gmux_backlight/max_brightness\"\n+\n+brightness=$(BACKLIGHT_DEVICE=gmux_backlight run_brightness --monitor eDP-1)\n+[[ $brightness == \"80\" ]] || fail \"gmux reports the hardware brightness instead of a stale requested value\" \"actual: $brightness\"\n+pass \"gmux reports the hardware brightness instead of a stale requested value\"\n+\n+BACKLIGHT_DEVICE=gmux_backlight run_brightness --no-osd --monitor eDP-1 +5%\n+grep -F 'brightnessctl -d gmux_backlight set 85%' \"$call_log\" >/dev/null || \\\n+  fail \"gmux brightness steps start from the hardware brightness\"\n+pass \"gmux brightness steps start from the hardware brightness\"\n+\n brightness=$(FOCUSED_MONITOR=DP-1 run_brightness)\n [[ $brightness == \"50\" ]] || fail \"brightness follows the focused external monitor\" \"actual: $brightness\"\n pass \"brightness follows the focused external monitor\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5639252946",
+      "html_url": "https://github.com/omacom/omarchy/pull/8205#issuecomment-5639252946",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8205",
+      "id": 5639252946,
+      "node_id": "IC_kwDOO0Cobs8AAAABUCAr0g",
+      "user": {
+        "login": "rand0mdud3",
+        "id": 87219286,
+        "node_id": "MDQ6VXNlcjg3MjE5Mjg2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/87219286?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rand0mdud3",
+        "html_url": "https://github.com/rand0mdud3",
+        "followers_url": "https://api.github.com/users/rand0mdud3/followers",
+        "following_url": "https://api.github.com/users/rand0mdud3/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rand0mdud3/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rand0mdud3/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rand0mdud3/subscriptions",
+        "organizations_url": "https://api.github.com/users/rand0mdud3/orgs",
+        "repos_url": "https://api.github.com/users/rand0mdud3/repos",
+        "events_url": "https://api.github.com/users/rand0mdud3/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rand0mdud3/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-11T18:55:11Z",
+      "updated_at": "2026-09-11T18:55:11Z",
+      "body": "Hardware verification on MacBookPro11,5 (pre-T2, gmux_backlight max 1023, second gmux data point after the author's T2 machine):\n\n- Suite green: brightness-display-test.sh 12/12 including the two new gmux assertions.\n- Converged device agrees with the installed command: brightness=actual=700 reports 68 on both.\n- Stale scenario end-to-end (staged brightness=31/actual=818/max=1023, real brightnessctl stubbed): this branch reads 80 from hardware and a +5% step issues set 85% instead of stepping from the stale 3%. Real panel untouched during the check.\n- Base is fresh (single commit on current quattro) and the four other open PRs touching this script (#8524, #8882, #9108, #11312) all land on different hunks, so no conflicts with this one.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5639252946/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5019175944,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKyqMCA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nUpdates display brightness handling so `gmux_backlight` reflects the panel\u2019s actual hardware brightness.\n\n**Changes:**\n- Reads and scales `actual_brightness` for gmux devices.\n- Uses the hardware value when calculating brightness steps.\n- Adds regression coverage for stale requested brightness.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated no comments.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-brightness-display` | Adds gmux-specific hardware brightness reporting. |\n| `test/shell.d/brightness-display-test.sh` | Tests reporting and stepping from actual brightness. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8205#pullrequestreview-5019175944",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8205",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8205#pullrequestreview-5019175944"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8205"
+        }
+      },
+      "submitted_at": "2026-08-25T13:02:31Z",
+      "commit_id": "01a2bef4f37d9dce3fc006cbb91ca137dbb725ad"
+    }
+  ],
+  "inline": []
+}

@@ -1,0 +1,93 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9210",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-suspend"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9210,
+  "checked_at": "2026-09-21T11:57:27.391641+00:00",
+  "title": "Stop T2 Mac resume from waiting on the Thunderbolt controllers",
+  "author": "phedoreanu",
+  "head_sha": "4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+  "base_sha": "f38eb4204137d1360ca892f244c9ca7f21f54913",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-09T12:37:27Z",
+  "state": "open",
+  "body": "## Summary\n\nOpening the lid of a T2 MacBook took about 20 s before the lock screen appeared. With `pm_print_times` the kernel's own accounting shows where it goes: `noirq resume of devices complete after 19061 msecs`, of which\n\n```\npcieport 0000:06:00.0  (Titan Ridge upstream, left)   6.16 s\npcieport 0000:7c:00.0  (Titan Ridge upstream, right)  6.09 s\nthunderbolt 0000:08:00.0 (NHI)                        2.86 s\nthunderbolt 0000:7e:00.0 (NHI)                        2.83 s\n```\n\nThe two Titan Ridge controllers lose power in deep sleep. On resume the kernel powers them up and waits for their firmware to bring the PCIe switch back (~6 s each), then the connection manager (~3 s each). T2 Macs need `pm_async=off` (enabling it at runtime hung the machine on the next resume), so these waits run one after another on the critical path.\n\n- Ship `default/systemd/system-sleep/t2-thunderbolt`. Before sleep it removes the Titan Ridge upstream ports, so `pci_bridge_wait_for_secondary_bus()` has nothing to wait for. After resume it rescans in the background until the controllers are back, then gives every childless downstream port a secondary bus reset: the integrated xHCI does not answer config cycles after the power cycle until its port is reset.\n- Install it from `fix-t2.sh` (mode 755, as #8588 points out `cp -p` would leave it inert) and migrate existing T2 installs.\n- Extend `t2-hardware-test.sh` to cover the hook contents, the fresh setup, the migration, its idempotency, and the non-T2 path.\n\nApple's Thunderbolt `_PS0/_PS3` methods are all gated on `OSDW()`, so there is no ACPI-side help to lean on under Linux.\n\n## Verification\n\n- `bash test/shell.d/t2-hardware-test.sh` (12 passing)\n- `./test/all`: only the pre-existing environment failures also present on `quattro` (missing `omarchy-pkgs` checkout, theme-install URL check)\n- MacBookPro16,1, linux-t2 7.1.8, Omarchy 4.0.1, five lid-close/open cycles: kernel resume went from 22.3 s to 4.5 s (`ACPI: PM: Low-level resume complete` to `PM: suspend exit`), the lock screen is up about a second and a half after the lid opens, and both Thunderbolt controllers plus their xHCI (with the USB-C rule from #9195 reapplied on bind) are back within a second of resume. The remaining time is amdgpu (1.1 s), the Wi-Fi root port (1.0 s), the efivarfs resync (0.8 s) and CPU re-online (0.9 s).\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f3e461776ef7889cce09c372fba58ee21a46c7c7",
+      "filename": "default/systemd/system-sleep/t2-thunderbolt",
+      "status": "added",
+      "additions": 82,
+      "deletions": 0,
+      "changes": 82,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/default%2Fsystemd%2Fsystem-sleep%2Ft2-thunderbolt",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/default%2Fsystemd%2Fsystem-sleep%2Ft2-thunderbolt",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem-sleep%2Ft2-thunderbolt?ref=4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+      "patch": "@@ -0,0 +1,82 @@\n+#!/bin/bash\n+\n+# The Titan Ridge Thunderbolt controllers on T2 Macs lose power in deep sleep.\n+# Left in place, the kernel resumes them serially and waits about 6 s per\n+# controller for its firmware plus about 3 s per NHI, which is most of the 20 s\n+# a lid-open takes. Remove them before sleeping so resume has nothing to wait\n+# for, then re-enumerate in the background once they have powered back up.\n+\n+state=/run/omarchy-t2-thunderbolt\n+\n+titan_ridge_bridges() {\n+  local dev\n+  for dev in /sys/bus/pci/devices/*; do\n+    [[ -r $dev/vendor && $(<\"$dev/vendor\") == 0x8086 && $(<\"$dev/device\") == 0x15ea ]] && echo \"$dev\"\n+  done\n+}\n+\n+# Upstream ports sit directly on a CPU/PCH root port.\n+tb_upstream_bridges() {\n+  local dev parent\n+  for dev in $(titan_ridge_bridges); do\n+    parent=$(basename \"$(readlink -f \"$dev/..\")\")\n+    [[ $parent == 0000:00:* ]] && echo \"$dev\"\n+  done\n+}\n+\n+# Downstream ports hang off another Titan Ridge bridge.\n+tb_downstream_bridges() {\n+  local dev parent\n+  for dev in $(titan_ridge_bridges); do\n+    parent=$(basename \"$(readlink -f \"$dev/..\")\")\n+    [[ $parent == 0000:00:* ]] || echo \"$dev\"\n+  done\n+}\n+\n+has_children() {\n+  compgen -G \"$1/0000:*\" >/dev/null\n+}\n+\n+# The integrated xHCI does not answer config cycles after the power cycle until\n+# its downstream port is reset (Bridge Control bit 6, secondary bus reset).\n+reset_secondary_bus() {\n+  local addr=${1##*/} ctl\n+  ctl=$(setpci -s \"$addr\" BRIDGE_CONTROL)\n+  setpci -s \"$addr\" BRIDGE_CONTROL=\"$(printf '%04x' $(( 0x$ctl | 0x40 )))\"\n+  sleep 0.01\n+  setpci -s \"$addr\" BRIDGE_CONTROL=\"$ctl\"\n+}\n+\n+case $1 in\n+  pre)\n+    count=0\n+    for dev in $(tb_upstream_bridges); do\n+      echo 1 > \"$dev/remove\" && count=$((count + 1))\n+    done\n+    # A controller the last resume's rescan has not brought back yet is still\n+    # one to bring back. A suspend inside that window must not lower the count\n+    # the next resume works from, or the controllers stay off the bus for good.\n+    previous=$(cat \"$state\" 2>/dev/null)\n+    [[ $previous =~ ^[0-9]+$ ]] || previous=0\n+    (( count < previous )) && count=$previous\n+    echo \"$count\" > \"$state\"\n+    ;;\n+  post)\n+    expected=$(cat \"$state\" 2>/dev/null || echo 0)\n+    (( expected > 0 )) || exit 0\n+    (\n+      for _ in $(seq 1 30); do\n+        echo 1 > /sys/bus/pci/rescan\n+        (( $(tb_upstream_bridges | wc -l) >= expected )) && break\n+        sleep 1\n+      done\n+      sleep 1\n+      echo 1 > /sys/bus/pci/rescan\n+      for dev in $(tb_downstream_bridges); do\n+        has_children \"$dev\" || reset_secondary_bus \"$dev\"\n+      done\n+      sleep 1\n+      echo 1 > /sys/bus/pci/rescan\n+    ) &\n+    ;;\n+esac"
+    },
+    {
+      "sha": "d2037fa6eba7231f6090f38a4499d70f68a5c140",
+      "filename": "docs/file-layout.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/docs%2Ffile-layout.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/docs%2Ffile-layout.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/docs%2Ffile-layout.md?ref=4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+      "patch": "@@ -139,7 +139,7 @@ logo.{txt,svg}, icon.{txt,png}  \u2500\u2500\u25ba omarchy-settings    /usr/share/omarchy\n                                                         /etc/skel/.config/omarchy/branding/{about,screensaver}.txt\n ```\n \n-The hardware-conditional `force-igpu` and `keyboard-backlight` sources also live under `default/systemd/system-sleep/`, but their setup commands publish root-owned copies only on machines that need them; they are not installed by `omarchy-settings`.\n+The hardware-conditional `force-igpu`, `keyboard-backlight` and `t2-thunderbolt` sources also live under `default/systemd/system-sleep/`, but their setup commands publish root-owned copies only on machines that need them (`t2-thunderbolt` lands as `omarchy-t2-thunderbolt` from the T2 Mac installer); they are not installed by `omarchy-settings`.\n \n ### Why `etc-overrides/` exists\n "
+    },
+    {
+      "sha": "0db62f25940ac5af7425e4d136a8cb29de1129cd",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 0,
+      "changes": 6,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+      "patch": "@@ -26,6 +26,12 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n   echo \"MODULES+=(t2bce_vhci usbhid hid_apple hid_generic xhci_pci xhci_hcd)\" > \\\n     /etc/mkinitcpio.conf.d/apple-t2.conf\n \n+  # The Thunderbolt controllers lose power in deep sleep and the kernel then\n+  # spends ~18 s of every resume waiting on them, one after another. The sleep\n+  # hook takes them out before suspend and re-enumerates them after.\n+  install -Dm755 \"$OMARCHY_PATH/default/systemd/system-sleep/t2-thunderbolt\" \\\n+    /usr/lib/systemd/system-sleep/omarchy-t2-thunderbolt\n+\n   mkdir -p /etc/limine-entry-tool.d\n   cat > /etc/limine-entry-tool.d/t2-mac.conf <<'EOF'\n # Generated by Omarchy installer for T2 Mac support"
+    },
+    {
+      "sha": "b98fe37fdaa82e967f21227d3c8c9c921ae3db16",
+      "filename": "migrations/1788110186.sh",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/migrations%2F1788110186.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/migrations%2F1788110186.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788110186.sh?ref=4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+      "patch": "@@ -0,0 +1,16 @@\n+echo \"Stop T2 Mac resume from waiting on the Thunderbolt controllers\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+hook=\"${OMARCHY_T2_THUNDERBOLT_HOOK:-/usr/lib/systemd/system-sleep/omarchy-t2-thunderbolt}\"\n+\n+if [[ -x $hook ]]; then\n+  exit 0\n+fi\n+\n+# The Thunderbolt controllers lose power in deep sleep and the kernel then\n+# spends ~18 s of every resume waiting on them, one after another. The sleep\n+# hook takes them out before suspend and re-enumerates them after.\n+sudo install -Dm755 \"$OMARCHY_PATH/default/systemd/system-sleep/t2-thunderbolt\" \"$hook\""
+    },
+    {
+      "sha": "22705119b636d8ded87e65ae3650487f75dcb225",
+      "filename": "test/shell.d/t2-hardware-test.sh",
+      "status": "modified",
+      "additions": 54,
+      "deletions": 0,
+      "changes": 54,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4f0a97b05da0422ff9a38e9acc2acb01c7c08b67/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-hardware-test.sh?ref=4f0a97b05da0422ff9a38e9acc2acb01c7c08b67",
+      "patch": "@@ -7,6 +7,8 @@ source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n other_packages=\"$ROOT/install/omarchy-other.packages\"\n migration=\"$ROOT/migrations/1785944594.sh\"\n+tb_hook=\"$ROOT/default/systemd/system-sleep/t2-thunderbolt\"\n+tb_migration=\"$ROOT/migrations/1788110186.sh\"\n \n grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep\"' \"$fix_t2\" ||\n   fail \"T2 setup installs the suspend kernel parameters\"\n@@ -20,6 +22,17 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"T2 setup leaves optional Touch Bar customization uninstalled\"\n ! grep -qx 'tiny-dfr' \"$other_packages\" ||\n   fail \"the ISO no longer caches tiny-dfr\"\n+grep -Fq 'install -Dm755 \"$OMARCHY_PATH/default/systemd/system-sleep/t2-thunderbolt\"' \"$fix_t2\" ||\n+  fail \"T2 setup installs the Thunderbolt sleep hook executable\"\n+[[ -x $tb_hook ]] || fail \"the Thunderbolt sleep hook is tracked executable\"\n+grep -Fq 'echo 1 > \"$dev/remove\"' \"$tb_hook\" ||\n+  fail \"the Thunderbolt sleep hook removes the controllers before sleep\"\n+grep -Fq 'echo 1 > /sys/bus/pci/rescan' \"$tb_hook\" ||\n+  fail \"the Thunderbolt sleep hook re-enumerates the controllers after resume\"\n+grep -Fq 'BRIDGE_CONTROL' \"$tb_hook\" ||\n+  fail \"the Thunderbolt sleep hook resets childless downstream ports for the xHCI\"\n+grep -Fq '(( count < previous )) && count=$previous' \"$tb_hook\" ||\n+  fail \"the Thunderbolt sleep hook keeps the controller count across back-to-back suspends\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n test_tmp=$(mktemp -d)\n@@ -212,3 +225,44 @@ grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n   fail \"T2 rerun migration rebuilds the boot image\"\n [[ -f $repair_marker ]] || fail \"T2 rerun migration records the machine-wide repair\"\n pass \"T2 rerun migration repairs installs the broken hardware check skipped\"\n+\n+tb_hook_target=\"$test_tmp/system-sleep/omarchy-t2-thunderbolt\"\n+rm -rf \"$test_tmp/system-sleep\"\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=1 \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_T2_THUNDERBOLT_HOOK=\"$tb_hook_target\" \\\n+  bash -euo pipefail \"$tb_migration\" >/dev/null\n+\n+cmp -s \"$tb_hook\" \"$tb_hook_target\" || fail \"T2 Thunderbolt migration installs the shipped sleep hook\"\n+[[ -x $tb_hook_target ]] || fail \"T2 Thunderbolt migration installs the hook executable\"\n+pass \"T2 Thunderbolt migration installs the sleep hook on existing installs\"\n+\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=1 \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_T2_THUNDERBOLT_HOOK=\"$tb_hook_target\" \\\n+  bash -euo pipefail \"$tb_migration\" >/dev/null\n+\n+[[ ! -s $calls ]] || fail \"an already repaired T2 install is left unchanged\" \"$(cat \"$calls\")\"\n+pass \"T2 Thunderbolt migration is idempotent\"\n+\n+rm -rf \"$test_tmp/system-sleep\"\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=0 \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_T2_THUNDERBOLT_HOOK=\"$tb_hook_target\" \\\n+  bash -euo pipefail \"$tb_migration\" >/dev/null\n+\n+[[ ! -e $tb_hook_target ]] || fail \"non-T2 systems get no Thunderbolt sleep hook\"\n+[[ ! -s $calls ]] || fail \"non-T2 systems skip the Thunderbolt repair\" \"$(cat \"$calls\")\"\n+pass \"T2 Thunderbolt migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

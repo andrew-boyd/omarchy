@@ -1,0 +1,104 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10125",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "baffin-capture"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "399665b58a317c50ff134555a9d9188d10ab4c9e",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10125,
+  "checked_at": "2026-09-21T11:56:00.880840+00:00",
+  "title": "Avoid Baffin GPU hangs during screen recording",
+  "author": "andrewrbrady",
+  "head_sha": "399665b58a317c50ff134555a9d9188d10ab4c9e",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:14Z",
+  "state": "open",
+  "body": "## Problem\n\nHardware encoding on AMD Baffin (`1002:67ef`, Radeon Pro 450/455/460) can hang the VCE 3.x encode ring. The subsequent GPU reset can lose compositor VRAM, terminate the graphical session, and leave an unusable recording. `-fallback-cpu-encoding yes` cannot recover after the GPU has already hung.\n\nFixes #9555.\n\n## Fix\n\nDetect the affected PCI device before starting `gpu-screen-recorder` and select its existing CPU encoder. All other GPUs retain the current automatic encoder selection.\n\n## Verification\n\n- Added regression coverage for an Intel + Baffin hybrid system\n- Added coverage confirming unaffected GPUs keep automatic selection\n- `bash test/shell.d/screenrecording-encoder-test.sh`\n- `./test/cli`\n- `git diff --check`\n- Recorded and visually inspected a 2880x1800, 60 fps H.264 capture on the affected MacBook Pro",
+  "draft": false,
+  "files": [
+    {
+      "sha": "095be7cba704da5eaa61fc12e3e22a320c9236b7",
+      "filename": "bin/omarchy-capture-screenrecording",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 1,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/399665b58a317c50ff134555a9d9188d10ab4c9e/bin%2Fomarchy-capture-screenrecording",
+      "raw_url": "https://github.com/omacom/omarchy/raw/399665b58a317c50ff134555a9d9188d10ab4c9e/bin%2Fomarchy-capture-screenrecording",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-capture-screenrecording?ref=399665b58a317c50ff134555a9d9188d10ab4c9e",
+      "patch": "@@ -122,6 +122,14 @@ default_resolution() {\n   fi\n }\n \n+screenrecording_needs_cpu_encoder() {\n+  # Radeon Pro 450/455/460 cards can hang their VCE 3.x encode ring and lose\n+  # compositor VRAM when the ensuing GPU reset fails (#9555). The recorder's\n+  # fallback cannot recover from a GPU that has already hung, so avoid starting\n+  # hardware encoding on Baffin altogether.\n+  LC_ALL=C lspci -Dn | grep -qE '[[:space:]]1002:67ef([[:space:]]|$)'\n+}\n+\n # Echoes \"monitor:NAME\" when the selection matches an entire monitor (prefer\n # -w <monitor> over a region capture \u2014 same kms backend, but no scaling math\n # and full native res), otherwise \"region:WxH+X+Y\". Returns non-zero if the\n@@ -176,6 +184,11 @@ start_screenrecording() {\n   local filename=\"$OUTPUT_DIR/screenrecording-$(date +'%Y-%m-%d_%H-%M-%S').mp4\"\n   local audio_devices=\"\"\n   local audio_args=()\n+  local encoder_args=()\n+\n+  if screenrecording_needs_cpu_encoder; then\n+    encoder_args=(-encoder cpu)\n+  fi\n \n   [[ $DESKTOP_AUDIO == \"true\" ]] && audio_devices+=\"default_output\"\n \n@@ -188,7 +201,7 @@ start_screenrecording() {\n   [[ -n $audio_devices ]] && audio_args+=(-a \"$audio_devices\" -ac aac)\n \n   echo \"===== $(date '+%F %T') args: $* target: $target =====\" >>\"$LOG_FILE\"\n-  gpu-screen-recorder \"${capture_args[@]}\" -k auto -f 60 -fm cfr -fallback-cpu-encoding yes -o \"$filename\" \"${audio_args[@]}\" 2>>\"$LOG_FILE\" &\n+  gpu-screen-recorder \"${capture_args[@]}\" \"${encoder_args[@]}\" -k auto -f 60 -fm cfr -fallback-cpu-encoding yes -o \"$filename\" \"${audio_args[@]}\" 2>>\"$LOG_FILE\" &\n   local pid=$!\n \n   while kill -0 $pid 2>/dev/null && [[ ! -f $filename ]]; do"
+    },
+    {
+      "sha": "b4ad55aa77d41f04b007b687a60b28bfa06e5757",
+      "filename": "test/shell.d/screenrecording-encoder-test.sh",
+      "status": "added",
+      "additions": 69,
+      "deletions": 0,
+      "changes": 69,
+      "blob_url": "https://github.com/omacom/omarchy/blob/399665b58a317c50ff134555a9d9188d10ab4c9e/test%2Fshell.d%2Fscreenrecording-encoder-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/399665b58a317c50ff134555a9d9188d10ab4c9e/test%2Fshell.d%2Fscreenrecording-encoder-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fscreenrecording-encoder-test.sh?ref=399665b58a317c50ff134555a9d9188d10ab4c9e",
+      "patch": "@@ -0,0 +1,69 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(dirname \"$0\")/base-test.sh\"\n+\n+tmp_dir=$(mktemp -d)\n+trap 'rm -rf \"$tmp_dir\"' EXIT\n+\n+stub_bin=\"$tmp_dir/bin\"\n+mkdir -p \"$stub_bin\" \"$tmp_dir/Videos\"\n+\n+cat >\"$stub_bin/gpu-screen-recorder\" <<'SH'\n+#!/bin/bash\n+\n+printf '%s\\n' \"$@\" >\"$OMARCHY_TEST_RECORDER_ARGS\"\n+while (($#)); do\n+  if [[ $1 == \"-o\" ]]; then\n+    touch \"$2\"\n+    break\n+  fi\n+  shift\n+done\n+SH\n+\n+cat >\"$stub_bin/hyprctl\" <<'SH'\n+#!/bin/bash\n+\n+printf '%s\\n' '[{\"focused\":true,\"width\":1920,\"height\":1080}]'\n+SH\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+printf '%s\\n' \"$OMARCHY_TEST_PCI_DEVICES\"\n+SH\n+\n+for command in omarchy-hyprland-monitor-focused omarchy-shell omarchy-notification-send; do\n+  cat >\"$stub_bin/$command\" <<'SH'\n+#!/bin/bash\n+\n+[[ ${0##*/} == \"omarchy-hyprland-monitor-focused\" ]] && echo \"eDP-1\"\n+SH\n+done\n+\n+chmod +x \"$stub_bin\"/*\n+\n+export HOME=\"$tmp_dir\"\n+export PATH=\"$stub_bin:$PATH\"\n+export OMARCHY_SCREENRECORD_DIR=\"$tmp_dir/Videos\"\n+export OMARCHY_TEST_RECORDER_ARGS=\"$tmp_dir/recorder-args\"\n+\n+run_recorder() {\n+  rm -f \"$OMARCHY_TEST_RECORDER_ARGS\" \"$tmp_dir\"/Videos/*\n+  OMARCHY_TEST_PCI_DEVICES=\"$1\" \"$ROOT/bin/omarchy-capture-screenrecording\" --fullscreen\n+  [[ -f $OMARCHY_TEST_RECORDER_ARGS ]] || fail \"$2 did not start the recorder\"\n+}\n+\n+run_recorder $'0000:00:02.0 0300: 8086:191b (rev 06)\\n0000:01:00.0 0300: 1002:67ef (rev c0)' \"Baffin detection\"\n+grep -Fx -- \"-encoder\" \"$OMARCHY_TEST_RECORDER_ARGS\" >/dev/null &&\n+  grep -Fx -- \"cpu\" \"$OMARCHY_TEST_RECORDER_ARGS\" >/dev/null ||\n+  fail \"Baffin forces CPU encoding\"\n+pass \"Baffin forces CPU encoding\"\n+\n+run_recorder \"0000:01:00.0 0300: 1002:73df (rev c1)\" \"unaffected GPU detection\"\n+if grep -Fx -- \"-encoder\" \"$OMARCHY_TEST_RECORDER_ARGS\" >/dev/null; then\n+  fail \"unaffected GPUs preserve automatic encoder selection\"\n+fi\n+pass \"unaffected GPUs preserve automatic encoder selection\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5554610357",
+      "html_url": "https://github.com/omacom/omarchy/pull/10125#issuecomment-5554610357",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10125",
+      "id": 5554610357,
+      "node_id": "IC_kwDOO0Cobs8AAAABSxSgtQ",
+      "user": {
+        "login": "dec05eba",
+        "id": 66856951,
+        "node_id": "MDQ6VXNlcjY2ODU2OTUx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/66856951?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dec05eba",
+        "html_url": "https://github.com/dec05eba",
+        "followers_url": "https://api.github.com/users/dec05eba/followers",
+        "following_url": "https://api.github.com/users/dec05eba/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dec05eba/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dec05eba/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dec05eba/subscriptions",
+        "organizations_url": "https://api.github.com/users/dec05eba/orgs",
+        "repos_url": "https://api.github.com/users/dec05eba/repos",
+        "events_url": "https://api.github.com/users/dec05eba/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dec05eba/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-05T20:35:02Z",
+      "updated_at": "2026-09-05T20:35:47Z",
+      "body": "Another solution is to use hevc on those devices until the issue is fixed in the kernel as hevc doesn't have that issue: https://gitlab.freedesktop.org/drm/amd/-/work_items/5595\r\nalthough that might cause compatibility issues with other software",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5554610357/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

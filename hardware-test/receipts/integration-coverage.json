@@ -1,0 +1,885 @@
+{
+  "combined_heads": {
+    "omarchy": "6096d649643d0d0e0bae65c7949e5043bf2cc338",
+    "omarchy-pkgs": "25712c910f80fdf5989c6434e3e2fa8830ec2581"
+  },
+  "feature_branch_count": 17,
+  "production_path_comparisons": 87,
+  "byte_identical_comparisons": 78,
+  "explained_differences": 9,
+  "unexplained_differences": 0,
+  "published_history_and_reconciled_base_preserved": true,
+  "qualification": "Source comparison, not a test pass. Combined VM results establish behavior only for the exact combined source. Differing standalone files retain their separate validation requirements.",
+  "files": [
+    {
+      "id": "P01",
+      "feature_head": "2e7b38893f12d4dda5f5c478997a2f65531ee196",
+      "path": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "same_production_bytes": true,
+      "feature_sha256": "13432a7a87a03f98158bbeedde3d80360cc4f81e2322bf6dd98451f094daf446",
+      "combined_sha256": "13432a7a87a03f98158bbeedde3d80360cc4f81e2322bf6dd98451f094daf446",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P02",
+      "feature_head": "803260c8feff6d9ed5dbac60d5f630cd45ae1b56",
+      "path": "migrations/1789546355.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9",
+      "combined_sha256": "75df90adbff83e407500d3b845c5a3bdcf3e1be29b774315a0da83146987b5c9",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "bin/omarchy-hw-bcm43xx",
+      "same_production_bytes": true,
+      "feature_sha256": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866",
+      "combined_sha256": "3730b56883741b5a85947edc7132b01bbdccd795b87259e4b1589a322cfa0866",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "bin/omarchy-hw-t2",
+      "same_production_bytes": true,
+      "feature_sha256": "d4854de9fed2a0b03b5c9784d61c5b78155d9466e23a62482c8c7acb0fd3861c",
+      "combined_sha256": "d4854de9fed2a0b03b5c9784d61c5b78155d9466e23a62482c8c7acb0fd3861c",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "install/hardware/apple/fix-t2.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9",
+      "combined_sha256": "68bdc8cd277b230c49e9e8785a7a2c5e9b88594e0de3b70a1b1eb110c704fab9",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "install/hardware/fix-bcm43xx.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d",
+      "combined_sha256": "7b7bfe715e2cfc8b21bbdba28e56fbe7e8c3d5dcbd8dc8110fffc894ae89187d",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "install/hardware/nvidia.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "25417ff6340279486d937a3f68670b28a5cbf829e85961443db431a32a074718",
+      "combined_sha256": "25417ff6340279486d937a3f68670b28a5cbf829e85961443db431a32a074718",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "install/hardware/pacman.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2",
+      "combined_sha256": "c796663a8b8d13474af526f84d62c2164e0957f7c110ae8a2108b744100a5ba2",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P03",
+      "feature_head": "c10fd0fa5a5912d2a8a8668303df3366179ef7ef",
+      "path": "install/hardware/vulkan.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366",
+      "combined_sha256": "6d5975697ea2e785e6564293c4c1a2468713cd415749dc11758996c126b48366",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P04",
+      "feature_head": "a21829e80e6ecc3ef751a98863030a0314e98a2f",
+      "path": "bin/omarchy-system-lid-close",
+      "same_production_bytes": true,
+      "feature_sha256": "4799cadd69793424468ae79b0a442155f446d5fe6c5a54d48c34bdaae763ecd1",
+      "combined_sha256": "4799cadd69793424468ae79b0a442155f446d5fe6c5a54d48c34bdaae763ecd1",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P05",
+      "feature_head": "7c880e9c3add9df83ad154951198d2323d6da274",
+      "path": "bin/omarchy-hyprland-monitor-disable-ghosts",
+      "same_production_bytes": true,
+      "feature_sha256": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73",
+      "combined_sha256": "46de204b1e2df3c3eeb8e2dfc7f73f5354b2c59a3253c324d6df68b68e904c73",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P05",
+      "feature_head": "7c880e9c3add9df83ad154951198d2323d6da274",
+      "path": "bin/omarchy-hyprland-monitor-watch",
+      "same_production_bytes": true,
+      "feature_sha256": "254439820dbb959ca439b5f4833bbc6c8725025baab058ae97c899fca7c42ab0",
+      "combined_sha256": "254439820dbb959ca439b5f4833bbc6c8725025baab058ae97c899fca7c42ab0",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P05",
+      "feature_head": "7c880e9c3add9df83ad154951198d2323d6da274",
+      "path": "bin/omarchy-monitor-state",
+      "same_production_bytes": true,
+      "feature_sha256": "d2ad4e659e37fa3e67059ef688258e6a5fafbf00f5ee0e0bd5ea9618c2d5746f",
+      "combined_sha256": "d2ad4e659e37fa3e67059ef688258e6a5fafbf00f5ee0e0bd5ea9618c2d5746f",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P06",
+      "feature_head": "6435b18c195e13203b267d90397699f5019deced",
+      "path": "install/hardware/apple/fix-spi-keyboard.sh",
+      "same_production_bytes": false,
+      "feature_sha256": "923f99127c00bb9a23c8e516abe917024dc229fddaa8a0a6a747090a7a702bc7",
+      "combined_sha256": "4b41d0dca43dad393e29de5394f1c0f0d184ba9be94919550bb31d0b78f60e76",
+      "reason": "Combined source also incorporates P07 model-specific PIO, anchored gating and configuration preservation. Standalone P06 retains its source installer behavior; combined tests do not prove that differing file independently.",
+      "diff": "--- P06/install/hardware/apple/fix-spi-keyboard.sh\n+++ combined/install/hardware/apple/fix-spi-keyboard.sh\n@@ -1,6 +1,6 @@\n # Detect MacBook models that need SPI keyboard modules\n product_name=\"$(cat /sys/class/dmi/id/product_name 2>/dev/null)\"\n-if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n+if [[ $product_name =~ ^(MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123])$ ]]; then\n   echo \"Detected MacBook with SPI keyboard\"\n \n   # macbook12-spi-driver-dkms is obsolete: applespi is mainlined (it ships in\n@@ -8,12 +8,38 @@\n   # removed in 6.12), so the DKMS build fails on every kernel update once\n   # linux-headers is present. Only the initramfs drop-in below is needed to\n   # get the in-tree module into the initramfs (load-bearing for LUKS roots).\n+  if [[ $product_name == \"MacBook8,1\" ]]; then\n+    expected_modules=\"MODULES+=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\"\n+\n+    # The Wildcat Point GSPI controller (00:15.4) does transfers through the\n+    # companion DesignWare DMA engine (00:15.0). On this board those DMA\n+    # transfers never complete: applespi times out with -110 and IRQ 21 stays\n+    # at zero. dw_dmac_pci is builtin, so it cannot be blacklisted as a module.\n+    # Blacklisting its initcall forces spi-pxa2xx into PIO, which works.\n+    # Deep/S3 sleep then wedges the same SPI device until reboot; s2idle does not.\n+    pio=/etc/limine-entry-tool.d/macbook81-spi-pio.conf\n+    expected_pio=$(cat <<'EOF'\n+# MacBook8,1: DesignWare DMA never completes GSPI transfers.\n+KERNEL_CMDLINE[default]+=\" initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle\"\n+EOF\n+    )\n+    if [[ -L $pio ]] || { [[ -e $pio ]] && [[ ! -f $pio || $(cat \"$pio\") != \"$expected_pio\" ]]; }; then\n+      echo \"Preserving customized SPI boot parameters: $pio; reconcile them manually before retrying.\" >&2\n+      return 1\n+    fi\n+    sudo mkdir -p /etc/limine-entry-tool.d\n+    printf '%s\\n' \"$expected_pio\" | sudo tee \"$pio\" >/dev/null\n+  else\n+    expected_modules=\"MODULES+=(applespi intel_lpss_pci spi_pxa2xx_platform)\"\n+  fi\n+  modules=/etc/mkinitcpio.conf.d/macbook_spi_modules.conf\n+  if [[ -L $modules ]] || { [[ -e $modules ]] &&\n+    [[ ! -f $modules || ( $(cat \"$modules\") != \"$expected_modules\" &&\n+       $(cat \"$modules\") != \"${expected_modules/+=/=}\" ) ]]; }; then\n+    echo \"Preserving customized SPI module configuration: $modules; reconcile it manually before retrying.\" >&2\n+    return 1\n+  fi\n   sudo mkdir -p /etc/mkinitcpio.conf.d\n-  if [[ $product_name == \"MacBook8,1\" ]]; then\n-    echo \"MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\" | \\\n-      sudo tee /etc/mkinitcpio.conf.d/macbook_spi_modules.conf >/dev/null\n-  else\n-    echo \"MODULES=(applespi intel_lpss_pci spi_pxa2xx_platform)\" | \\\n-      sudo tee /etc/mkinitcpio.conf.d/macbook_spi_modules.conf >/dev/null\n-  fi\n+  # Keep modules contributed by the main config and other drop-ins.\n+  printf '%s\\n' \"$expected_modules\" | sudo tee \"$modules\" >/dev/null\n fi\n"
+    },
+    {
+      "id": "P06",
+      "feature_head": "6435b18c195e13203b267d90397699f5019deced",
+      "path": "install/omarchy-other.packages",
+      "same_production_bytes": false,
+      "feature_sha256": "53440af1c7a3510db792a9418202f01f6ec70d349717ff47e87615ecdb1de9ff",
+      "combined_sha256": "5901a99d2073f390aeb06e9be5a5a5ac0df2b3331e327708e0d4cb28cefd2b3a",
+      "reason": "Combined optional-package list merges P06 legacy SPI retirement, P08 FaceTime packages and P11 MacBook audio packages. Hardware selection remains in the individual installer leaves.",
+      "diff": "--- P06/install/omarchy-other.packages\n+++ combined/install/omarchy-other.packages\n@@ -23,6 +23,7 @@\n linux-firmware\n linux-omarchy\n linux-omarchy-headers\n+macbook12-audio-driver-dkms\n nvidia-580xx-dkms\n nvidia-dkms\n nvidia-open-dkms\n@@ -70,5 +71,10 @@\n linux-t2-headers\n t2fanrd\n \n+# FaceTime HD camera on 2013\u20132015 Intel Macs\n+facetimehd-dkms\n+facetimehd-firmware\n+facetimehd-data\n+\n # Framework 16\n qmk-hid\n"
+    },
+    {
+      "id": "P06",
+      "feature_head": "6435b18c195e13203b267d90397699f5019deced",
+      "path": "migrations/1788476400.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "b44d2c59b6a78dc78a8de6b6d82dfb03ab14d1fa819986a764daf0972ed9080a",
+      "combined_sha256": "b44d2c59b6a78dc78a8de6b6d82dfb03ab14d1fa819986a764daf0972ed9080a",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P07",
+      "feature_head": "612908e346bfdacd31bd0d70d27955d73803f52e",
+      "path": "install/hardware/apple/fix-spi-keyboard.sh",
+      "same_production_bytes": false,
+      "feature_sha256": "5405dfa40dd92b4e2e5c2f752599b51b627693441de493bc38d22fbe119d55af",
+      "combined_sha256": "4b41d0dca43dad393e29de5394f1c0f0d184ba9be94919550bb31d0b78f60e76",
+      "reason": "Standalone P07 retains the legacy SPI package; the combined candidate removes that package through P06 and retains P07 module/PIO configuration.",
+      "diff": "--- P07/install/hardware/apple/fix-spi-keyboard.sh\n+++ combined/install/hardware/apple/fix-spi-keyboard.sh\n@@ -3,7 +3,11 @@\n if [[ $product_name =~ ^(MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123])$ ]]; then\n   echo \"Detected MacBook with SPI keyboard\"\n \n-  omarchy-pkg-add macbook12-spi-driver-dkms\n+  # macbook12-spi-driver-dkms is obsolete: applespi is mainlined (it ships in\n+  # the linux package, and its header that the out-of-tree copy needs was\n+  # removed in 6.12), so the DKMS build fails on every kernel update once\n+  # linux-headers is present. Only the initramfs drop-in below is needed to\n+  # get the in-tree module into the initramfs (load-bearing for LUKS roots).\n   if [[ $product_name == \"MacBook8,1\" ]]; then\n     expected_modules=\"MODULES+=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\"\n \n"
+    },
+    {
+      "id": "P07",
+      "feature_head": "612908e346bfdacd31bd0d70d27955d73803f52e",
+      "path": "migrations/1788318101.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "8a50938cc23857d38e5d632363aeca09a8417ef6cf5f1db33b50cdc9aa2815d5",
+      "combined_sha256": "8a50938cc23857d38e5d632363aeca09a8417ef6cf5f1db33b50cdc9aa2815d5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08",
+      "feature_head": "002c0f11f75ae7ec7d3594752639ba786e433c80",
+      "path": "bin/omarchy-hw-facetimehd",
+      "same_production_bytes": true,
+      "feature_sha256": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+      "combined_sha256": "b2c3ffe46fd8da9e846ec30430e59a2e5c4038abbdbb3ad0fe0e2cadd1c030dc",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08",
+      "feature_head": "002c0f11f75ae7ec7d3594752639ba786e433c80",
+      "path": "install/hardware/all.sh",
+      "same_production_bytes": false,
+      "feature_sha256": "2e9c3b32c4dce1245e26c15169018d7f1345a42b704d36591b3253006cb5942f",
+      "combined_sha256": "150b14437c7955acafb32ef49cd8f2826979ca2f0e10ed6c9cf480887e833d53",
+      "reason": "Combined installer invokes all three selected camera, Broadcom and audio feature leaves; the standalone branch adds only its own feature wiring.",
+      "diff": "--- P08/install/hardware/all.sh\n+++ combined/install/hardware/all.sh\n@@ -32,10 +32,15 @@\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs8409-audio.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs4208-audio.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-facetimehd.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-bcm43602-nvram.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-5ghz.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n \n"
+    },
+    {
+      "id": "P08",
+      "feature_head": "002c0f11f75ae7ec7d3594752639ba786e433c80",
+      "path": "install/hardware/apple/fix-facetimehd.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891",
+      "combined_sha256": "2f1567c28a4c35a2a8581208e2057865001a10775cfad73f8683f13e66d32891",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08",
+      "feature_head": "002c0f11f75ae7ec7d3594752639ba786e433c80",
+      "path": "install/omarchy-other.packages",
+      "same_production_bytes": false,
+      "feature_sha256": "9c0e9b41df13db8a37e7b809ea5948b7cb3dbe8c90d3f305fc8f88e95fd38bdf",
+      "combined_sha256": "5901a99d2073f390aeb06e9be5a5a5ac0df2b3331e327708e0d4cb28cefd2b3a",
+      "reason": "Combined optional-package list merges P06 legacy SPI retirement, P08 FaceTime packages and P11 MacBook audio packages. Hardware selection remains in the individual installer leaves.",
+      "diff": "--- P08/install/omarchy-other.packages\n+++ combined/install/omarchy-other.packages\n@@ -23,7 +23,7 @@\n linux-firmware\n linux-omarchy\n linux-omarchy-headers\n-macbook12-spi-driver-dkms\n+macbook12-audio-driver-dkms\n nvidia-580xx-dkms\n nvidia-dkms\n nvidia-open-dkms\n"
+    },
+    {
+      "id": "P08",
+      "feature_head": "002c0f11f75ae7ec7d3594752639ba786e433c80",
+      "path": "migrations/1789542390.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "98c28a28296442f5df74bb0707d34f97015b6dca2cd035ce7128a4efd7e0b01b",
+      "combined_sha256": "98c28a28296442f5df74bb0707d34f97015b6dca2cd035ce7128a4efd7e0b01b",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-data/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "0bb57ddeef94b128356d71b173c74a5ec1c429c304ddbfe32159025fe99fe8c4",
+      "combined_sha256": "0bb57ddeef94b128356d71b173c74a5ec1c429c304ddbfe32159025fe99fe8c4",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-data/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "7ac44a2cffd356b202ee34a731fc8902791b06f53f888fbd957b17bd8047db3a",
+      "combined_sha256": "7ac44a2cffd356b202ee34a731fc8902791b06f53f888fbd957b17bd8047db3a",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-dkms/.nvchecker.toml",
+      "same_production_bytes": true,
+      "feature_sha256": "1876bd0c6249ce004c3f2120d63c6de2de3d6210b4ddb52844b855efca5d9bc0",
+      "combined_sha256": "1876bd0c6249ce004c3f2120d63c6de2de3d6210b4ddb52844b855efca5d9bc0",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-dkms/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "003685b359cd6eb364f55d8a41b379c808fa77c939acb5bf6c5977f29443956a",
+      "combined_sha256": "003685b359cd6eb364f55d8a41b379c808fa77c939acb5bf6c5977f29443956a",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-dkms/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "7fba462d8b473f6bd3d0829fc2abd30f7ddbcdc80f79bae7db79bbc121a82e20",
+      "combined_sha256": "7fba462d8b473f6bd3d0829fc2abd30f7ddbcdc80f79bae7db79bbc121a82e20",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-firmware/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "a7ba66c7195333428c6163739ccb7f15549acef7499e8d32e3b04da0a9b8d319",
+      "combined_sha256": "a7ba66c7195333428c6163739ccb7f15549acef7499e8d32e3b04da0a9b8d319",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-firmware/LicenseRef-Apple.tar.xz",
+      "same_production_bytes": true,
+      "feature_sha256": "f4e84968cf4105c1545638c99116735c349d32695c5bf9ac74d7a99eab3fcebe",
+      "combined_sha256": "f4e84968cf4105c1545638c99116735c349d32695c5bf9ac74d7a99eab3fcebe",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P08-packages",
+      "feature_head": "16f57d2aedb47a88b0b49cba59781f3c18c96af3",
+      "path": "pkgbuilds/facetimehd-firmware/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "2a7971acac284695c37d03711874479f5525b7131e85efa0574380e6160429a8",
+      "combined_sha256": "2a7971acac284695c37d03711874479f5525b7131e85efa0574380e6160429a8",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P09",
+      "feature_head": "1c577ec5c339d02b386db959e15af40175a8a8e6",
+      "path": "default/systemd/system/omarchy-nvme-suspend-fix.service",
+      "same_production_bytes": true,
+      "feature_sha256": "9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab",
+      "combined_sha256": "9c4a9bd9cb1d296af737deaedca110ac1d009d226f623b07432a7793929a1dab",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P09",
+      "feature_head": "1c577ec5c339d02b386db959e15af40175a8a8e6",
+      "path": "install/hardware/apple/fix-suspend-nvme.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "fe6477cc48b756f59e8755943f26f21a588b2fe75742c0fa1cd75b4d29f52671",
+      "combined_sha256": "fe6477cc48b756f59e8755943f26f21a588b2fe75742c0fa1cd75b4d29f52671",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P09",
+      "feature_head": "1c577ec5c339d02b386db959e15af40175a8a8e6",
+      "path": "migrations/1789274148.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "c4f3c3a0ac74e07f8cbccdbb6031e975f27ba7d36d1690dc43b27874658dd24b",
+      "combined_sha256": "c4f3c3a0ac74e07f8cbccdbb6031e975f27ba7d36d1690dc43b27874658dd24b",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "default/firmware/apple/brcmfmac43602-pcie.txt",
+      "same_production_bytes": true,
+      "feature_sha256": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+      "combined_sha256": "96348380228b1f4a39c83dff3c7c7524e6e079f18a8eadba4941f1e5bb463ee5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "default/systemd/system-sleep/rebind-brcmfmac",
+      "same_production_bytes": true,
+      "feature_sha256": "f3b1b42e842306136cd4eb3dc388448fd9a41f2a275047f14604469c0295b4f1",
+      "combined_sha256": "f3b1b42e842306136cd4eb3dc388448fd9a41f2a275047f14604469c0295b4f1",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "install/hardware/all.sh",
+      "same_production_bytes": false,
+      "feature_sha256": "f77dfc960132afe30e8ebda07c75460895bf8fcd9ad874b38137c5da129de63a",
+      "combined_sha256": "150b14437c7955acafb32ef49cd8f2826979ca2f0e10ed6c9cf480887e833d53",
+      "reason": "Combined installer invokes all three selected camera, Broadcom and audio feature leaves; the standalone branch adds only its own feature wiring.",
+      "diff": "--- P10/install/hardware/all.sh\n+++ combined/install/hardware/all.sh\n@@ -32,9 +32,12 @@\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs8409-audio.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs4208-audio.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-facetimehd.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-bcm43602-nvram.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-5ghz.sh\"\n"
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "install/hardware/apple/brcmfmac-43602.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+      "combined_sha256": "33e8c1b225b8314ce7b22308259f80a924a02552c30ad61daf5926e8792ba2ee",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "install/hardware/apple/fix-bcm43602-nvram.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+      "combined_sha256": "9bc3045074dfa95e2323ebd76aba06c8f7cbb24023824551c5c01ac541e7a07c",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "install/hardware/apple/fix-brcmfmac-5ghz.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+      "combined_sha256": "8af61c38e27546cbf6ff546a176bd6760ef02d53517ef59e1678563a54d225c2",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "3052da6be60734248eeba99e933ddedb67cdd8b9386b931d3fb47c04c557bfa4",
+      "combined_sha256": "3052da6be60734248eeba99e933ddedb67cdd8b9386b931d3fb47c04c557bfa4",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "migrations/1787312531.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+      "combined_sha256": "e6c698448340dcf170d5cbce7944ed92970e691472a9c7c3d85866876ce45fdb",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P10",
+      "feature_head": "9ebee0cf1c4b18708dc50c4ab3032e042c32dc7c",
+      "path": "migrations/1789668939.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "88ed060c5a5e14fa076f34a4513b8f0cfd90f0f9742095503e67a77a9c87c0b2",
+      "combined_sha256": "88ed060c5a5e14fa076f34a4513b8f0cfd90f0f9742095503e67a77a9c87c0b2",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "bin/omarchy-hw-apple-cs8409",
+      "same_production_bytes": true,
+      "feature_sha256": "c3eb3820d5a8983292a8aa3db312da7ce54716ab5998dd68e28ffe98b2023e10",
+      "combined_sha256": "c3eb3820d5a8983292a8aa3db312da7ce54716ab5998dd68e28ffe98b2023e10",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "bin/omarchy-hw-imac-cs4208",
+      "same_production_bytes": true,
+      "feature_sha256": "26e6ec0bbd7dcc294f4a69ffd3c633b7c09d0a772025c50b7f5633fc409008d5",
+      "combined_sha256": "26e6ec0bbd7dcc294f4a69ffd3c633b7c09d0a772025c50b7f5633fc409008d5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "default/wireplumber/wireplumber.conf.d/51-macbook-cs4208-softvol.conf",
+      "same_production_bytes": true,
+      "feature_sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+      "combined_sha256": "1a52648d2b8631f782bb145543cb1eccdbe2cb4a6bf6e0c1270c16924ab8506f",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+      "same_production_bytes": true,
+      "feature_sha256": "594cc5b9376c851923573cf5916a5e710f537f5b3474aec78c926635e612bd7a",
+      "combined_sha256": "594cc5b9376c851923573cf5916a5e710f537f5b3474aec78c926635e612bd7a",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/hardware/all.sh",
+      "same_production_bytes": false,
+      "feature_sha256": "5ac34f5589dd6a1361e2cbfd5770c92af87b09c17c03fefb9a06b49fa9232ba5",
+      "combined_sha256": "150b14437c7955acafb32ef49cd8f2826979ca2f0e10ed6c9cf480887e833d53",
+      "reason": "Combined installer invokes all three selected camera, Broadcom and audio feature leaves; the standalone branch adds only its own feature wiring.",
+      "diff": "--- P11/install/hardware/all.sh\n+++ combined/install/hardware/all.sh\n@@ -37,6 +37,10 @@\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-facetimehd.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-bcm43602-nvram.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-5ghz.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n \n"
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "4ede61a1ee28f13142141e3b9216623c79e33b3c4077f6739a3f21a0a2005fa1",
+      "combined_sha256": "4ede61a1ee28f13142141e3b9216623c79e33b3c4077f6739a3f21a0a2005fa1",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/hardware/apple/fix-cs8409-audio.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "86ed0308e85591ff9e014667215577564cc61601dfd3362e5b7bc8302fecde47",
+      "combined_sha256": "86ed0308e85591ff9e014667215577564cc61601dfd3362e5b7bc8302fecde47",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/hardware/apple/omarchy-cs4208-audio.service",
+      "same_production_bytes": true,
+      "feature_sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+      "combined_sha256": "6d3d1f9b15b4683fbecf750e905f3668f796adf96a9247d77f4fb0d594746898",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/omarchy-other.packages",
+      "same_production_bytes": false,
+      "feature_sha256": "8e9ec064d21869fefc7fd95a7112fc48bc5da3ec651bb3dae123b777b82814dc",
+      "combined_sha256": "5901a99d2073f390aeb06e9be5a5a5ac0df2b3331e327708e0d4cb28cefd2b3a",
+      "reason": "Combined optional-package list merges P06 legacy SPI retirement, P08 FaceTime packages and P11 MacBook audio packages. Hardware selection remains in the individual installer leaves.",
+      "diff": "--- P11/install/omarchy-other.packages\n+++ combined/install/omarchy-other.packages\n@@ -23,7 +23,6 @@\n linux-firmware\n linux-omarchy\n linux-omarchy-headers\n-macbook12-spi-driver-dkms\n macbook12-audio-driver-dkms\n nvidia-580xx-dkms\n nvidia-dkms\n@@ -72,5 +71,10 @@\n linux-t2-headers\n t2fanrd\n \n+# FaceTime HD camera on 2013\u20132015 Intel Macs\n+facetimehd-dkms\n+facetimehd-firmware\n+facetimehd-data\n+\n # Framework 16\n qmk-hid\n"
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/user/all.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "46e026042bdafdb1823b5c824fa8132756638039e40fc3cb52df128f7d30fb0d",
+      "combined_sha256": "46e026042bdafdb1823b5c824fa8132756638039e40fc3cb52df128f7d30fb0d",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/user/hardware/apple/fix-cs4208-audio.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "6aaef3589011bd95564525251e29e568ca81f91ac837fb72759431f58cac8c52",
+      "combined_sha256": "6aaef3589011bd95564525251e29e568ca81f91ac837fb72759431f58cac8c52",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "f6e17796af7e3fdc85886202afa71a8e5bd2fe6918e042c49a34d8eaa865bc0e",
+      "combined_sha256": "f6e17796af7e3fdc85886202afa71a8e5bd2fe6918e042c49a34d8eaa865bc0e",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "migrations/1786889011.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "08ee43e6ac782b85bff1a843f886dd58dc9ba0ccd44412f4b5f35066a5d55dd5",
+      "combined_sha256": "08ee43e6ac782b85bff1a843f886dd58dc9ba0ccd44412f4b5f35066a5d55dd5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "migrations/1788673159.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "fea683a5bec3374120c4c3207a9ddc15de30f2c15b819bb31216c5b7e82a975e",
+      "combined_sha256": "fea683a5bec3374120c4c3207a9ddc15de30f2c15b819bb31216c5b7e82a975e",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11",
+      "feature_head": "718268634ed323174a43c2b83690af921019bd83",
+      "path": "migrations/1789869577.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "5d8ca6e9734605cfe12b3abeb1ed612fe85069d3c71bf6e5770c8876b7940a4d",
+      "combined_sha256": "5d8ca6e9734605cfe12b3abeb1ed612fe85069d3c71bf6e5770c8876b7940a4d",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11-packages",
+      "feature_head": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "combined_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11-packages",
+      "feature_head": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "edeb58a211e5fe5f42953f9e07240a7dbfaba08a30ca9c06c36b9aa21b6e16a9",
+      "combined_sha256": "edeb58a211e5fe5f42953f9e07240a7dbfaba08a30ca9c06c36b9aa21b6e16a9",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11-packages",
+      "feature_head": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf",
+      "same_production_bytes": true,
+      "feature_sha256": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268",
+      "combined_sha256": "248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11-packages",
+      "feature_head": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+      "path": "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1",
+      "combined_sha256": "a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11-packages",
+      "feature_head": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+      "path": "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "combined_sha256": "5a1f7783227b40fc074b2be24c1e10c6182bbcfa95708b313c03c78ba87bb4d5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P11-packages",
+      "feature_head": "4cf695f8c4864ce40b064e691d85b8c2c6ae1b82",
+      "path": "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "5ea9b3fef2605fd9e27561acfc093db42251dcc7e1d962bd21720bbc27be3ee2",
+      "combined_sha256": "5ea9b3fef2605fd9e27561acfc093db42251dcc7e1d962bd21720bbc27be3ee2",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12",
+      "feature_head": "2d674eafb2609035081dfd0686b69f2cc531c6d3",
+      "path": "shell/plugins/lock/LockView.qml",
+      "same_production_bytes": true,
+      "feature_sha256": "72b28d1822f0c862c573444da2706b24202e9961f2482d0c8f28e3fe905dfb12",
+      "combined_sha256": "72b28d1822f0c862c573444da2706b24202e9961f2482d0c8f28e3fe905dfb12",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12",
+      "feature_head": "2d674eafb2609035081dfd0686b69f2cc531c6d3",
+      "path": "shell/plugins/lock/Service.qml",
+      "same_production_bytes": true,
+      "feature_sha256": "a8b716ef18723bb6174837ba795eb601446f700da934b1a9184c9b96a0e81908",
+      "combined_sha256": "a8b716ef18723bb6174837ba795eb601446f700da934b1a9184c9b96a0e81908",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12",
+      "feature_head": "2d674eafb2609035081dfd0686b69f2cc531c6d3",
+      "path": "shell/plugins/polkit/PolkitAgent.qml",
+      "same_production_bytes": true,
+      "feature_sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+      "combined_sha256": "4ef8ef00f3fb447517c2ef09a1624e113af955c25a3e66a14dc86db794be5552",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/fprintd-t1bridge/.gitattributes",
+      "same_production_bytes": true,
+      "feature_sha256": "e8984b76b488481c59d8df4675a5a2115b04625bf8eff2d746932e43a4876eeb",
+      "combined_sha256": "e8984b76b488481c59d8df4675a5a2115b04625bf8eff2d746932e43a4876eeb",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/fprintd-t1bridge/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "combined_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/fprintd-t1bridge/0001-Honor-driver-native-duplicate-detection.patch",
+      "same_production_bytes": true,
+      "feature_sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+      "combined_sha256": "443b8ed5d07f6c877a6a42436bf86373d287fbebeb7a321741f30e26f5bd67f0",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/fprintd-t1bridge/0002-Fix-tests-for-current-GLib.patch",
+      "same_production_bytes": true,
+      "feature_sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+      "combined_sha256": "e754df76248ca01e1dcb19d6b510a4b02610994b038d4f647f410f52ef6c0fe0",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/fprintd-t1bridge/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+      "combined_sha256": "c4626a03f0c734132b41d05bbfebe414ba370377199d4df8c5a4574923fe0e6a",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/libfprint-t1bridge/.gitattributes",
+      "same_production_bytes": true,
+      "feature_sha256": "e8984b76b488481c59d8df4675a5a2115b04625bf8eff2d746932e43a4876eeb",
+      "combined_sha256": "e8984b76b488481c59d8df4675a5a2115b04625bf8eff2d746932e43a4876eeb",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/libfprint-t1bridge/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "combined_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/libfprint-t1bridge/0001-Add-T1Bridge-fingerprint-driver.patch",
+      "same_production_bytes": true,
+      "feature_sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+      "combined_sha256": "5f0cea3c603526272587703916844ef7a73b3401d7def9889188143bbdedbd51",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/libfprint-t1bridge/0002-Use-relative-test-helper-path.patch",
+      "same_production_bytes": true,
+      "feature_sha256": "43a10082d4909eb0ba161679537dae9ab23835f69f20d414c671251aae5424ed",
+      "combined_sha256": "43a10082d4909eb0ba161679537dae9ab23835f69f20d414c671251aae5424ed",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/libfprint-t1bridge/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "225789c5ce2bd696abce859292d4652e9d3224281aed53000c885577c3a46e58",
+      "combined_sha256": "225789c5ce2bd696abce859292d4652e9d3224281aed53000c885577c3a46e58",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/libfprint-t1bridge/T1Bridge-MIT.txt",
+      "same_production_bytes": true,
+      "feature_sha256": "a59f489b7cb0fb2df6b806e687e17a3f52df1d63c599a96d86eef895324f9bf1",
+      "combined_sha256": "a59f489b7cb0fb2df6b806e687e17a3f52df1d63c599a96d86eef895324f9bf1",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge-dkms/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "combined_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge-dkms/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "f7d6797df16c444153a6399460ddcce7daf19e139aada15c83d3aafbc435beab",
+      "combined_sha256": "f7d6797df16c444153a6399460ddcce7daf19e139aada15c83d3aafbc435beab",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge-omarchy/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "5d0b77436dcbb75b83b506babb23c142fdae213e1f8b609aaf7a5480b77f152f",
+      "combined_sha256": "5d0b77436dcbb75b83b506babb23c142fdae213e1f8b609aaf7a5480b77f152f",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge-omarchy/0001-Suppress-auto-brightness-while-panel-is-off.patch",
+      "same_production_bytes": true,
+      "feature_sha256": "f2b9a7a680bee0c5b2a8d315e1bf845f36d64f23ddb93011c14ac87711c43da5",
+      "combined_sha256": "f2b9a7a680bee0c5b2a8d315e1bf845f36d64f23ddb93011c14ac87711c43da5",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge-omarchy/PKGBUILD",
+      "same_production_bytes": false,
+      "feature_sha256": "764762ad1bd436123958fc52dc8271c6c71eebf8f1b7f90838b640563aaac4d3",
+      "combined_sha256": "e2cd6d501258061c4fa886c7eb085f69e6dc02d160f93989ebd0abbbf58b3dec",
+      "reason": "Published companion retains stable omarchy>=4.0.1. The combined build explicitly substitutes the exact local omarchy-dev dependency and local pkgrel when the builder opts in.",
+      "diff": "--- P12-packages/pkgbuilds/t1bridge-omarchy/PKGBUILD\n+++ combined/pkgbuilds/t1bridge-omarchy/PKGBUILD\n@@ -4,7 +4,19 @@\n pkgdesc='Optional Omarchy desktop integration for T1Bridge'\n arch=('any')\n license=('MIT')\n-depends=('brightnessctl' 'coreutils' 'iio-sensor-proxy' 'bash' 'gawk' 'jq' 'libpulse' 'omarchy>=4.0.1' 'systemd' 't1bridge>=0.1.0')\n+_omarchy_dependency='omarchy>=4.0.1'\n+# Local integration ISOs test a pinned quattro runtime whose version is below\n+# the stable release. Keep the released dependency unless the builder opts in\n+# with the exact version read from its actual omarchy-dev package archive.\n+if [[ -n ${OMARCHY_LOCAL_RUNTIME_DEPENDENCY:-} ]]; then\n+  if [[ ! $OMARCHY_LOCAL_RUNTIME_DEPENDENCY =~ ^omarchy-dev=[[:alnum:]][[:alnum:].:+_~-]*$ ]]; then\n+    printf 'Invalid exact local Omarchy dependency: %s\\n' \"$OMARCHY_LOCAL_RUNTIME_DEPENDENCY\" >&2\n+    return 1\n+  fi\n+  _omarchy_dependency=$OMARCHY_LOCAL_RUNTIME_DEPENDENCY\n+  pkgrel=2.1\n+fi\n+depends=('brightnessctl' 'coreutils' 'iio-sensor-proxy' 'bash' 'gawk' 'jq' 'libpulse' \"$_omarchy_dependency\" 'systemd' 't1bridge>=0.1.0')\n makedepends=('make')\n checkdepends=('diffutils')\n source=(\"$pkgname-$pkgver.tar.gz::https://linux.standardagents.ai/arch/standardagents/x86_64/$pkgname-$pkgver.tar.gz\"\n"
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge/.omarchy/package.json",
+      "same_production_bytes": true,
+      "feature_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "combined_sha256": "cce8dd499167078f0015fb346589bc35b27068c0c305a6efc3a1637fa6757b49",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P12-packages",
+      "feature_head": "4f00650be7f30d5db8d6128113355e7dd4bef98d",
+      "path": "pkgbuilds/t1bridge/PKGBUILD",
+      "same_production_bytes": true,
+      "feature_sha256": "a86db89024fd94ff82dc4e2f4da8f68246b246727e0ef1beceeed618b8a36e89",
+      "combined_sha256": "a86db89024fd94ff82dc4e2f4da8f68246b246727e0ef1beceeed618b8a36e89",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P13",
+      "feature_head": "9ccd35bf2cdad94d56f8e9c6571cd645f70f2135",
+      "path": "migrations/1789325478.sh",
+      "same_production_bytes": true,
+      "feature_sha256": "0d6db060042f88623e3e309283c40c82ddaf2cb95e1a50e5695b299941cad51f",
+      "combined_sha256": "0d6db060042f88623e3e309283c40c82ddaf2cb95e1a50e5695b299941cad51f",
+      "reason": null,
+      "diff": ""
+    },
+    {
+      "id": "P14",
+      "feature_head": "7dc8d929138c8ebe4b2ba0735a64cc5e334c2413",
+      "path": "bin/omarchy-diagnose-suspend-wake",
+      "same_production_bytes": true,
+      "feature_sha256": "e067913534cfd9bfb53bd559db229b0c7e391ed040b272990335add2fe296d3d",
+      "combined_sha256": "e067913534cfd9bfb53bd559db229b0c7e391ed040b272990335add2fe296d3d",
+      "reason": null,
+      "diff": ""
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12502",
+  "origins": [
+    "published-source-table"
+  ],
+  "groups": [],
+  "prior_snapshots": [
+    {
+      "head_sha": "6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+      "state": "open",
+      "updated_at": "2026-09-19T08:22:48Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12502,
+  "checked_at": "2026-09-21T11:57:56.523444+00:00",
+  "title": "Keep the keyboard backlight level across lock and suspend",
+  "author": "mohan314e",
+  "head_sha": "6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+  "base_sha": "60663faf8764253646f1d6166e864b608d4a0fa1",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-19T08:22:48Z",
+  "state": "open",
+  "body": "## What's wrong\n\nThe keyboard backlight goes off and never comes back. Turning it on by hand doesn't help \u2014 the next wake turns it off again.\n\n## How it's meant to work\n\nLocking blanks the backlight:\n\n1. Remember the current level (`brightnessctl -s`)\n2. Set it to 0\n\nWaking puts it back:\n\n3. Restore the remembered level (`brightnessctl -r`)\n\nThat is correct, as long as step 1 only ever runs while the light is actually on.\n\n## Why it breaks\n\nStep 1 remembers **whatever it finds** \u2014 including 0. So a blank that runs while the light is already off remembers 0.\n\nAfter that, \"restore the remembered level\" means \"set it to 0\". Every time. Nothing ever writes a good value back, so it never heals on its own.\n\nSo the whole bug reduces to one question: **can a blank ever run while the light is already off?**\n\n## Yes \u2014 and only one path does it\n\nA blank is normally preceded by a wake, and a wake restores the light. So the light is on when the blank runs. Fine.\n\nFour places schedule a blank:\n\n| | what it is | wake before it? |\n|---|---|---|\n| `:146` | you lock the screen | yes \u2014 you were just using the laptop |\n| `:181` | you touch the lock screen | yes \u2014 `runWake()` ran first |\n| `:551` | a password attempt ends | yes \u2014 submitting called `runWake()` |\n| `:490` | **resume from suspend** | **no** |\n\n`:490` is the suspend gap. The blank countdown freezes during suspend. On resume it fires late, notices the gap, and re-arms \u2014 but it never wakes anything:\n\n1. Before suspend: blank runs. Remembers 40, sets 0.\n2. Suspend, then resume. The light is still 0.\n3. `:490` fires and re-arms. No wake, so nothing restores the light.\n4. Five seconds later the blank runs again. It finds 0. **It remembers 0.**\n\nPoisoned, permanently.\n\nResume can't be rescued anywhere else either. `runWake()`'s callers are `:169`, `:218`, `:244`, `:298` and `:323`, and the last needs real typing or mouse movement on the lock screen. Opening a lid is neither.\n\n**Fix 1 \u2014 `Service.qml:490`: wake, don't just re-arm.** `runWake()` arms the timer itself while locked, so the five-second run-up before blanking still happens. The light is simply real again before the next blank records it.\n\n## A second, separate problem\n\nRestore writes the remembered level no matter what. But the backlight hotkeys still work while locked. So if you set the level yourself on the lock screen, the next wake throws your choice away (#10767).\n\nThe level at restore time tells you which happened:\n\n| level when restore runs | what it means | what to do |\n|---|---|---|\n| still 0 | nothing has touched it since the blank | the remembered level is still yours \u2014 apply it |\n| anything else | it was set *after* the blank | that is newer than what we remembered \u2014 leave it alone |\n\nThe same rule also covers locking while the light was already off: remembers 0, sees 0, applies 0 \u2014 no change, no special case needed.\n\n**Fix 2 \u2014 `restore` only writes while the level is still 0.**\n\nThis is also why `off` is left as-is. Guarding `off` against saving 0 would mean a backlight you deliberately turned off is never remembered, and the next wake would switch it back on.\n\n**Fix 3 \u2014 `omarchy-system-wake` restores the keyboard before the display.** The display call goes through Hyprland IPC, which lid transitions can stall; the keyboard write goes straight to sysfs and is instant. Doing it first means it is already done if the display call hangs \u2014 and `runWake()` drops a new wake request while the previous one is still running.\n\n`OMARCHY_LEDS_PATH` follows the existing `OMARCHY_BACKLIGHT_PATH` and `OMARCHY_DRM_PATH` seams, so the new test can run on hardware with no keyboard backlight.\n\nReported in #9339, #10105 and #7650.\n\n**Validation:** the new `test/shell.d/brightness-keyboard-test.sh` covers blank/restore, a level changed while blanked, and a deliberate zero. It fails against the unpatched script and passes on this branch. `qmllint` reports no new warnings on `Service.qml`. `./test/all` passes apart from ten files that fail identically on a clean checkout in this environment for unrelated reasons. The three changes were also applied to a running 4.0.4-1 system and exercised through real blank and restore cycles; a full suspend and resume cycle was not manually tested.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "720813359aa84338b36b1d3295395be7c33a7529",
+      "filename": "bin/omarchy-brightness-keyboard",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 2,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/bin%2Fomarchy-brightness-keyboard",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/bin%2Fomarchy-brightness-keyboard",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-keyboard?ref=6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+      "patch": "@@ -13,7 +13,8 @@ direction=\"${1:-up}\"\n \n # Find keyboard backlight device (look for *kbd_backlight* pattern in leds class).\n device=\"\"\n-for candidate in /sys/class/leds/*kbd_backlight*; do\n+leds_path=${OMARCHY_LEDS_PATH:-/sys/class/leds}\n+for candidate in \"$leds_path\"/*kbd_backlight*; do\n   if [[ -e $candidate ]]; then\n     device=\"$(basename \"$candidate\")\"\n     break\n@@ -29,7 +30,10 @@ if [[ $direction == \"off\" ]]; then\n   brightnessctl -sd \"$device\" set 0 >/dev/null\n   exit 0\n elif [[ $direction == \"restore\" ]]; then\n-  brightnessctl -rd \"$device\" >/dev/null\n+  current_brightness=\"$(brightnessctl -d \"$device\" get)\"\n+  if (( current_brightness == 0 )); then\n+    brightnessctl -rd \"$device\" >/dev/null\n+  fi\n   exit 0\n fi\n "
+    },
+    {
+      "sha": "3487ee308b00ba19a19add7d21e729f7ae651cb5",
+      "filename": "bin/omarchy-system-wake",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/bin%2Fomarchy-system-wake",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/bin%2Fomarchy-system-wake",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-system-wake?ref=6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+      "patch": "@@ -5,6 +5,6 @@\n # omarchy:name=wake\n # omarchy:examples=omarchy system wake\n \n-omarchy-brightness-display on\n omarchy-brightness-keyboard restore\n+omarchy-brightness-display on\n omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true"
+    },
+    {
+      "sha": "b6d4ec2cd53534914c19e7d5b6248125abc51eea",
+      "filename": "shell/plugins/lock/Service.qml",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/shell%2Fplugins%2Flock%2FService.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/shell%2Fplugins%2Flock%2FService.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FService.qml?ref=6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+      "patch": "@@ -487,7 +487,7 @@ Item {\n       // blank the freshly woken unlock screen under the user. Wall-clock time\n       // exposes the gap: take a fresh run-up instead of blanking.\n       if (Date.now() - armedAt > interval + 2000) {\n-        root.armBlankTimer()\n+        root.runWake()\n         return\n       }\n       // Only a password check in flight should hold the display up. The"
+    },
+    {
+      "sha": "6d1b171f90da289499c5fea0c1184947155d0da8",
+      "filename": "test/shell.d/brightness-keyboard-test.sh",
+      "status": "added",
+      "additions": 89,
+      "deletions": 0,
+      "changes": 89,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/test%2Fshell.d%2Fbrightness-keyboard-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3/test%2Fshell.d%2Fbrightness-keyboard-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrightness-keyboard-test.sh?ref=6c6ab91abcec857d6e4ce0f618cdb0079e5b73f3",
+      "patch": "@@ -0,0 +1,89 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+mock_bin=\"$test_tmp/bin\"\n+call_log=\"$test_tmp/calls\"\n+leds_path=\"$test_tmp/leds\"\n+state=\"$test_tmp/brightness\"\n+saved=\"$test_tmp/saved\"\n+mkdir -p \"$mock_bin\" \"$leds_path/chromeos::kbd_backlight\"\n+\n+cat >\"$mock_bin/brightnessctl\" <<'SH'\n+#!/bin/bash\n+printf 'brightnessctl %s\\n' \"$*\" >>\"$CALL_LOG\"\n+\n+state=\"${BRIGHTNESS_STATE:?}\"\n+saved=\"${BRIGHTNESS_SAVED:?}\"\n+\n+if [[ $1 == \"-d\" && $3 == \"get\" ]]; then\n+  cat \"$state\"\n+elif [[ $1 == \"-d\" && $3 == \"max\" ]]; then\n+  printf '100\\n'\n+elif [[ $1 == \"-sd\" && $3 == \"set\" ]]; then\n+  cat \"$state\" >\"$saved\"\n+  printf '%s\\n' \"$4\" >\"$state\"\n+elif [[ $1 == \"-rd\" ]]; then\n+  cat \"$saved\" >\"$state\"\n+elif [[ $1 == \"-d\" && $3 == \"set\" ]]; then\n+  printf '%s\\n' \"$4\" >\"$state\"\n+fi\n+SH\n+\n+chmod +x \"$mock_bin\"/*\n+\n+run_keyboard() {\n+  CALL_LOG=\"$call_log\" BRIGHTNESS_STATE=\"$state\" BRIGHTNESS_SAVED=\"$saved\" \\\n+    OMARCHY_LEDS_PATH=\"$leds_path\" PATH=\"$mock_bin:$ROOT/bin:$PATH\" \\\n+    \"$ROOT/bin/omarchy-brightness-keyboard\" \"$@\"\n+}\n+\n+begin() {\n+  printf '%s\\n' \"$1\" >\"$state\"\n+  printf '%s\\n' \"$2\" >\"$saved\"\n+  : >\"$call_log\"\n+}\n+\n+level() { cat \"$state\"; }\n+save_level() { cat \"$saved\"; }\n+\n+# A blank records the level it found, so the following wake has something to\n+# put back.\n+begin 40 7\n+run_keyboard off\n+[[ $(level) == \"0\" ]] || fail \"off blanks the backlight\" \"actual: $(level)\"\n+pass \"off blanks the backlight\"\n+[[ $(save_level) == \"40\" ]] || fail \"off saves the lit level\" \"actual: $(save_level)\"\n+pass \"off saves the lit level\"\n+\n+run_keyboard restore\n+[[ $(level) == \"40\" ]] || fail \"restore brings the saved level back\" \"actual: $(level)\"\n+pass \"restore brings the saved level back\"\n+\n+# The level being something other than zero is proof that it was set after the\n+# blank -- the backlight hotkeys stay bound while locked -- so that choice is\n+# newer than the saved value and has to survive the wake.\n+begin 40 7\n+run_keyboard off\n+printf '55\\n' >\"$state\"\n+: >\"$call_log\"\n+run_keyboard restore\n+[[ $(level) == \"55\" ]] || fail \"restore leaves a level changed while blanked\" \"actual: $(level)\"\n+pass \"restore leaves a level changed while blanked\"\n+grep -q -- '-rd' \"$call_log\" && fail \"restore does not write when the level changed\" \"$(cat \"$call_log\")\"\n+pass \"restore does not write when the level changed\"\n+\n+# Turning the backlight off by hand before locking is a choice, not state to be\n+# undone on the next wake.\n+begin 0 40\n+run_keyboard off\n+[[ $(save_level) == \"0\" ]] || fail \"off saves a deliberate zero\" \"actual: $(save_level)\"\n+pass \"off saves a deliberate zero\"\n+run_keyboard restore\n+[[ $(level) == \"0\" ]] || fail \"restore keeps a deliberate zero off\" \"actual: $(level)\"\n+pass \"restore keeps a deliberate zero off\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

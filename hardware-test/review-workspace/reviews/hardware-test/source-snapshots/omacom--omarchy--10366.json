@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10366",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "keyboard-backlight-state"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "9faa38e8b67f366947974d5218ed409370f44fa6",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10366,
+  "checked_at": "2026-09-21T11:56:41.441423+00:00",
+  "title": "Fix keyboard backlight restore after screensaver dismiss",
+  "author": "marcindyguda",
+  "head_sha": "9faa38e8b67f366947974d5218ed409370f44fa6",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:12Z",
+  "state": "open",
+  "body": "## Problem\n\nAfter the screensaver shows and is dismissed (before the lock deadline), the keyboard backlight stays dark instead of keeping its previous brightness.\n\n## Root cause\n\n- Lock blanking (`shell/plugins/lock/Service.qml` blankProcess) runs `omarchy-brightness-keyboard off` = `brightnessctl -s set 0` (save + off).\n- Wake (`bin/omarchy-system-wake`) runs `omarchy-brightness-keyboard restore` = `brightnessctl -r`.\n- But screensaver dismiss (`shell/plugins/services/idle/Service.qml` `cancelIdleCycle`) also runs `omarchy-system-wake` **without any preceding `off`**, so `restore` applied a stale save (often `0` from an earlier cycle) and clobbered the still-lit keyboard. A repeated `off` while already at zero had the same clobbering effect on the save file.\n\nReproduced live on a MacBook (`kbd_backlight`, max 255): stray `restore` with no preceding `off` reset a lit keyboard to the stale saved value.\n\n## Fix\n\n`bin/omarchy-brightness-keyboard` now pairs `off`/`restore` with a marker file (`${XDG_RUNTIME_DIR:-/tmp}/omarchy-keyboard-backlight-off`):\n\n- `off` only saves (`-s`) when the keyboard is actually lit; a repeated `off` at zero is a plain `set 0` that leaves the save intact.\n- `restore` is a no-op without the marker (screensaver dismiss), one-shot (clears the marker), and leaves an already-lit keyboard alone.\n\nNo caller changes needed; `omarchy-system-wake` keeps calling `restore`.\n\n## Verification\n\n- New `test/shell.d/keyboard-backlight-test.sh` passes; `idle-test.sh` passes (`bin-style-test.sh` failure is pre-existing on clean checkout, unrelated `omarchy-remove-ai-openclaw`).\n- Live check: `25 -> off -> 0 (marker) -> restore -> 25 (marker cleared)`; stray `restore` on a lit keyboard is a no-op.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e760ca3952ef9b7d68894503878f915e0d83d067",
+      "filename": "bin/omarchy-brightness-keyboard",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 2,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9faa38e8b67f366947974d5218ed409370f44fa6/bin%2Fomarchy-brightness-keyboard",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9faa38e8b67f366947974d5218ed409370f44fa6/bin%2Fomarchy-brightness-keyboard",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-keyboard?ref=9faa38e8b67f366947974d5218ed409370f44fa6",
+      "patch": "@@ -25,11 +25,31 @@ if [[ -z $device ]]; then\n   exit 1\n fi\n \n+# Marker tracks whether this command actually turned the backlight off, so a\n+# later restore without a preceding off (e.g. screensaver dismiss, which wakes\n+# via omarchy-system-wake without ever blanking the keyboard) is a no-op\n+# instead of restoring a stale brightnessctl save.\n+state_marker=\"${XDG_RUNTIME_DIR:-/tmp}/omarchy-keyboard-backlight-off\"\n+\n if [[ $direction == \"off\" ]]; then\n-  brightnessctl -sd \"$device\" set 0 >/dev/null\n+  current_brightness=\"$(brightnessctl -d \"$device\" get 2>/dev/null || echo 0)\"\n+  if (( current_brightness == 0 )); then\n+    brightnessctl -d \"$device\" set 0 >/dev/null\n+  else\n+    brightnessctl -sd \"$device\" set 0 >/dev/null\n+    touch \"$state_marker\"\n+  fi\n   exit 0\n elif [[ $direction == \"restore\" ]]; then\n-  brightnessctl -rd \"$device\" >/dev/null\n+  if [[ ! -f $state_marker ]]; then\n+    exit 0\n+  fi\n+  rm -f \"$state_marker\"\n+  current_brightness=\"$(brightnessctl -d \"$device\" get 2>/dev/null || echo 0)\"\n+  if (( current_brightness != 0 )); then\n+    exit 0\n+  fi\n+  brightnessctl -rd \"$device\" >/dev/null || true\n   exit 0\n fi\n "
+    },
+    {
+      "sha": "19e21c368726e31cedefcf839c81b2718afd7293",
+      "filename": "test/shell.d/keyboard-backlight-test.sh",
+      "status": "added",
+      "additions": 45,
+      "deletions": 0,
+      "changes": 45,
+      "blob_url": "https://github.com/omacom/omarchy/blob/9faa38e8b67f366947974d5218ed409370f44fa6/test%2Fshell.d%2Fkeyboard-backlight-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/9faa38e8b67f366947974d5218ed409370f44fa6/test%2Fshell.d%2Fkeyboard-backlight-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fkeyboard-backlight-test.sh?ref=9faa38e8b67f366947974d5218ed409370f44fa6",
+      "patch": "@@ -0,0 +1,45 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+keyboard=\"$ROOT/bin/omarchy-brightness-keyboard\"\n+wake=\"$ROOT/bin/omarchy-system-wake\"\n+\n+# The bug: screensaver dismiss runs omarchy-system-wake (keyboard restore)\n+# without any preceding keyboard off, so restore must not apply a stale\n+# brightnessctl save. The marker pairs off/restore.\n+grep -F 'state_marker=\"${XDG_RUNTIME_DIR:-/tmp}/omarchy-keyboard-backlight-off\"' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard backlight tracks whether off actually blanked the keyboard\"\n+pass \"keyboard backlight tracks whether off actually blanked the keyboard\"\n+\n+# A repeated off while already at zero must not re-save (which would clobber\n+# the saved brightness with 0 and make the later restore a no-op).\n+grep -F 'if (( current_brightness == 0 )); then' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard off avoids re-saving when already off\"\n+grep -F 'brightnessctl -d \"$device\" set 0' \"$keyboard\" >/dev/null || \\\n+  fail \"repeated keyboard off turns off without saving\"\n+grep -F 'brightnessctl -sd \"$device\" set 0' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard off saves state when turning off a lit keyboard\"\n+pass \"keyboard off only saves when turning off a lit keyboard\"\n+\n+# Restore without a preceding off (screensaver dismiss) stays put.\n+grep -F 'if [[ ! -f $state_marker ]]; then' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard restore without a preceding off is a no-op\"\n+pass \"keyboard restore without a preceding off is a no-op\"\n+\n+# Restore is one-shot and never clobbers a keyboard that is already lit\n+# (e.g. user adjusted it while locked).\n+grep -F 'rm -f \"$state_marker\"' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard restore clears its marker\"\n+grep -F 'if (( current_brightness != 0 )); then' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard restore leaves an already-lit keyboard alone\"\n+grep -F 'brightnessctl -rd \"$device\"' \"$keyboard\" >/dev/null || \\\n+  fail \"keyboard restore still restores a blanked keyboard\"\n+pass \"keyboard restore is one-shot and leaves a lit keyboard alone\"\n+\n+# The wake path itself is unchanged: display on, keyboard restore, clamshell.\n+grep -F 'omarchy-brightness-keyboard restore' \"$wake\" >/dev/null || \\\n+  fail \"system wake still restores keyboard brightness\"\n+pass \"system wake still restores keyboard brightness\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

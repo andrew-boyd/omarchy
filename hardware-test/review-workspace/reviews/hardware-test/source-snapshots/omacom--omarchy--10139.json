@@ -1,0 +1,117 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10139",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "sd-reader"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10139,
+  "checked_at": "2026-09-21T11:57:03.592115+00:00",
+  "title": "Keep the Apple USB SD card reader alive after suspend",
+  "author": "MrBazzieB",
+  "head_sha": "38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:14Z",
+  "state": "open",
+  "body": "## What\n\nOn 2013\u20132015 Intel Macs the built-in Apple USB Card Reader (`05ac:8406`) enumerates at boot, then stays powered off after suspend. A USB port reset cannot turn the chip back on. This was reproduced on MacBookPro12,1: after sleep the xHCI SuperSpeed port is present but empty, and `lsusb` never sees the reader until the PCH GPIO that supplies it is toggled.\n\nOmarchy already ships `options usbcore autosuspend=-1` in `/etc/modprobe.d/omarchy-usb-autosuspend.conf`, but `usbcore` is built into the Arch kernel, so that file never applies.\n\n## How\n\nOn matching DMI models (MacBookAir6/7, MacBookPro11, MacBookPro12,1):\n\n- Write a Limine drop-in with `usbcore.quirks=05ac:8406:bk usbcore.autosuspend=-1`\n- Pin the device awake with udev once it enumerates\n- Install `acpi_call` and a post-resume sleep hook that calls Apple's XHCI `SPWR`/`SRST` methods (GPIO 44/24)\n- Expose `omarchy cmd apple-sd-reader reset` for a manual recovery\n\nA migration applies the same leaf on existing installs. New installs get it from `omarchy-apply-hardware`.\n\n## Test plan\n\n- [x] `./test/shell.d/apple-sd-reader-test.sh`\n- [x] `./test/shell.d/privileged-heredoc-test.sh`\n- [x] `./test/cli` (command metadata)\n- [x] On MacBookPro12,1: after the reader dropped, ACPI `SPWR`/`SRST` brought it back and the card mounted as `sdb`",
+  "draft": false,
+  "files": [
+    {
+      "sha": "acb085411be66e5f11185404410465c42c73a840",
+      "filename": "bin/omarchy-cmd-apple-sd-reader",
+      "status": "added",
+      "additions": 166,
+      "deletions": 0,
+      "changes": 166,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/bin%2Fomarchy-cmd-apple-sd-reader",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/bin%2Fomarchy-cmd-apple-sd-reader",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-cmd-apple-sd-reader?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -0,0 +1,166 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Revive or pin the built-in Apple USB SD card reader\n+# omarchy:args={reset|status}\n+# omarchy:requires-sudo=true\n+# omarchy:hidden=true\n+\n+# The 2013\u20132015 Apple USB Card Reader (05ac:8406) sits on xHCI SuperSpeed and\n+# often stays powered off after suspend. USB port reset cannot turn the chip\n+# back on. Apple's XHCI ACPI methods SPWR/SRST toggle PCH GPIO 44 (power) and\n+# GPIO 24 (reset). See install/hardware/apple/fix-sd-card-reader.sh.\n+\n+set -euo pipefail\n+\n+VID=\"05ac\"\n+PID=\"8406\"\n+ACPI_CALL=\"${OMARCHY_ACPI_CALL:-/proc/acpi/call}\"\n+\n+die() {\n+  echo \"omarchy-cmd-apple-sd-reader: $*\" >&2\n+  exit 1\n+}\n+\n+require_root() {\n+  if (( EUID != 0 )); then\n+    die \"needs root (try: sudo omarchy cmd apple-sd-reader ${1:-reset})\"\n+  fi\n+}\n+\n+find_reader() {\n+  local d\n+  for d in /sys/bus/usb/devices/*; do\n+    [[ -f $d/idVendor && -f $d/idProduct ]] || continue\n+    if [[ $(<\"$d/idVendor\") == \"$VID\" && $(<\"$d/idProduct\") == \"$PID\" ]]; then\n+      printf '%s\\n' \"$d\"\n+      return 0\n+    fi\n+  done\n+  return 1\n+}\n+\n+keep_alive() {\n+  local dev driver\n+  modprobe usb-storage >/dev/null 2>&1 || true\n+  modprobe uas >/dev/null 2>&1 || true\n+\n+  dev=$(find_reader) || return 1\n+  echo on >\"$dev/power/control\" 2>/dev/null || true\n+  echo -1 >\"$dev/power/autosuspend\" 2>/dev/null || true\n+  echo 0 >\"$dev/power/autosuspend_delay_ms\" 2>/dev/null || true\n+  echo 0 >\"$dev/power/persist\" 2>/dev/null || true\n+\n+  driver=$(basename \"$(readlink -f \"$dev/driver\" 2>/dev/null)\" 2>/dev/null || true)\n+  if [[ $driver == \"apple-mfi-fastcharge\" ]]; then\n+    basename \"$dev\" >\"$dev/driver/unbind\" 2>/dev/null || true\n+  fi\n+  return 0\n+}\n+\n+acpi_ensure() {\n+  [[ -e $ACPI_CALL ]] && return 0\n+  modprobe acpi_call >/dev/null 2>&1 || return 1\n+  [[ -e $ACPI_CALL ]]\n+}\n+\n+acpi_eval() {\n+  local method=$1\n+  [[ -w $ACPI_CALL ]] || return 1\n+  echo \"$method\" >\"$ACPI_CALL\" 2>/dev/null || return 1\n+  tr -d '\\0' <\"$ACPI_CALL\" >/dev/null\n+}\n+\n+unmount_reader_disks() {\n+  local host disk\n+  host=$(find_reader) || return 0\n+  for disk in /sys/block/sd*; do\n+    [[ -e $disk ]] || continue\n+    if [[ $(readlink -f \"$disk\") == \"$host\"* ]]; then\n+      umount \"/dev/$(basename \"$disk\")\"* >/dev/null 2>&1 || true\n+    fi\n+  done\n+}\n+\n+# Try the ACPI names used on MacBookPro12,1 and the shorter XHC alias.\n+apple_gpio_power() {\n+  local method\n+  acpi_ensure || return 1\n+  echo \"omarchy-cmd-apple-sd-reader: cycling Apple SD power via ACPI SPWR/SRST\"\n+  unmount_reader_disks\n+  for method in '\\_SB.PCI0.XHC1.SPWR' '\\_SB.PCI0.XHC.SPWR'; do\n+    acpi_eval \"$method 0\" && break\n+  done\n+  for method in '\\_SB.PCI0.XHC1.SRST' '\\_SB.PCI0.XHC.SRST'; do\n+    acpi_eval \"$method 1\" && break\n+  done\n+  sleep 2\n+  for method in '\\_SB.PCI0.XHC1.SPWR' '\\_SB.PCI0.XHC.SPWR'; do\n+    acpi_eval \"$method 1\" && break\n+  done\n+  for method in '\\_SB.PCI0.XHC1.SPWR' '\\_SB.PCI0.XHC.SPWR'; do\n+    acpi_eval \"$method 3\" || true\n+  done\n+  sleep 0.3\n+  for method in '\\_SB.PCI0.XHC1.SRST' '\\_SB.PCI0.XHC.SRST'; do\n+    acpi_eval \"$method 0\" && break\n+  done\n+  sleep 1\n+  return 0\n+}\n+\n+wait_for_reader() {\n+  local i\n+  for i in $(seq 1 24); do\n+    if find_reader >/dev/null; then\n+      keep_alive || true\n+      return 0\n+    fi\n+    sleep 0.25\n+  done\n+  return 1\n+}\n+\n+status() {\n+  local dev\n+  if dev=$(find_reader); then\n+    echo \"reader      $(cat \"$dev/product\" 2>/dev/null)  $(basename \"$dev\")  power=$(cat \"$dev/power/control\" 2>/dev/null)\"\n+  else\n+    echo \"reader      not enumerated\"\n+  fi\n+\n+  if [[ -e $ACPI_CALL ]]; then\n+    echo \"acpi_call   loaded\"\n+  else\n+    echo \"acpi_call   not loaded\"\n+  fi\n+\n+  lsblk -o NAME,SIZE,TYPE,TRAN,VENDOR,MODEL,LABEL,MOUNTPOINT\n+}\n+\n+cmd=${1:-reset}\n+case $cmd in\n+  status)\n+    status\n+    ;;\n+  reset)\n+    require_root \"$cmd\"\n+    if find_reader >/dev/null; then\n+      keep_alive || true\n+      echo \"omarchy-cmd-apple-sd-reader: card reader already on the bus; pinned awake\"\n+      status\n+      exit 0\n+    fi\n+    if apple_gpio_power && wait_for_reader; then\n+      echo \"omarchy-cmd-apple-sd-reader: card reader came up\"\n+      status\n+      exit 0\n+    fi\n+    echo \"omarchy-cmd-apple-sd-reader: reader still missing\" >&2\n+    status\n+    exit 1\n+    ;;\n+  *)\n+    echo \"usage: omarchy cmd apple-sd-reader {reset|status}\" >&2\n+    exit 2\n+    ;;\n+esac"
+    },
+    {
+      "sha": "168661592a324729a8235aa78a469874d2c5dea6",
+      "filename": "bin/omarchy-hw-apple-sd-reader",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/bin%2Fomarchy-hw-apple-sd-reader",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/bin%2Fomarchy-hw-apple-sd-reader",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-sd-reader?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -0,0 +1,7 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect Intel Macs with the built-in Apple USB SD card reader (05ac:8406).\n+\n+product_name=\"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\"\n+\n+grep -qiE 'MacBookAir6,[12]|MacBookAir7,[12]|MacBookPro11,[1-5]|MacBookPro12,1' \"$product_name\" 2>/dev/null"
+    },
+    {
+      "sha": "5cc7a031207fe5afe0d20c2e2296473b16b8d289",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -39,6 +39,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-sd-card-reader.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "cbe9de831ebe31d46804af4f1997f0c9ec2af39e",
+      "filename": "install/hardware/apple/fix-sd-card-reader.sh",
+      "status": "added",
+      "additions": 47,
+      "deletions": 0,
+      "changes": 47,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/install%2Fhardware%2Fapple%2Ffix-sd-card-reader.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/install%2Fhardware%2Fapple%2Ffix-sd-card-reader.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-sd-card-reader.sh?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -0,0 +1,47 @@\n+# The 2013\u20132015 Apple USB Card Reader (05ac:8406) often stays powered off after\n+# suspend. usbcore is built into the Arch kernel, so /etc/modprobe.d cannot set\n+# usbcore.autosuspend; the quirk has to live on the kernel command line.\n+# ACPI SPWR/SRST (via acpi_call) re-powers the chip when USB reset cannot.\n+\n+if omarchy-hw-apple-sd-reader; then\n+  echo \"Detected Apple USB SD card reader Mac: $(cat \"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\" 2>/dev/null || true)\"\n+\n+  limine_conf=\"${OMARCHY_APPLE_SD_LIMINE_CONF:-/etc/limine-entry-tool.d/apple-sd-reader.conf}\"\n+  udev_rules=\"${OMARCHY_APPLE_SD_UDEV_RULES:-/etc/udev/rules.d/90-omarchy-apple-sd-reader.rules}\"\n+  sleep_hook=\"${OMARCHY_APPLE_SD_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/omarchy-apple-sd-reader}\"\n+\n+  omarchy-pkg-add acpi_call\n+\n+  sudo mkdir -p \"$(dirname \"$limine_conf\")\" \"$(dirname \"$udev_rules\")\" \"$(dirname \"$sleep_hook\")\"\n+\n+  sudo tee \"$limine_conf\" >/dev/null <<'EOF'\n+# Generated by Omarchy for the Apple USB Card Reader (05ac:8406)\n+KERNEL_CMDLINE[default]+=\" usbcore.quirks=05ac:8406:bk usbcore.autosuspend=-1\"\n+EOF\n+\n+  sudo tee \"$udev_rules\" >/dev/null <<'EOF'\n+# Pin the Apple USB Card Reader awake once firmware enumerates it.\n+ACTION==\"add\", SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", ATTR{idProduct}==\"8406\", TEST==\"power/control\", ATTR{power/control}=\"on\"\n+ACTION==\"add\", SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", ATTR{idProduct}==\"8406\", TEST==\"power/autosuspend\", ATTR{power/autosuspend}=\"-1\"\n+EOF\n+\n+  sudo tee \"$sleep_hook\" >/dev/null <<'EOF'\n+#!/bin/bash\n+# After suspend the Apple USB SD reader often stays detached.\n+if [[ $1 == \"post\" ]]; then\n+  /usr/share/omarchy/bin/omarchy-cmd-apple-sd-reader reset >/dev/null 2>&1 || true\n+fi\n+EOF\n+  sudo chmod 0755 \"$sleep_hook\"\n+\n+  if omarchy-cmd-present limine-mkinitcpio; then\n+    sudo limine-mkinitcpio\n+  fi\n+\n+  if omarchy-cmd-present udevadm; then\n+    sudo udevadm control --reload\n+    sudo udevadm trigger --subsystem-match=usb --action=add >/dev/null 2>&1 || true\n+  fi\n+\n+  omarchy-state set reboot-required\n+fi"
+    },
+    {
+      "sha": "7e75a4bb58d072c9340899b795ee2dccde02501c",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, an NVMe suspend fix for those same models, and a keep-alive for the built-in Apple USB SD card reader (`05ac:8406`) on 2013\u20132015 Air and Pro machines. That reader often stays powered off after sleep; `omarchy cmd apple-sd-reader reset` re-powers it.\n \n ### Known Limitations\n "
+    },
+    {
+      "sha": "0c8a4d199f119b24b3dd1e63ff574f33077acb3f",
+      "filename": "migrations/1788508170.sh",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/migrations%2F1788508170.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/migrations%2F1788508170.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788508170.sh?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -0,0 +1,8 @@\n+echo \"Keep the Apple USB SD card reader alive after suspend\"\n+\n+# The 2013\u20132015 Apple USB Card Reader stays powered off after sleep. Install-time\n+# setup now writes a kernel quirk, udev pin, sleep hook, and acpi_call. Existing\n+# Macs only get that on omarchy update via this migration.\n+if omarchy-hw-apple-sd-reader; then\n+  source \"$OMARCHY_PATH/install/hardware/apple/fix-sd-card-reader.sh\"\n+fi"
+    },
+    {
+      "sha": "ea393b7158ecb98aaa47a4ae45bbaa52f7e33a3c",
+      "filename": "test/shell.d/apple-sd-reader-test.sh",
+      "status": "added",
+      "additions": 142,
+      "deletions": 0,
+      "changes": 142,
+      "blob_url": "https://github.com/omacom/omarchy/blob/38c07810ee3d06e22eaa069c630d7a33fbbf3475/test%2Fshell.d%2Fapple-sd-reader-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/38c07810ee3d06e22eaa069c630d7a33fbbf3475/test%2Fshell.d%2Fapple-sd-reader-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-sd-reader-test.sh?ref=38c07810ee3d06e22eaa069c630d7a33fbbf3475",
+      "patch": "@@ -0,0 +1,142 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-sd-card-reader.sh\"\n+hw=\"$ROOT/bin/omarchy-hw-apple-sd-reader\"\n+cmd=\"$ROOT/bin/omarchy-cmd-apple-sd-reader\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+migration=\"$ROOT/migrations/1788508170.sh\"\n+\n+grep -q 'apple/fix-sd-card-reader.sh' \"$all\" ||\n+  fail \"the Apple SD reader fix runs during hardware setup\"\n+grep -q 'usbcore.quirks=05ac:8406:bk' \"$leaf\" ||\n+  fail \"the install leaf puts the Apple reader quirk on the kernel command line\"\n+grep -q 'acpi_call' \"$leaf\" ||\n+  fail \"the install leaf installs acpi_call for SPWR/SRST\"\n+grep -q 'SPWR' \"$cmd\" ||\n+  fail \"the helper calls Apple XHCI SPWR\"\n+grep -q '05ac:8406' \"$manual\" ||\n+  fail \"Mac support documents the SD reader keep-alive\"\n+grep -q 'fix-sd-card-reader.sh' \"$migration\" ||\n+  fail \"a migration applies the Apple SD reader fix on existing installs\"\n+pass \"the Apple SD reader fix is wired into hardware setup\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+dmi=\"$test_tmp/product_name\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/limine\" \"$test_tmp/udev\" \"$test_tmp/sleep\"\n+: >\"$calls\"\n+\n+printf 'MacBookPro12,1\\n' >\"$dmi\"\n+\n+OMARCHY_DMI_PRODUCT_NAME=$dmi \"$hw\"\n+pass \"detector matches MacBookPro12,1\"\n+\n+printf 'MacBookPro14,1\\n' >\"$dmi\"\n+if OMARCHY_DMI_PRODUCT_NAME=$dmi \"$hw\"; then\n+  fail \"detector ignores MacBookPro14,1\"\n+fi\n+pass \"detector skips Macs without the Apple USB reader\"\n+\n+printf 'MacBookAir7,2\\n' >\"$dmi\"\n+OMARCHY_DMI_PRODUCT_NAME=$dmi \"$hw\"\n+pass \"detector matches MacBookAir7,2\"\n+\n+cat >\"$stub_bin/omarchy-hw-apple-sd-reader\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+\n+cat >\"$stub_bin/omarchy-hw-apple-sd-reader-miss\" <<'SH'\n+#!/bin/bash\n+exit 1\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-cmd-present\" <<'SH'\n+#!/bin/bash\n+[[ $1 == \"limine-mkinitcpio\" ]]\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+limine_conf=\"$test_tmp/limine/apple-sd-reader.conf\"\n+udev_rules=\"$test_tmp/udev/90-omarchy-apple-sd-reader.rules\"\n+sleep_hook=\"$test_tmp/sleep/omarchy-apple-sd-reader\"\n+\n+run_leaf() {\n+  PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_APPLE_SD_LIMINE_CONF=\"$limine_conf\" \\\n+    OMARCHY_APPLE_SD_UDEV_RULES=\"$udev_rules\" \\\n+    OMARCHY_APPLE_SD_SLEEP_HOOK=\"$sleep_hook\" \\\n+    bash -euo pipefail -c 'source \"$1\"' _ \"$leaf\"\n+}\n+\n+: >\"$calls\"\n+run_leaf\n+\n+grep -Fq 'KERNEL_CMDLINE[default]+=\" usbcore.quirks=05ac:8406:bk usbcore.autosuspend=-1\"' \"$limine_conf\" ||\n+  fail \"leaf writes the Limine quirk drop-in\"\n+grep -q 'idProduct}==\"8406\"' \"$udev_rules\" ||\n+  fail \"leaf writes the udev keep-alive rule\"\n+grep -q 'omarchy-cmd-apple-sd-reader' \"$sleep_hook\" ||\n+  fail \"sleep hook calls the Apple SD reader helper\"\n+[[ -x $sleep_hook ]] || fail \"sleep hook is executable\"\n+grep -Fxq $'omarchy-pkg-add\\tacpi_call' \"$calls\" ||\n+  fail \"leaf installs acpi_call\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"leaf rebuilds the boot image\"\n+grep -Fxq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"leaf marks reboot required\"\n+pass \"leaf installs cmdline, udev, sleep hook, and acpi_call\"\n+\n+# Non-matching hardware: replace the detector on PATH with a miss.\n+mv \"$stub_bin/omarchy-hw-apple-sd-reader\" \"$stub_bin/omarchy-hw-apple-sd-reader.hit\"\n+cp \"$stub_bin/omarchy-hw-apple-sd-reader-miss\" \"$stub_bin/omarchy-hw-apple-sd-reader\"\n+: >\"$calls\"\n+rm -f \"$limine_conf\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_APPLE_SD_LIMINE_CONF=\"$limine_conf\" \\\n+  OMARCHY_APPLE_SD_UDEV_RULES=\"$udev_rules\" \\\n+  OMARCHY_APPLE_SD_SLEEP_HOOK=\"$sleep_hook\" \\\n+  bash -euo pipefail -c 'source \"$1\"' _ \"$leaf\"\n+[[ ! -e $limine_conf ]] || fail \"non-matching hardware does not write Limine config\"\n+[[ ! -s $calls ]] || fail \"non-matching hardware is a no-op\" \"$(cat \"$calls\")\"\n+pass \"leaf is a no-op on machines without the Apple USB reader\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

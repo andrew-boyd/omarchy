@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10582",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "t1-als"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+      "state": "open"
+    },
+    {
+      "head_sha": "e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:09Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10582,
+  "checked_at": "2026-09-21T11:57:09.446956+00:00",
+  "title": "Enable first-run user units one at a time",
+  "author": "fresh3nough",
+  "head_sha": "e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:09Z",
+  "state": "open",
+  "body": "## Summary\n\nFixes #10484.\n\n`install/user/first-run/enable-user-units.sh` ran a single multi-unit:\n\n```bash\nsystemctl --user enable --now \\\n  bt-agent.service \\\n  ... \\\n  omarchy-crash-watch.service\n```\n\nunder `set -euo pipefail`. `systemctl enable` validates the **entire** list before applying any unit. One missing unit (the reporter hit this with a package that never installed `omarchy-brightness-keyboard-auto.service` into `/usr/lib/systemd/user/`) fails the call, aborts the script, and leaves **every** later omarchy user unit disabled \u2014 bt-agent, sleep-lock, fcitx5, crash-watch, migrate-notify, recover-internal-monitor.\n\n### Change\n\n- Enable/start each shipped unit in a loop\n- Warn on individual failure; continue\n- Exit non-zero only if **none** of the units could be enabled\n\nNote: this tree does not currently ship `omarchy-brightness-keyboard-auto.service` under `default/systemd/user/` (the reporter saw it only under `/usr/share/omarchy/...` on an older package build). The blast-radius fix is still required so any future missing unit cannot disable the rest.\n\n## Evidence\n\n### Bug reproduced (source + systemctl semantics)\n\n```\n# pre-fix script\nset -euo pipefail\nsystemctl --user enable --now a.service missing.service\n# \u2192 Failed to enable unit: Unit missing.service does not exist\n# \u2192 under set -e, nothing after runs; a.service never enabled if it wasn't already\n```\n\n### Fix validated\n\n```\nbash test/shell.d/enable-user-units-test.sh\nok - enable-user-units enables units one at a time\nok - enable-user-units continues after a missing unit\nok - multi-arg enable fails the whole list when one unit is missing\nok - enable-user-units enables every shipped unit when all exist\n\nbash test/shell.d/systemd-test.sh\n# still green\n```\n\n## Test plan\n\n- [x] Stub harness: missing mid-list unit still enables later units\n- [x] Stub harness: all present \u2192 quiet success\n- [x] Contrast: multi-arg enable fails whole list\n- [x] `bash test/shell.d/systemd-test.sh`\n- [ ] Manual first-run / re-run enable-user-units with a deliberately missing unit name",
+  "draft": false,
+  "files": [
+    {
+      "sha": "270300f8fa6a9de5161faf447b2ba8240c8d2b07",
+      "filename": "install/user/first-run/enable-user-units.sh",
+      "status": "modified",
+      "additions": 34,
+      "deletions": 7,
+      "changes": 41,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee/install%2Fuser%2Ffirst-run%2Fenable-user-units.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee/install%2Fuser%2Ffirst-run%2Fenable-user-units.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fuser%2Ffirst-run%2Fenable-user-units.sh?ref=e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+      "patch": "@@ -8,14 +8,41 @@\n # first session has bluetooth pairing, sleep lock, etc. live immediately\n # instead of waiting for the next login. ConditionPath* in the unit files\n # keep the enabled units inert on hardware they don't apply to.\n+#\n+# Enable one unit at a time. systemctl validates an entire multi-unit list\n+# before applying any of it, so one missing unit (for example a package that\n+# forgot to install a unit into /usr/lib/systemd/user/) would leave every\n+# later unit disabled under set -e (issue #10484).\n \n set -euo pipefail\n \n-systemctl --user daemon-reload\n-systemctl --user enable --now \\\n-  bt-agent.service \\\n-  omarchy-recover-internal-monitor.service \\\n-  omarchy-sleep-lock.service \\\n-  omarchy-migrate-notify.service \\\n-  omarchy-fcitx5.service \\\n+units=(\n+  bt-agent.service\n+  omarchy-recover-internal-monitor.service\n+  omarchy-sleep-lock.service\n+  omarchy-migrate-notify.service\n+  omarchy-fcitx5.service\n   omarchy-crash-watch.service\n+)\n+\n+systemctl --user daemon-reload\n+\n+failed=0\n+for unit in \"${units[@]}\"; do\n+  if ! systemctl --user enable --now \"$unit\"; then\n+    echo \"warning: could not enable $unit\" >&2\n+    failed=1\n+  fi\n+done\n+\n+# Non-zero only if every unit failed \u2014 a single missing unit must not block\n+# first-run completion or the remaining units that did enable.\n+if (( failed )) && ! systemctl --user is-enabled --quiet bt-agent.service 2>/dev/null &&\n+  ! systemctl --user is-enabled --quiet omarchy-fcitx5.service 2>/dev/null &&\n+  ! systemctl --user is-enabled --quiet omarchy-crash-watch.service 2>/dev/null &&\n+  ! systemctl --user is-enabled --quiet omarchy-sleep-lock.service 2>/dev/null &&\n+  ! systemctl --user is-enabled --quiet omarchy-migrate-notify.service 2>/dev/null &&\n+  ! systemctl --user is-enabled --quiet omarchy-recover-internal-monitor.service 2>/dev/null; then\n+  echo \"error: no omarchy user units could be enabled\" >&2\n+  exit 1\n+fi"
+    },
+    {
+      "sha": "2bc8faa61c31fbd0ecd2465a6ed7a9547b1b7957",
+      "filename": "test/shell.d/enable-user-units-test.sh",
+      "status": "added",
+      "additions": 107,
+      "deletions": 0,
+      "changes": 107,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee/test%2Fshell.d%2Fenable-user-units-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee/test%2Fshell.d%2Fenable-user-units-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fenable-user-units-test.sh?ref=e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+      "patch": "@@ -0,0 +1,107 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+# first-run must not abort the whole unit list when one unit is missing\n+# (issue #10484). systemctl enable with multiple names validates the full list\n+# first; a single missing name enables nothing.\n+\n+script=\"$ROOT/install/user/first-run/enable-user-units.sh\"\n+[[ -f $script ]] || fail \"enable-user-units.sh exists\"\n+\n+grep -F 'for unit in' \"$script\" >/dev/null ||\n+  fail \"enable-user-units enables units one at a time\"\n+grep -F 'could not enable' \"$script\" >/dev/null ||\n+  fail \"enable-user-units warns when a unit fails\"\n+# Must not keep the multi-arg enable that aborts the whole list under set -e.\n+if grep -E 'enable --now[[:space:]]+\\\\$' \"$script\" >/dev/null; then\n+  fail \"enable-user-units must not multi-arg enable under one set -e line\"\n+fi\n+pass \"enable-user-units enables units one at a time\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+mock_bin=\"$test_tmp/bin\"\n+log=\"$test_tmp/systemctl.log\"\n+mkdir -p \"$mock_bin\"\n+\n+cat >\"$mock_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$OMARCHY_TEST_SYSTEMCTL_LOG\"\n+# daemon-reload always succeeds.\n+[[ $1 == \"--user\" && $2 == \"daemon-reload\" ]] && exit 0\n+# is-enabled: treat any previously successful enable --now as enabled.\n+if [[ $1 == \"--user\" && $2 == \"is-enabled\" ]]; then\n+  unit=${4:-$3}\n+  [[ $unit == --quiet ]] && unit=$4\n+  if grep -Fq \"enable --now $unit\" \"$OMARCHY_TEST_SYSTEMCTL_LOG\" 2>/dev/null; then\n+    exit 0\n+  fi\n+  exit 1\n+fi\n+# enable --now: fail only the injected missing unit.\n+if [[ $1 == \"--user\" && $2 == \"enable\" && $3 == \"--now\" ]]; then\n+  unit=$4\n+  if [[ $unit == \"${OMARCHY_TEST_MISSING_UNIT:-}\" ]]; then\n+    echo \"Failed to enable unit: Unit $unit does not exist\" >&2\n+    exit 1\n+  fi\n+  exit 0\n+fi\n+exit 0\n+SH\n+chmod +x \"$mock_bin/systemctl\"\n+\n+# Missing unit in the middle must not stop later units.\n+: >\"$log\"\n+export OMARCHY_TEST_SYSTEMCTL_LOG=\"$log\"\n+export OMARCHY_TEST_MISSING_UNIT=\"omarchy-sleep-lock.service\"\n+PATH=\"$mock_bin:/usr/bin:/bin\" bash \"$script\" >\"$test_tmp/out\" 2>\"$test_tmp/err\" || status=$?\n+status=${status:-0}\n+(( status == 0 )) || fail \"enable-user-units exits 0 when some units still enable\" \"status=$status err=$(cat \"$test_tmp/err\")\"\n+\n+grep -F 'enable --now bt-agent.service' \"$log\" >/dev/null ||\n+  fail \"enable-user-units still tries bt-agent\" \"$(cat \"$log\")\"\n+grep -F 'enable --now omarchy-sleep-lock.service' \"$log\" >/dev/null ||\n+  fail \"enable-user-units still tries the missing unit\" \"$(cat \"$log\")\"\n+grep -F 'enable --now omarchy-crash-watch.service' \"$log\" >/dev/null ||\n+  fail \"enable-user-units continues after a missing unit\" \"$(cat \"$log\")\"\n+grep -F 'could not enable omarchy-sleep-lock.service' \"$test_tmp/err\" >/dev/null ||\n+  fail \"enable-user-units warns about the missing unit\" \"$(cat \"$test_tmp/err\")\"\n+pass \"enable-user-units continues after a missing unit\"\n+\n+# Prove the old multi-arg failure mode for contrast (documentation of the bug).\n+: >\"$log\"\n+cat >\"$mock_bin/systemctl-atomic\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$OMARCHY_TEST_SYSTEMCTL_LOG\"\n+if [[ $* == *enable* && $* == *does-not-exist* ]]; then\n+  echo \"Failed to enable unit: Unit does-not-exist.service does not exist\" >&2\n+  exit 1\n+fi\n+exit 0\n+SH\n+chmod +x \"$mock_bin/systemctl-atomic\"\n+if PATH=\"$mock_bin:$PATH\" systemctl-atomic --user enable --now bt-agent.service does-not-exist.service 2>/dev/null; then\n+  fail \"multi-arg enable should fail when one unit is missing\"\n+fi\n+# No partial enables recorded as separate lines for the good unit alone \u2014 the\n+# atomic call is one line that failed entirely.\n+lines=$(grep -c 'enable --now' \"$log\" || true)\n+(( lines == 1 )) || fail \"atomic multi-arg enable is a single failed call\" \"$(cat \"$log\")\"\n+pass \"multi-arg enable fails the whole list when one unit is missing\"\n+\n+# All units present \u2192 clean success, no warnings.\n+: >\"$log\"\n+: >\"$test_tmp/err\"\n+unset OMARCHY_TEST_MISSING_UNIT\n+PATH=\"$mock_bin:/usr/bin:/bin\" bash \"$script\" >\"$test_tmp/out\" 2>\"$test_tmp/err\"\n+[[ ! -s $test_tmp/err ]] || fail \"enable-user-units is quiet when every unit enables\" \"$(cat \"$test_tmp/err\")\"\n+for unit in bt-agent.service omarchy-recover-internal-monitor.service omarchy-sleep-lock.service \\\n+  omarchy-migrate-notify.service omarchy-fcitx5.service omarchy-crash-watch.service; do\n+  grep -F \"enable --now $unit\" \"$log\" >/dev/null ||\n+    fail \"enable-user-units enables $unit\" \"$(cat \"$log\")\"\n+done\n+pass \"enable-user-units enables every shipped unit when all exist\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

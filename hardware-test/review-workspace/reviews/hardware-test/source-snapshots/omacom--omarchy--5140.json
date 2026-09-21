@@ -1,0 +1,531 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/5140",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-t2-combo"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "f25bb1f04be415d5565f6c0c27d7d421906a3170",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 5140,
+  "checked_at": "2026-09-21T11:57:49.070951+00:00",
+  "title": "Add WiFi resume hook for T2 MacBooks",
+  "author": "fedesapuppo",
+  "head_sha": "f25bb1f04be415d5565f6c0c27d7d421906a3170",
+  "base_sha": "031ba01c83281f788cb1c1f83d535e6ff84ceda6",
+  "base_ref": "dev",
+  "updated_at": "2026-04-22T23:31:08Z",
+  "state": "open",
+  "body": "## Summary\r\n\r\n- Installs a systemd system-sleep hook that reloads the Broadcom WiFi driver after waking from suspend\r\n\r\nThe Broadcom WiFi driver (`brcmfmac`) on T2 MacBooks loses connection state after suspend and silently fails \u2014 WiFi appears connected but can't transmit data. This hook unloads and reloads the kernel module on resume, restoring connectivity.\r\n\r\n## Tested: \r\n\r\n- Run `fix-t2.sh` on a T2 MacBook\r\n- Suspend and resume the machine\r\n- WiFi reconnects automatically after wake",
+  "draft": false,
+  "files": [
+    {
+      "sha": "84503abfe4c1cbd20ce754a5dd1a6de63b998b7d",
+      "filename": "install/config/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 10,
+      "deletions": 0,
+      "changes": 10,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f25bb1f04be415d5565f6c0c27d7d421906a3170/install%2Fconfig%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f25bb1f04be415d5565f6c0c27d7d421906a3170/install%2Fconfig%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fhardware%2Fapple%2Ffix-t2.sh?ref=f25bb1f04be415d5565f6c0c27d7d421906a3170",
+      "patch": "@@ -41,4 +41,14 @@ high_temp=75\n speed_curve=linear\n always_full_speed=false\n EOF\n+\n+  cat <<'HOOK' | sudo tee /usr/lib/systemd/system-sleep/wifi-resume >/dev/null\n+#!/bin/bash\n+if [[ $1 == \"post\" ]]; then\n+  logger -t wifi-resume \"Reloading brcmfmac after resume\"\n+  modprobe -r brcmfmac 2>/dev/null\n+  modprobe brcmfmac || logger -t wifi-resume \"Failed to reload brcmfmac\"\n+fi\n+HOOK\n+  sudo chmod +x /usr/lib/systemd/system-sleep/wifi-resume\n fi"
+    },
+    {
+      "sha": "e101e8ce6c60fb1a1716e27fbf1995282623310a",
+      "filename": "migrations/1774703846.sh",
+      "status": "added",
+      "additions": 13,
+      "deletions": 0,
+      "changes": 13,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f25bb1f04be415d5565f6c0c27d7d421906a3170/migrations%2F1774703846.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f25bb1f04be415d5565f6c0c27d7d421906a3170/migrations%2F1774703846.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1774703846.sh?ref=f25bb1f04be415d5565f6c0c27d7d421906a3170",
+      "patch": "@@ -0,0 +1,13 @@\n+if lspci -nn | grep -q \"106b:180[12]\" && [[ ! -f /usr/lib/systemd/system-sleep/wifi-resume ]]; then\n+  echo \"Installing WiFi resume hook for T2 MacBook\"\n+\n+  cat <<'HOOK' | sudo tee /usr/lib/systemd/system-sleep/wifi-resume >/dev/null\n+#!/bin/bash\n+if [[ $1 == \"post\" ]]; then\n+  logger -t wifi-resume \"Reloading brcmfmac after resume\"\n+  modprobe -r brcmfmac 2>/dev/null\n+  modprobe brcmfmac || logger -t wifi-resume \"Failed to reload brcmfmac\"\n+fi\n+HOOK\n+  sudo chmod +x /usr/lib/systemd/system-sleep/wifi-resume\n+fi"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4171098485",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#issuecomment-4171098485",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/5140",
+      "id": 4171098485,
+      "node_id": "IC_kwDOO0Cobs74nel1",
+      "user": {
+        "login": "dhh",
+        "id": 2741,
+        "node_id": "MDQ6VXNlcjI3NDE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/2741?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dhh",
+        "html_url": "https://github.com/dhh",
+        "followers_url": "https://api.github.com/users/dhh/followers",
+        "following_url": "https://api.github.com/users/dhh/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dhh/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dhh/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dhh/subscriptions",
+        "organizations_url": "https://api.github.com/users/dhh/orgs",
+        "repos_url": "https://api.github.com/users/dhh/repos",
+        "events_url": "https://api.github.com/users/dhh/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dhh/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-04-01T15:59:56Z",
+      "updated_at": "2026-04-01T15:59:56Z",
+      "body": "We need a migration for this too, no?",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4171098485/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4171181687",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#issuecomment-4171181687",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/5140",
+      "id": 4171181687,
+      "node_id": "IC_kwDOO0Cobs74ny53",
+      "user": {
+        "login": "fedesapuppo",
+        "id": 69604771,
+        "node_id": "MDQ6VXNlcjY5NjA0Nzcx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/69604771?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/fedesapuppo",
+        "html_url": "https://github.com/fedesapuppo",
+        "followers_url": "https://api.github.com/users/fedesapuppo/followers",
+        "following_url": "https://api.github.com/users/fedesapuppo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/fedesapuppo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/fedesapuppo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/fedesapuppo/subscriptions",
+        "organizations_url": "https://api.github.com/users/fedesapuppo/orgs",
+        "repos_url": "https://api.github.com/users/fedesapuppo/repos",
+        "events_url": "https://api.github.com/users/fedesapuppo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/fedesapuppo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-04-01T16:09:50Z",
+      "updated_at": "2026-04-22T23:25:37Z",
+      "body": "> We need a migration for this too, no?\r\n\r\nWe do! \ud83d\ude05 I'm on it David! ",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4171181687/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4296033532",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#issuecomment-4296033532",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/5140",
+      "id": 4296033532,
+      "node_id": "IC_kwDOO0Cobs8AAAABABBE_A",
+      "user": {
+        "login": "dhh",
+        "id": 2741,
+        "node_id": "MDQ6VXNlcjI3NDE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/2741?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dhh",
+        "html_url": "https://github.com/dhh",
+        "followers_url": "https://api.github.com/users/dhh/followers",
+        "following_url": "https://api.github.com/users/dhh/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dhh/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dhh/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dhh/subscriptions",
+        "organizations_url": "https://api.github.com/users/dhh/orgs",
+        "repos_url": "https://api.github.com/users/dhh/repos",
+        "events_url": "https://api.github.com/users/dhh/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dhh/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-04-22T12:04:07Z",
+      "updated_at": "2026-04-22T12:04:07Z",
+      "body": "Did you or anyone else test this?",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4296033532/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4300601228",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#issuecomment-4300601228",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/5140",
+      "id": 4300601228,
+      "node_id": "IC_kwDOO0Cobs8AAAABAFX3jA",
+      "user": {
+        "login": "fedesapuppo",
+        "id": 69604771,
+        "node_id": "MDQ6VXNlcjY5NjA0Nzcx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/69604771?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/fedesapuppo",
+        "html_url": "https://github.com/fedesapuppo",
+        "followers_url": "https://api.github.com/users/fedesapuppo/followers",
+        "following_url": "https://api.github.com/users/fedesapuppo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/fedesapuppo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/fedesapuppo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/fedesapuppo/subscriptions",
+        "organizations_url": "https://api.github.com/users/fedesapuppo/orgs",
+        "repos_url": "https://api.github.com/users/fedesapuppo/repos",
+        "events_url": "https://api.github.com/users/fedesapuppo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/fedesapuppo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-04-22T23:29:38Z",
+      "updated_at": "2026-04-22T23:29:38Z",
+      "body": "  Hey David! I just tested on my T2 mac, and I caught a bug. I installed the hook to\r\n  /etc/systemd/system-sleep/, but systemd-sleep only scans\r\n  /usr/lib/systemd/system-sleep/ (confirmed in the man page and in the binary's\r\n  strings). The hook this PR installed never ran.\r\n\r\n  It appeared to work during my initial review because an older copy existed at\r\n  /usr/lib/systemd/system-sleep/wifi-resume.bak from a previous manual setup, and\r\n  systemd runs all executables in that directory regardless of extension. That stale\r\n  file was silently handling my resumes.\r\n\r\n  Pushed f25bb1f0 to install at the correct path and drop the redundant mkdir -p (the\r\n  directory ships with systemd).\r\n\r\n  Verified on my T2 MacBook Air:\r\n  - Without the hook: brcmfmac reports bus is down on resume, traffic silently fails.\r\n  - With the hook at the correct path: hook fires (wifi-resume[...]: Reloading brcmfmac\r\n   after resume), module reloads, WiFi passes traffic.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4300601228/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4023842858,
+      "node_id": "PRR_kwDOO0Cobs7v1vgq",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds an installer-time systemd sleep/resume hook for T2 MacBooks to reload the Broadcom (`brcmfmac`) WiFi module on resume, addressing post-suspend connectivity failures.\n\n**Changes:**\n- Extend the T2 detection/install script to create a `systemd/system-sleep` resume hook.\n- On `post` resume, unload and reload `brcmfmac` and log outcomes via `logger`.\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/dev?filename=.github/instructions/*.instructions.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add Copilot custom instructions</a> for smarter, more guided reviews. <a href=\"https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn how to get started</a>.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#pullrequestreview-4023842858",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5140#pullrequestreview-4023842858"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5140"
+        }
+      },
+      "submitted_at": "2026-03-27T21:39:57Z",
+      "commit_id": "95e51ea5987c6a6859f26b9190af09854d541599"
+    },
+    {
+      "id": 4045353751,
+      "node_id": "PRR_kwDOO0Cobs7xHzMX",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated 2 comments.\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/dev?filename=.github/instructions/*.instructions.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add Copilot custom instructions</a> for smarter, more guided reviews. <a href=\"https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn how to get started</a>.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#pullrequestreview-4045353751",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5140#pullrequestreview-4045353751"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5140"
+        }
+      },
+      "submitted_at": "2026-04-01T16:13:15Z",
+      "commit_id": "4a7e8478acae69da8d47c9a79ff969cabab87b13"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003362100",
+      "pull_request_review_id": 4023842858,
+      "id": 3003362100,
+      "node_id": "PRRC_kwDOO0Cobs6zA6s0",
+      "diff_hunk": "@@ -32,4 +32,14 @@ EOF\n # Generated by Omarchy installer for T2 Mac support\n KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pcie_ports=compat\"\n EOF\n+\n+  cat <<'HOOK' | sudo tee /usr/lib/systemd/system-sleep/wifi-resume >/dev/null",
+      "path": "install/config/hardware/apple/fix-t2.sh",
+      "commit_id": "95e51ea5987c6a6859f26b9190af09854d541599",
+      "original_commit_id": "95e51ea5987c6a6859f26b9190af09854d541599",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This installs the system-sleep hook into `/usr/lib/systemd/system-sleep`, which is typically reserved for distribution/package-managed units and may be overwritten on upgrades. Elsewhere in this repo, locally-installed systemd artifacts are placed under `/etc/systemd/...` (e.g., `install/config/hardware/apple/fix-suspend-nvme.sh:13`). Consider writing the hook to `/etc/systemd/system-sleep/wifi-resume` instead (and ensure the target directory exists, e.g., via `mkdir -p`).",
+      "created_at": "2026-03-27T21:39:57Z",
+      "updated_at": "2026-03-27T21:39:57Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#discussion_r3003362100",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003362100"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5140#discussion_r3003362100"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003362100/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 45,
+      "original_line": 36,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3023120925",
+      "pull_request_review_id": 4045353751,
+      "id": 3023120925,
+      "node_id": "PRRC_kwDOO0Cobs60MSod",
+      "diff_hunk": "@@ -0,0 +1,14 @@\n+if lspci -nn | grep -q \"106b:180[12]\" && [[ ! -f /etc/systemd/system-sleep/wifi-resume ]]; then\n+  echo \"Installing WiFi resume hook for T2 MacBook\"\n+\n+  sudo mkdir -p /etc/systemd/system-sleep\n+  cat <<'HOOK' | sudo tee /etc/systemd/system-sleep/wifi-resume >/dev/null\n+#!/bin/bash\n+if [[ $1 == \"post\" ]]; then\n+  logger -t wifi-resume \"Reloading brcmfmac after resume\"\n+  modprobe -r brcmfmac 2>/dev/null\n+  modprobe brcmfmac || logger -t wifi-resume \"Failed to reload brcmfmac\"\n+fi\n+HOOK\n+  sudo chmod +x /etc/systemd/system-sleep/wifi-resume\n+fi",
+      "path": "migrations/1774703846.sh",
+      "commit_id": "4a7e8478acae69da8d47c9a79ff969cabab87b13",
+      "original_commit_id": "4a7e8478acae69da8d47c9a79ff969cabab87b13",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The WiFi resume hook installation code is duplicated in both this migration file and in install/config/hardware/apple/fix-t2.sh (lines 36-45). This duplication creates a maintenance burden: any bugs or improvements to the hook logic must be made in both places, increasing the risk of inconsistency. Consider consolidating this logic into a shared function or having one location call the other to avoid divergence. Additionally, this migration lacks error handling - if the hook installation fails, there's no indication in the logs, and no way to recover.\n```suggestion\n  if [[ -x \"install/config/hardware/apple/fix-t2.sh\" ]]; then\n    if ! sudo \"install/config/hardware/apple/fix-t2.sh\"; then\n      echo \"Error: fix-t2.sh failed while installing WiFi resume hook\" >&2\n    fi\n  else\n    echo \"Error: install/config/hardware/apple/fix-t2.sh not found or not executable; WiFi resume hook not installed\" >&2\n  fi\n\n  if [[ ! -f /etc/systemd/system-sleep/wifi-resume ]]; then\n    echo \"Error: WiFi resume hook was not created at /etc/systemd/system-sleep/wifi-resume\" >&2\n  fi\nfi\n```",
+      "created_at": "2026-04-01T16:13:14Z",
+      "updated_at": "2026-04-01T16:13:15Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#discussion_r3023120925",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3023120925"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5140#discussion_r3023120925"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3023120925/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 4,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 14,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3023120982",
+      "pull_request_review_id": 4045353751,
+      "id": 3023120982,
+      "node_id": "PRRC_kwDOO0Cobs60MSpW",
+      "diff_hunk": "@@ -41,4 +41,15 @@ high_temp=75\n speed_curve=linear\n always_full_speed=false\n EOF\n+\n+  sudo mkdir -p /etc/systemd/system-sleep",
+      "path": "install/config/hardware/apple/fix-t2.sh",
+      "commit_id": "4a7e8478acae69da8d47c9a79ff969cabab87b13",
+      "original_commit_id": "4a7e8478acae69da8d47c9a79ff969cabab87b13",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The WiFi resume hook installation code is duplicated in both this file and in migrations/1774703846.sh. Additionally, unlike the migration file, this location lacks the idempotency check ([[ ! -f /etc/systemd/system-sleep/wifi-resume ]]) that prevents reinstalling the hook if it already exists. If fix-t2.sh is run after the migration (or if the script is executed multiple times), the hook file will be unnecessarily overwritten. Consider adding the same guard condition used in the migration.",
+      "created_at": "2026-04-01T16:13:15Z",
+      "updated_at": "2026-04-01T16:13:15Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5140#discussion_r3023120982",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3023120982"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5140#discussion_r3023120982"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3023120982/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 36,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 45,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

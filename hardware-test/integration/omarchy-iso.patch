@@ -1,0 +1,998 @@
+diff --git a/bin/omarchy-iso-make b/bin/omarchy-iso-make
+index 5dbbeff..8ce26b3 100755
+--- a/bin/omarchy-iso-make
++++ b/bin/omarchy-iso-make
+@@ -6,8 +6,13 @@ NO_CACHE=""
+ KEEP_PKG_CACHE=""
+ LOCAL_OMARCHY_PATH=""
+ LOCAL_PKGS_PATH=""
++DETACH_BUILD=""
+ while [[ $# -gt 0 ]]; do
+   case $1 in
++  --detach)
++    DETACH_BUILD=1
++    shift
++    ;;
+   --no-cache)
+     NO_CACHE=1
+     shift
+@@ -114,7 +119,7 @@ git submodule update --init --recursive --jobs=8
+ 
+ BUILD_SCRIPT="builder/build-iso.sh"
+ BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
+-BUILD_RELEASE_PATH="$BUILD_ROOT/release"
++BUILD_RELEASE_PATH="${OMARCHY_BUILD_RELEASE_PATH:-$BUILD_ROOT/release}"
+ mkdir -p "$BUILD_RELEASE_PATH"
+ 
+ OMARCHY_ISO_REF="${OMARCHY_ISO_REF:-quattro}"
+@@ -135,6 +140,10 @@ DOCKER_ARGS=(
+   -v "$BUILD_ROOT/configs:/configs:ro"
+ )
+ 
++if [[ -n $DETACH_BUILD ]]; then
++  DOCKER_ARGS+=(--detach --cpus=4 --memory=8g)
++fi
++
+ if [[ -n $LOCAL_OMARCHY_PATH ]]; then
+   DOCKER_ARGS+=(
+     -v "$LOCAL_OMARCHY_PATH:/omarchy-source:ro"
+@@ -142,14 +151,19 @@ if [[ -n $LOCAL_OMARCHY_PATH ]]; then
+   )
+ fi
+ 
+-if [[ -d /var/cache/pacman/pkg ]]; then
+-  DOCKER_ARGS+=(-v "/var/cache/pacman/pkg:/var/cache/pacman/pkg")
++PACMAN_BUILD_CACHE_DIR="${OMARCHY_PACMAN_CACHE_DIR:-/var/cache/pacman/pkg}"
++if [[ -d $PACMAN_BUILD_CACHE_DIR ]]; then
++  DOCKER_ARGS+=(-v "$PACMAN_BUILD_CACHE_DIR:/var/cache/pacman/pkg")
++fi
++if [[ -n ${OMARCHY_COMPANION_BUILD_DIR:-} ]]; then
++  mkdir -p "$OMARCHY_COMPANION_BUILD_DIR"
++  DOCKER_ARGS+=(-v "$OMARCHY_COMPANION_BUILD_DIR:/var/cache/intel-mac-build")
+ fi
+ 
+ # Mount the build cache directory where packages are downloaded. Channels use
+ # different package snapshots and must never share an offline mirror cache.
+ if [[ -z "$NO_CACHE" ]]; then
+-  OFFLINE_REPO_BUILD_CACHE_DIR="$HOME/.cache/omarchy/iso_${OMARCHY_MIRROR}/airootfs/var/cache/omarchy"
++  OFFLINE_REPO_BUILD_CACHE_DIR="${OMARCHY_ISO_CACHE_ROOT:-$HOME/.cache/omarchy/iso_${OMARCHY_MIRROR}}/airootfs/var/cache/omarchy"
+   mkdir -p "$OFFLINE_REPO_BUILD_CACHE_DIR"
+   DOCKER_ARGS+=(-v "$OFFLINE_REPO_BUILD_CACHE_DIR:/var/cache/airootfs/var/cache/omarchy")
+ else
+@@ -161,9 +175,28 @@ fi
+ # The docker group is root-equivalent, so Omarchy operators stay out of it on
+ # purpose. When the socket refuses the calling user, run the client through
+ # sudo instead of requiring group membership.
+-DOCKER=(docker)
+-if ! docker version &>/dev/null; then
+-  DOCKER=(sudo docker)
++DOCKER=(/usr/bin/docker)
++if ! /usr/bin/docker version &>/dev/null; then
++  if sudo -n /usr/bin/docker version &>/dev/null; then
++    DOCKER=(sudo -n /usr/bin/docker)
++  else
++    DOCKER=(sudo /usr/bin/docker)
++  fi
++fi
++
++if [[ -n $DETACH_BUILD ]]; then
++  # Keep the actual build and its evidence alive after the remote terminal
++  # disconnects. Only the container launch needs host sudo authentication.
++  "${DOCKER[@]}" run "${DOCKER_ARGS[@]}" archlinux/archlinux:latest /bin/bash -c '
++    set -o pipefail
++    /builder/build-iso.sh 2>&1 | tee /out/build.log
++    result=$?
++    printf "%s\n" "$result" > /out/build.exit
++    chown "$HOST_UID:$HOST_GID" /out/build.log /out/build.exit
++    exit "$result"
++  '
++  echo "Build started. Log: $BUILD_RELEASE_PATH/build.log"
++  exit 0
+ fi
+ 
+ "${DOCKER[@]}" run "${DOCKER_ARGS[@]}" archlinux/archlinux:latest /$BUILD_SCRIPT
+diff --git a/bin/omarchy-iso-test b/bin/omarchy-iso-test
+index 4d7e781..e3a8135 100755
+--- a/bin/omarchy-iso-test
++++ b/bin/omarchy-iso-test
+@@ -859,7 +859,7 @@ unlock_luks() {
+     sleep 20
+     ((waited += 30))
+ 
+-    press ctrl-alt-f3
++    press ctrl-alt-f4
+     sleep 3
+     if ocr_screen | grep -qi "login:"; then
+       return 0
+@@ -890,21 +890,28 @@ EOF
+   (cd "$BASE_DIR/www" && exec python3 -m http.server "$HTTP_PORT" --bind 127.0.0.1 >/dev/null 2>&1) &
+   HTTP_PID=$!
+ 
+-  # Type the login blind: a VNC viewer that resizes the framebuffer makes the
+-  # console font unreadable to OCR, and the real gate is SSH coming up anyway.
+-  # Getty re-prompts after a failed login, so a whole-sequence retry recovers
+-  # from typing before the prompt was ready.
+-  sleep 15 # give first boot time to reach getty
+-  local attempt
++  # The display manager can claim an early-selected VT while boot completes.
++  # Verify a getty prompt before typing: a fixed VT can be the greeter itself.
++  sleep 15
++  local attempt tty console_ready
+   for attempt in 1 2 3; do
+-    press ctrl-alt-f3
+-    sleep 8
+-    press ret # settle a half-typed prompt from a previous attempt
+-    sleep 2
++    console_ready=false
++    for tty in 4 5 6 3; do
++      press "ctrl-alt-f$tty"
++      sleep 4
++      if ocr_screen | grep -qi "login:"; then
++        console_ready=true
++        break
++      fi
++    done
++    if ! $console_ready; then
++      capture_console "failure-first-boot-no-console-$attempt"
++      continue
++    fi
+     type_text "$GUEST_USER"
+     capture_console "success-first-boot-03-console-username"
+     press ret
+-    sleep 3
++    wait_for_screen "Pass.*ord" 60
+     type_text "$GUEST_PASSWORD"
+     press ret
+     sleep 4
+diff --git a/builder/build-intel-mac-packages.sh b/builder/build-intel-mac-packages.sh
+new file mode 100644
+index 0000000..18be6f1
+--- /dev/null
++++ b/builder/build-intel-mac-packages.sh
+@@ -0,0 +1,93 @@
++#!/bin/bash
++# Local validation only: build the actual companion recipes, including checks.
++set -euo pipefail
++
++offline_mirror_dir=$1
++work_dir=/var/cache/intel-mac-build
++mkdir -p "$work_dir" "$offline_mirror_dir"
++chown builder:builder "$work_dir"
++
++# Read the selected runtime's real package version; never advertise a made-up
++# stable version to satisfy the optional desktop integration dependency.
++runtime_dependency=''
++for artifact in "$offline_mirror_dir/omarchy-dev-"*.pkg.tar.zst; do
++  [[ -f $artifact ]] || continue
++  read -r artifact_name artifact_version < <(pacman -Qp "$artifact")
++  [[ $artifact_name == omarchy-dev ]] || continue
++  [[ -z $runtime_dependency ]] || { echo 'ERROR: multiple local runtimes.' >&2; exit 1; }
++  runtime_dependency="$artifact_name=$artifact_version"
++done
++
++# Resolve dependencies against the exact locally built packages first. This
++# repository is used only inside the disposable build container.
++repo-add "$offline_mirror_dir/intel-mac-local.db.tar.gz" "$offline_mirror_dir/"*.pkg.tar.zst
++awk -v mirror="$offline_mirror_dir" '
++  !added && /^\[core\]/ {
++    print "[intel-mac-local]\nSigLevel = Never\nServer = file://" mirror "\n"
++    added = 1
++  }
++  { print }
++' /etc/pacman.conf > /tmp/pacman-intel-mac-build.conf
++cp /tmp/pacman-intel-mac-build.conf /etc/pacman.conf
++
++failed=()
++while IFS= read -r pkg; do
++  [[ -n $pkg && $pkg != \#* ]] || continue
++  if bash /builder/reuse-verified-package.sh "$offline_mirror_dir" "$pkg"; then
++    continue
++  fi
++  echo "Building Intel Mac companion: $pkg"
++  pkg_work="$work_dir/$pkg"
++  mkdir -p "$pkg_work"
++  cp -a "/omarchy-pkgs/pkgbuilds/$pkg/." "$pkg_work/"
++  # This is a dedicated build directory. Preserve downloaded sources, but do
++  # not let an older output masquerade as an artifact of this attempt.
++  find "$pkg_work" -maxdepth 1 -type f -name '*.pkg.tar.zst' -delete
++  chown -R builder:builder "$pkg_work"
++
++  pacman -Sy --noconfirm
++  local_runtime_env=()
++  if [[ $pkg == t1bridge-omarchy && -n $runtime_dependency ]]; then
++    local_runtime_env=("OMARCHY_LOCAL_RUNTIME_DEPENDENCY=$runtime_dependency")
++  fi
++  # Do not disable source verification, dependency resolution, or check().
++  # USB replay tests timed out under default parallelism in this quota-limited
++  # container. All 131 libfprint tests passed twice serially; retain every test.
++  if ! env "${local_runtime_env[@]}" su builder -c "cd '$pkg_work' && PKGDEST='$pkg_work' MAKEFLAGS=-j4 CARGO_BUILD_JOBS=4 MESON_NUM_PROCESSES=1 makepkg --syncdeps --noconfirm --force --cleanbuild" </dev/null; then
++    failed+=("$pkg")
++    echo "ERROR: companion build failed: $pkg; continuing independent builds." >&2
++    continue
++  fi
++
++  # --packagelist predicts a -debug archive even when a data-only package
++  # produces no debug symbols. Publish actual outputs, requiring the primary.
++  mapfile -t artifacts < <(find "$pkg_work" -maxdepth 1 -type f -name '*.pkg.tar.zst' | sort)
++  primary_found=false
++  for artifact in "${artifacts[@]}"; do
++    read -r artifact_name _ < <(pacman -Qp "$artifact")
++    [[ $artifact_name == "$pkg" ]] && primary_found=true
++    # Match package metadata, not just filename prefixes: t1bridge, its DKMS
++    # package and its desktop integration must not delete one another.
++    for previous in "$offline_mirror_dir/$artifact_name-"*.pkg.tar.zst; do
++      [[ -f $previous ]] || continue
++      read -r previous_name _ < <(pacman -Qp "$previous")
++      [[ $previous_name == "$artifact_name" ]] || continue
++      rm -f "$previous" "$previous.sig"
++    done
++    cp "$artifact" "$offline_mirror_dir/"
++    rm -f "$offline_mirror_dir/$(basename "$artifact").sig"
++    cached="/var/cache/pacman/pkg/$(basename "$artifact")"
++    rm -f "$cached.sig"
++    cp "$artifact" "$cached"
++    repo-add "$offline_mirror_dir/intel-mac-local.db.tar.gz" "$artifact"
++  done
++  if ! $primary_found; then
++    failed+=("$pkg")
++    echo "ERROR: successful build produced no primary archive for $pkg." >&2
++  fi
++done < /builder/intel-mac.packages
++
++if (( ${#failed[@]} )); then
++  printf 'ERROR: failed companion builds: %s\n' "${failed[*]}" >&2
++  exit 1
++fi
+diff --git a/builder/build-iso.sh b/builder/build-iso.sh
+index aa2feb3..26a7caa 100755
+--- a/builder/build-iso.sh
++++ b/builder/build-iso.sh
+@@ -22,6 +22,8 @@ case "$OMARCHY_ISO_REF" in
+ esac
+ : "${OMARCHY_NVIM_PACKAGE:=omarchy-nvim}"
+ export OMARCHY_RUNTIME_PACKAGE OMARCHY_SETTINGS_PACKAGE OMARCHY_NVIM_PACKAGE
++local_package_names=("$OMARCHY_RUNTIME_PACKAGE" "$OMARCHY_SETTINGS_PACKAGE" "$OMARCHY_NVIM_PACKAGE")
++online_pacman_config="/configs/pacman-online-${OMARCHY_MIRROR}.conf"
+ 
+ # Packages installed into the Arch container used to build the ISO.
+ pacman-key --init
+@@ -100,7 +102,20 @@ fi
+ # trees and drop them in the offline mirror. Otherwise pacman -Syw below
+ # downloads the published versions from the omarchy network mirror.
+ if [[ -d /omarchy-source && -d /omarchy-pkgs ]]; then
++  bash /builder/cache-t2-firmware.sh "$offline_mirror_dir"
+   bash /builder/build-omarchy-packages.sh "$offline_mirror_dir"
++  bash /builder/build-intel-mac-packages.sh "$offline_mirror_dir"
++  mapfile -t companion_package_names < /builder/intel-mac.packages
++  local_package_names+=("${companion_package_names[@]}")
++  # Give the local artifacts priority over published packages, even if the
++  # generated local version sorts lower. Only this file repo bypasses signing.
++  online_pacman_config=/tmp/pacman-intel-mac-online.conf
++  awk -v mirror="$offline_mirror_dir" '
++    /^\[core\]/ {
++      print "[intel-mac-local]\nSigLevel = Never\nServer = file://" mirror "\n"
++    }
++    { print }
++  ' "/configs/pacman-online-${OMARCHY_MIRROR}.conf" > "$online_pacman_config"
+   LOCAL_OMARCHY_BUILD=1
+ fi
+ 
+@@ -196,7 +211,7 @@ mapfile -t all_packages < <(
+     grep -hv '^#\|^$' /builder/archinstall.packages
+     # Always include the selected Omarchy packages so the target install can
+     # find the runtime and companion packages in the offline mirror.
+-    printf '%s\n' "$OMARCHY_RUNTIME_PACKAGE" "$OMARCHY_SETTINGS_PACKAGE" "$OMARCHY_NVIM_PACKAGE"
++    printf '%s\n' "${local_package_names[@]}"
+   } | sort -u
+ )
+ 
+@@ -210,22 +225,11 @@ mapfile -t all_packages < <(
+   printf '%s\n' "${all_packages[@]}" | sed 's/^broadcom-wl$/broadcom-wl-dkms/' | sort -u
+ )
+ 
+-# With --local-source we already built these omarchy* packages directly into
+-# the mirror; strip them from the pacman -Syw list so it doesn't try to fetch
+-# the published versions on top.
+-if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
+-  mapfile -t all_packages < <(
+-    printf '%s\n' "${all_packages[@]}" |
+-      grep -Fxv \
+-        -e "$OMARCHY_RUNTIME_PACKAGE" \
+-        -e "$OMARCHY_SETTINGS_PACKAGE" \
+-        -e "$OMARCHY_NVIM_PACKAGE" || true
+-  )
+-fi
+-
++# Local-source artifacts resolve through the container's local file repository;
++# their dependency closures are downloaded along with the ordinary ISO targets.
+ mkdir -p /tmp/offlinedb
+ download_offline_packages() {
+-  pacman --config /configs/pacman-online-${OMARCHY_MIRROR}.conf --noconfirm -Syw \
++  pacman --config "$online_pacman_config" --noconfirm -Syw \
+     "${all_packages[@]}" --cachedir "$offline_mirror_dir/" --dbpath /tmp/offlinedb --needed
+ }
+ 
+@@ -243,7 +247,7 @@ fi
+ # newest version of every cached package name) removes packages that have left
+ # the lists or dependency closure, such as an old Electron major version.
+ if ! resolved_package_files="$(
+-  pacman --config "/configs/pacman-online-${OMARCHY_MIRROR}.conf" --noconfirm \
++  pacman --config "$online_pacman_config" --noconfirm \
+     --dbpath /tmp/offlinedb -S --print --print-format '%f' "${all_packages[@]}"
+ )"; then
+   echo "ERROR: could not resolve the package files required by the offline mirror" >&2
+@@ -251,12 +255,26 @@ if ! resolved_package_files="$(
+ fi
+ mapfile -t required_package_files <<< "$resolved_package_files"
+ 
+-# The online transaction intentionally excludes packages built from the local
+-# checkouts. Add those exact artifacts back to the keep-set after verifying
+-# that the local build left exactly one file for each selected package name.
++# A versioned companion dependency must not quietly introduce a published
++# runtime alongside the local one (the dev package currently provides an
++# unversioned "omarchy"). That would stop this ISO proving source integration.
+ if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
+-  for local_package_name in \
+-    "$OMARCHY_RUNTIME_PACKAGE" "$OMARCHY_SETTINGS_PACKAGE" "$OMARCHY_NVIM_PACKAGE"; do
++  resolved_package_names="$(pacman --config "$online_pacman_config" --noconfirm \
++    --dbpath /tmp/offlinedb -S --print --print-format '%n' "${all_packages[@]}")"
++  for runtime_variant in omarchy omarchy-dev omarchy-settings omarchy-settings-dev; do
++    [[ $runtime_variant == "$OMARCHY_RUNTIME_PACKAGE" || $runtime_variant == "$OMARCHY_SETTINGS_PACKAGE" ]] && continue
++    if grep -Fxq "$runtime_variant" <<< "$resolved_package_names"; then
++      echo "ERROR: companion dependencies pull $runtime_variant alongside the local runtime." >&2
++      echo "Resolve the version/provider mismatch before testing this ISO." >&2
++      exit 1
++    fi
++  done
++fi
++
++# Verify the offline mirror retains exactly one artifact for every local
++# runtime and companion package, including packages used only on Apple models.
++if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
++  for local_package_name in "${local_package_names[@]}"; do
+     local_package_file=""
+     for candidate in "$offline_mirror_dir/$local_package_name-"*.pkg.tar.*; do
+       [[ -f $candidate && $candidate != *.sig ]] || continue
+@@ -283,6 +301,15 @@ printf '%s\n' "${required_package_files[@]}" |
+ # always reflect only the package files selected for this build.
+ rm -f "$offline_mirror_dir"/offline.db* "$offline_mirror_dir"/offline.files*
+ repo-add "$offline_mirror_dir/offline.db.tar.gz" "$offline_mirror_dir/"*.pkg.tar.zst
++if [[ -n ${LOCAL_OMARCHY_BUILD:-} ]]; then
++  receipt_dir="$build_cache_dir/airootfs/usr/share/omarchy-iso"
++  printf '%s\n' "${local_package_names[@]}" > "$receipt_dir/local-packages"
++  (
++    cd "$offline_mirror_dir"
++    sha256sum -- *.pkg.tar.zst
++  ) > "$receipt_dir/package-sha256sums"
++  cp "$receipt_dir/local-packages" "$receipt_dir/package-sha256sums" /out/
++fi
+ 
+ # mkarchiso expects the mirror at /var/cache/omarchy/mirror/offline inside the
+ # container (the airootfs path); symlink rather than duplicate.
+diff --git a/builder/build-omarchy-packages.sh b/builder/build-omarchy-packages.sh
+index 5f7173f..94952a0 100755
+--- a/builder/build-omarchy-packages.sh
++++ b/builder/build-omarchy-packages.sh
+@@ -42,6 +42,12 @@ packages=(
+   "$OMARCHY_NVIM_PACKAGE"
+ )
+ 
++reuse_all=true
++for pkg in "${packages[@]}"; do
++  bash /builder/reuse-verified-package.sh "$offline_mirror_dir" "$pkg" || reuse_all=false
++done
++$reuse_all && exit 0
++
+ # Local-source packages must replace every cached build of the same package,
+ # even when the checkout's generated pkgver sorts below a published build.
+ # Otherwise the later generic cache pruning can silently keep edge instead.
+@@ -78,6 +84,9 @@ for package_file in "$work_dir"/*.pkg.tar.zst; do
+   # otherwise valid local-source build.
+   rm -f "$destination" "$destination.sig"
+   mv "$package_file" "$destination"
++  cached="/var/cache/pacman/pkg/$(basename "$destination")"
++  rm -f "$cached.sig"
++  cp "$destination" "$cached"
+ done
+ 
+ echo
+diff --git a/builder/cache-t2-firmware.sh b/builder/cache-t2-firmware.sh
+new file mode 100644
+index 0000000..c7e6505
+--- /dev/null
++++ b/builder/cache-t2-firmware.sh
+@@ -0,0 +1,18 @@
++#!/bin/bash
++# The baseline requests this offline firmware, but the current arch-mact2
++# database lists only a fetcher. Preserve the maintainer's original artifact.
++set -euo pipefail
++mirror=$1
++filename=apple-bcm-firmware-14.0-1-any.pkg.tar.zst
++url="https://github.com/NoaHimesaka1873/arch-mact2-mirror/releases/download/release/$filename"
++# SHA256 published on the maintainer's GitHub release asset (2026-09-16).
++expected=f2cd47d9e3fb9658f16997b2d9ace3033b57925b8c6ddd86ccc3d07d0c3e9559
++mkdir -p "$mirror"
++if ! (cd "$mirror" && printf '%s  %s\n' "$expected" "$filename" | sha256sum -c --status); then
++  curl -fL --retry 2 --output "$mirror/$filename.download" "$url"
++  printf '%s  %s\n' "$expected" "$mirror/$filename.download" | sha256sum -c
++  mv "$mirror/$filename.download" "$mirror/$filename"
++fi
++[[ $(pacman -Qp "$mirror/$filename") == 'apple-bcm-firmware 14.0-1' ]]
++rm -f "$mirror/$filename.sig"
++printf 'Pinned baseline firmware: %s (%s)\n' "$url" "$expected"
+diff --git a/builder/intel-mac.packages b/builder/intel-mac.packages
+new file mode 100644
+index 0000000..226dff9
+--- /dev/null
++++ b/builder/intel-mac.packages
+@@ -0,0 +1,10 @@
++facetimehd-firmware
++facetimehd-data
++facetimehd-dkms
++macbook12-audio-driver-dkms
++snd-hda-macbookpro-dkms
++libfprint-t1bridge
++fprintd-t1bridge
++t1bridge-dkms
++t1bridge
++t1bridge-omarchy
+diff --git a/builder/reuse-verified-package.sh b/builder/reuse-verified-package.sh
+new file mode 100644
+index 0000000..c1913bf
+--- /dev/null
++++ b/builder/reuse-verified-package.sh
+@@ -0,0 +1,44 @@
++#!/bin/bash
++# Opt-in reuse of actual passing build artifacts; source and bytes must match.
++set -euo pipefail
++mirror=$1
++package=$2
++receipt=/var/cache/intel-mac-build/verified-reuse.json
++[[ -f $receipt ]] || exit 1
++mapfile -t artifacts < <(python - "$receipt" "$mirror" "$package" <<'PY'
++import hashlib, json, pathlib, subprocess, sys
++receipt, mirror, package = sys.argv[1:]
++data = json.loads(pathlib.Path(receipt).read_text())
++for name, path in [('omarchy', '/omarchy-source'), ('omarchy-pkgs', '/omarchy-pkgs')]:
++    head = subprocess.check_output(['git', '-c', f'safe.directory={path}', '-C', path, 'rev-parse', 'HEAD'], text=True).strip()
++    if data['input_commits'][name] != head:
++        sys.exit(1)
++entries = data['packages'].get(package, [])
++if not entries:
++    sys.exit(1)
++for entry in entries:
++    filename = entry['filename']
++    if pathlib.Path(filename).name != filename:
++        sys.exit(1)
++    artifact = pathlib.Path(mirror) / filename
++    if not artifact.is_file() or hashlib.file_digest(artifact.open('rb'), 'sha256').hexdigest() != entry['sha256']:
++        sys.exit(1)
++for entry in entries:
++    print(pathlib.Path(mirror) / entry['filename'])
++PY
++)
++(( ${#artifacts[@]} )) || exit 1
++primary=false
++for artifact in "${artifacts[@]}"; do
++  read -r name _ < <(pacman -Qp "$artifact")
++  [[ $name == "$package" ]] && primary=true
++done
++$primary || exit 1
++# A local rebuild can keep its filename while changing its archive checksum.
++# Refresh this task's dedicated pacman cache before any dependency transaction.
++for artifact in "${artifacts[@]}"; do
++  cached="/var/cache/pacman/pkg/$(basename "$artifact")"
++  rm -f "$cached.sig"
++  cp "$artifact" "$cached"
++done
++echo "Reusing verified build artifact for $package (matching source commits and SHA256)."
+diff --git a/configs/airootfs/usr/share/omarchy-iso/orchestrator/apple_efi.py b/configs/airootfs/usr/share/omarchy-iso/orchestrator/apple_efi.py
+new file mode 100644
+index 0000000..e9d24b5
+--- /dev/null
++++ b/configs/airootfs/usr/share/omarchy-iso/orchestrator/apple_efi.py
+@@ -0,0 +1,160 @@
++"""Apple's coprocessor firmware folder, carried across a full-disk install.
++
++On 2016/2017 Touch Bar MacBook Pros the T1 coprocessor holds no firmware of
++its own: the Mac loads it from `EFI/APPLE/EMBEDDEDOS` on the EFI System
++Partition at every boot, and the Touch Bar, Touch ID and the FaceTime camera
++are all behind that chip. Recreating the ESP deletes the folder, and nothing
++in Linux puts it back — the machine installs and boots fine, with three pieces
++of hardware permanently dead until macOS is reinstalled to write the folder
++again (basecamp/omarchy#8271).
++
++So the folder is copied into the live system's RAM before the partition table
++is touched, and written back onto the new ESP before the bootloader lands on
++it. Everything here is best-effort by construction: a failure is logged and
++the install carries on, because a machine that boots with a dead Touch Bar is
++today's outcome, while an install aborted over a firmware copy is worse than
++the bug it protects against.
++
++The folder is the whole signal — there is no hardware sniffing. A disk that
++has one gets it preserved, and a disk that has none costs a read-only mount
++of the partitions the installer is about to erase anyway.
++"""
++
++from __future__ import annotations
++
++import shutil
++import tempfile
++from collections.abc import Iterator
++from contextlib import ExitStack, contextmanager
++from pathlib import Path
++
++from .command import capture, require_text
++from .ui import info
++
++# Relative to the root of the ESP, in the case the firmware itself uses.
++APPLE_DIR = Path("EFI/APPLE")
++FIRMWARE_DIR = "EMBEDDEDOS"
++
++# The real folder is a few MB. These bound what a surprising one may cost the
++# live system, whose RAM the install itself is also spending.
++MAX_STASH_BYTES = 256 * 1024 * 1024
++FREE_SPACE_MARGIN = 256 * 1024 * 1024
++
++
++def preserve(disk: str, stash: Path) -> Path | None:
++    """Copy EFI/APPLE off `disk` into `stash` before the disk is wiped.
++
++    Returns the stash path, or None when there was nothing to preserve or the
++    copy did not work out. Every mount is read-only: the source is never
++    written, only read out of the way.
++    """
++    try:
++        with ExitStack() as mounts:
++            candidates = []
++            for partition in _vfat_partitions(disk):
++                root = mounts.enter_context(_mounted_ro(partition))
++                if root and (root / APPLE_DIR).is_dir():
++                    candidates.append((partition, root / APPLE_DIR))
++
++            if not candidates:
++                info("› no Apple coprocessor firmware on the install disk")
++                return None
++
++            # More than one ESP can carry an EFI/APPLE; the one holding the
++            # firmware itself is the one worth keeping.
++            partition, source = max(
++                candidates, key=lambda found: (found[1] / FIRMWARE_DIR).is_dir()
++            )
++            return _stash(partition, source, stash)
++    except Exception as exc:  # noqa: BLE001 — never abort an install over this
++        info(f"› warning: could not preserve Apple coprocessor firmware: {exc}")
++        return None
++
++
++def restore(esp_root: Path, stash: Path) -> bool:
++    """Write the preserved folder back onto the freshly created ESP.
++
++    `esp_root` is the ESP as the live system sees it (the mount under the
++    install target), not the mountpoint the installed system will use.
++    """
++    if not stash.is_dir():
++        return False
++
++    destination = esp_root / APPLE_DIR
++    try:
++        destination.parent.mkdir(parents=True, exist_ok=True)
++        shutil.copytree(stash, destination, dirs_exist_ok=True)
++        capture(["sync"])
++
++        expected = _tree_size(stash)
++        written = _tree_size(destination)
++        if written != expected:
++            info(
++                f"› warning: Apple coprocessor firmware landed on {destination} "
++                f"as {written[0]} files / {written[1]} bytes, expected "
++                f"{expected[0]} / {expected[1]}"
++            )
++            return False
++    except Exception as exc:  # noqa: BLE001 — never abort an install over this
++        info(f"› warning: could not restore Apple coprocessor firmware: {exc}")
++        return False
++
++    info(
++        f"› restored Apple coprocessor firmware to {destination} "
++        f"({expected[0]} files, {expected[1] // 1024} KiB)"
++    )
++    return True
++
++
++def _stash(partition: str, source: Path, stash: Path) -> Path | None:
++    files, size = _tree_size(source)
++    stash.parent.mkdir(parents=True, exist_ok=True)
++    free = shutil.disk_usage(stash.parent).free
++    if size > MAX_STASH_BYTES or size + FREE_SPACE_MARGIN > free:
++        info(
++            f"› warning: not preserving Apple coprocessor firmware from "
++            f"{partition}: {size} bytes does not fit in the live system's "
++            f"memory ({free} bytes free)"
++        )
++        return None
++
++    if stash.exists():
++        shutil.rmtree(stash)
++    shutil.copytree(source, stash)
++    info(
++        f"› preserved Apple coprocessor firmware from {partition} "
++        f"({files} files, {size // 1024} KiB)"
++    )
++    return stash
++
++
++def _vfat_partitions(disk: str) -> list[str]:
++    """Partitions on `disk` that could be an ESP, in on-disk order."""
++    listing = capture(["lsblk", "-nrpo", "PATH,FSTYPE", disk])
++    partitions = []
++    for line in listing.stdout.splitlines():
++        fields = line.split()
++        if len(fields) == 2 and fields[1] == "vfat" and fields[0] != disk:
++            # This is handed to mount, so a byte lost in decoding it must stop
++            # the copy rather than mount something else.
++            partitions.append(require_text(fields[0], "the ESP device"))
++    return partitions
++
++
++@contextmanager
++def _mounted_ro(partition: str) -> Iterator[Path | None]:
++    """Mount `partition` read-only somewhere temporary, or yield None."""
++    with tempfile.TemporaryDirectory(prefix="omarchy-esp-") as mountpoint:
++        if capture(["mount", "-o", "ro", partition, mountpoint]).returncode != 0:
++            yield None
++            return
++        try:
++            yield Path(mountpoint)
++        finally:
++            capture(["umount", mountpoint])
++
++
++def _tree_size(root: Path) -> tuple[int, int]:
++    """(file count, total bytes) under `root` — what a restore must match."""
++    files = [path for path in root.rglob("*") if path.is_file()]
++    return len(files), sum(path.stat().st_size for path in files)
+diff --git a/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py b/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py
+index 1ebd4ce..c393002 100644
+--- a/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py
++++ b/configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py
+@@ -32,6 +32,7 @@ import time
+ from dataclasses import replace
+ from pathlib import Path
+ 
++from . import apple_efi
+ from . import archinstall_adapter as arch
+ from .command import capture, capture_identifier, require_text
+ from .context import InstallContext
+@@ -181,6 +182,9 @@ def prepare_live(ctx: InstallContext) -> None:
+     else:
+         disk = _install_disk(ctx)
+         if disk:
++            # An Apple ESP carries the T1/T2 coprocessor's firmware, and the
++            # wipe below is the last moment it exists (omarchy#8271).
++            apple_efi.preserve(disk, _apple_efi_stash(ctx))
+             info(f"› cleaning up holders on install disk: {disk}")
+             subprocess.run(["omarchy-iso-cleanup-disk", disk], check=True)
+ 
+@@ -191,6 +195,13 @@ def prepare_live(ctx: InstallContext) -> None:
+     ctx.state["mirror_handler"] = arch.make_mirror_handler(offline=True)
+ 
+ 
++def _apple_efi_stash(ctx: InstallContext) -> Path:
++    """Where Apple's coprocessor firmware waits out the wipe: the state
++    directory, which is tmpfs on the live ISO and so survives the disk but
++    not the reboot."""
++    return ctx.state_dir / "apple-efi"
++
++
+ def _install_disk(ctx: InstallContext) -> str | None:
+     """Return the device path of the disk being wiped, or None for
+     pre_mounted / no-wipe configs."""
+@@ -363,9 +374,16 @@ def _install_limine_omarchy(ctx: InstallContext, installer, config) -> None:
+         if not efi_partition.mountpoint:
+             raise RuntimeError("EFI partition is not mounted")
+ 
++        esp_mount = str(efi_partition.mountpoint)
++
++        # The ESP is new and empty here; Apple's coprocessor firmware goes
++        # back on before anything else claims the partition. The mountpoint
++        # is the installed system's, so read it through the target.
++        apple_efi.restore(ctx.target / esp_mount.lstrip("/"), _apple_efi_stash(ctx))
++
+         _install_limine_efi(
+             ctx,
+-            esp_mount=str(efi_partition.mountpoint),
++            esp_mount=esp_mount,
+             disk=arch.parent_device_path(efi_partition.safe_dev_path),
+             part=int(efi_partition.partn),
+             removable=bootloader_removable,
+diff --git a/test/integration.d/base-test.sh b/test/integration.d/base-test.sh
+index df2d6ba..e42bb3c 100644
+--- a/test/integration.d/base-test.sh
++++ b/test/integration.d/base-test.sh
+@@ -306,6 +306,7 @@ wait_for_ssh() {
+ # reset just scrubbed it): console login on a spare TTY, then a bootstrap
+ # script fetched from a throwaway host HTTP server.
+ bootstrap_ssh() {
++  local attempt=${1:-1}
+   log "Authorizing SSH access via console login"
+ 
+   mkdir -p "$BASE_DIR/www"
+@@ -322,7 +323,8 @@ EOF
+ 
+   local waited=0
+   while true; do
+-    press ctrl-alt-f3
++    # tty3 can be occupied by the graphical session after provisioning.
++    press ctrl-alt-f4
+     sleep 4
+     ocr_screen | grep -qi "login:" && break
+     ((waited += 8))
+@@ -345,7 +347,16 @@ EOF
+   type_text "curl -fsS http://10.0.2.2:$HTTP_PORT/bootstrap -o /tmp/bs && bash /tmp/bs"
+   press ret
+ 
+-  wait_for_ssh 360 "failure-bootstrap-ssh-timeout"
++  if ! wait_for_ssh 60 "failure-bootstrap-ssh-attempt-$attempt"; then
++    kill "$HTTP_PID" 2>/dev/null || true
++    HTTP_PID=""
++    if ((attempt < 3)); then
++      log "Console bootstrap did not establish SSH; retrying after possible provisioning reboot"
++      bootstrap_ssh "$((attempt + 1))"
++      return
++    fi
++    return 1
++  fi
+   capture_console "success-bootstrap-ssh"
+ 
+   kill "$HTTP_PID" 2>/dev/null || true
+@@ -510,7 +521,18 @@ install_phase() {
+   # Build under a staging name: the finished base is promoted only after a
+   # clean shutdown, so a failed install can never pass for a reusable base.
+   rm -f "$BASE_DISK" "$BASE_DISK.building"
+-  qemu-img create -f qcow2 "$BASE_DISK.building" 40G >/dev/null
++  if [[ -n ${OMARCHY_INTEGRATION_INITIAL_DISK:-} ]]; then
++    # Optional synthetic pre-install disk for preservation tests. The source
++    # stays read-only behind a disposable overlay; never accept a host device.
++    local initial_disk
++    initial_disk=$(realpath "$OMARCHY_INTEGRATION_INITIAL_DISK")
++    [[ -f $initial_disk && ! -b $initial_disk ]]
++    qemu-img info --output=json "$initial_disk" |
++      python -c 'import json,sys; d=json.load(sys.stdin); assert d["format"] == "qcow2" and d["virtual-size"] == 40 * 1024**3'
++    qemu-img create -f qcow2 -b "$initial_disk" -F qcow2 "$BASE_DISK.building" >/dev/null
++  else
++    qemu-img create -f qcow2 "$BASE_DISK.building" 40G >/dev/null
++  fi
+   cp "$OVMF_VARS_TEMPLATE" "$BASE_OVMF"
+   ACTIVE_OVMF="$BASE_OVMF"
+ 
+diff --git a/test/integration.d/factory-reset-test.sh b/test/integration.d/factory-reset-test.sh
+index 0c3952a..4ed66b0 100755
+--- a/test/integration.d/factory-reset-test.sh
++++ b/test/integration.d/factory-reset-test.sh
+@@ -52,9 +52,20 @@ CONF
+   " >/dev/null
+ 
+   ssh_sudo "cat /boot/limine.conf" >"$RUN_DIR/limine.conf.fixtured"
++  ssh_sudo 'sha256sum /boot/EFI/Linux/foreign_*.efi' >"$RUN_DIR/foreign-uki.sha256"
++  [[ -s $RUN_DIR/foreign-uki.sha256 ]]
+   log "ESP fixtured as a shared dual-boot ESP (old machine-id $OLD_ID)"
+ }
+ 
++# Check the actual kernel filenames created above, before and after reset.
++# A hardcoded foreign_linux.efi misses linux-omarchy and other installed kernels.
++foreign_ukis_preserved() {
++  local expected actual
++  expected=$(cat "$RUN_DIR/foreign-uki.sha256")
++  actual=$(ssh_sudo 'sha256sum /boot/EFI/Linux/foreign_*.efi') || return 1
++  [[ $actual == "$expected" ]]
++}
++
+ # ------------------------------------------------------------- reset driver
+ 
+ # Drive the interactive reset through a pty on the guest: `script` supplies
+@@ -128,7 +139,7 @@ reset_phase() {
+   check "foreign boot directory survives staging" \
+     ssh_sudo "grep -q foreign-payload /boot/$FOREIGN_ID/marker"
+   check "foreign UKI survives staging" \
+-    ssh_sudo "test -f /boot/EFI/Linux/foreign_linux.efi"
++    foreign_ukis_preserved
+   check "old omarchy entry is removed by staging" \
+     ssh_sudo "! grep -q 'machine-id=$OLD_ID' /boot/limine.conf"
+   check "old omarchy boot directory is removed by staging" \
+@@ -270,7 +281,7 @@ first_boot_phase() {
+   check "foreign boot directory survives the first boot" \
+     ssh_sudo "grep -q foreign-payload /boot/$FOREIGN_ID/marker"
+   check "foreign UKI survives the first boot" \
+-    ssh_sudo "test -f /boot/EFI/Linux/foreign_linux.efi"
++    foreign_ukis_preserved
+   check "old omarchy identity never returns" \
+     ssh_sudo "! grep -q 'machine-id=$OLD_ID' /boot/limine.conf"
+   check "the new identity owns a boot entry" \
+diff --git a/test/unit/test_apple_efi.py b/test/unit/test_apple_efi.py
+new file mode 100644
+index 0000000..0d8d8f0
+--- /dev/null
++++ b/test/unit/test_apple_efi.py
+@@ -0,0 +1,181 @@
++#!/usr/bin/python
++
++"""Carrying EFI/APPLE across a wipe, without the disk or the mounts.
++
++The mount seam (`_mounted_ro`) is replaced with directories on disk, so these
++exercise the real copy, the real preference rule and the real verification —
++everything except the two commands that need a block device and root.
++"""
++
++import sys
++import tempfile
++import unittest
++from contextlib import contextmanager
++from pathlib import Path
++from unittest import mock
++
++ROOT = Path(__file__).resolve().parents[2]
++sys.path.insert(0, str(ROOT / "configs/airootfs/usr/share/omarchy-iso"))
++
++from orchestrator import apple_efi  # noqa: E402
++
++# What a Touch Bar Mac's ESP actually holds, small enough to write per test.
++FIRMWARE = {
++    "EFI/APPLE/EMBEDDEDOS/EmbeddedOSFirmware.im4p": b"\x00im4p" * 64,
++    "EFI/APPLE/EMBEDDEDOS/FDRData": b"fdr" * 32,
++    "EFI/APPLE/EXTENSIONS/Firmware.scap": b"scap" * 16,
++}
++OTHER_ESP = {"EFI/BOOT/BOOTX64.EFI": b"MZ", "EFI/Microsoft/Boot/bootmgfw.efi": b"MZ"}
++
++
++def write_tree(root: Path, files: dict) -> Path:
++    for name, contents in files.items():
++        path = root / name
++        path.parent.mkdir(parents=True, exist_ok=True)
++        path.write_bytes(contents)
++    return root
++
++
++def read_tree(root: Path) -> dict:
++    return {
++        str(path.relative_to(root)): path.read_bytes()
++        for path in sorted(root.rglob("*"))
++        if path.is_file()
++    }
++
++
++class AppleEfiTest(unittest.TestCase):
++    def setUp(self):
++        directory = tempfile.TemporaryDirectory()
++        self.addCleanup(directory.cleanup)
++        self.tmp = Path(directory.name)
++        self.stash = self.tmp / "state" / "apple-efi"
++
++        self.logged = []
++        self.patch("info", self.logged.append)
++
++    def esp(self, name: str, files: dict) -> Path:
++        """A directory standing in for a mounted ESP."""
++        return write_tree(self.tmp / name, files)
++
++    def fake_disk(self, partitions: dict) -> None:
++        """Make /dev/... names resolve to those directories instead of mounts.
++
++        A None stands for a partition that would not mount.
++        """
++        @contextmanager
++        def mounted(partition):
++            yield partitions[partition]
++
++        self.patch("_vfat_partitions", lambda disk: list(partitions))
++        self.patch("_mounted_ro", mounted)
++
++    def patch(self, name, replacement):
++        patcher = mock.patch.object(apple_efi, name, replacement)
++        patcher.start()
++        self.addCleanup(patcher.stop)
++
++    def log(self) -> str:
++        return "\n".join(self.logged)
++
++    def test_the_firmware_folder_is_found_and_copied_off_the_disk(self):
++        self.fake_disk({"/dev/sda1": self.esp("sda1", FIRMWARE)})
++
++        self.assertEqual(apple_efi.preserve("/dev/sda", self.stash), self.stash)
++        self.assertEqual(
++            read_tree(self.stash),
++            {
++                "EMBEDDEDOS/EmbeddedOSFirmware.im4p": FIRMWARE[
++                    "EFI/APPLE/EMBEDDEDOS/EmbeddedOSFirmware.im4p"
++                ],
++                "EMBEDDEDOS/FDRData": FIRMWARE["EFI/APPLE/EMBEDDEDOS/FDRData"],
++                "EXTENSIONS/Firmware.scap": FIRMWARE["EFI/APPLE/EXTENSIONS/Firmware.scap"],
++            },
++        )
++        self.assertIn("preserved Apple coprocessor firmware", self.log())
++
++    def test_a_disk_with_no_apple_folder_is_left_alone(self):
++        self.fake_disk({"/dev/sda1": self.esp("sda1", OTHER_ESP)})
++
++        self.assertIsNone(apple_efi.preserve("/dev/sda", self.stash))
++        self.assertFalse(self.stash.exists())
++        self.assertEqual(len(self.logged), 1)
++        self.assertIn("no Apple coprocessor firmware", self.log())
++
++    def test_the_esp_holding_the_firmware_wins_over_one_that_only_looks_apple(self):
++        # A stale EFI/APPLE left by a macOS install that is no longer the one
++        # the Mac boots its coprocessor from.
++        decoy = self.esp("sda1", {"EFI/APPLE/README": b"stale"})
++        real = self.esp("sda2", FIRMWARE)
++        self.fake_disk({"/dev/sda1": decoy, "/dev/sda2": real})
++
++        apple_efi.preserve("/dev/sda", self.stash)
++
++        self.assertTrue((self.stash / "EMBEDDEDOS/FDRData").is_file())
++        self.assertFalse((self.stash / "README").exists())
++        self.assertIn("/dev/sda2", self.log())
++
++    def test_what_the_wipe_would_have_destroyed_is_on_the_new_esp(self):
++        self.fake_disk({"/dev/sda1": self.esp("sda1", FIRMWARE)})
++        apple_efi.preserve("/dev/sda", self.stash)
++
++        new_esp = self.tmp / "mnt" / "boot"
++        new_esp.mkdir(parents=True)
++
++        self.assertTrue(apple_efi.restore(new_esp, self.stash))
++        self.assertEqual(
++            read_tree(new_esp / "EFI/APPLE"),
++            read_tree(self.tmp / "sda1" / "EFI/APPLE"),
++        )
++        self.assertIn("restored Apple coprocessor firmware", self.log())
++
++    def test_nothing_preserved_means_nothing_written_to_the_new_esp(self):
++        new_esp = self.tmp / "mnt" / "boot"
++        new_esp.mkdir(parents=True)
++
++        self.assertFalse(apple_efi.restore(new_esp, self.stash))
++        self.assertEqual(read_tree(new_esp), {})
++
++    def test_a_short_restore_is_reported_rather_than_claimed(self):
++        self.fake_disk({"/dev/sda1": self.esp("sda1", FIRMWARE)})
++        apple_efi.preserve("/dev/sda", self.stash)
++        new_esp = self.tmp / "mnt" / "boot"
++        new_esp.mkdir(parents=True)
++
++        def half_a_copy(source, destination, dirs_exist_ok=False):
++            Path(destination).mkdir(parents=True, exist_ok=True)
++            (Path(destination) / "FDRData").write_bytes(b"truncated")
++
++        with mock.patch.object(apple_efi.shutil, "copytree", half_a_copy):
++            self.assertFalse(apple_efi.restore(new_esp, self.stash))
++
++        self.assertNotIn("restored Apple coprocessor firmware", self.log())
++        self.assertIn("warning", self.log())
++
++    def test_an_unreadable_source_warns_and_lets_the_install_continue(self):
++        self.fake_disk({"/dev/sda1": self.esp("sda1", FIRMWARE)})
++
++        with mock.patch.object(
++            apple_efi.shutil, "copytree", side_effect=PermissionError("EFI/APPLE")
++        ):
++            self.assertIsNone(apple_efi.preserve("/dev/sda", self.stash))
++
++        self.assertIn("warning: could not preserve", self.log())
++
++    def test_a_folder_too_big_for_the_live_system_is_not_copied(self):
++        self.fake_disk({"/dev/sda1": self.esp("sda1", FIRMWARE)})
++        self.patch("MAX_STASH_BYTES", 8)
++
++        self.assertIsNone(apple_efi.preserve("/dev/sda", self.stash))
++        self.assertFalse(self.stash.exists())
++        self.assertIn("warning: not preserving", self.log())
++
++    def test_a_partition_that_will_not_mount_is_skipped(self):
++        self.fake_disk({"/dev/sda1": None, "/dev/sda2": self.esp("sda2", FIRMWARE)})
++
++        self.assertEqual(apple_efi.preserve("/dev/sda", self.stash), self.stash)
++        self.assertIn("/dev/sda2", self.log())
++
++
++if __name__ == "__main__":
++    unittest.main()

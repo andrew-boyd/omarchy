@@ -1,0 +1,45 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11464",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "imac-5k"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "aabf8f9270127a2591bdf45641dd7c06d327f941",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11464,
+  "checked_at": "2026-09-21T11:56:28.884235+00:00",
+  "title": "Add the 2017 iMac 5K to Mac support",
+  "author": "ahmadtv",
+  "head_sha": "aabf8f9270127a2591bdf45641dd7c06d327f941",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T13:31:12Z",
+  "state": "open",
+  "body": "The Mac support page covers T1 and T2 Macs. The 2017 27-inch iMac (iMac18,3) has neither, and stock Omarchy runs on it with four known gaps. This adds it under Known Limitations in the same format, with a link to the community patcher that fixes the display, sound and brightness.\n\nWritten on an iMac18,3 running Omarchy 4.0.3 daily.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)",
+  "draft": false,
+  "files": [
+    {
+      "sha": "95baf622663a30513b46f062a206f1974ab54bac",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/aabf8f9270127a2591bdf45641dd7c06d327f941/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/aabf8f9270127a2591bdf45641dd7c06d327f941/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=aabf8f9270127a2591bdf45641dd7c06d327f941",
+      "patch": "@@ -69,3 +69,18 @@ The Apple T2 Security Chip was introduced in 2017. The T2 chip was discontinued\n - MacBook Pro 15-inch (2020) \u2013 Model: A1990\n \n On these models, the installer automatically sets up the patched `linux-t2` kernel, the T2 audio configuration, Apple's Broadcom Wi-Fi/Bluetooth firmware, and fan control via `t2fanrd`. The Touch Bar runs on the kernel's built-in Boot Camp-style support.\n+\n+#### iMac Retina 5K (2017)\n+\n+The 2017 27-inch iMac has no T2 chip, so the installer sets it up like the other Intel Macs.\n+\n+- iMac (Retina 5K, 27-inch, 2017) \u2013 Model: A1419\n+\n+#### Known Issues\n+\n+- The display doesn't run at its native 5120\u00d72880: the panel is two tiles, and the stock driver lights only one\n+- Sound is not functioning\n+- The brightness control has no effect\n+- Sleep hangs the machine; only a power cycle recovers it\n+\n+A community patcher for this model fixes the display, sound and brightness: [omarchy-imac18-3](https://github.com/ahmadtv/omarchy-imac18-3)."
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,81 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11064",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11064,
+  "checked_at": "2026-09-21T11:56:17.714728+00:00",
+  "title": "Add pre-T2 MacBook Cirrus CS8409 speaker fix",
+  "author": "ozdadirri",
+  "head_sha": "1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+  "base_sha": "8ea51516390320f8e768808b230098e67bdaa82c",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-09T23:50:12Z",
+  "state": "open",
+  "body": "## Problem\n\nPre-T2 \"Touch Bar\" MacBooks (`MacBookPro13,2`, `MacBookPro13,3`, `MacBookPro14,2`, `MacBookPro14,3`) pair a **Cirrus CS8409** HDA bridge with a **MAX98706** speaker amp. The in-tree `snd_hda_codec_cs8409` driver never initialises the amp, so the card comes up with `speaker_outs=0` and only headphone output works.\n\n`install/hardware/apple/fix-t2.sh` does not help here \u2014 it gates on the T2 PCI ID (`106b:180[12]`), which these models predate. So today there is no path in Omarchy that restores speaker output on these Macs, and users have to re-apply an out-of-tree patch by hand after every update.\n\nWrite-up of the underlying issue and manual fix: https://medium.com/@chris.xg.wang/installing-omarchy-linux-on-your-old-mac-heres-the-fix-for-your-sound-1a0c289377f4\n\n## Change\n\n- **`install/hardware/apple/fix-cirrus-speakers.sh`** (new) \u2014 detects the affected models via `/sys/class/dmi/id/product_name`, excludes real T2 hardware, and installs `snd-hda-macbookpro-dkms-git` ([davidjo/snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro)). DKMS rebuilds the codec patch on every kernel bump, so the fix survives updates \u2014 no manual re-apply.\n- **`install/hardware/all.sh`** \u2014 dispatches the new leaf next to the other `apple/` lines, right after `fix-t2.sh`.\n- **`migrations/1788959623.sh`** (new) \u2014 same detection, idempotent (`omarchy-pkg-present` guard), backfills the package on installs set up before the leaf existed.\n- **`test/shell.d/cirrus-speakers-test.sh`** (new) \u2014 static checks plus stubbed migration runs across the four target models, rejected models, T2 hardware, and the already-installed case.\n\nBoth scripts read `lspci` into a variable before matching to avoid the `grep -q` SIGPIPE / `pipefail` misfire (#6608).\n\n## Verification\n\n- `./test/shell` \u2014 new test passes; the only failing files (`config`, `locate`, `snapper`, `unowned-system-paths`) fail identically on a clean `quattro` here (they need a local `omarchy-pkgs` checkout).\n- On a `MacBookPro13,2`: after the DKMS build + reboot, `dmesg | grep -i cs8409` shows the patched codec, `wpctl status` lists the speaker sink, and `speaker-test -D hw:0,0 -c 2 -t sine -f 440` produces output from both speakers.\n\n## Open questions for maintainers\n\n- **`-git` AUR dependency.** `snd-hda-macbookpro-dkms-git` has no pinned release. Happy to switch to a versioned/vendored package or move it into the Omarchy package repo if you'd prefer.\n- **Model list.** Confirming `13,2 / 13,3 / 14,2 / 14,3` is the complete CS8409 + MAX98706 set (non-Touch Bar `13,1 / 14,1` are deliberately excluded \u2014 different codec). Happy to narrow or widen.\n- Whether newer `linux-t2` / `apple-t2-audio-config` now covers any of these, shrinking the target.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "dbfda622179d711adc6dcaa8dc494d629acdbada",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1ed9d451df4c551857cc0ea648c0b3d5471beb96/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1ed9d451df4c551857cc0ea648c0b3d5471beb96/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+      "patch": "@@ -41,6 +41,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cirrus-speakers.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\""
+    },
+    {
+      "sha": "9486d9671b1b1951cd5db0fac210c4db943e2563",
+      "filename": "install/hardware/apple/fix-cirrus-speakers.sh",
+      "status": "added",
+      "additions": 18,
+      "deletions": 0,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1ed9d451df4c551857cc0ea648c0b3d5471beb96/install%2Fhardware%2Fapple%2Ffix-cirrus-speakers.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1ed9d451df4c551857cc0ea648c0b3d5471beb96/install%2Fhardware%2Fapple%2Ffix-cirrus-speakers.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-cirrus-speakers.sh?ref=1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+      "patch": "@@ -0,0 +1,18 @@\n+# Restore speaker output on pre-T2 \"Touch Bar\" MacBooks (Cirrus CS8409 audio).\n+#\n+# These models pair a Cirrus CS8409 HDA bridge with a MAX98706 speaker amp. The\n+# in-tree snd_hda_codec_cs8409 driver never initialises the amp, so the card\n+# comes up with speaker_outs=0 and only headphones work. fix-t2.sh does not\n+# cover them: it gates on the T2 PCI ID (106b:180[12]), which these Macs predate.\n+#\n+# davidjo/snd_hda_macbookpro ships the out-of-tree codec patch; the DKMS package\n+# rebuilds it against every installed kernel, so the fix survives kernel updates.\n+# Affected: MacBookPro13,2 MacBookPro13,3 MacBookPro14,2 MacBookPro14,3.\n+\n+product_name=\"${OMARCHY_DMI_PRODUCT_NAME:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+pci=\"$(lspci -nn)\"\n+if [[ $product_name =~ ^MacBookPro1[34],[23]$ ]] &&\n+  [[ $pci != *\"106b:1801\"* && $pci != *\"106b:1802\"* ]]; then\n+  echo \"Detected pre-T2 MacBook with Cirrus CS8409 speakers\"\n+  omarchy-pkg-add snd-hda-macbookpro-dkms-git\n+fi"
+    },
+    {
+      "sha": "f0395db6ad99e3c0e74114b505f7fb7b1169ff3f",
+      "filename": "migrations/1788959623.sh",
+      "status": "added",
+      "additions": 21,
+      "deletions": 0,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1ed9d451df4c551857cc0ea648c0b3d5471beb96/migrations%2F1788959623.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1ed9d451df4c551857cc0ea648c0b3d5471beb96/migrations%2F1788959623.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788959623.sh?ref=1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+      "patch": "@@ -0,0 +1,21 @@\n+echo \"Install the Cirrus CS8409 speaker codec fix on pre-T2 Touch Bar MacBooks\"\n+\n+# Pre-T2 MacBookPro13,2/13,3/14,2/14,3 pair a Cirrus CS8409 HDA bridge with a\n+# MAX98706 speaker amp the in-tree driver never initialises, so speakers stay\n+# silent. install/hardware/apple/fix-cirrus-speakers.sh now installs the\n+# davidjo/snd_hda_macbookpro DKMS codec patch on fresh setups; this backfills it\n+# on existing installs. DKMS then rebuilds it on every future kernel bump, so no\n+# manual re-apply is needed after an omarchy update.\n+\n+product_name=\"${OMARCHY_DMI_PRODUCT_NAME:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+[[ $product_name =~ ^MacBookPro1[34],[23]$ ]] || exit 0\n+\n+# Read lspci into a variable before matching: piping straight into `grep -q`\n+# lets grep close the pipe on the first match, and the SIGPIPE that lands on\n+# lspci trips `set -o pipefail` into reporting \"no T2 hardware\" (#6608).\n+pci=\"$(lspci -nn)\"\n+[[ $pci == *\"106b:1801\"* || $pci == *\"106b:1802\"* ]] && exit 0\n+\n+omarchy-pkg-present snd-hda-macbookpro-dkms-git && exit 0\n+\n+omarchy-pkg-add snd-hda-macbookpro-dkms-git"
+    },
+    {
+      "sha": "522f7c6738c7227731f897ce01d048396c71c1bf",
+      "filename": "test/shell.d/cirrus-speakers-test.sh",
+      "status": "added",
+      "additions": 68,
+      "deletions": 0,
+      "changes": 68,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1ed9d451df4c551857cc0ea648c0b3d5471beb96/test%2Fshell.d%2Fcirrus-speakers-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1ed9d451df4c551857cc0ea648c0b3d5471beb96/test%2Fshell.d%2Fcirrus-speakers-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fcirrus-speakers-test.sh?ref=1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+      "patch": "@@ -0,0 +1,68 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+fix=\"$ROOT/install/hardware/apple/fix-cirrus-speakers.sh\"\n+migration=\"$ROOT/migrations/1788959623.sh\"\n+\n+grep -Fq 'snd-hda-macbookpro-dkms-git' \"$fix\" ||\n+  fail \"Cirrus setup installs the out-of-tree codec DKMS package\"\n+grep -Fq 'run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cirrus-speakers.sh\"' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"Cirrus setup is dispatched from install/hardware/all.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-present\" <<'SH'\n+#!/bin/bash\n+(( ${DKMS_INSTALLED:-0} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-pkg-add\\t%s\\n' \"$*\" >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_migration() {\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_DMI_PRODUCT_NAME=\"$1\" T2_HARDWARE=\"${2:-0}\" DKMS_INSTALLED=\"${3:-0}\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+for model in MacBookPro13,2 MacBookPro13,3 MacBookPro14,2 MacBookPro14,3; do\n+  run_migration \"$model\"\n+  grep -Fq $'omarchy-pkg-add\\tsnd-hda-macbookpro-dkms-git' \"$calls\" ||\n+    fail \"Cirrus migration installs the codec fix on $model\"\n+done\n+\n+for model in MacBookPro13,1 MacBookPro14,1 MacBookPro15,2 \"MacBookAir8,1\" \"Precision 5540\"; do\n+  run_migration \"$model\"\n+  [[ ! -s $calls ]] || fail \"Cirrus migration ignores $model\" \"$(cat \"$calls\")\"\n+done\n+\n+run_migration MacBookPro14,3 1\n+[[ ! -s $calls ]] || fail \"Cirrus migration defers to fix-t2.sh on T2 hardware\" \"$(cat \"$calls\")\"\n+\n+run_migration MacBookPro14,3 0 1\n+[[ ! -s $calls ]] || fail \"Cirrus migration is idempotent once the package is installed\" \"$(cat \"$calls\")\"\n+\n+pass \"Cirrus CS8409 speaker fix targets only pre-T2 Touch Bar MacBooks\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

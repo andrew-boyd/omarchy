@@ -1,0 +1,200 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9730",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "image-picker"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9730,
+  "checked_at": "2026-09-21T11:56:31.354281+00:00",
+  "title": "Expose image picker cursor control over IPC",
+  "author": "sunny0826",
+  "head_sha": "75b7d8821872d93f571da06d82a00d5f7cf21658",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-11T03:42:33Z",
+  "state": "open",
+  "body": "## Summary\n\n- expose live Image Picker state and remote cursor control through the existing `image-selector` IPC target\n- add optional semantic picker contexts while preserving the existing `open` and `preload` methods\n- mark the theme and background pickers with `theme` and `background` contexts, and document the public contract\n\nThe new control surface is:\n\n```bash\nomarchy-shell image-selector state\nomarchy-shell image-selector setCursor <path-or-name>\nomarchy-shell image-selector apply\n```\n\n`setCursor` performs an exact match against the loaded path, file name, or extension-free name. It only moves the picker cursor. `apply` reuses the existing file-based selection flow. Calls made while the picker is closed return `closed`, and unknown cursor values return `unknown` without changing the current selection.\n\nThis first version intentionally uses polling through `state`. It does not add a runtime state file, event mechanism, or any Touch Bar-specific code.\n\n## Testing\n\n- `bash test/shell.d/image-picker-test.sh`\n- `bash test/shell.d/menu-images-test.sh`\n- `bash test/shell.d/runtime-smoke-test.sh` (real Wayland/Quickshell IPC)\n- `./test/cli`\n- `./test/shell` \u2014 affected tests pass; the full local run still reports unrelated environment failures from the missing `omarchy-pkgs` checkout and the About animation assertion. A transient Network QR failure passed on immediate rerun.\n\nRelated discussion: #9536\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b2604848f4706f146a486c56a6a02d9e956d34e8",
+      "filename": "bin/omarchy-menu-images",
+      "status": "modified",
+      "additions": 33,
+      "deletions": 11,
+      "changes": 44,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/bin%2Fomarchy-menu-images",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/bin%2Fomarchy-menu-images",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-menu-images?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -1,9 +1,10 @@\n #!/bin/bash\n \n # omarchy:summary=Open a generic image selector menu\n-# omarchy:args=[--selected <image>] [--print-name] [--show-labels] [--filterable] [--lazy-thumbnails] [--preload] [--cache-only] <image-dir>...\n+# omarchy:args=[--selected <image>] [--context <name>] [--print-name] [--show-labels] [--filterable] [--lazy-thumbnails] [--preload] [--cache-only] <image-dir>...\n \n selected_image=\"\"\n+context=\"\"\n print_name=false\n show_labels=false\n filterable=false\n@@ -14,7 +15,7 @@ cache_only=false\n image_dirs=()\n \n usage() {\n-  echo \"Usage: omarchy-menu-images [--selected <image>] [--print-name] [--show-labels] [--filterable] [--lazy-thumbnails] [--preload] [--cache-only] <image-dir>...\"\n+  echo \"Usage: omarchy-menu-images [--selected <image>] [--context <name>] [--print-name] [--show-labels] [--filterable] [--lazy-thumbnails] [--preload] [--cache-only] <image-dir>...\"\n }\n \n while (( $# > 0 )); do\n@@ -28,6 +29,15 @@ while (( $# > 0 )); do\n       selected_image=\"$2\"\n       shift 2\n       ;;\n+    --context)\n+      if (( $# < 2 )); then\n+        usage >&2\n+        exit 1\n+      fi\n+\n+      context=\"$2\"\n+      shift 2\n+      ;;\n     --print-name)\n       print_name=true\n       shift\n@@ -277,18 +287,30 @@ fi\n rows_b64=$(printf '%s' \"$rows\" | base64 -w 0)\n \n if [[ $preload == true ]]; then\n-  omarchy-shell image-selector preload \"$rows_b64\" \"$selected_list_image\" \"$show_labels\" \"$filterable\" >/dev/null || true\n+  if [[ -n $context ]]; then\n+    omarchy-shell image-selector preloadWithContext \"$rows_b64\" \"$selected_list_image\" \"$show_labels\" \"$filterable\" \"$context\" >/dev/null || true\n+  else\n+    omarchy-shell image-selector preload \"$rows_b64\" \"$selected_list_image\" \"$show_labels\" \"$filterable\" >/dev/null || true\n+  fi\n   exit 0\n fi\n \n-if ! open_result=$(omarchy-shell image-selector open \\\n-     \"\" \\\n-     \"$rows_b64\" \\\n-     \"$selected_list_image\" \\\n-     \"$selection_file\" \\\n-     \"$done_file\" \\\n-     \"$show_labels\" \\\n-     \"$filterable\"); then\n+open_method=\"open\"\n+open_args=(\n+  \"\"\n+  \"$rows_b64\"\n+  \"$selected_list_image\"\n+  \"$selection_file\"\n+  \"$done_file\"\n+  \"$show_labels\"\n+  \"$filterable\"\n+)\n+if [[ -n $context ]]; then\n+  open_method=\"openWithContext\"\n+  open_args+=(\"$context\")\n+fi\n+\n+if ! open_result=$(omarchy-shell image-selector \"$open_method\" \"${open_args[@]}\"); then\n   echo \"Image selector failed to accept request\" >&2\n   exit 1\n fi"
+    },
+    {
+      "sha": "0ba6acd87376b65090745feb6c16704dc1d2d237",
+      "filename": "bin/omarchy-theme-bg-switcher",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/bin%2Fomarchy-theme-bg-switcher",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/bin%2Fomarchy-theme-bg-switcher",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-theme-bg-switcher?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -9,6 +9,7 @@ theme_name=$(cat \"$HOME/.local/state/omarchy/current/theme.name\" 2>/dev/null)\n current_background=$(readlink -f \"$HOME/.local/state/omarchy/current/background\" 2>/dev/null)\n \n omarchy-menu-images \\\n+  --context background \\\n   --selected \"$current_background\" \\\n   \"$HOME/.local/state/omarchy/current/theme/backgrounds\" \\\n   \"$HOME/.config/omarchy/backgrounds/$theme_name\""
+    },
+    {
+      "sha": "41523d02fa0f700abc3ae6690435f0ee0979a740",
+      "filename": "bin/omarchy-theme-switcher",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/bin%2Fomarchy-theme-switcher",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/bin%2Fomarchy-theme-switcher",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-theme-switcher?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -111,6 +111,7 @@ for extension in png jpg jpeg webp gif bmp; do\n   fi\n done\n menu_args=(\n+  --context theme\n   --print-name\n   --show-labels\n   --filterable"
+    },
+    {
+      "sha": "d9f5a54b3ddaf16a647f09f077ebb5e88f10f8ee",
+      "filename": "shell/plugins/README.md",
+      "status": "modified",
+      "additions": 12,
+      "deletions": 0,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fplugins%2FREADME.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fplugins%2FREADME.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2FREADME.md?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -67,6 +67,18 @@ Two ways to drive it:\n   uses. Colors come from the central shell theme singleton; there is no\n   per-call override surface.\n \n+`omarchy-menu-images --context <name> ...` gives a picker request a semantic context without exposing its image-directory layout. The theme and background switchers use `theme` and `background`; other callers may supply their own value. Direct IPC consumers that already have encoded rows can use `openWithContext`, which accepts the normal `open` arguments followed by the context. The original `open` method remains unchanged for compatibility.\n+\n+While the picker is open, external controllers and local automation can inspect and move its cursor without introducing another selection model:\n+\n+```bash\n+omarchy-shell image-selector state\n+omarchy-shell image-selector setCursor <path-or-name>\n+omarchy-shell image-selector apply\n+```\n+\n+`state` returns JSON containing `opened`, `context`, `cursorPath`, and `cursorName`. `setCursor` matches an exact loaded path, file name, or extension-free name; it moves the cursor without applying or closing the picker. `apply` uses the normal file-based selection flow. Control calls return `closed` while no picker is visible, and an unknown cursor returns `unknown` without changing the selection.\n+\n The selection round-trip remains file-based: callers create a\n `selection_file` and `done_file` (both `mktemp`), pass the paths, and\n poll `done_file` for existence. The plugin writes the chosen path into"
+    },
+    {
+      "sha": "d6cdf69bda1fa77c426990fab5c7bc9a10295f0e",
+      "filename": "shell/plugins/image-picker/ImagePicker.qml",
+      "status": "modified",
+      "additions": 36,
+      "deletions": 3,
+      "changes": 39,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fplugins%2Fimage-picker%2FImagePicker.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fplugins%2Fimage-picker%2FImagePicker.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fimage-picker%2FImagePicker.qml?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -18,6 +18,7 @@ Item {\n   property string loadedImageRows: \"\"\n   property string selectionFile: Quickshell.env(\"OMARCHY_IMAGE_SELECTOR_SELECTION_FILE\") || Quickshell.env(\"OMARCHY_BACKGROUND_SELECTION_FILE\")\n   property string selectedImage: Quickshell.env(\"OMARCHY_IMAGE_SELECTOR_SELECTED\")\n+  property string pickerContext: \"\"\n   property int selectedIndex: 0\n   property bool imagesLoaded: false\n   property bool opened: false\n@@ -86,6 +87,36 @@ Item {\n     return labelForPath(path)\n   }\n \n+  function cursorState() {\n+    var path = opened ? currentPath() : \"\"\n+    return JSON.stringify({\n+      opened: opened,\n+      context: opened ? pickerContext : \"\",\n+      cursorPath: path,\n+      cursorName: path ? nameForPath(path) : \"\"\n+    })\n+  }\n+\n+  function setCursor(cursor) {\n+    if (!opened) return \"closed\"\n+\n+    var index = ImagePickerModel.indexForCursor(imageArray, cursor)\n+    if (index < 0) return \"unknown\"\n+\n+    if (filterText) updateFilter(\"\")\n+    select(index, true)\n+    focusPicker()\n+    return \"ok\"\n+  }\n+\n+  function applyCursor() {\n+    if (!opened) return \"closed\"\n+    if (!currentPath() || !selectionFile) return \"unknown\"\n+\n+    applySelected()\n+    return \"ok\"\n+  }\n+\n   function itemMatches(index) {\n     return ImagePickerModel.itemMatches(imageArray, index, filterText)\n   }\n@@ -207,7 +238,7 @@ Item {\n     }\n   }\n \n-  function openSelector(nextImageDirs, nextImageRows, nextSelectedImage, nextSelectionFile, nextDoneFile, nextShowLabels, nextFilterable) {\n+  function openSelector(nextImageDirs, nextImageRows, nextSelectedImage, nextSelectionFile, nextDoneFile, nextShowLabels, nextFilterable, nextContext) {\n     if (requestActive && doneFile && doneFile !== nextDoneFile)\n       finishDoneFile(doneFile)\n \n@@ -221,6 +252,7 @@ Item {\n     requestActive = !!doneFile\n     showLabels = nextShowLabels === true || nextShowLabels === \"true\"\n     filterable = nextFilterable === true || nextFilterable === \"true\"\n+    pickerContext = String(nextContext || \"\")\n     filterText = \"\"\n     layoutSettled = false\n \n@@ -316,14 +348,14 @@ Item {\n     var doneF = String(args.doneFile || \"\")\n     var labels = args.showLabels === true || args.showLabels === \"true\"\n     var filter = args.filterable === true || args.filterable === \"true\"\n-    openSelector(dirs, rows, sel, selFile, doneF, labels, filter)\n+    openSelector(dirs, rows, sel, selFile, doneF, labels, filter, args.context)\n   }\n \n   function close() {\n     cancel()\n   }\n \n-  function preloadRows(nextImageRows, nextSelectedImage, nextShowLabels, nextFilterable) {\n+  function preloadRows(nextImageRows, nextSelectedImage, nextShowLabels, nextFilterable, nextContext) {\n     // Theme/background set hooks can warm selector rows after a picker was\n     // dismissed. Ignore those preloads while a user-visible request is open;\n     // otherwise the preload resets layoutSettled without revealing again,\n@@ -335,6 +367,7 @@ Item {\n     selectedImage = nextSelectedImage\n     showLabels = nextShowLabels === true || nextShowLabels === \"true\"\n     filterable = nextFilterable === true || nextFilterable === \"true\"\n+    pickerContext = String(nextContext || \"\")\n     filterText = \"\"\n     layoutSettled = false\n "
+    },
+    {
+      "sha": "04dbde1526986bfae9a69518a8728c360b76675d",
+      "filename": "shell/plugins/image-picker/ImagePickerModel.js",
+      "status": "modified",
+      "additions": 21,
+      "deletions": 0,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fplugins%2Fimage-picker%2FImagePickerModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fplugins%2Fimage-picker%2FImagePickerModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fimage-picker%2FImagePickerModel.js?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -77,6 +77,26 @@ function indexForSelectedImage(images, selectedImage) {\n   return 0\n }\n \n+function indexForCursor(images, cursor) {\n+  var values = Array.isArray(images) ? images : []\n+  var needle = String(cursor || \"\")\n+  if (!needle) return -1\n+\n+  for (var i = 0; i < values.length; i++) {\n+    if (values[i].filePath === needle) return i\n+  }\n+\n+  for (var j = 0; j < values.length; j++) {\n+    if (values[j].fileName === needle) return j\n+  }\n+\n+  for (var k = 0; k < values.length; k++) {\n+    if (nameForPath(values[k].filePath) === needle) return k\n+  }\n+\n+  return -1\n+}\n+\n function nextSelectedIndexForFilter(images, selectedIndex, filterText) {\n   if (itemMatches(images, selectedIndex, filterText)) return selectedIndex\n   return firstMatchingIndex(images, filterText)\n@@ -92,6 +112,7 @@ if (typeof module !== \"undefined\") {\n     filteredPosition: filteredPosition,\n     selectedFilteredPosition: selectedFilteredPosition,\n     indexForSelectedImage: indexForSelectedImage,\n+    indexForCursor: indexForCursor,\n     nextSelectedIndexForFilter: nextSelectedIndexForFilter\n   }\n }"
+    },
+    {
+      "sha": "f5db752e9c33f71aa0bdf720666864b61524b8df",
+      "filename": "shell/shell.qml",
+      "status": "modified",
+      "additions": 55,
+      "deletions": 0,
+      "changes": 55,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fshell.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/shell%2Fshell.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fshell.qml?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -840,6 +840,27 @@ ShellRoot {\n       return shell.summon(\"omarchy.image-picker\", payload) ? \"ok\" : \"unknown\"\n     }\n \n+    function openWithContext(imageDirs: string,\n+                             imageRowsB64: string,\n+                             selectedImage: string,\n+                             selectionFile: string,\n+                             doneFile: string,\n+                             showLabels: string,\n+                             filterable: string,\n+                             context: string): string {\n+      var payload = JSON.stringify({\n+        imageDirs: imageDirs,\n+        imageRows: Util.decodeBase64(imageRowsB64),\n+        selectedImage: selectedImage,\n+        selectionFile: selectionFile,\n+        doneFile: doneFile,\n+        showLabels: showLabels,\n+        filterable: filterable,\n+        context: context\n+      })\n+      return shell.summon(\"omarchy.image-picker\", payload) ? \"ok\" : \"unknown\"\n+    }\n+\n     function preload(imageRowsB64: string,\n                      selectedImage: string,\n                      showLabels: string,\n@@ -852,6 +873,19 @@ ShellRoot {\n       return \"ok\"\n     }\n \n+    function preloadWithContext(imageRowsB64: string,\n+                                selectedImage: string,\n+                                showLabels: string,\n+                                filterable: string,\n+                                context: string): string {\n+      var picker = shell.imagePickerItem()\n+      if (picker && typeof picker.preloadRows === \"function\") {\n+        picker.preloadRows(Util.decodeBase64(imageRowsB64), selectedImage,\n+                           showLabels, filterable, context)\n+      }\n+      return \"ok\"\n+    }\n+\n     function cancel(doneFile: string): string {\n       var picker = shell.imagePickerItem()\n       if (picker && typeof picker.closeSelector === \"function\") {\n@@ -862,6 +896,27 @@ ShellRoot {\n       return \"ok\"\n     }\n \n+    function state(): string {\n+      var picker = shell.imagePickerItem()\n+      return picker && typeof picker.cursorState === \"function\"\n+        ? picker.cursorState()\n+        : JSON.stringify({ opened: false, context: \"\", cursorPath: \"\", cursorName: \"\" })\n+    }\n+\n+    function setCursor(cursor: string): string {\n+      var picker = shell.imagePickerItem()\n+      return picker && typeof picker.setCursor === \"function\"\n+        ? picker.setCursor(cursor)\n+        : \"closed\"\n+    }\n+\n+    function apply(): string {\n+      var picker = shell.imagePickerItem()\n+      return picker && typeof picker.applyCursor === \"function\"\n+        ? picker.applyCursor()\n+        : \"closed\"\n+    }\n+\n     function ping(): string {\n       return \"ok\"\n     }"
+    },
+    {
+      "sha": "895e87d14136fdbc1cd8b2dd8598e15c1b00e9b0",
+      "filename": "test/shell.d/image-picker-test.sh",
+      "status": "modified",
+      "additions": 28,
+      "deletions": 0,
+      "changes": 28,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/test%2Fshell.d%2Fimage-picker-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/test%2Fshell.d%2Fimage-picker-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fimage-picker-test.sh?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -37,6 +37,11 @@ assert(!picker.itemMatches(images, 2, 'river'), 'image picker rejects non-matchi\n assertEqual(picker.firstMatchingIndex(images, 'plain'), 2, 'image picker finds first matching index')\n assertEqual(picker.indexForSelectedImage(images, '/themes/a/gruvbox-dark.jpeg'), 1, 'image picker finds selected image')\n assertEqual(picker.indexForSelectedImage(images, '/missing.png'), 0, 'image picker defaults selected image to first row')\n+assertEqual(picker.indexForCursor(images, '/themes/a/gruvbox-dark.jpeg'), 1, 'image picker finds a remote cursor by path')\n+assertEqual(picker.indexForCursor(images, 'gruvbox-dark.jpeg'), 1, 'image picker finds a remote cursor by file name')\n+assertEqual(picker.indexForCursor(images, 'gruvbox-dark'), 1, 'image picker finds a remote cursor by name')\n+assertEqual(picker.indexForCursor(images, 'Gruvbox Dark'), -1, 'image picker cursor matching stays exact')\n+assertEqual(picker.indexForCursor(images, 'missing'), -1, 'image picker rejects an unknown remote cursor')\n \n assertEqual(picker.filteredPosition(images, 2, 'dark'), 1, 'image picker computes filtered position')\n assertEqual(picker.selectedFilteredPosition(images, 2, 'dark'), 0, 'image picker selected filtered position falls back when selected is hidden')\n@@ -51,4 +56,27 @@ assert(\n   /source: item\\.sourceActivated && item\\.thumbnailPath \\? Util\\.fileUrl\\(item\\.thumbnailPath\\) : \"\"[\\s\\S]*asynchronous: false/.test(imagePickerQml),\n   'image picker loads activated thumbnails synchronously to avoid carousel flicker'\n )\n+assert(\n+  /function cursorState\\(\\)[\\s\\S]*opened: opened[\\s\\S]*cursorPath: path[\\s\\S]*cursorName: path \\? nameForPath\\(path\\) : \"\"/.test(imagePickerQml),\n+  'image picker exposes live cursor state'\n+)\n+assert(\n+  /function setCursor\\(cursor\\)[\\s\\S]*if \\(!opened\\) return \"closed\"[\\s\\S]*indexForCursor\\(imageArray, cursor\\)[\\s\\S]*select\\(index, true\\)/.test(imagePickerQml),\n+  'image picker moves a remote cursor without applying it'\n+)\n+assert(\n+  /function applyCursor\\(\\)[\\s\\S]*if \\(!opened\\) return \"closed\"[\\s\\S]*applySelected\\(\\)/.test(imagePickerQml),\n+  'image picker remote apply reuses the existing selection flow'\n+)\n+\n+const shellQml = fs.readFileSync(path.join(root, 'shell/shell.qml'), 'utf8')\n+assert(\n+  /target: \"image-selector\"[\\s\\S]*function state\\(\\): string[\\s\\S]*function setCursor\\(cursor: string\\): string[\\s\\S]*function apply\\(\\): string/.test(shellQml),\n+  'image selector IPC exposes state, setCursor, and apply'\n+)\n+\n+const themeSwitcher = fs.readFileSync(path.join(root, 'bin/omarchy-theme-switcher'), 'utf8')\n+const backgroundSwitcher = fs.readFileSync(path.join(root, 'bin/omarchy-theme-bg-switcher'), 'utf8')\n+assert(/menu_args=\\([\\s\\S]*--context theme/.test(themeSwitcher), 'theme picker declares its semantic context')\n+assert(/omarchy-menu-images[\\s\\S]*--context background/.test(backgroundSwitcher), 'background picker declares its semantic context')\n JS"
+    },
+    {
+      "sha": "fa9bb4a51ef6c585afde7056e2361d0470c0fbf8",
+      "filename": "test/shell.d/menu-images-test.sh",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/test%2Fshell.d%2Fmenu-images-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/test%2Fshell.d%2Fmenu-images-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmenu-images-test.sh?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -38,6 +38,13 @@ printf 'thumbnail' >\"$output\"\n EOF\n chmod +x \"$stub_bin/vipsthumbnail\"\n \n+cat >\"$stub_bin/omarchy-shell\" <<'EOF'\n+#!/bin/bash\n+\n+printf '%s\\n' \"$*\" >>\"$OMARCHY_TEST_IPC_LOG\"\n+EOF\n+chmod +x \"$stub_bin/omarchy-shell\"\n+\n for name in one two three; do\n   printf 'image-%s' \"$name\" >\"$images/$name.png\"\n done\n@@ -139,3 +146,11 @@ PATH=\"$stub_bin:$PATH\" XDG_CACHE_HOME=\"$cache_home\" VIPSTHUMBNAIL_CALLS_FILE=\"$t\n \n (( $(wc -l <\"$tmp/calls\") == 6 )) || fail \"image menu releases thumbnail locks after generation\"\n pass \"image menu owns locks for exactly one generator lifetime\"\n+\n+ipc_log=\"$tmp/ipc.log\"\n+PATH=\"$stub_bin:$PATH\" XDG_CACHE_HOME=\"$cache_home\" OMARCHY_TEST_IPC_LOG=\"$ipc_log\" \\\n+  \"$ROOT/bin/omarchy-menu-images\" --preload --context theme \"$images\"\n+\n+[[ $(awk '{ print $1, $2, $NF }' \"$ipc_log\") == \"image-selector preloadWithContext theme\" ]] ||\n+  fail \"image menu forwards semantic context over IPC\"\n+pass \"image menu forwards semantic context over IPC\""
+    },
+    {
+      "sha": "53d147120a237c8b88b9adc80ff12aa64bb51f8c",
+      "filename": "test/shell.d/runtime-smoke-test.sh",
+      "status": "modified",
+      "additions": 37,
+      "deletions": 4,
+      "changes": 41,
+      "blob_url": "https://github.com/omacom/omarchy/blob/75b7d8821872d93f571da06d82a00d5f7cf21658/test%2Fshell.d%2Fruntime-smoke-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/75b7d8821872d93f571da06d82a00d5f7cf21658/test%2Fshell.d%2Fruntime-smoke-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fruntime-smoke-test.sh?ref=75b7d8821872d93f571da06d82a00d5f7cf21658",
+      "patch": "@@ -189,19 +189,25 @@ jq -e '.hasPlayer | type == \"boolean\"' <<<\"$(shell_ipc media status)\" >/dev/null\n jq -e '.enabled | type == \"boolean\"' <<<\"$(shell_ipc idle status)\" >/dev/null || fail_with_log \"idle IPC returns status JSON\"\n jq -e '.locked | type == \"boolean\"' <<<\"$(shell_ipc lock status)\" >/dev/null || fail_with_log \"lock IPC returns status JSON\"\n [[ $(shell_ipc image-selector ping) == \"ok\" ]] || fail_with_log \"image selector IPC responds\"\n+jq -e '.opened == false and .context == \"\" and .cursorPath == \"\" and .cursorName == \"\"' \\\n+  <<<\"$(shell_ipc image-selector state)\" >/dev/null || fail_with_log \"closed image selector reports empty cursor state\"\n+[[ $(shell_ipc image-selector setCursor missing) == \"closed\" ]] || fail_with_log \"closed image selector rejects remote cursor changes\"\n+[[ $(shell_ipc image-selector apply) == \"closed\" ]] || fail_with_log \"closed image selector rejects remote apply\"\n [[ $(shell_ipc osd ping) == \"ok\" ]] || fail_with_log \"OSD IPC responds\"\n [[ $(shell_ipc osd show '{\"message\":\"Runtime smoke\",\"duration\":0}') == \"ok\" ]] || fail_with_log \"OSD IPC opens\"\n [[ $(shell_ipc osd close) == \"ok\" ]] || fail_with_log \"OSD IPC closes\"\n pass \"plugin IPC contracts respond\"\n \n shell_ipc_quiet shell rescanPlugins >/dev/null\n-selector_rows_b64=$(printf '%s\\t%s' \"$TMPDIR/selector.png\" \"$TMPDIR/selector.png\" | base64 -w 0)\n+selector_one=\"$TMPDIR/selector-one.png\"\n+selector_two=\"$TMPDIR/selector-two.png\"\n+selector_rows_b64=$(printf '%s\\t%s\\n%s\\t%s' \"$selector_one\" \"$selector_one\" \"$selector_two\" \"$selector_two\" | base64 -w 0)\n selector_selection_file=$(mktemp \"$TMPDIR/selector-selection.XXXXXX\")\n selector_done_file=$(mktemp \"$TMPDIR/selector-done.XXXXXX\")\n rm -f \"$selector_done_file\"\n selector_open=\"\"\n for _ in {1..80}; do\n-  selector_open=$(shell_ipc image-selector open \"\" \"$selector_rows_b64\" \"\" \"$selector_selection_file\" \"$selector_done_file\" false false 2>/dev/null || true)\n+  selector_open=$(shell_ipc image-selector openWithContext \"\" \"$selector_rows_b64\" \"\" \"$selector_selection_file\" \"$selector_done_file\" false false theme 2>/dev/null || true)\n   if [[ $selector_open == \"ok\" ]]; then\n     break\n   fi\n@@ -211,9 +217,36 @@ for _ in {1..80}; do\n   sleep 0.1\n done\n [[ $selector_open == \"ok\" ]] || fail_with_log \"image selector IPC survives plugin rescan\"\n-shell_ipc_quiet image-selector cancel \"$selector_done_file\" >/dev/null\n+\n+selector_state=\"\"\n+for _ in {1..80}; do\n+  selector_state=$(shell_ipc image-selector state 2>/dev/null || true)\n+  jq -e --arg path \"$selector_one\" '.opened == true and .context == \"theme\" and .cursorPath == $path and .cursorName == \"selector-one\"' \\\n+    <<<\"$selector_state\" >/dev/null 2>&1 && break\n+  sleep 0.1\n+done\n+jq -e --arg path \"$selector_one\" '.opened == true and .context == \"theme\" and .cursorPath == $path and .cursorName == \"selector-one\"' \\\n+  <<<\"$selector_state\" >/dev/null || fail_with_log \"image selector reports live cursor state and context\"\n+\n+[[ $(shell_ipc image-selector setCursor selector-two) == \"ok\" ]] || fail_with_log \"image selector accepts a remote cursor name\"\n+selector_state=$(shell_ipc image-selector state)\n+jq -e --arg path \"$selector_two\" '.opened == true and .cursorPath == $path and .cursorName == \"selector-two\"' \\\n+  <<<\"$selector_state\" >/dev/null || fail_with_log \"image selector reports a remotely moved cursor\"\n+[[ $(shell_ipc image-selector setCursor missing) == \"unknown\" ]] || fail_with_log \"image selector rejects an unknown cursor\"\n+jq -e --arg path \"$selector_two\" '.cursorPath == $path' <<<\"$(shell_ipc image-selector state)\" >/dev/null ||\n+  fail_with_log \"unknown remote cursor leaves the selection unchanged\"\n+\n+[[ $(shell_ipc image-selector apply) == \"ok\" ]] || fail_with_log \"image selector applies the remote cursor\"\n+for _ in {1..80}; do\n+  [[ -e $selector_done_file ]] && break\n+  sleep 0.1\n+done\n+[[ -e $selector_done_file ]] || fail_with_log \"image selector remote apply finishes the request\"\n+[[ $(<\"$selector_selection_file\") == \"$selector_two\" ]] || fail_with_log \"image selector remote apply writes the selected path\"\n+jq -e '.opened == false and .cursorPath == \"\" and .cursorName == \"\"' \\\n+  <<<\"$(shell_ipc image-selector state)\" >/dev/null || fail_with_log \"image selector remote apply closes the picker\"\n rm -f \"$selector_selection_file\" \"$selector_done_file\"\n-pass \"image selector IPC survives plugin rescan\"\n+pass \"image selector remote-control IPC survives plugin rescan\"\n \n shell_ipc_quiet omarchy.system-update refresh >/dev/null 2>&1 || true\n sleep 0.8"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5629111160",
+      "html_url": "https://github.com/omacom/omarchy/pull/9730#issuecomment-5629111160",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9730",
+      "id": 5629111160,
+      "node_id": "IC_kwDOO0Cobs8AAAABT4VreA",
+      "user": {
+        "login": "sunny0826",
+        "id": 24563928,
+        "node_id": "MDQ6VXNlcjI0NTYzOTI4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/24563928?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/sunny0826",
+        "html_url": "https://github.com/sunny0826",
+        "followers_url": "https://api.github.com/users/sunny0826/followers",
+        "following_url": "https://api.github.com/users/sunny0826/following{/other_user}",
+        "gists_url": "https://api.github.com/users/sunny0826/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/sunny0826/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/sunny0826/subscriptions",
+        "organizations_url": "https://api.github.com/users/sunny0826/orgs",
+        "repos_url": "https://api.github.com/users/sunny0826/repos",
+        "events_url": "https://api.github.com/users/sunny0826/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/sunny0826/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-11T03:42:33Z",
+      "updated_at": "2026-09-11T03:42:33Z",
+      "body": "@dhh Could you take a look at this when you have a moment?\r\n\r\nIt exposes live Image Picker state and remote cursor control over the existing image-selector IPC (state / setCursor / apply), with optional theme and background contexts. More context and the task write-up are here: https://app.basecamp.com/5994298/buckets/48688864/card_tables/cards/10262905397\r\n\r\nWould love your feedback.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5629111160/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

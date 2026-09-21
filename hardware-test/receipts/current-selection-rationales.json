@@ -1,0 +1,13 @@
+{
+  "omacom/omarchy#12076": "Selected BCM43xx, T2, Vulkan and NVIDIA sysfs detection contribution, with later software checks/repairs for disappearing PCI attributes. Device-detection fixtures do not certify hardware support.",
+  "omacom/omarchy#9880": "Selected legacy SPI retirement contribution. Later package/native-applespi checks protect retained kernels; manual T1 provisioning and a verified live provider transition still precede retirement.",
+  "omacom/omarchy#9735": "Selected MacBook8,1 SPI-PIO workaround with later custom-file preservation, additive MODULES handling and interrupted-initramfs retry. Existing hardware parameters are retained, not retuned.",
+  "omacom/omarchy#11624": "Selected Apple-controller NVMe starting point with later custom-unit preservation, anchored model gating and unknown-PCI retry handling. Controller applicability still needs physical verification; no arbitrary PCI address is assumed to be NVMe.",
+  "omacom/omarchy#12314": "Selected pre-sleep/post-wake per-device hook with later serialized state, failed/partial rebind recovery and custom-hook preservation. This revision takes the BCM4350/BCM43602 chip boundary from #7333; broader T2 recovery is not automatically enabled.",
+  "omacom/omarchy#9516": "Selected CS8409 package-backed installer including its distinct iMac track. Later exact-model/header checks preserve custom configuration. Upstream closure in favor of #8285 does not erase the wider model evidence or source credit.",
+  "omacom/omarchy#10458": "Selected iMac CS4208 in-tree configuration, with later preservation of administrator settings and audio routes. No new speaker/mixer tuning was inferred without hardware.",
+  "omacom/omarchy-pkgs#249": "Selected CS8409 package foundation, with the previously documented offline preparation/build compatibility work. Review the exact recipe and built archive receipts rather than assuming the source PR is byte-identical to the integrated package.",
+  "omacom/omarchy-pkgs#153": "Selected MacBook CS4208 package foundation with the existing recorded matching-kernel preparation follow-up. It conflicts with the separate CS8409 package on one system; do not install both model tracks together.",
+  "omacom/omarchy#12328": "Selected Apple-prefix exception for the pending kernel migration, with later unreadable-DMI retry handling. Already-migrated systems are outside this migration; this is not adoption of every proposed custom kernel.",
+  "omacom/omarchy#11904": "Selected standalone diagnostics command with later private state, locking, explicit failure propagation and retryable restore. Fixtures and virtual RTC operations do not prove a physical Mac suspend cause; no automatic sleep hook is added."
+}

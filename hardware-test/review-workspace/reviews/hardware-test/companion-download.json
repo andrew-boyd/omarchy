@@ -1,0 +1,79 @@
+{
+  "iso_sha256": "9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252",
+  "filename": "intel-mac-companions-9e6288ef.tar.gz",
+  "sha256": "2a56569086336894aaeb6892217fba57d65cbcec8f14dcb0faa549e4112df1ec",
+  "bytes": 11182321,
+  "packages": [
+    {
+      "name": "facetimehd-data",
+      "version": "5.1.5769-2",
+      "filename": "facetimehd-data-5.1.5769-2-any.pkg.tar.zst",
+      "sha256": "b053c4dadd15c7d8a4dad64949082b02a09357c316ea502516544cfe2e1e1a02",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "facetimehd-dkms",
+      "version": "0.7.2-1",
+      "filename": "facetimehd-dkms-0.7.2-1-any.pkg.tar.zst",
+      "sha256": "8e518fb73435f8bf6767a0ef4d0b8f2702e5186f77f7242056d77726e5134cc0",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "facetimehd-firmware",
+      "version": "1:1.43_5-2",
+      "filename": "facetimehd-firmware-1:1.43_5-2-any.pkg.tar.zst",
+      "sha256": "a50a16d22a2ec812f3e2a99ae2edba096e97ba910eef5bda9a73f0279f65d386",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "fprintd-t1bridge",
+      "version": "1.94.5-14",
+      "filename": "fprintd-t1bridge-1.94.5-14-x86_64.pkg.tar.zst",
+      "sha256": "a69aecd72ce4b2f3a7c67cd6e96acccd19f3aa1049dc94ceca1a383d46b0b197",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "libfprint-t1bridge",
+      "version": "1.94.100-17",
+      "filename": "libfprint-t1bridge-1.94.100-17-x86_64.pkg.tar.zst",
+      "sha256": "24114633997e43b4718fef87a3bb82fb7d33e9cd339829b696dd6a55b1c7c3ec",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "macbook12-audio-driver-dkms",
+      "version": "0.1-2",
+      "filename": "macbook12-audio-driver-dkms-0.1-2-x86_64.pkg.tar.zst",
+      "sha256": "65180e21bea2b55eccb779b77563f26bc5c218fabc07fd584b64178413ffd22b",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "snd-hda-macbookpro-dkms",
+      "version": "0.1-3",
+      "filename": "snd-hda-macbookpro-dkms-0.1-3-x86_64.pkg.tar.zst",
+      "sha256": "82d01608fd53ff0927973cff81addb3c535e06b2a926abb8404dbac4d1deb12b",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "t1bridge",
+      "version": "0.1.9-1",
+      "filename": "t1bridge-0.1.9-1-x86_64.pkg.tar.zst",
+      "sha256": "13e9ef28d6995b86e7a63e010e81e50eb82847229b0fecd85cd3e078535acdd2",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "t1bridge-dkms",
+      "version": "0.1.9-1",
+      "filename": "t1bridge-dkms-0.1.9-1-x86_64.pkg.tar.zst",
+      "sha256": "f6fe898a3cf2b9de82019dc2eb70ad7ef30524849bf656a534b3171b5eaecbab",
+      "embedded_matches_receipt": true
+    },
+    {
+      "name": "t1bridge-omarchy",
+      "version": "0.2.1-2.1",
+      "filename": "t1bridge-omarchy-0.2.1-2.1-any.pkg.tar.zst",
+      "sha256": "e51ab4e15bd346b8283a0bd3b749f37d6fe3ea21fba91e1638dcc9ded19541c9",
+      "embedded_matches_receipt": true
+    }
+  ],
+  "instruction": "Install only the matching track; the two audio packages conflict. The five T1 packages form one matched optional manual setup."
+}

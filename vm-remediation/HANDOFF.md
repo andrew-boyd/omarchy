@@ -1,3 +1,5 @@
+> Historical candidate. Use the [2026-09-21 ISO and qualified validation report](../hardware-test/HANDOFF.md) for the current physical test handoff. These earlier results remain preserved.
+
 # Rebuilt ISO and software follow-up — 2026-09-21 UTC
 
 **Publication verified:** all 17 existing draft bodies were updated and read back; ten feature/package branches advanced by ordinary fast-forward pushes. [Exact publication receipts](receipts/published-pr-updates.json) retain their heads and body hashes. Every source-reference row and original contribution commit remains preserved.

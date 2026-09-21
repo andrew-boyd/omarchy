@@ -1,0 +1,93 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10140",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "alpine-ridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "d06853a760955a09ef5a014a4f28584c6d1f0ec9",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10140,
+  "checked_at": "2026-09-21T11:55:55.046989+00:00",
+  "title": "Apply USB autosuspend policy through the kernel command line",
+  "author": "andrewrbrady",
+  "head_sha": "d06853a760955a09ef5a014a4f28584c6d1f0ec9",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:14Z",
+  "state": "open",
+  "body": "Fixes #8097.\n\n## What changed\n\n- move `usbcore.autosuspend=-1` from `modprobe.d` to the Limine kernel command line\n- remove the ineffective modprobe configuration and its Quattro upgrade overwrite\n- migrate existing installs by rebuilding their boot image once and marking reboot required\n- preserve administrator-modified legacy files\n- add focused migration and policy coverage\n\n## Why\n\nArch builds `usbcore` into the kernel, so `/etc/modprobe.d/omarchy-usb-autosuspend.conf` is never read for it. Omarchy therefore currently expresses a global no-autosuspend policy without applying it: `/sys/module/usbcore/parameters/autosuspend` remains the kernel default of `2`.\n\nI reproduced this on a 2016 MacBook Pro 15-inch (`MacBookPro13,3`) with two Intel JHL6540 Alpine Ridge USB controllers (`8086:15d4`). The installed Omarchy configuration contains `options usbcore autosuspend=-1`, while the live parameter remains `2` and both controllers use runtime power management.\n\nThis draft deliberately preserves the policy already stated by Omarchy. The maintainer decision is whether global disabling remains desirable given its idle-power cost; if not, removing the dead setting without activating it would be the alternative.\n\n## Testing\n\n- `test/shell.d/usb-autosuspend-test.sh`\n- `test/shell.d/upgrade-to-quattro-test.sh`\n- `bash -n migrations/1788507775.sh test/shell.d/usb-autosuspend-test.sh`\n- `git diff --check`\n\n`./test/all` ran all 227 shell test files. The new test and related upgrade tests passed. Six unrelated environment/baseline tests failed: missing `omarchy-pkgs` checkout coverage, live graphical geometry checks, and an existing Windows VM concurrency race. No suspend, reboot, module reload, GPU recording, or other disruptive hardware test was performed on the MacBook.",
+  "draft": true,
+  "files": [
+    {
+      "sha": "6c6e84ff622b52708d5d9ebd00597abe58e0e684",
+      "filename": "bin/omarchy-upgrade-to-quattro",
+      "status": "modified",
+      "additions": 0,
+      "deletions": 1,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/d06853a760955a09ef5a014a4f28584c6d1f0ec9/bin%2Fomarchy-upgrade-to-quattro",
+      "raw_url": "https://github.com/omacom/omarchy/raw/d06853a760955a09ef5a014a4f28584c6d1f0ec9/bin%2Fomarchy-upgrade-to-quattro",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-upgrade-to-quattro?ref=d06853a760955a09ef5a014a4f28584c6d1f0ec9",
+      "patch": "@@ -1213,7 +1213,6 @@ run_final_system_package_upgrade() {\n     --overwrite '/etc/gnupg/dirmngr.conf' \\\n     --overwrite '/etc/mkinitcpio.conf.d/omarchy_hooks.conf' \\\n     --overwrite '/etc/mkinitcpio.conf.d/thunderbolt_module.conf' \\\n-    --overwrite '/etc/modprobe.d/omarchy-usb-autosuspend.conf' \\\n     --overwrite '/etc/sddm.conf.d/10-theme.conf' \\\n     --overwrite '/etc/sddm.conf.d/10-wayland.conf' \\\n     --overwrite '/etc/sudoers.d/omarchy-asdcontrol' \\"
+    },
+    {
+      "sha": "464b8f59a1c36a496d123ea5631f2f9dfd70bf05",
+      "filename": "etc/limine-entry-tool.d/omarchy-defaults.conf",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/d06853a760955a09ef5a014a4f28584c6d1f0ec9/etc%2Flimine-entry-tool.d%2Fomarchy-defaults.conf",
+      "raw_url": "https://github.com/omacom/omarchy/raw/d06853a760955a09ef5a014a4f28584c6d1f0ec9/etc%2Flimine-entry-tool.d%2Fomarchy-defaults.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/etc%2Flimine-entry-tool.d%2Fomarchy-defaults.conf?ref=d06853a760955a09ef5a014a4f28584c6d1f0ec9",
+      "patch": "@@ -2,6 +2,10 @@ TARGET_OS_NAME=\"Omarchy\"\n \n KERNEL_CMDLINE[default]+=\" quiet splash loglevel=0 systemd.show_status=false rd.udev.log_level=0 vt.global_cursor_default=0\"\n \n+# Keep USB devices awake by default. usbcore is built into the Arch kernel, so\n+# this must be a kernel parameter rather than a modprobe.d option.\n+KERNEL_CMDLINE[default]+=\" usbcore.autosuspend=-1\"\n+\n # Kernel 7.1 unpacks the initramfs asynchronously, which races /init: the\n # early /proc, /sys, /dev, and /run mounts fail while unpacking settles, so\n # plymouthd exits when it can't read /proc/cmdline and encrypted boots fall"
+    },
+    {
+      "sha": "b66d637ee884f2cf7aa1f33b54e628200a6ee4fa",
+      "filename": "etc/modprobe.d/omarchy-usb-autosuspend.conf",
+      "status": "removed",
+      "additions": 0,
+      "deletions": 1,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f99d33a8ddee7b36509a71a6d20d5d23355ce8b1/etc%2Fmodprobe.d%2Fomarchy-usb-autosuspend.conf",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f99d33a8ddee7b36509a71a6d20d5d23355ce8b1/etc%2Fmodprobe.d%2Fomarchy-usb-autosuspend.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/etc%2Fmodprobe.d%2Fomarchy-usb-autosuspend.conf?ref=f99d33a8ddee7b36509a71a6d20d5d23355ce8b1",
+      "patch": "@@ -1 +0,0 @@\n-options usbcore autosuspend=-1"
+    },
+    {
+      "sha": "8ade76a65aaff42742d77c6c0c48aa21c1abf349",
+      "filename": "migrations/1788507775.sh",
+      "status": "added",
+      "additions": 27,
+      "deletions": 0,
+      "changes": 27,
+      "blob_url": "https://github.com/omacom/omarchy/blob/d06853a760955a09ef5a014a4f28584c6d1f0ec9/migrations%2F1788507775.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/d06853a760955a09ef5a014a4f28584c6d1f0ec9/migrations%2F1788507775.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788507775.sh?ref=d06853a760955a09ef5a014a4f28584c6d1f0ec9",
+      "patch": "@@ -0,0 +1,27 @@\n+echo \"Apply Omarchy's USB autosuspend policy through the kernel command line\"\n+\n+defaults_conf=\"${OMARCHY_USB_AUTOSUSPEND_DEFAULTS_CONF:-/etc/limine-entry-tool.d/omarchy-defaults.conf}\"\n+legacy_conf=\"${OMARCHY_USB_AUTOSUSPEND_LEGACY_CONF:-/etc/modprobe.d/omarchy-usb-autosuspend.conf}\"\n+running_cmdline=\"${OMARCHY_USB_AUTOSUSPEND_RUNNING_CMDLINE:-/proc/cmdline}\"\n+rebuild_marker=\"${OMARCHY_USB_AUTOSUSPEND_REBUILD_MARKER:-/var/lib/omarchy/migrations/1788507775}\"\n+\n+# Remove only the exact file Omarchy used to ship. Preserve administrator\n+# changes, even though usbcore is built in and modprobe cannot apply them.\n+if [[ -f $legacy_conf ]] &&\n+  [[ $(<\"$legacy_conf\") == \"options usbcore autosuspend=-1\" ]]; then\n+  sudo rm \"$legacy_conf\"\n+fi\n+\n+omarchy-cmd-present limine-mkinitcpio || exit 0\n+[[ -f $defaults_conf && -r $running_cmdline ]] || exit 0\n+grep -Fq 'usbcore.autosuspend=-1' \"$defaults_conf\" || exit 0\n+\n+# The running command line cannot change until reboot. Record a successful\n+# rebuild so this machine-wide repair is not repeated for each Omarchy user.\n+[[ ! -e $rebuild_marker ]] || exit 0\n+\n+if [[ \" $(<\"$running_cmdline\") \" != *\" usbcore.autosuspend=-1 \"* ]]; then\n+  sudo limine-mkinitcpio\n+  sudo install -Dm644 /dev/null \"$rebuild_marker\"\n+  omarchy-state set reboot-required\n+fi"
+    },
+    {
+      "sha": "e8bd02a358a5315d30a3c579ab47426a0938cb36",
+      "filename": "test/shell.d/usb-autosuspend-test.sh",
+      "status": "added",
+      "additions": 87,
+      "deletions": 0,
+      "changes": 87,
+      "blob_url": "https://github.com/omacom/omarchy/blob/d06853a760955a09ef5a014a4f28584c6d1f0ec9/test%2Fshell.d%2Fusb-autosuspend-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/d06853a760955a09ef5a014a4f28584c6d1f0ec9/test%2Fshell.d%2Fusb-autosuspend-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fusb-autosuspend-test.sh?ref=d06853a760955a09ef5a014a4f28584c6d1f0ec9",
+      "patch": "@@ -0,0 +1,87 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+defaults_conf=\"$ROOT/etc/limine-entry-tool.d/omarchy-defaults.conf\"\n+migration=\"$ROOT/migrations/1788507775.sh\"\n+\n+grep -Fqx 'KERNEL_CMDLINE[default]+=\" usbcore.autosuspend=-1\"' \"$defaults_conf\" ||\n+  fail \"USB autosuspend is disabled through the kernel command line\"\n+[[ ! -e $ROOT/etc/modprobe.d/omarchy-usb-autosuspend.conf ]] ||\n+  fail \"the ineffective usbcore modprobe option is removed\"\n+pass \"USB autosuspend policy is expressed as a working kernel parameter\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+legacy_conf=\"$test_tmp/omarchy-usb-autosuspend.conf\"\n+running_cmdline=\"$test_tmp/cmdline\"\n+rebuild_marker=\"$test_tmp/rebuild-complete\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-cmd-present\" <<'SH'\n+#!/bin/bash\n+(( ${LIMINE_MKINITCPIO_INSTALLED:-1} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_migration() {\n+  PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_USB_AUTOSUSPEND_DEFAULTS_CONF=\"$defaults_conf\" \\\n+    OMARCHY_USB_AUTOSUSPEND_LEGACY_CONF=\"$legacy_conf\" \\\n+    OMARCHY_USB_AUTOSUSPEND_RUNNING_CMDLINE=\"$running_cmdline\" \\\n+    OMARCHY_USB_AUTOSUSPEND_REBUILD_MARKER=\"$rebuild_marker\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+echo 'options usbcore autosuspend=-1' >\"$legacy_conf\"\n+echo 'quiet splash' >\"$running_cmdline\"\n+run_migration\n+\n+[[ ! -e $legacy_conf ]] || fail \"migration removes the exact obsolete config\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" || fail \"migration rebuilds the boot image\"\n+grep -Fxq $'omarchy-state\\tset\\treboot-required' \"$calls\" || fail \"migration requests a reboot\"\n+[[ -f $rebuild_marker ]] || fail \"migration records the machine-wide rebuild\"\n+pass \"migration replaces the obsolete setting and rebuilds once\"\n+\n+: >\"$calls\"\n+run_migration\n+[[ ! -s $calls ]] || fail \"migration does not repeat a recorded rebuild\" \"$(cat \"$calls\")\"\n+pass \"migration is machine-idempotent before reboot\"\n+\n+printf '%s\\n' '# administrator note' 'options usbcore autosuspend=-1' >\"$legacy_conf\"\n+echo 'quiet splash usbcore.autosuspend=-1' >\"$running_cmdline\"\n+rm -f \"$rebuild_marker\"\n+: >\"$calls\"\n+run_migration\n+\n+[[ -e $legacy_conf ]] || fail \"migration preserves an administrator-modified config\"\n+[[ ! -s $calls ]] || fail \"a booted kernel with the parameter needs no rebuild\" \"$(cat \"$calls\")\"\n+pass \"migration preserves custom files and skips an active parameter\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

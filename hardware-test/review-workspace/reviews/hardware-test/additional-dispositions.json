@@ -1,0 +1,206 @@
+{
+  "omacom/omarchy#10797": {
+    "plans": [
+      "P02"
+    ],
+    "treatment": "superseded",
+    "rationale": "Author folded this installed-flavor header helper into #12249. Retain that relationship and its Broadcom/T2 use case; do not install a second header-selection helper alongside the selected stock-kernel repair."
+  },
+  "omacom/omarchy#11897": {
+    "plans": [
+      "P02"
+    ],
+    "treatment": "context",
+    "rationale": "Merged hardware DKMS header foundation for linux-omarchy; retained as landed context, not newly implemented code in this roll-up."
+  },
+  "omacom/omarchy#11898": {
+    "plans": [
+      "P02"
+    ],
+    "treatment": "context",
+    "rationale": "Merged 4.0.4 backport of #11897. Preserve release-branch history separately from the current quattro candidate."
+  },
+  "omacom/omarchy#9211": {
+    "plans": [
+      "P04",
+      "P12"
+    ],
+    "treatment": "alternative",
+    "rationale": "Shared lock wake and wake-key consumption proposal, reported on MacBookPro16,1. It uses wall-clock polling and changes password-key handling; retain alongside the explicit resume/focus alternatives instead of stacking competing wake owners into the accepted lid-lock/fingerprint components."
+  },
+  "omacom/omarchy#9637": {
+    "plans": [
+      "P04"
+    ],
+    "treatment": "deferred",
+    "rationale": "Existing MacBook10,1 lid-open brightness restoration, now the upstream-selected successor to closed #10462. The current lid-lock component does not implement it. Keep its complete patch as the lid-open follow-up; reconcile lock timer ownership described on #10462 before combining it with the resume-IPC alternatives."
+  },
+  "omacom/omarchy-pkgs#422": {
+    "plans": [
+      "P10",
+      "P13"
+    ],
+    "treatment": "alternative",
+    "rationale": "Separate linux-bcm43602 kernel cold-resume implementation for BCM43602 / Apple subsystem 106b:0133, with author-reported MacBookPro12,1 tests. Current patch/config hashes independently match the recipe despite the linked checksum concern. Kernel review and signed-source/build verification remain separate gates. It is not in this ISO; compare as a separate kernel trial with the userspace sleep hook disabled."
+  },
+  "omacom/omarchy#10314": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "MacBook10,1 BCM4350 wake-source/S3 power-drain policy, distinct from firmware recovery. The source changes ACPI/PCI wake settings and removes named hibernation drop-ins. Keep this model-specific contribution as a separate test track; calibration or driver rebinding does not cover it."
+  },
+  "omacom/omarchy#10332": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "alternative",
+    "rationale": "BCM43602 module unload/reload alternative with reports on MacBookPro12,1 and 11,5. Upstream closed #11434 and #7589 in its favor, but those use different PCI recovery lifecycles. Preserve the hardware evidence and compare complete implementations; the chosen per-device hook does not unload every brcmfmac radio."
+  },
+  "omacom/omarchy#11623": {
+    "plans": [
+      "P10",
+      "P11"
+    ],
+    "treatment": "alternative",
+    "rationale": "Combined NVRAM/audio proposal. Its calibration applies a shared file by PCI ID and can retain the embedded default MAC when no interface identity is available; audio uses live git clone/pull and stock linux-headers. Retain the signal/audio reports, but prefer the selected model/subsystem calibration paths and pinned packaged audio delivery. The bundle is not fully superseded by either single roll-up."
+  },
+  "omacom/omarchy#7180": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "alternative",
+    "rationale": "Apple BCM4350-only sleep.target service with an author-reported MacBook10,1 S3 cycle. #7333 extends this approach to BCM43602. Preserve the service ordering and module-reload failure evidence; do not enable both this service and the selected system-sleep hook."
+  },
+  "omacom/omarchy#7333": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "partial",
+    "rationale": "The existing Apple BCM4350/BCM43602 four-PCI-ID boundary is incorporated into P10 installer, migration and per-device hook selection. Its complete sleep.target service remains a separate implementation; original author and MacBookPro12,1 sleep report retained. T2 recovery is kept separate because source reports disagree on its lifecycle. Focused source checks and the fresh-image software checks passed. Physical validation remains pending."
+  },
+  "omacom/omarchy#7589": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "alternative",
+    "rationale": "Closed upstream in favor of #10332. Preserve the MacBookPro13,2 device-rebind report and complete fixed-03:00.0 hook; it differs from module unloading and drops its marker after exhausted recovery retries. The current dynamic-device/retry-preserving hook remains the selected implementation."
+  },
+  "omacom/omarchy#11064": {
+    "plans": [
+      "P11"
+    ],
+    "treatment": "alternative",
+    "rationale": "Exact Touch Bar-model/AUR CS8409 installer with a reported MacBookPro13,2 speaker test; upstream closed #11625 in its favor. Keep that evidence and model-gating rationale, while retaining the selected pinned package and wider iMac track. The claim that every 13,1/14,1 has a different codec is not adopted as a blanket exclusion."
+  },
+  "omacom/omarchy#8560": {
+    "plans": [
+      "P04",
+      "P12"
+    ],
+    "treatment": "alternative",
+    "rationale": "Upstream-selected successor when #9181 was closed. Its active-focus callback is a smaller implementation than explicit resume signaling, output recreation and bounded retries. Keep the difference visible; closure does not establish complete behavioral equivalence."
+  },
+  "omacom/omarchy#10468": {
+    "plans": [
+      "P01"
+    ],
+    "treatment": "context",
+    "rationale": "Shared keybinding-name/layout proposal with de(mac) evidence and a #12676 dependency. It changes menu labels, not P01 typing-device eligibility; retain as adjacent keyboard context without claiming an Intel-Mac-specific driver fix."
+  },
+  "omacom/omarchy#11536": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "alternative",
+    "rationale": "BCM4377 Wi-Fi/Bluetooth combo-specific recovery on MacBookAir9,1, including ordered unloading and a delayed reload after reports of crashes. This contradicts treating every T2 radio like pre-T2 BCM4350/BCM43602. Preserve as a separate T2 test target; do not stack it with the generic rebind hook."
+  },
+  "omacom/omarchy#5140": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "alternative",
+    "rationale": "T2 post-resume module reload with a corrected installed hook path and author-reported traffic test. Preserve separately from combo-device ordering and pre-T2 PCI rebinding; earlier apparently successful tests used a stale executable backup hook."
+  },
+  "omacom/omarchy#9803": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "Model-specific MacBookPro16,1 WPA3/SAE-offload policy, not calibration or sleep recovery. Preserve this distinct T2 track and its association/traffic evidence; the current roll-up does not implement it."
+  },
+  "omacom/omarchy#10306": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "Apple firmware/package-source availability for non-T2 brcmfmac Macs, including iMac19,x. Separate from the two selected calibration files; package provenance and offline delivery must be reconciled before inclusion. These models remain in scope."
+  },
+  "omacom/omarchy#11748": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "Boot-time regulatory country hint for Apple BCM4350/BCM43602 using existing timezone-derived configuration and preserving overrides. This is separate from board calibration and recovery; retain the original as its test target without guessing a country."
+  },
+  "omacom/omarchy#10910": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "BCM43224 wl-driver detection and blacklist policy. Keep separate from brcmfmac recovery and b43 firmware; the selected hook cannot supply this older-Mac support."
+  },
+  "omacom/omarchy#11311": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "BCM4322 b43 firmware delivery for older MacBooks. Preserve as a distinct driver/package track; applying the wl blacklist or brcmfmac recovery is not equivalent."
+  },
+  "omacom/omarchy#8812": {
+    "plans": [
+      "P10"
+    ],
+    "treatment": "deferred",
+    "rationale": "BCM4350 upgrade-only removal of conflicting legacy wl packages. Retain the narrow existing upgrade proposal; fresh-install calibration and sleep hooks do not cover this transition."
+  },
+  "omacom/omarchy#11570": {
+    "plans": [
+      "P10",
+      "P04"
+    ],
+    "treatment": "alternative",
+    "rationale": "MacBookPro14,2 bundle combines Wi-Fi module reload with Thunderbolt removal/rescan, backed by model-specific cycle reports. Keep both ownership boundaries visible; do not stack its Wi-Fi hook with P10 or imply P04 fixes Thunderbolt recovery."
+  },
+  "omacom/omarchy#7732": {
+    "plans": [
+      "P06",
+      "P08",
+      "P11"
+    ],
+    "treatment": "alternative",
+    "rationale": "Complete MacBookPro13,1 camera/audio/SPI transition bundle with reported hardware validation, dependent on package #182. Preserve as a broader model-specific alternative; no one feature roll-up supersedes all of its coverage."
+  },
+  "omacom/omarchy-pkgs#182": {
+    "plans": [
+      "P08",
+      "P11"
+    ],
+    "treatment": "alternative",
+    "rationale": "Camera/audio package bundle for #7732 with offline source preparation and post-transaction DKMS verification. Compare its delivery guarantees with the selected package companions; the whole bundle is not incorporated merely because package names overlap."
+  },
+  "omacom/omarchy-iso#174": {
+    "plans": [
+      "P12"
+    ],
+    "treatment": "partial",
+    "rationale": "Both existing EFI-preservation commits are incorporated unchanged into the local integrated ISO source with original authorship. The new ISO passed a fresh VM disk-wipe/restore check for all three synthetic file hashes; historical B7 lacks this contribution. The proposal remains best-effort and verifies counts/sizes rather than hashes, so the physical-install guide also requires an independent external firmware backup."
+  },
+  "omacom/omarchy-pkgs#544": {
+    "plans": [
+      "P13"
+    ],
+    "treatment": "alternative",
+    "rationale": "Separate downstream ACPICA PCI address correction for MacBookPro14,1 resume latency. Upstream review is pending; retain its linked source/sign-off and do not conflate it with kernel migration policy or a validated general suspend fix."
+  }
+}

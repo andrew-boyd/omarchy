@@ -1,0 +1,141 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11536",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-t2-combo"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11536,
+  "checked_at": "2026-09-21T11:57:48.204020+00:00",
+  "title": "Fix BCM4377 Bluetooth hang and D3 suspend abort on T2 Macs",
+  "author": "anomalousmouse",
+  "head_sha": "c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T17:38:39Z",
+  "state": "open",
+  "body": "Fixes #11264.\n\nOn MacBookAir9,1 (and other T2 machines with the BCM4377 combo chip) two things are broken out of the box even after `hci_bcm4377` is module-loaded:\n\n1. **Bluetooth looks powered and finds nothing.** After boot, `hci0` exists, rfkill is clear, and BlueZ reports `Powered: yes` with `Class: 0x00000000`. HCI commands time out (`0x0c56`, `0x200b`). A scan returns zero devices. One PCI unbind/bind sets a real class (`0x006c010c`) and discovery works. The oneshot retries that rebind and treats an unset class as hung, because `Powered: yes` is a lie on this chip.\n\n2. **Suspend never happens.** `brcmfmac` times out in `brcmf_pcie_pm_enter_D3` (`pci_pm_suspend` returns -5). logind retries every ~30s with the lid closed, so the machine stays awake and warm. Unloading `brcmfmac` first lets deep suspend work. `hci_bcm4377` has to go too: left bound it wakes hung and a minute later DPC-isolates the whole chip, taking Wi-Fi with it. Reloading `brcmfmac` the instant the machine wakes has hard-crashed this model; the reload waits 15s.\n\nThis is **not** every T2 Mac. Gate is the combo PCI IDs (`14e4:4488` Wi-Fi, `14e4:5fa0` Bluetooth), not the T2 bridge.\n\nUnload is a `Before=sleep.target` oneshot so NetworkManager can release the iface. A systemd-sleep hook runs after user.slice is frozen, which is why `modprobe -r brcmfmac` can fail there, and why it races any existing sleep.target Wi-Fi unloader that reloads immediately on resume.\n\nExisting community units (`t2-brcmfmac-suspend.service`, `bt-bcm4377-rebind.service`, `/usr/lib/systemd/system-sleep/t2-wifi-suspend`) are disabled/removed so they cannot fight the packaged path.\n\nNew installs get this from `install/hardware/apple/fix-t2-bcm4377.sh`. Existing installs get it from `migrations/1789234234.sh`.\n\nSigned-off-by: Grok <grok@x.ai>",
+  "draft": false,
+  "files": [
+    {
+      "sha": "53c3f99aa5fbdf265fd34ea10df65e6b58b7575a",
+      "filename": "bin/omarchy-t2-bcm4377-rebind",
+      "status": "added",
+      "additions": 69,
+      "deletions": 0,
+      "changes": 69,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/bin%2Fomarchy-t2-bcm4377-rebind",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/bin%2Fomarchy-t2-bcm4377-rebind",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-t2-bcm4377-rebind?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,69 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Rebind the BCM4377 Bluetooth function until the adapter is usable\n+# omarchy:group=hw\n+# omarchy:hidden=true\n+# omarchy:requires-sudo=true\n+\n+# The BCM4377 on T2 Macs often fails its first initialisation (HCI command\n+# timeouts, or probe error -110). Unbinding and rebinding hci_bcm4377, sometimes\n+# more than once, brings it up. BlueZ can report Powered: yes while the class\n+# stays 0x00000000 and scans find nothing \u2014 that happens at boot, not only\n+# after suspend.\n+\n+set -euo pipefail\n+\n+MAX_TRIES=${MAX_TRIES:-5}\n+DRV=/sys/bus/pci/drivers/hci_bcm4377\n+\n+DEV=\"\"\n+for d in /sys/bus/pci/devices/*; do\n+  [[ -r $d/vendor && -r $d/device ]] || continue\n+  if [[ $(<\"$d/vendor\") == \"0x14e4\" && $(<\"$d/device\") == \"0x5fa0\" ]]; then\n+    DEV=$(basename \"$d\")\n+    break\n+  fi\n+done\n+\n+if [[ -z $DEV ]]; then\n+  echo \"omarchy-t2-bcm4377-rebind: no BCM4377 Bluetooth function found, nothing to do\"\n+  exit 0\n+fi\n+\n+modprobe hci_bcm4377 2>/dev/null || true\n+\n+# Returns 0 only if BlueZ says powered *and* the adapter class is set.\n+# A hung BCM4377 still reports Powered: yes with Class: 0x00000000 (0).\n+alive() {\n+  [[ -e /sys/class/bluetooth/hci0 ]] || return 1\n+  timeout 5 bluetoothctl power on >/dev/null 2>&1 || true\n+  local show\n+  show=$(timeout 5 bluetoothctl show 2>/dev/null) || return 1\n+  echo \"$show\" | grep -q 'Powered: yes' || return 1\n+  echo \"$show\" | grep -q 'Class: 0x00000000' && return 1\n+  return 0\n+}\n+\n+if alive; then\n+  echo \"omarchy-t2-bcm4377-rebind: $DEV already powered, nothing to do\"\n+  exit 0\n+fi\n+\n+for i in $(seq 1 \"$MAX_TRIES\"); do\n+  echo \"omarchy-t2-bcm4377-rebind: attempt $i/$MAX_TRIES on $DEV\"\n+  if [[ -L /sys/bus/pci/devices/$DEV/driver ]]; then\n+    echo \"$DEV\" >\"$DRV/unbind\" 2>/dev/null || true\n+    sleep 2\n+  fi\n+  echo \"$DEV\" >\"$DRV/bind\" 2>/dev/null || true\n+  sleep 3\n+  systemctl restart bluetooth.service\n+  sleep 3\n+  if alive; then\n+    echo \"omarchy-t2-bcm4377-rebind: Bluetooth powered on after attempt $i\"\n+    exit 0\n+  fi\n+done\n+\n+echo \"omarchy-t2-bcm4377-rebind: gave up after $MAX_TRIES attempts\" >&2\n+exit 1"
+    },
+    {
+      "sha": "80a979a1d236068cc1df8a4f24a7d99a55fcaffa",
+      "filename": "bin/omarchy-t2-bcm4377-suspend",
+      "status": "added",
+      "additions": 109,
+      "deletions": 0,
+      "changes": 109,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/bin%2Fomarchy-t2-bcm4377-suspend",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/bin%2Fomarchy-t2-bcm4377-suspend",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-t2-bcm4377-suspend?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,109 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Unload BCM4377 Wi-Fi and Bluetooth around suspend\n+# omarchy:group=hw\n+# omarchy:args=<pre|post>\n+# omarchy:hidden=true\n+# omarchy:requires-sudo=true\n+\n+# brcmfmac times out in brcmf_pcie_pm_enter_D3 (pci_pm_suspend returns -5),\n+# which aborts both deep and s2idle. Unload has to happen before sleep.target:\n+# a systemd-sleep hook runs after user.slice is frozen, when NetworkManager\n+# still holds the interface and `modprobe -r brcmfmac` can fail.\n+#\n+# hci_bcm4377 must be unloaded too. Left bound, it wakes hung and later raises\n+# a PCIe error that DPC-isolates the whole combo chip (Wi-Fi dies until reboot).\n+# Stop bluetoothd first so the module can actually leave.\n+#\n+# Reloading brcmfmac the instant the system wakes has hard-crashed this chip.\n+# Defer that reload ~15s, then rebind Bluetooth.\n+\n+set -euo pipefail\n+\n+has_bcm4377() {\n+  local dev\n+  for dev in /sys/bus/pci/devices/*; do\n+    [[ -r $dev/vendor && -r $dev/device ]] || continue\n+    if [[ $(<\"$dev/vendor\") == \"0x14e4\" ]]; then\n+      case $(<\"$dev/device\") in\n+        0x4488|0x5fa0) return 0 ;;\n+      esac\n+    fi\n+  done\n+  return 1\n+}\n+\n+loaded() {\n+  [[ -d /sys/module/$1 ]]\n+}\n+\n+wifi_ifaces() {\n+  local path driver\n+  for path in /sys/class/net/*/device/driver; do\n+    [[ -e $path ]] || continue\n+    driver=$(basename \"$(readlink -f \"$path\")\")\n+    [[ $driver == \"brcmfmac\" ]] || continue\n+    basename \"$(dirname \"$(dirname \"$path\")\")\"\n+  done\n+}\n+\n+release_wifi() {\n+  local iface\n+  for iface in $(wifi_ifaces); do\n+    nmcli device disconnect \"$iface\" >/dev/null 2>&1 || true\n+    ip link set \"$iface\" down >/dev/null 2>&1 || true\n+  done\n+}\n+\n+unload_bluetooth() {\n+  loaded hci_bcm4377 || return 0\n+  systemctl stop bluetooth.service >/dev/null 2>&1 || true\n+  modprobe -r hci_bcm4377 || true\n+  if loaded hci_bcm4377; then\n+    echo \"warning: failed to unload hci_bcm4377\" >&2\n+  else\n+    echo \"unloaded hci_bcm4377 before suspend\"\n+  fi\n+}\n+\n+pre() {\n+  has_bcm4377 || exit 0\n+\n+  unload_bluetooth\n+\n+  loaded brcmfmac || exit 0\n+\n+  release_wifi\n+\n+  local attempt\n+  for attempt in 1 2 3 4 5; do\n+    loaded brcmfmac_wcc && modprobe -r brcmfmac_wcc || true\n+    if ! loaded brcmfmac || modprobe -r brcmfmac; then\n+      echo \"unloaded brcmfmac before suspend (attempt $attempt)\"\n+      exit 0\n+    fi\n+    sleep 0.4\n+  done\n+\n+  echo \"failed to unload brcmfmac; BCM4377 will abort suspend\" >&2\n+  exit 1\n+}\n+\n+post() {\n+  has_bcm4377 || exit 0\n+\n+  systemctl stop t2-wifi-reload.service t2-wifi-reload.timer \\\n+    omarchy-t2-bcm4377-reload.service omarchy-t2-bcm4377-reload.timer >/dev/null 2>&1 || true\n+  systemd-run --collect --on-active=15s --unit=omarchy-t2-bcm4377-reload \\\n+    /bin/bash -c 'modprobe brcmfmac; modprobe brcmfmac_wcc || true; systemctl start omarchy-t2-bcm4377-rebind.service'\n+  echo \"scheduled brcmfmac/bluetooth reload in 15s\"\n+}\n+\n+case \"${1:-}\" in\n+  pre) pre ;;\n+  post) post ;;\n+  *)\n+    echo \"usage: omarchy-t2-bcm4377-suspend <pre|post>\" >&2\n+    exit 2\n+    ;;\n+esac"
+    },
+    {
+      "sha": "303acb7d629bfc59d95dfb9f7c204308502fad73",
+      "filename": "default/systemd/system/omarchy-t2-bcm4377-rebind.service",
+      "status": "added",
+      "additions": 13,
+      "deletions": 0,
+      "changes": 13,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/default%2Fsystemd%2Fsystem%2Fomarchy-t2-bcm4377-rebind.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/default%2Fsystemd%2Fsystem%2Fomarchy-t2-bcm4377-rebind.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem%2Fomarchy-t2-bcm4377-rebind.service?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,13 @@\n+[Unit]\n+Description=Rebind BCM4377 Bluetooth until the adapter is usable\n+Documentation=https://github.com/omacom/omarchy/issues/11264\n+After=bluetooth.service\n+Wants=bluetooth.service\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/usr/bin/omarchy-t2-bcm4377-rebind\n+TimeoutStartSec=120\n+\n+[Install]\n+WantedBy=multi-user.target"
+    },
+    {
+      "sha": "ce6703597775fc81f35b6a7ff36e2a246aebb52d",
+      "filename": "default/systemd/system/omarchy-t2-bcm4377-suspend.service",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/default%2Fsystemd%2Fsystem%2Fomarchy-t2-bcm4377-suspend.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/default%2Fsystemd%2Fsystem%2Fomarchy-t2-bcm4377-suspend.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem%2Fomarchy-t2-bcm4377-suspend.service?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,16 @@\n+[Unit]\n+Description=Unload BCM4377 Wi-Fi and Bluetooth around suspend\n+Documentation=https://github.com/omacom/omarchy/issues/11264\n+Before=sleep.target\n+StopWhenUnneeded=yes\n+\n+[Service]\n+Type=oneshot\n+RemainAfterExit=yes\n+TimeoutStartSec=15\n+TimeoutStopSec=15\n+ExecStart=/usr/bin/omarchy-t2-bcm4377-suspend pre\n+ExecStop=/usr/bin/omarchy-t2-bcm4377-suspend post\n+\n+[Install]\n+WantedBy=sleep.target"
+    },
+    {
+      "sha": "3ae0667f5c59b9382d33b76a870967f44c90babd",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -41,6 +41,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2-bcm4377.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\""
+    },
+    {
+      "sha": "cd91bf8e58e0dcbe8a345a77b6def69165aea444",
+      "filename": "install/hardware/apple/fix-t2-bcm4377.sh",
+      "status": "added",
+      "additions": 39,
+      "deletions": 0,
+      "changes": 39,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/install%2Fhardware%2Fapple%2Ffix-t2-bcm4377.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/install%2Fhardware%2Fapple%2Ffix-t2-bcm4377.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2-bcm4377.sh?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,39 @@\n+# BCM4377 combo (Wi-Fi 14e4:4488, Bluetooth 14e4:5fa0) flakes on first Bluetooth\n+# probe and cannot enter D3, which aborts suspend. Other T2 chips do not share\n+# this; gate on the combo PCI IDs, not the T2 bridge. See\n+# https://github.com/omacom/omarchy/issues/11264\n+#\n+# Unload happens in a Before=sleep.target oneshot so NetworkManager can release\n+# the interface. A systemd-sleep hook runs after user.slice is frozen, and\n+# reloading brcmfmac the instant the machine wakes has hard-crashed this chip.\n+systemd_dir=\"${OMARCHY_T2_BCM4377_SYSTEMD_DIR:-/etc/systemd/system}\"\n+sleep_hook=\"${OMARCHY_T2_BCM4377_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/t2-wifi-suspend}\"\n+omarchy_path=\"${OMARCHY_PATH:-/usr/share/omarchy}\"\n+unit_dir=\"$omarchy_path/default/systemd/system\"\n+\n+if lspci -nn | grep -E \"14e4:(4488|5fa0)\" >/dev/null; then\n+  echo \"Detected BCM4377 Wi-Fi/Bluetooth; installing boot rebind and suspend unload\"\n+\n+  mkdir -p \"$systemd_dir\"\n+  install -m 644 \"$unit_dir/omarchy-t2-bcm4377-rebind.service\" \\\n+    \"$systemd_dir/omarchy-t2-bcm4377-rebind.service\"\n+  install -m 644 \"$unit_dir/omarchy-t2-bcm4377-suspend.service\" \\\n+    \"$systemd_dir/omarchy-t2-bcm4377-suspend.service\"\n+\n+  # Community workarounds that race these units on resume (immediate brcmfmac\n+  # reload) or duplicate the boot rebind.\n+  systemctl disable --now t2-brcmfmac-suspend.service >/dev/null 2>&1 || true\n+  systemctl disable --now bt-bcm4377-rebind.service >/dev/null 2>&1 || true\n+  systemctl disable --now t2-wifi-suspend.service >/dev/null 2>&1 || true\n+  rm -f \"$sleep_hook\"\n+\n+  systemctl daemon-reload\n+  systemctl enable omarchy-t2-bcm4377-rebind.service\n+  systemctl enable omarchy-t2-bcm4377-suspend.service\n+\n+  # ISO finalization is a chroot; starting the oneshot there cannot talk to a\n+  # real adapter. On a live system, unstick Bluetooth without waiting for reboot.\n+  if systemctl is-system-running >/dev/null 2>&1; then\n+    systemctl start omarchy-t2-bcm4377-rebind.service >/dev/null 2>&1 || true\n+  fi\n+fi"
+    },
+    {
+      "sha": "04c7115290fcd06048ec1609088724040710e11d",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 1,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -61,11 +61,12 @@ The Apple T2 Security Chip was introduced in 2017. The T2 chip was discontinued\n - MacBook Pro 13-inch (2018, four Thunderbolt 3 ports) \u2013 Model: A1989\n - MacBook Pro 15-inch (2018) \u2013 Model: A1990\n - MacBook Air (Retina, 13-inch, 2018) \u2013 Model: A1932\n+- MacBook Air (Retina, 13-inch, 2020) \u2013 Model: A2179\n - Mac mini (2018) \u2013 Model: A1998\n - MacBook Pro 13-inch (2019, two Thunderbolt 3 ports) \u2013 Model: A2159\n - MacBook Pro 13-inch (2019, four Thunderbolt 3 ports) \u2013 Model: A2178\n - MacBook Pro 15-inch (2019) \u2013 Model: A1990\n - MacBook Pro 13-inch (2020, two Thunderbolt 3 ports) \u2013 Model: A2265\n - MacBook Pro 15-inch (2020) \u2013 Model: A1990\n \n-On these models, the installer automatically sets up the patched `linux-t2` kernel, the T2 audio configuration, Apple's Broadcom Wi-Fi/Bluetooth firmware, and fan control via `t2fanrd`. The Touch Bar runs on the kernel's built-in Boot Camp-style support.\n+On these models, the installer automatically sets up the patched `linux-t2` kernel, the T2 audio configuration, Apple's Broadcom Wi-Fi/Bluetooth firmware, and fan control via `t2fanrd`. The Touch Bar runs on the kernel's built-in Boot Camp-style support. Machines with the BCM4377 combo chip (including the 2020 MacBook Air) also get a boot-time Bluetooth rebind and a pre-sleep unload of Wi-Fi/Bluetooth, so the adapter comes up and the lid can sleep."
+    },
+    {
+      "sha": "8b925b637de2abbaa2e93e7a5108789d337507ba",
+      "filename": "migrations/1789234234.sh",
+      "status": "added",
+      "additions": 24,
+      "deletions": 0,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/migrations%2F1789234234.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/migrations%2F1789234234.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789234234.sh?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,24 @@\n+echo \"Rebind BCM4377 Bluetooth after boot and unload the combo chip around suspend\"\n+\n+# Existing T2 installs load hci_bcm4377 but leave a hung adapter (Powered: yes,\n+# class 0x00000000) and cannot suspend: brcmfmac times out entering D3. Gate on\n+# the combo PCI IDs so other T2 chips are left alone. See\n+# install/hardware/apple/fix-t2-bcm4377.sh and omacom/omarchy#11264.\n+\n+as_root() {\n+  if (( EUID == 0 )); then\n+    \"$@\"\n+  else\n+    sudo \"$@\"\n+  fi\n+}\n+\n+if ! lspci -nn | grep -E \"14e4:(4488|5fa0)\" >/dev/null; then\n+  exit 0\n+fi\n+\n+as_root env \\\n+  OMARCHY_PATH=\"${OMARCHY_PATH:-/usr/share/omarchy}\" \\\n+  OMARCHY_T2_BCM4377_SYSTEMD_DIR=\"${OMARCHY_T2_BCM4377_SYSTEMD_DIR:-/etc/systemd/system}\" \\\n+  OMARCHY_T2_BCM4377_SLEEP_HOOK=\"${OMARCHY_T2_BCM4377_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/t2-wifi-suspend}\" \\\n+  bash -euo pipefail -c 'source \"$1\"' bash \"$OMARCHY_PATH/install/hardware/apple/fix-t2-bcm4377.sh\""
+    },
+    {
+      "sha": "114e17bc83a60bd4e935e80e27030b5b39da3af3",
+      "filename": "test/shell.d/t2-bcm4377-test.sh",
+      "status": "added",
+      "additions": 157,
+      "deletions": 0,
+      "changes": 157,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/test%2Fshell.d%2Ft2-bcm4377-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c012c47e8afdff853e5ffa17b7ca4a2abc005a86/test%2Fshell.d%2Ft2-bcm4377-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-bcm4377-test.sh?ref=c012c47e8afdff853e5ffa17b7ca4a2abc005a86",
+      "patch": "@@ -0,0 +1,157 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-t2-bcm4377.sh\"\n+fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1789234234.sh\"\n+rebind=\"$ROOT/bin/omarchy-t2-bcm4377-rebind\"\n+suspend=\"$ROOT/bin/omarchy-t2-bcm4377-suspend\"\n+rebind_unit=\"$ROOT/default/systemd/system/omarchy-t2-bcm4377-rebind.service\"\n+suspend_unit=\"$ROOT/default/systemd/system/omarchy-t2-bcm4377-suspend.service\"\n+\n+grep -q 'apple/fix-t2-bcm4377.sh' \"$all\" ||\n+  fail \"the BCM4377 workaround runs during hardware setup\"\n+! grep -q 'omarchy-t2-bcm4377' \"$fix_t2\" ||\n+  fail \"only the BCM4377 leaf owns the combo-chip units\"\n+grep -q 'Class: 0x00000000' \"$rebind\" ||\n+  fail \"the rebind treats an unset adapter class as hung\"\n+grep -q 'WantedBy=sleep.target' \"$suspend_unit\" ||\n+  fail \"suspend unload is a sleep.target unit, not a systemd-sleep hook\"\n+grep -q 'Before=sleep.target' \"$suspend_unit\" ||\n+  fail \"suspend unload runs before sleep.target\"\n+grep -q 'omarchy-t2-bcm4377-rebind.service' \"$suspend\" ||\n+  fail \"resume reloads Bluetooth through the rebind unit\"\n+pass \"BCM4377 setup is a dedicated leaf with a class-aware rebind\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+systemd_dir=\"$test_tmp/systemd\"\n+sleep_hook=\"$test_tmp/system-sleep/t2-wifi-suspend\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/system-sleep\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no such hardware\" (#6608).\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+if [[ -n ${WIFI_ID:-} ]]; then\n+  echo \"03:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]\"\n+fi\n+if [[ -n ${BT_ID:-} ]]; then\n+  echo \"03:00.1 Network controller [0280]: Broadcom Inc. Bluetooth [14e4:$BT_ID]\"\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+case \"$1\" in\n+  is-system-running) exit 1 ;;\n+esac\n+exit 0\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local wifi_id=\"${1:-}\" bt_id=\"${2:-}\" t2=\"${3:-0}\"\n+  rm -rf \"$systemd_dir\"\n+  mkdir -p \"$systemd_dir\" \"$(dirname \"$sleep_hook\")\"\n+  printf 'legacy-hook\\n' >\"$sleep_hook\"\n+  : >\"$calls\"\n+\n+  WIFI_ID=\"$wifi_id\" BT_ID=\"$bt_id\" T2_HARDWARE=\"$t2\" PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_T2_BCM4377_SYSTEMD_DIR=\"$systemd_dir\" \\\n+    OMARCHY_T2_BCM4377_SLEEP_HOOK=\"$sleep_hook\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\" </dev/null\n+}\n+\n+run_leaf 4488 5fa0 1 >/dev/null\n+[[ -f $systemd_dir/omarchy-t2-bcm4377-rebind.service ]] ||\n+  fail \"a BCM4377 machine gets the rebind unit\"\n+[[ -f $systemd_dir/omarchy-t2-bcm4377-suspend.service ]] ||\n+  fail \"a BCM4377 machine gets the suspend unit\"\n+cmp -s \"$rebind_unit\" \"$systemd_dir/omarchy-t2-bcm4377-rebind.service\" ||\n+  fail \"the installed rebind unit matches the packaged file\"\n+grep -Fq $'systemctl\\tenable\\tomarchy-t2-bcm4377-rebind.service' \"$calls\" ||\n+  fail \"the rebind unit is enabled\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tenable\\tomarchy-t2-bcm4377-suspend.service' \"$calls\" ||\n+  fail \"the suspend unit is enabled\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tdisable\\t--now\\tt2-brcmfmac-suspend.service' \"$calls\" ||\n+  fail \"leftover community suspend units are disabled\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tdisable\\t--now\\tbt-bcm4377-rebind.service' \"$calls\" ||\n+  fail \"leftover community rebind units are disabled\" \"$(cat \"$calls\")\"\n+[[ ! -e $sleep_hook ]] || fail \"the leftover systemd-sleep hook is removed\"\n+! grep -Fq $'systemctl\\tstart\\tomarchy-t2-bcm4377-rebind.service' \"$calls\" ||\n+  fail \"ISO/chroot setup does not start the rebind oneshot\" \"$(cat \"$calls\")\"\n+pass \"a BCM4377 machine gets the units and leftover workarounds are retired\"\n+\n+run_leaf 4464 \"\" 1 >/dev/null\n+[[ ! -e $systemd_dir/omarchy-t2-bcm4377-rebind.service ]] ||\n+  fail \"a T2 Mac without BCM4377 is left alone\"\n+[[ ! -s $calls ]] || fail \"a T2 Mac without BCM4377 escalates nothing\" \"$(cat \"$calls\")\"\n+pass \"a T2 Mac without BCM4377 is left alone\"\n+\n+run_leaf \"\" \"\" 0 >/dev/null\n+[[ ! -e $systemd_dir/omarchy-t2-bcm4377-suspend.service ]] ||\n+  fail \"unrelated hardware is left alone\"\n+pass \"unrelated hardware is left alone\"\n+\n+run_migration() {\n+  local wifi_id=\"${1:-}\" bt_id=\"${2:-}\" t2=\"${3:-0}\"\n+  rm -rf \"$systemd_dir\"\n+  mkdir -p \"$systemd_dir\" \"$(dirname \"$sleep_hook\")\"\n+  printf 'legacy-hook\\n' >\"$sleep_hook\"\n+  : >\"$calls\"\n+\n+  WIFI_ID=\"$wifi_id\" BT_ID=\"$bt_id\" T2_HARDWARE=\"$t2\" PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_T2_BCM4377_SYSTEMD_DIR=\"$systemd_dir\" \\\n+    OMARCHY_T2_BCM4377_SLEEP_HOOK=\"$sleep_hook\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration 4488 5fa0 1\n+[[ -f $systemd_dir/omarchy-t2-bcm4377-rebind.service ]] ||\n+  fail \"the migration installs the rebind unit on existing BCM4377 installs\"\n+grep -Fq $'sudo\\tenv' \"$calls\" ||\n+  fail \"the migration escalates to install machine-wide units\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tenable\\tomarchy-t2-bcm4377-suspend.service' \"$calls\" ||\n+  fail \"the migration enables the suspend unit\" \"$(cat \"$calls\")\"\n+[[ ! -e $sleep_hook ]] || fail \"the migration removes the leftover sleep hook\"\n+pass \"the migration repairs an existing BCM4377 install\"\n+\n+run_migration 4464 \"\" 1\n+[[ ! -e $systemd_dir/omarchy-t2-bcm4377-rebind.service ]] ||\n+  fail \"the migration skips T2 Macs without BCM4377\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on other T2 chips\" \"$(cat \"$calls\")\"\n+pass \"the migration skips T2 Macs without BCM4377\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

@@ -1,3 +1,5 @@
+> Historical candidate. Use the [2026-09-21 ISO and qualified validation report](../hardware-test/HANDOFF.md) for the current physical test handoff. These earlier results remain preserved.
+
 # Intel Mac ISO / VM validation handoff
 
 Scope: the 14 Intel Mac feature drafts and three package companions. These remain consolidation and hardware-testing targets. VM results establish build, installation and software behavior; they do not certify physical Mac support or release readiness.

@@ -1,0 +1,365 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8524",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "brightness-range"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8524,
+  "checked_at": "2026-09-21T11:56:09.276660+00:00",
+  "title": "Fix brightness lockout on displays with small max_brightness ranges",
+  "author": "gorem",
+  "head_sha": "6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:30Z",
+  "state": "open",
+  "body": "Fixes #8523\n\n### Problem\nOn hardware with low `max_brightness` ranges (such as `acpi_video0` on a 2012 Retina MacBook Pro, where `max_brightness` is `15`), small percentage steps like `1%` calculate to fractional values (`0.01 * 15 = 0.15`) that `brightnessctl` rounds down to raw brightness `0`.\n\nAs a result:\n- Stepping up with `+5%` when at `0%` evaluates `target = 1%`, which rounds to raw `0`. Repeated `+5%` keypresses repeatedly set raw `0`, trapping the user on a black screen.\n\n### Solution\n1. When stepping up (`is_up=1`), compare raw integer brightness values (`brightnessctl get`) before and after writing. If raw brightness did not increase, fall back to `brightnessctl set +1` to ensure the display turns back on on the first upward step.\n2. Downward steps (`5%-`) are allowed to reach `0%` (backlight off) as intended for users who want a true 0% setting.\n3. Added unit test coverage in `test/shell.d/brightness-display-test.sh` for both upward recovery from 0% and downward stepping to 0%.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "4fd05f9952f77ef9d18caa5ee4ffb8ff3f99cbac",
+      "filename": "bin/omarchy-brightness-display",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 1,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6dc082c751b3eb749e699073fd8dd84ce21fc3a1/bin%2Fomarchy-brightness-display",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6dc082c751b3eb749e699073fd8dd84ce21fc3a1/bin%2Fomarchy-brightness-display",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display?ref=6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+      "patch": "@@ -92,9 +92,11 @@ else\n   # Current brightness percentage\n   current=$(backlight_brightness \"$device\") || exit 1\n \n+  is_up=0\n   # Apply non-uniform step size: 1% steps if at or below 5%, otherwise set an\n   # absolute target percentage to avoid raw backlight rounding causing uneven OSD steps.\n   if [[ $step == \"+5%\" ]]; then\n+    is_up=1\n     if (( current < 5 )); then\n       (( target = current + 1 ))\n     else\n@@ -110,13 +112,23 @@ else\n       (( target = current - 5 ))\n     fi\n \n-    (( target < 1 )) && target=1\n+    (( target < 0 )) && target=0\n     step=\"$target%\"\n+  elif [[ $step == \"+\"* ]]; then\n+    is_up=1\n   fi\n \n   # Set brightness of the display device.\n   brightnessctl -d \"$device\" set \"$step\" >/dev/null\n \n+  # On hardware with small max_brightness ranges (e.g. acpi_video0 with max_brightness=15),\n+  # percentage targets (like 1%) can round to raw 0. When stepping up from 0%, ensure\n+  # raw brightness increases by at least +1 step so the display turns back on.\n+  new_current=$(backlight_brightness \"$device\") || new_current=\"$current\"\n+  if (( is_up && new_current <= current && current < 100 )); then\n+    brightnessctl -d \"$device\" set +1 >/dev/null\n+  fi\n+\n   # Show the new brightness in OSD\n   (( no_osd )) || omarchy-osd -i brightness -p \"$(backlight_brightness \"$device\")\"\n fi"
+    },
+    {
+      "sha": "0f2380e57283a2eaec23d5d0112b814cac7dbc86",
+      "filename": "test/shell.d/brightness-display-test.sh",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 1,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6dc082c751b3eb749e699073fd8dd84ce21fc3a1/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6dc082c751b3eb749e699073fd8dd84ce21fc3a1/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrightness-display-test.sh?ref=6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+      "patch": "@@ -31,7 +31,11 @@ cat >\"$mock_bin/brightnessctl\" <<'SH'\n #!/bin/bash\n printf 'brightnessctl %s\\n' \"$*\" >>\"$CALL_LOG\"\n if [[ $* == *\" -m\"* ]]; then\n-  printf 'mock_backlight,backlight,40,40%%\\n'\n+  if [[ -f \"${MOCK_BRIGHTNESS_FILE:-}\" ]]; then\n+    cat \"$MOCK_BRIGHTNESS_FILE\"\n+  else\n+    printf 'mock_backlight,backlight,40,40%%\\n'\n+  fi\n fi\n SH\n \n@@ -144,3 +148,11 @@ if PATH=\"$mock_bin:$PATH\" \"$ROOT/bin/omarchy-hyprland-monitor-focused-apple\"; th\n   fail \"focused non-Apple display is not detected as Apple\"\n fi\n pass \"named Apple display is detected independently of focus\"\n+\n+mock_bfile=\"$test_tmp/mbright\"\n+printf 'mock_backlight,backlight,0,0%%\\n' >\"$mock_bfile\"\n+MOCK_BRIGHTNESS_FILE=\"$mock_bfile\" run_brightness --no-osd --monitor eDP-1 +5% >/dev/null\n+grep -F 'brightnessctl -d mock_backlight set +1' \"$call_log\" >/dev/null || \\\n+  fail \"stepping up from 0% falls back to +1 raw step when target percentage rounds down\"\n+pass \"stepping up from 0% falls back to +1 raw step when target percentage rounds down\"\n+"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5527457747",
+      "html_url": "https://github.com/omacom/omarchy/pull/8524#issuecomment-5527457747",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8524",
+      "id": 5527457747,
+      "node_id": "IC_kwDOO0Cobs8AAAABSXZP0w",
+      "user": {
+        "login": "gorem",
+        "id": 5383921,
+        "node_id": "MDQ6VXNlcjUzODM5MjE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5383921?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/gorem",
+        "html_url": "https://github.com/gorem",
+        "followers_url": "https://api.github.com/users/gorem/followers",
+        "following_url": "https://api.github.com/users/gorem/following{/other_user}",
+        "gists_url": "https://api.github.com/users/gorem/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/gorem/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/gorem/subscriptions",
+        "organizations_url": "https://api.github.com/users/gorem/orgs",
+        "repos_url": "https://api.github.com/users/gorem/repos",
+        "events_url": "https://api.github.com/users/gorem/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/gorem/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-03T14:42:22Z",
+      "updated_at": "2026-09-03T14:42:22Z",
+      "body": "Thanks for the thorough review! I've updated the PR accordingly:\n\n1. **Raw Integer Comparison**: Updated the recovery check to compare raw integer brightness values (`brightnessctl get`) before and after the write rather than rounded percentage values, preventing unnecessary extra steps on backlights with coarse granularity.\n2. **Updated PR Description & Regression Test**: Updated the PR description to clarify that downward steps allow reaching 0% (backlight off), and added a regression test for downward stepping to 0% in `test/shell.d/brightness-display-test.sh`.\n3. Re-ran test suites and squashed all changes into a single clean commit.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5527457747/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5037064422,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLDuA5g",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nFixes brightness lockout on displays with small brightness ranges by applying raw-step fallbacks when percentage adjustments round to zero.\n\n**Changes:**\n- Adds raw brightness fallbacks for 5% stepping.\n- Adds mockable brightness state and upward-fallback coverage.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated 1 comment.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-brightness-display` | Adds raw-step recovery logic. |\n| `test/shell.d/brightness-display-test.sh` | Tests upward recovery from 0%. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8524#pullrequestreview-5037064422",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8524",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8524#pullrequestreview-5037064422"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8524"
+        }
+      },
+      "submitted_at": "2026-08-27T03:51:21Z",
+      "commit_id": "de25127c4c6bfbe9c7dfaa7533f6645b73f37a24"
+    },
+    {
+      "id": 5037229010,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLD4D0g",
+      "user": {
+        "login": "gorem",
+        "id": 5383921,
+        "node_id": "MDQ6VXNlcjUzODM5MjE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5383921?u=8d3dad49439b8c8853fc03e927a420ecdb66f569&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/gorem",
+        "html_url": "https://github.com/gorem",
+        "followers_url": "https://api.github.com/users/gorem/followers",
+        "following_url": "https://api.github.com/users/gorem/following{/other_user}",
+        "gists_url": "https://api.github.com/users/gorem/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/gorem/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/gorem/subscriptions",
+        "organizations_url": "https://api.github.com/users/gorem/orgs",
+        "repos_url": "https://api.github.com/users/gorem/repos",
+        "events_url": "https://api.github.com/users/gorem/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/gorem/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8524#pullrequestreview-5037229010",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8524",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8524#pullrequestreview-5037229010"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8524"
+        }
+      },
+      "submitted_at": "2026-08-27T04:25:40Z",
+      "commit_id": "a68e1d49080ab81ebdc03feb0347478f5583fa7f"
+    },
+    {
+      "id": 5100286677,
+      "node_id": "PRR_kwDOO0Cobs8AAAABMAAy1Q",
+      "user": {
+        "login": "davetist",
+        "id": 109555139,
+        "node_id": "U_kgDOBoetww",
+        "avatar_url": "https://avatars.githubusercontent.com/u/109555139?u=bf8e6a8d28fb6febb59805a95a5c05d0c0834287&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/davetist",
+        "html_url": "https://github.com/davetist",
+        "followers_url": "https://api.github.com/users/davetist/followers",
+        "following_url": "https://api.github.com/users/davetist/following{/other_user}",
+        "gists_url": "https://api.github.com/users/davetist/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/davetist/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/davetist/subscriptions",
+        "organizations_url": "https://api.github.com/users/davetist/orgs",
+        "repos_url": "https://api.github.com/users/davetist/repos",
+        "events_url": "https://api.github.com/users/davetist/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/davetist/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Tested the exact PR commit c0ed799676891fecb614418eb2cba263fe82854b.\n\nResults:\n- Focused brightness-display test: PASS, 12/12 assertions.\n- Real hardware test on an Intel Ivy Bridge laptop using acpi_video0 with max_brightness=15: PASS. The PR recovered 0% to raw 1 / 7%, allowed 7% to 0%, and recovered 0% to raw 1 / 7% again. The original raw level was restored.\n- bash -n and git diff --check: PASS.\n\nReview points:\n1. The PR description says downward steps fall back to raw brightness 1, but the implementation allows the level to reach raw 0. This matches the intended behavior for users who want a true 0% setting, but please update the description and add a regression test documenting it.\n2. The recovery check compares rounded percentage values rather than raw brightness values, and treats a failed post-write read as if no increase occurred. On some backlights this could cause an unnecessary extra raw step. Comparing raw brightness before and after the write would be more robust.\n\nThe full test suite also reported six environment-dependent failures unrelated to this change: missing omarchy-pkgs checkout, window animation, network QR, and theme-install fixture failures.",
+      "state": "CHANGES_REQUESTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8524#pullrequestreview-5100286677",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8524",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8524#pullrequestreview-5100286677"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8524"
+        }
+      },
+      "submitted_at": "2026-09-03T09:38:57Z",
+      "commit_id": "c0ed799676891fecb614418eb2cba263fe82854b"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3868568051",
+      "pull_request_review_id": 5037064422,
+      "id": 3868568051,
+      "node_id": "PRRC_kwDOO0Cobs7mlanz",
+      "diff_hunk": "@@ -144,3 +148,11 @@ if PATH=\"$mock_bin:$PATH\" \"$ROOT/bin/omarchy-hyprland-monitor-focused-apple\"; th\n   fail \"focused non-Apple display is not detected as Apple\"\n fi\n pass \"named Apple display is detected independently of focus\"\n+\n+mock_bfile=\"$test_tmp/mbright\"\n+printf 'mock_backlight,backlight,0,0%%\\n' >\"$mock_bfile\"\n+MOCK_BRIGHTNESS_FILE=\"$mock_bfile\" run_brightness --no-osd --monitor eDP-1 +5% >/dev/null\n+grep -F 'brightnessctl -d mock_backlight set +1' \"$call_log\" >/dev/null || \\\n+  fail \"stepping up from 0% falls back to +1 raw step when target percentage rounds down\"\n+pass \"stepping up from 0% falls back to +1 raw step when target percentage rounds down\"",
+      "path": "test/shell.d/brightness-display-test.sh",
+      "commit_id": "6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+      "original_commit_id": "de25127c4c6bfbe9c7dfaa7533f6645b73f37a24",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This covers only the upward fallback. The distinct downward path (`5%-` producing a 0% result and then writing raw `1`) is part of this fix but remains untested, so a regression could still turn the backlight off. Add a case that starts above zero, makes the mock report 0% after the percentage write, and verifies the exact raw `set 1` call.",
+      "created_at": "2026-08-27T03:51:21Z",
+      "updated_at": "2026-08-27T03:51:21Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8524#discussion_r3868568051",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8524",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3868568051"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8524#discussion_r3868568051"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8524"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3868568051/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 154,
+      "original_start_line": 154,
+      "start_side": "RIGHT",
+      "line": 157,
+      "original_line": 157,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 23,
+      "position": 23,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3868713175",
+      "pull_request_review_id": 5037229010,
+      "id": 3868713175,
+      "node_id": "PRRC_kwDOO0Cobs7ml-DX",
+      "diff_hunk": "@@ -144,3 +148,11 @@ if PATH=\"$mock_bin:$PATH\" \"$ROOT/bin/omarchy-hyprland-monitor-focused-apple\"; th\n   fail \"focused non-Apple display is not detected as Apple\"\n fi\n pass \"named Apple display is detected independently of focus\"\n+\n+mock_bfile=\"$test_tmp/mbright\"\n+printf 'mock_backlight,backlight,0,0%%\\n' >\"$mock_bfile\"\n+MOCK_BRIGHTNESS_FILE=\"$mock_bfile\" run_brightness --no-osd --monitor eDP-1 +5% >/dev/null\n+grep -F 'brightnessctl -d mock_backlight set +1' \"$call_log\" >/dev/null || \\\n+  fail \"stepping up from 0% falls back to +1 raw step when target percentage rounds down\"\n+pass \"stepping up from 0% falls back to +1 raw step when target percentage rounds down\"",
+      "path": "test/shell.d/brightness-display-test.sh",
+      "commit_id": "6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+      "original_commit_id": "de25127c4c6bfbe9c7dfaa7533f6645b73f37a24",
+      "user": {
+        "login": "gorem",
+        "id": 5383921,
+        "node_id": "MDQ6VXNlcjUzODM5MjE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5383921?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/gorem",
+        "html_url": "https://github.com/gorem",
+        "followers_url": "https://api.github.com/users/gorem/followers",
+        "following_url": "https://api.github.com/users/gorem/following{/other_user}",
+        "gists_url": "https://api.github.com/users/gorem/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/gorem/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/gorem/subscriptions",
+        "organizations_url": "https://api.github.com/users/gorem/orgs",
+        "repos_url": "https://api.github.com/users/gorem/repos",
+        "events_url": "https://api.github.com/users/gorem/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/gorem/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Added unit test coverage for the downward fallback path (`5%-` producing a 0% result and writing raw `1`) in `test/shell.d/brightness-display-test.sh` and squashed commits.",
+      "created_at": "2026-08-27T04:25:40Z",
+      "updated_at": "2026-08-27T04:25:40Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8524#discussion_r3868713175",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8524",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3868713175"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8524#discussion_r3868713175"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8524"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3868713175/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 154,
+      "original_start_line": 154,
+      "start_side": "RIGHT",
+      "line": 157,
+      "original_line": 157,
+      "side": "RIGHT",
+      "in_reply_to_id": 3868568051,
+      "author_association": "NONE",
+      "original_position": 23,
+      "position": 23,
+      "subject_type": "line"
+    }
+  ]
+}

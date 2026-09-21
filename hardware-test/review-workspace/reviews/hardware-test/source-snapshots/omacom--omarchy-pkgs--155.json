@@ -1,0 +1,156 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/155",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+      "state": "open"
+    },
+    {
+      "head_sha": "bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+      "state": "open",
+      "updated_at": "2026-09-18T19:18:32Z"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 155,
+  "checked_at": "2026-09-21T11:56:17.714367+00:00",
+  "title": "Add snd-hda-macbookpro-dkms for 2016-2017 MacBook speakers",
+  "author": "shawnyeager",
+  "head_sha": "bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+  "base_sha": "c409cb6d6a75282a874eac055a98ea666269db10",
+  "base_ref": "master",
+  "updated_at": "2026-09-18T19:18:32Z",
+  "state": "open",
+  "body": "Pairs with https://github.com/basecamp/omarchy/pull/7140. That PR detects CS8409 MacBook Pros and installs this package.\n\nIn-tree `snd_hda_codec_cs8409` enumerates the CS8409 but never programs the MAX98706 / SSM3515 / TAS5764L speaker amps, so those machines show an unmuted Analog Stereo sink and play nothing. [davidjo/snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro) is the Apple path.\n\nThe AUR package (`snd-hda-macbookpro-dkms-git`) copies only a subset of the tree and does not depend on `wget`, which `PRE_BUILD` needs to fetch matching kernel sources. This package:\n\n- pins commit `6c324f6` (verified on MacBookPro14,3 / linux 7.1.8)\n- installs the full tree with executable install scripts\n- depends on `dkms`, `wget`, and `patch`\n\n`source: local` so an AUR sync does not replace it.\n\nVerified on this machine: after DKMS install + reboot, `srcversion` is the patched module, dmesg takes the APPLE path, and speakers play.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2a9719d3fbb0a9054048dda881eae277703d01e2",
+      "filename": "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2F.omarchy%2Fpackage.json",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2F.omarchy%2Fpackage.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2F.omarchy%2Fpackage.json?ref=bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+      "patch": "@@ -0,0 +1,3 @@\n+{\n+  \"source\": \"local\"\n+}"
+    },
+    {
+      "sha": "95a9aef56acb306694fc00e236b47ff8ce6e48f4",
+      "filename": "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD",
+      "status": "added",
+      "additions": 43,
+      "deletions": 0,
+      "changes": 43,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2FPKGBUILD?ref=bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+      "patch": "@@ -0,0 +1,43 @@\n+# Maintainer: Omarchy <https://omarchy.org>\n+# Upstream: https://github.com/davidjo/snd_hda_macbookpro\n+#\n+# The AUR package (snd-hda-macbookpro-dkms-git) copies only a subset of\n+# the tree and does not depend on wget, which PRE_BUILD needs to fetch\n+# matching kernel sources. This package installs the whole driver and\n+# pins the commit verified on MacBookPro14,3 / linux 7.1.8.\n+\n+_pkgbase=snd-hda-macbookpro\n+# Must match PACKAGE_NAME in upstream dkms.conf. The AUR dest uses hyphens\n+# (snd-hda-macbookpro-0.1); Arch's alpm hook then runs\n+# `dkms install snd-hda-macbookpro/0.1`, which exits 7 because PACKAGE_NAME\n+# is snd_hda_macbookpro. omarchy-pkg-add relies on that hook.\n+_srcname=snd_hda_macbookpro\n+pkgname=${_pkgbase}-dkms\n+pkgver=0.1\n+pkgrel=2\n+pkgdesc=\"DKMS driver for Cirrus CS8409 HDA on 2016\u20132017 MacBook Pros\"\n+arch=('x86_64')\n+url=\"https://github.com/davidjo/snd_hda_macbookpro\"\n+license=('GPL-2.0-only')\n+depends=('dkms' 'wget' 'patch')\n+makedepends=('git')\n+optdepends=('linux-headers: build against the Arch kernel')\n+provides=('snd-hda-macbookpro-dkms-git')\n+conflicts=('snd-hda-macbookpro-dkms-git')\n+# 6c324f6: dkms.conf for current kernels; 6.17+ install path.\n+_commit=6c324f6c9262faa853fdd74d798c5686937a9d0f\n+source=(\"git+https://github.com/davidjo/snd_hda_macbookpro.git#commit=${_commit}\")\n+sha256sums=('SKIP')\n+\n+package() {\n+    local dest=\"${pkgdir}/usr/src/${_srcname}-${pkgver}\"\n+\n+    install -dm755 \"$dest\"\n+    cp -a snd_hda_macbookpro/. \"$dest/\"\n+    rm -rf \"$dest/.git\" \"$dest/build\"\n+\n+    # PRE_BUILD runs install.cirrus.driver.sh; the AUR package left these 0644.\n+    chmod 755 \"$dest\"/install.cirrus.driver.sh \\\n+              \"$dest\"/install.cirrus.driver.pre617.sh \\\n+              \"$dest\"/dkms.sh\n+}"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5308582355",
+      "html_url": "https://github.com/omacom/omarchy-pkgs/pull/155#issuecomment-5308582355",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/155",
+      "id": 5308582355,
+      "node_id": "IC_kwDOPjeh9M8AAAABPGqJ0w",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-16T17:00:10Z",
+      "updated_at": "2026-08-16T17:00:10Z",
+      "body": "Automated fix: install DKMS sources at `/usr/src/snd_hda_macbookpro-0.1` so the name matches `PACKAGE_NAME` in upstream `dkms.conf`.\n\nThe AUR dest (`/usr/src/snd-hda-macbookpro-0.1`) makes Arch's alpm hook run `dkms install snd-hda-macbookpro/0.1`, which exits 7. `omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms` (basecamp/omarchy#7140) relies on that hook. The working install on this machine already used the underscore path via `dkms.sh`.\n\nbdf0fcf",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5308582355/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5486733794",
+      "html_url": "https://github.com/omacom/omarchy-pkgs/pull/155#issuecomment-5486733794",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/155",
+      "id": 5486733794,
+      "node_id": "IC_kwDOPjeh9M8AAAABRwjp4g",
+      "user": {
+        "login": "j7j7",
+        "id": 31825378,
+        "node_id": "MDQ6VXNlcjMxODI1Mzc4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/31825378?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/j7j7",
+        "html_url": "https://github.com/j7j7",
+        "followers_url": "https://api.github.com/users/j7j7/followers",
+        "following_url": "https://api.github.com/users/j7j7/following{/other_user}",
+        "gists_url": "https://api.github.com/users/j7j7/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/j7j7/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/j7j7/subscriptions",
+        "organizations_url": "https://api.github.com/users/j7j7/orgs",
+        "repos_url": "https://api.github.com/users/j7j7/repos",
+        "events_url": "https://api.github.com/users/j7j7/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/j7j7/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-01T00:32:01Z",
+      "updated_at": "2026-09-01T00:32:01Z",
+      "body": "Thanks \u2014 I carried your `snd-hda-macbookpro-dkms` packaging forward and only widened the package description/comments for 2017\u20132019 iMacs (same CS8409 Apple path).\n\nFollow-up: https://github.com/omacom/omarchy-pkgs/pull/249  \nOmarchy hook (MacBook + iMac): https://github.com/omacom/omarchy/pull/9516",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5486733794/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 1,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

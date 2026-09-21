@@ -1,0 +1,162 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12435",
+  "origins": [
+    "published-source-table"
+  ],
+  "groups": [],
+  "prior_snapshots": [
+    {
+      "head_sha": "e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "state": "open",
+      "updated_at": "2026-09-20T16:35:04Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12435,
+  "checked_at": "2026-09-21T11:57:55.641848+00:00",
+  "title": "Reclaim lock screen keyboard focus after resume from suspend",
+  "author": "jonathan-downs",
+  "head_sha": "e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+  "base_sha": "d174d4aa279ea7393d4fad4a80fed147866106b9",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T16:35:04Z",
+  "state": "open",
+  "body": "## Summary\r\n\r\n- The lock screen's password field only regrabs keyboard focus when `inputEnabled` toggles or when the user clicks/moves the pointer on the lock surface (`LockView`'s `wakeRequested`). A real suspend/resume does neither: the lock was already active before the machine slept, so `inputEnabled` never changes, and there's no pointer activity on resume. The surface comes back with no focused input, so nothing you type registers until you click the screen.\r\n- Adds `omarchy-resume-focus-monitor.service`, a systemd user service mirroring the existing `omarchy-sleep-lock.service`, running `bin/omarchy-system-resume-monitor`. It watches logind's `PrepareForSleep` signal for the resume case (`boolean false`) and calls a new `lock` IPC verb, `resume()`, on each occurrence.\r\n- `lock/Service.qml`'s `resume()` IPC handler calls a new `handleSystemResume()` that reuses `runWake()` and bumps a new `resumeSignal` property, wired into `LockView` so it reclaims focus the same way the click handler already does.\r\n\r\n**Note on design:** my first pass ran the monitor as a plain QML `Process` owned by `Service.qml` instead of a systemd service. Testing on real hardware caught a real leak in that approach: when Quickshell itself is torn down (a shell restart, a crash-and-relaunch), the `Process`'s own child can be killed abruptly enough that its coproc'd `dbus-monitor` grandchild is orphaned rather than reaped, reparenting to the user's systemd instance and leaking a live system-bus connection indefinitely. Reproduced across multiple shell restarts before fixing it. The systemd-service approach here avoids that entirely: the whole unit's cgroup (dbus-monitor included) is torn down together regardless of how the service itself exits, matching the existing pre-sleep monitor's own approach for the same reason.\r\n\r\n## Related\r\n\r\nEncountered while investigating a report involving a suspend/resume-specific numpad quirk on the lock screen (separate root cause, not addressed here). This PR only covers the confirmed, reproducible focus issue. It touches the same file as a few other open suspend/resume + lock-screen issues, so linking for context in case of overlapping work:\r\n\r\n- #11820\r\n- #12140\r\n- #11744\r\n\r\n## Test plan\r\n\r\n- [x] `./test/cli` - all passing\r\n- [x] `./test/shell` - all passing except 5 pre-existing failures unrelated to this change and reproducible on a clean checkout (`config-test.sh`, `locate-test.sh`, `omarchy-kernel-migration-test.sh`, `snapper-test.sh`, `unowned-system-paths-test.sh`)\r\n- [x] New `test/shell.d/resume-monitor-test.sh`: verifies the monitor calls `omarchy-shell lock resume` once per resume event while ignoring sleep events, cleans up its `dbus-monitor` producer when the pipeline itself is killed directly (bypassing systemd, to prove the script doesn't rely on systemd alone), and that `--consume` parses events correctly from stdin. Ran 5x in a loop with no leaked processes.\r\n- [x] New assertions in `test/shell.d/systemd-test.sh` for the service file's `ExecStart` path, environment/ordering conditions, `Restart=always`, and that first-run enables it\r\n- [x] Verified locally on real hardware via a plugin clone of `lock` plus the real systemd service: lid-close suspend/resume no longer requires a click before the password field accepts input, and confirmed zero leaked `dbus-monitor` processes across multiple shell restarts and service (re)starts\r\n\r\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)",
+  "draft": false,
+  "files": [
+    {
+      "sha": "dfe3aac4e035496255204d6c375148fa99abb992",
+      "filename": "bin/omarchy-system-resume-monitor",
+      "status": "added",
+      "additions": 51,
+      "deletions": 0,
+      "changes": 51,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/bin%2Fomarchy-system-resume-monitor",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/bin%2Fomarchy-system-resume-monitor",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-system-resume-monitor?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -0,0 +1,51 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Monitor system resume from suspend and nudge lock screen focus\n+# omarchy:group=system\n+# omarchy:hidden=true\n+\n+# Unlike omarchy-system-sleep-monitor, this has no inhibitor to hold and no\n+# single event to wait for: it runs for as long as the service does and calls\n+# into the shell on every resume. Run under a systemd service (see\n+# default/systemd/user/omarchy-resume-focus-monitor.service) rather than as a\n+# Quickshell Process, so a restart or crash cannot orphan the dbus-monitor\n+# child -- systemd kills the whole unit's cgroup, where a plain child process\n+# of the shell can outlive it if the shell itself is torn down abruptly. The\n+# coproc/trap below is a second, independent line of defense so the script\n+# doesn't rely on that alone: it reaps its own producer even when run outside\n+# systemd (as in tests, or a manual invocation).\n+consume_resume_events() {\n+  local line\n+\n+  while IFS= read -r line; do\n+    [[ $line == *\"boolean false\"* ]] && omarchy-shell lock resume >/dev/null 2>&1\n+  done\n+}\n+\n+monitor_resume_events() {\n+  local monitor_fd monitor_pid\n+\n+  coproc RESUME_EVENTS {\n+    exec dbus-monitor --system \\\n+      \"type='signal',sender='org.freedesktop.login1',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'\"\n+  }\n+  monitor_fd=${RESUME_EVENTS[0]}\n+  monitor_pid=$RESUME_EVENTS_PID\n+\n+  cleanup_monitor() {\n+    kill \"$monitor_pid\" 2>/dev/null || true\n+    wait \"$monitor_pid\" 2>/dev/null || true\n+  }\n+  trap cleanup_monitor EXIT\n+\n+  consume_resume_events <&\"$monitor_fd\"\n+}\n+\n+case ${1:-} in\n+  --consume)\n+    consume_resume_events\n+    exit 0\n+    ;;\n+esac\n+\n+monitor_resume_events"
+    },
+    {
+      "sha": "e9caae2054b12821f0ef4628aac207f755a531e3",
+      "filename": "default/systemd/user/omarchy-resume-focus-monitor.service",
+      "status": "added",
+      "additions": 20,
+      "deletions": 0,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/default%2Fsystemd%2Fuser%2Fomarchy-resume-focus-monitor.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/default%2Fsystemd%2Fuser%2Fomarchy-resume-focus-monitor.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fuser%2Fomarchy-resume-focus-monitor.service?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -0,0 +1,20 @@\n+[Unit]\n+Description=Reclaim lock screen keyboard focus after resume from suspend\n+# Same rationale as omarchy-sleep-lock.service: the monitor calls into the\n+# running Omarchy shell, so wait until UWSM has imported OMARCHY_PATH and\n+# WAYLAND_DISPLAY, but keep the default target ordering so the monitor starts\n+# before graphical-session.target is reached.\n+After=dbus.socket wayland-session-waitenv.service\n+Requires=dbus.socket\n+PartOf=graphical-session.target\n+ConditionEnvironment=OMARCHY_PATH\n+ConditionEnvironment=WAYLAND_DISPLAY\n+\n+[Service]\n+Type=simple\n+ExecStart=/usr/bin/omarchy-system-resume-monitor\n+Restart=always\n+RestartSec=2\n+\n+[Install]\n+WantedBy=graphical-session.target"
+    },
+    {
+      "sha": "77429016f3dccebfe3df43491fc8ea5bfa752e74",
+      "filename": "install/user/first-run/enable-user-units.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/install%2Fuser%2Ffirst-run%2Fenable-user-units.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/install%2Fuser%2Ffirst-run%2Fenable-user-units.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fuser%2Ffirst-run%2Fenable-user-units.sh?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -16,6 +16,7 @@ systemctl --user enable --now \\\n   bt-agent.service \\\n   omarchy-recover-internal-monitor.service \\\n   omarchy-sleep-lock.service \\\n+  omarchy-resume-focus-monitor.service \\\n   omarchy-migrate-notify.service \\\n   omarchy-fcitx5.service \\\n   omarchy-crash-watch.service"
+    },
+    {
+      "sha": "fc268733559d5069327bbe17bb30b4c380c68bb9",
+      "filename": "shell/plugins/lock/LockView.qml",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/shell%2Fplugins%2Flock%2FLockView.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/shell%2Fplugins%2Flock%2FLockView.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FLockView.qml?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -21,6 +21,8 @@ Item {\n   property bool powerSaverActive: false\n   property string passwordText: \"\"\n   property bool syncingPasswordText: false\n+  // Bumped by the service on every system resume from suspend.\n+  property int resumeSignal: 0\n \n   readonly property string placeholderText: \"Enter Password\"\n   readonly property int fieldWidth: 381\n@@ -67,6 +69,12 @@ Item {\n   onInputEnabledChanged: {\n     if (inputEnabled) Qt.callLater(forcePasswordFocus)\n   }\n+  // Resume from suspend doesn't toggle inputEnabled (the lock was already\n+  // active before the machine slept), so it needs its own trigger to reclaim\n+  // focus the same way a click on the lock screen already does.\n+  onResumeSignalChanged: {\n+    if (inputEnabled) Qt.callLater(forcePasswordFocus)\n+  }\n   Component.onCompleted: {\n     syncPasswordText()\n     if (inputEnabled) Qt.callLater(forcePasswordFocus)"
+    },
+    {
+      "sha": "d158bcd77c1914ad6804f11563bc9890d17fc3c6",
+      "filename": "shell/plugins/lock/Service.qml",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/shell%2Fplugins%2Flock%2FService.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/shell%2Fplugins%2Flock%2FService.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FService.qml?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -41,6 +41,9 @@ Item {\n   readonly property bool videoBackground: Util.isVideoPath(backgroundPath)\n   property bool strandedLock: false\n   property bool strandedLockResolved: false\n+  // Bumped on every system resume from suspend so LockView instances know to\n+  // reclaim keyboard focus, same as a click on the lock screen already does.\n+  property int resumeSignal: 0\n \n   readonly property bool locked: lockRequested || sessionLock.locked || sessionLock.secure\n   readonly property bool authenticating: authenticatingPassword || fingerprintAuthenticating\n@@ -181,6 +184,12 @@ Item {\n     if (lockRequested) armBlankTimer()\n   }\n \n+  function handleSystemResume() {\n+    if (!lockRequested) return\n+    runWake()\n+    resumeSignal += 1\n+  }\n+\n   function runBlank() {\n     root.displaysBlank = true\n     root.monitorDpmsKnown = false\n@@ -317,6 +326,7 @@ Item {\n         displaysBlank: root.screenBlank(lockSurface.screen ? lockSurface.screen.name : \"\")\n         powerSaverActive: root.powerSaverActive\n         passwordText: root.enteredPassword\n+        resumeSignal: root.resumeSignal\n         onPasswordTextEdited: function(password) { root.enteredPassword = password }\n         onSubmitPassword: function(password) { root.submitPassword(password) }\n         onClearFailureRequested: root.failureMessage = \"\"\n@@ -617,5 +627,17 @@ Item {\n       root.previewVisible = false\n       return \"ok\"\n     }\n+\n+    // Called by omarchy-system-resume-monitor (a systemd-managed service, not\n+    // a QML Process here) each time the system resumes from suspend. A real\n+    // suspend/resume leaves the lock surface showing but with no keyboard\n+    // focus reclaimed -- unlike idle-blank wake, nothing here otherwise reacts\n+    // to the machine actually coming back from sleep, only to user pointer\n+    // activity (see LockView's wakeRequested). This nudges focus back the\n+    // same way a click on the lock screen already does.\n+    function resume(): string {\n+      root.handleSystemResume()\n+      return \"ok\"\n+    }\n   }\n }"
+    },
+    {
+      "sha": "931f02469da29bd3ce37f2eaa1010ef5fe5be009",
+      "filename": "test/shell.d/resume-monitor-test.sh",
+      "status": "added",
+      "additions": 111,
+      "deletions": 0,
+      "changes": 111,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/test%2Fshell.d%2Fresume-monitor-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/test%2Fshell.d%2Fresume-monitor-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fresume-monitor-test.sh?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -0,0 +1,111 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+resume_monitor=\"$ROOT/bin/omarchy-system-resume-monitor\"\n+tmpdir=$(mktemp -d)\n+trap 'rm -rf \"$tmpdir\"' EXIT\n+\n+mock_bin=\"$tmpdir/bin\"\n+producer_pid_file=\"$tmpdir/producer-pid\"\n+call_log=\"$tmpdir/calls\"\n+mkdir -p \"$mock_bin\"\n+: >\"$call_log\"\n+\n+# Emits a sleep event, a resume event, then another sleep/resume pair, to\n+# prove the monitor keeps running and calling into the shell on every resume\n+# rather than exiting after the first one -- unlike the pre-sleep monitor,\n+# this has no inhibitor lock tying it to a single event.\n+cat >\"$mock_bin/dbus-monitor\" <<'SH'\n+#!/bin/bash\n+\n+echo \"$$\" >\"$PRODUCER_PID_FILE\"\n+printf '   boolean true\\n'\n+printf '   boolean false\\n'\n+printf '   boolean true\\n'\n+printf '   boolean false\\n'\n+exec sleep 30\n+SH\n+chmod +x \"$mock_bin/dbus-monitor\"\n+\n+cat >\"$mock_bin/omarchy-shell\" <<'SH'\n+#!/bin/bash\n+\n+printf 'shell %s\\n' \"$*\" >>\"$CALL_LOG\"\n+SH\n+chmod +x \"$mock_bin/omarchy-shell\"\n+\n+PATH=\"$mock_bin:$PATH\" CALL_LOG=\"$call_log\" PRODUCER_PID_FILE=\"$producer_pid_file\" \\\n+  \"$resume_monitor\" &\n+monitor_pid=$!\n+sleep 0.5\n+kill \"$monitor_pid\" 2>/dev/null || true\n+wait \"$monitor_pid\" 2>/dev/null || true\n+\n+mapfile -t calls <\"$call_log\"\n+\n+[[ ${#calls[@]} -eq 2 && ${calls[0]} == \"shell lock resume\" && ${calls[1]} == \"shell lock resume\" ]] ||\n+  fail \"resume monitor calls into the shell once per resume, ignoring sleep events\" \\\n+    \"calls: ${calls[*]:-<none>}\"\n+pass \"resume monitor calls into the shell once per resume, ignoring sleep events\"\n+\n+# Terminating the monitor must also clean up the dbus-monitor producer instead\n+# of orphaning it -- this is the leak the systemd unit (Restart=always plus\n+# cgroup teardown) guards against; the script's own pipeline shouldn't leak\n+# one either when killed directly.\n+rm -f \"$producer_pid_file\"\n+cat >\"$mock_bin/dbus-monitor\" <<'SH'\n+#!/bin/bash\n+\n+sleep 0.1\n+echo \"$$\" >\"$PRODUCER_PID_FILE\"\n+exec sleep 30\n+SH\n+chmod +x \"$mock_bin/dbus-monitor\"\n+\n+PATH=\"$mock_bin:$PATH\" CALL_LOG=\"$call_log\" PRODUCER_PID_FILE=\"$producer_pid_file\" \\\n+  \"$resume_monitor\" &\n+monitor_pid=$!\n+\n+for _ in {1..100}; do\n+  [[ -s $producer_pid_file ]] && break\n+  sleep 0.01\n+done\n+if [[ ! -s $producer_pid_file ]]; then\n+  kill \"$monitor_pid\" 2>/dev/null || true\n+  wait \"$monitor_pid\" 2>/dev/null || true\n+  fail \"resume monitor starts its event producer\"\n+fi\n+\n+producer_pid=$(<\"$producer_pid_file\")\n+kill \"$monitor_pid\"\n+wait \"$monitor_pid\" 2>/dev/null || true\n+\n+# The producer is allowed a moment to receive and act on the pipeline's own\n+# teardown before this counts as a leak.\n+for _ in {1..20}; do\n+  kill -0 \"$producer_pid\" 2>/dev/null || break\n+  sleep 0.05\n+done\n+if kill -0 \"$producer_pid\" 2>/dev/null; then\n+  kill \"$producer_pid\" 2>/dev/null || true\n+  fail \"resume monitor cleans up its producer when the pipeline itself is terminated\" \\\n+    \"producer still running: $producer_pid\"\n+fi\n+pass \"resume monitor cleans up its producer when the pipeline itself is terminated\"\n+\n+# --consume reads events straight off stdin, the same seam the pre-sleep\n+# monitor's tests use, so the parsing logic is testable without a real (or\n+# even mocked) dbus-monitor process.\n+rm -f \"$call_log\"\n+: >\"$call_log\"\n+printf '   boolean true\\n   boolean false\\n   garbage\\n   boolean false\\n' \\\n+  | PATH=\"$mock_bin:$PATH\" CALL_LOG=\"$call_log\" \"$resume_monitor\" --consume\n+\n+mapfile -t consume_calls <\"$call_log\"\n+[[ ${#consume_calls[@]} -eq 2 && ${consume_calls[0]} == \"shell lock resume\" && ${consume_calls[1]} == \"shell lock resume\" ]] ||\n+  fail \"resume monitor --consume calls the shell only for boolean false lines\" \\\n+    \"calls: ${consume_calls[*]:-<none>}\"\n+pass \"resume monitor --consume calls the shell only for boolean false lines\""
+    },
+    {
+      "sha": "48f2f84bed437669a95a55132dd9b8a1d977cf41",
+      "filename": "test/shell.d/systemd-test.sh",
+      "status": "modified",
+      "additions": 27,
+      "deletions": 0,
+      "changes": 27,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/test%2Fshell.d%2Fsystemd-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e4fab87120fb9a3e4730c1a049eaa554c8b20e4e/test%2Fshell.d%2Fsystemd-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fsystemd-test.sh?ref=e4fab87120fb9a3e4730c1a049eaa554c8b20e4e",
+      "patch": "@@ -31,6 +31,33 @@ grep -Fx 'systemctl --user daemon-reload' \"$first_run_units\" >/dev/null\n grep -F 'omarchy-sleep-lock.service' \"$first_run_units\" >/dev/null\n pass \"first-run reloads and enables the sleep lock service\"\n \n+resume_service=\"$ROOT/default/systemd/user/omarchy-resume-focus-monitor.service\"\n+grep -Fx 'ExecStart=/usr/bin/omarchy-system-resume-monitor' \"$resume_service\" >/dev/null\n+pass \"resume focus monitor service uses the package-backed monitor path\"\n+\n+grep -Fx 'After=dbus.socket wayland-session-waitenv.service' \"$resume_service\" >/dev/null ||\n+  fail \"resume focus monitor starts before UWSM imports the graphical session environment\"\n+grep -Fx 'PartOf=graphical-session.target' \"$resume_service\" >/dev/null ||\n+  fail \"resume focus monitor survives logout with a stale Wayland environment\"\n+grep -Fx 'ConditionEnvironment=OMARCHY_PATH' \"$resume_service\" >/dev/null ||\n+  fail \"resume focus monitor can start without the Omarchy shell path\"\n+grep -Fx 'ConditionEnvironment=WAYLAND_DISPLAY' \"$resume_service\" >/dev/null ||\n+  fail \"resume focus monitor can start without a Wayland display\"\n+pass \"resume focus monitor service follows the initialized graphical session\"\n+\n+# A plain QML Process child can be orphaned if the shell is torn down\n+# abruptly (the bug this service exists to avoid -- see\n+# bin/omarchy-system-resume-monitor); Restart=always plus systemd's own\n+# cgroup-based teardown is what guarantees the dbus-monitor child never\n+# outlives the unit.\n+grep -Fx 'Restart=always' \"$resume_service\" >/dev/null ||\n+  fail \"resume focus monitor does not restart after a crash\"\n+pass \"resume focus monitor restarts after a crash\"\n+\n+grep -F 'omarchy-resume-focus-monitor.service' \"$first_run_units\" >/dev/null ||\n+  fail \"first-run does not enable the resume focus monitor service\"\n+pass \"first-run reloads and enables the resume focus monitor service\"\n+\n upgrade_to_quattro=\"$ROOT/bin/omarchy-upgrade-to-quattro\"\n grep -F '6870b232a6c0474b59187882e6d25ae771bba735098bcbedef8a2b73b97e2b6a' \"$upgrade_to_quattro\" >/dev/null\n grep -F 'bcd1a76cb5c63514922bc5e11af22ae480fc6d06a99863364e02bdf3c7bdceaf' \"$upgrade_to_quattro\" >/dev/null"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5750251766",
+      "html_url": "https://github.com/omacom/omarchy/pull/12435#issuecomment-5750251766",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12435",
+      "id": 5750251766,
+      "node_id": "IC_kwDOO0Cobs8AAAABVr3g9g",
+      "user": {
+        "login": "RenanBezerraGuima",
+        "id": 124211327,
+        "node_id": "U_kgDOB2dQfw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/124211327?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/RenanBezerraGuima",
+        "html_url": "https://github.com/RenanBezerraGuima",
+        "followers_url": "https://api.github.com/users/RenanBezerraGuima/followers",
+        "following_url": "https://api.github.com/users/RenanBezerraGuima/following{/other_user}",
+        "gists_url": "https://api.github.com/users/RenanBezerraGuima/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/RenanBezerraGuima/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/RenanBezerraGuima/subscriptions",
+        "organizations_url": "https://api.github.com/users/RenanBezerraGuima/orgs",
+        "repos_url": "https://api.github.com/users/RenanBezerraGuima/repos",
+        "events_url": "https://api.github.com/users/RenanBezerraGuima/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/RenanBezerraGuima/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-20T13:58:00Z",
+      "updated_at": "2026-09-20T13:58:00Z",
+      "body": "Tested this on my machine and it fixes the issue: after suspend/resume the lock screen password field accepts typing immediately, no click on the screen needed first. Suspend via lid close, resume, type password \u2014 works on the first try. Thanks for tracking this down.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5750251766/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

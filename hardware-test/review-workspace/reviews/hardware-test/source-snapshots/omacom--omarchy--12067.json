@@ -1,0 +1,170 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12067",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "facetime-pcie"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "state": "open"
+    },
+    {
+      "head_sha": "8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "state": "open",
+      "updated_at": "2026-09-20T03:43:12Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12067,
+  "checked_at": "2026-09-21T11:56:23.953267+00:00",
+  "title": "Install the FaceTime HD camera driver on Intel Macs that have one",
+  "author": "MrBazzieB",
+  "head_sha": "8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T03:43:12Z",
+  "state": "open",
+  "body": "## What\n\nDetect the Broadcom FaceTime HD PCIe webcam (`14e4:1570`) and install `facetimehd-firmware`, `facetimehd-data`, and `facetimehd-dkms` during hardware setup. A migration covers existing installs.\n\nThis is the 720p camera in 2013\u20132015 Intel Macs (this machine is a MacBookPro12,1). There is no in-tree driver.\n\n## Packaging\n\n`facetimehd-dkms` is not in `[omarchy]` yet. Please add it to the ISO/repo from **current** [patjak/facetimehd](https://github.com/patjak/facetimehd) master (after `54fb8f2`), not AUR `0.7.0.2`.\n\nLinux 7.2 removed `strncpy` from the kernel API. AUR `0.7.0.2` still calls it in `fthd_v4l2.c` and DKMS fails on `linux-omarchy` 7.2 with:\n\n```\nerror: implicit declaration of function \u2018strncpy\u2019\n```\n\nUpstream already guards that call for kernels >= 4.2. I compiled `c5c7fac` against `7.2.5-3-omarchy` on this MacBook and it built cleanly.\n\nAlso cache `facetimehd-firmware` and `facetimehd-data` (already listed in `omarchy-other.packages`).\n\n## Test plan\n\n- [x] `test/shell.d/facetimehd-test.sh`\n- [x] `./test/cli`\n- [ ] ISO/package: `facetimehd-dkms` from current git is in `[omarchy]`\n- [ ] On a Mac with `14e4:1570`, `modinfo facetimehd` and `/dev/video0` after install or `omarchy update`",
+  "draft": false,
+  "files": [
+    {
+      "sha": "d3051b5ab0a44f812b5dfa7b7765616854ac2f26",
+      "filename": "bin/omarchy-hw-facetimehd",
+      "status": "added",
+      "additions": 6,
+      "deletions": 0,
+      "changes": 6,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/bin%2Fomarchy-hw-facetimehd",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/bin%2Fomarchy-hw-facetimehd",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-facetimehd?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -0,0 +1,6 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect a Broadcom FaceTime HD PCIe webcam (14e4:1570).\n+\n+# grep -q would SIGPIPE a chatty lspci under pipefail and look like \"no camera\".\n+lspci -nn | grep \"14e4:1570\" >/dev/null"
+    },
+    {
+      "sha": "71230e30ef67cf15aacc75dd0eb04b8884de5a72",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -35,6 +35,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-facetimehd.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "6a4028c989cb3bf8fc2d24089fd31b18ddd8ae72",
+      "filename": "install/hardware/apple/fix-facetimehd.sh",
+      "status": "added",
+      "additions": 10,
+      "deletions": 0,
+      "changes": 10,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/install%2Fhardware%2Fapple%2Ffix-facetimehd.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/install%2Fhardware%2Fapple%2Ffix-facetimehd.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-facetimehd.sh?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -0,0 +1,10 @@\n+# Broadcom 720p FaceTime HD (PCI 14e4:1570) on 2013-2015 Intel Macs. There is\n+# no in-tree driver; facetimehd is the reverse-engineered module. Linux 7.2\n+# removed strncpy, so the packaged facetimehd-dkms must be built from\n+# patjak/facetimehd after 54fb8f2. AUR 0.7.0.2 does not compile on linux-omarchy 7.2.\n+\n+if omarchy-hw-facetimehd; then\n+  echo \"Detected FaceTime HD camera\"\n+\n+  omarchy-pkg-add facetimehd-firmware facetimehd-data facetimehd-dkms\n+fi"
+    },
+    {
+      "sha": "d3cbd27b1b0b90882abdc1395211e7d1d6c80060",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -71,5 +71,10 @@ linux-t2\n linux-t2-headers\n t2fanrd\n \n+# FaceTime HD camera on 2013\u20132015 Intel Macs\n+facetimehd-dkms\n+facetimehd-firmware\n+facetimehd-data\n+\n # Framework 16\n qmk-hid"
+    },
+    {
+      "sha": "6b6ecb5d297003c80560e9f7e43aa24d2c6a7896",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the FaceTime HD camera driver on machines with a Broadcom 1570, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n \n ### Known Limitations\n "
+    },
+    {
+      "sha": "0c16f7f27bf46801d74d3c2c9cc53e166c171164",
+      "filename": "migrations/1789542390.sh",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/migrations%2F1789542390.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/migrations%2F1789542390.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789542390.sh?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -0,0 +1,7 @@\n+echo \"Install the FaceTime HD camera driver on Intel Macs that have one\"\n+\n+# Fresh installs get this from install/hardware/apple/fix-facetimehd.sh. Existing\n+# Macs only pick it up on omarchy update via this migration.\n+if omarchy-hw-facetimehd; then\n+  source \"$OMARCHY_PATH/install/hardware/apple/fix-facetimehd.sh\"\n+fi"
+    },
+    {
+      "sha": "6557a6a021ff3496de59c54bc0a2f6f384d9b673",
+      "filename": "test/shell.d/facetimehd-test.sh",
+      "status": "added",
+      "additions": 117,
+      "deletions": 0,
+      "changes": 117,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/test%2Fshell.d%2Ffacetimehd-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8bb9e8e663e5decc4bae299f8ba0177adb3fe256/test%2Fshell.d%2Ffacetimehd-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ffacetimehd-test.sh?ref=8bb9e8e663e5decc4bae299f8ba0177adb3fe256",
+      "patch": "@@ -0,0 +1,117 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-facetimehd.sh\"\n+hw=\"$ROOT/bin/omarchy-hw-facetimehd\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+other_packages=\"$ROOT/install/omarchy-other.packages\"\n+migration=\"$ROOT/migrations/1789542390.sh\"\n+\n+grep -q 'apple/fix-facetimehd.sh' \"$all\" ||\n+  fail \"the FaceTime HD fix runs during hardware setup\"\n+grep -q 'omarchy-hw-facetimehd' \"$leaf\" ||\n+  fail \"the install leaf keys off the FaceTime HD detector\"\n+grep -q 'facetimehd-dkms' \"$leaf\" ||\n+  fail \"the install leaf installs facetimehd-dkms\"\n+grep -qx 'facetimehd-dkms' \"$other_packages\" ||\n+  fail \"the ISO caches facetimehd-dkms\"\n+grep -qx 'facetimehd-firmware' \"$other_packages\" ||\n+  fail \"the ISO caches facetimehd-firmware\"\n+grep -qx 'facetimehd-data' \"$other_packages\" ||\n+  fail \"the ISO caches facetimehd-data\"\n+grep -q '14e4:1570' \"$hw\" ||\n+  fail \"the detector matches the Broadcom 1570 PCI ID\"\n+grep -q 'FaceTime HD' \"$manual\" ||\n+  fail \"Mac support documents the FaceTime HD camera\"\n+grep -q 'fix-facetimehd.sh' \"$migration\" ||\n+  fail \"a migration applies the FaceTime HD fix on existing installs\"\n+pass \"the FaceTime HD fix is wired into hardware setup\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no such hardware\" (#6608).\n+if (( ${FACETIMEHD_HARDWARE:-0} == 1 )); then\n+  echo '02:00.0 Multimedia controller [0480]: Broadcom Inc. 720p FaceTime HD Camera [14e4:1570]'\n+fi\n+for _ in {1..4096}; do\n+  echo '00:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+install -m0755 \"$hw\" \"$stub_bin/omarchy-hw-facetimehd\"\n+chmod +x \"$stub_bin\"/*\n+\n+# Detector: present\n+FACETIMEHD_HARDWARE=1 PATH=\"$stub_bin:$PATH\" \"$stub_bin/omarchy-hw-facetimehd\"\n+pass \"detector matches PCI 14e4:1570\"\n+\n+# Detector: absent\n+if FACETIMEHD_HARDWARE=0 PATH=\"$stub_bin:$PATH\" \"$stub_bin/omarchy-hw-facetimehd\"; then\n+  fail \"detector ignores machines without a FaceTime HD camera\"\n+fi\n+pass \"detector skips machines without a FaceTime HD camera\"\n+\n+run_leaf() {\n+  local hardware=\"$1\"\n+  : >\"$calls\"\n+  FACETIMEHD_HARDWARE=\"$hardware\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -euo pipefail -c 'source \"$1\"' _ \"$leaf\"\n+}\n+\n+run_leaf 1\n+grep -Fxq $'omarchy-pkg-add\\tfacetimehd-firmware\\tfacetimehd-data\\tfacetimehd-dkms' \"$calls\" ||\n+  fail \"leaf installs firmware, calibration data, and the DKMS module\" \"$(cat \"$calls\")\"\n+pass \"leaf installs firmware, calibration data, and the DKMS module\"\n+\n+run_leaf 0\n+[[ ! -s $calls ]] || fail \"non-matching hardware is a no-op\" \"$(cat \"$calls\")\"\n+pass \"leaf is a no-op on machines without a FaceTime HD camera\"\n+\n+run_migration() {\n+  local hardware=\"$1\"\n+  : >\"$calls\"\n+  FACETIMEHD_HARDWARE=\"$hardware\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration 1\n+grep -Fxq $'omarchy-pkg-add\\tfacetimehd-firmware\\tfacetimehd-data\\tfacetimehd-dkms' \"$calls\" ||\n+  fail \"the migration installs the FaceTime HD packages\" \"$(cat \"$calls\")\"\n+pass \"the migration installs the FaceTime HD packages\"\n+\n+run_migration 0\n+[[ ! -s $calls ]] || fail \"the migration is a no-op without a FaceTime HD camera\" \"$(cat \"$calls\")\"\n+pass \"the migration is a no-op without a FaceTime HD camera\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5747398839",
+      "html_url": "https://github.com/omacom/omarchy/pull/12067#issuecomment-5747398839",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12067",
+      "id": 5747398839,
+      "node_id": "IC_kwDOO0Cobs8AAAABVpJYtw",
+      "user": {
+        "login": "murdawkmedia",
+        "id": 119478503,
+        "node_id": "U_kgDOBx8Y5w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/119478503?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/murdawkmedia",
+        "html_url": "https://github.com/murdawkmedia",
+        "followers_url": "https://api.github.com/users/murdawkmedia/followers",
+        "following_url": "https://api.github.com/users/murdawkmedia/following{/other_user}",
+        "gists_url": "https://api.github.com/users/murdawkmedia/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/murdawkmedia/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/murdawkmedia/subscriptions",
+        "organizations_url": "https://api.github.com/users/murdawkmedia/orgs",
+        "repos_url": "https://api.github.com/users/murdawkmedia/repos",
+        "events_url": "https://api.github.com/users/murdawkmedia/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/murdawkmedia/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-20T03:43:12Z",
+      "updated_at": "2026-09-20T03:43:12Z",
+      "body": "Confirmed working on another supported Intel Mac, with one packaging update that may simplify this PR.\n\nTest system:\n\n- MacBookAir6,2\n- Broadcom FaceTime HD Camera `14e4:1570`\n- Omarchy 4.0.4-1\n- `linux-omarchy` 7.2.5-3\n\nInstalled and tested:\n\n- `facetimehd-dkms` 0.7.2-1\n- `facetimehd-firmware` 1:1.43_5-2\n- `facetimehd-data` 5.1.5769-2\n\nDKMS built successfully for `7.2.5-3-omarchy`, `modprobe facetimehd` initialized the ISP and created `/dev/video0`, and V4L2 identified it as `Apple Facetime HD`. A fresh capture completed 30/30 frames at 1280x720 YUYV and 29.97 fps. Installing `facetimehd-data` also supplied the requested `1871_01XX.dat` calibration file, removing the missing-calibration warning.\n\nThe PR body's warning about stable AUR `0.7.0.2` appears to be stale now: the current stable package is 0.7.2-1 and compiles cleanly against Omarchy's 7.2.5 kernel. That may remove the need to package a separate current-master build in `[omarchy]`.\n\nStrong support for the PCI-ID-gated install and migration. The exact package set proposed here works on MacBookAir6,2 and produces real 720p video, not just a loaded module.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5747398839/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

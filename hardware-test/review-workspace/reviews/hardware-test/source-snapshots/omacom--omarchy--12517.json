@@ -1,0 +1,51 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12517",
+  "origins": [
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "picture-in-picture"
+  ],
+  "prior_snapshots": [],
+  "repository": "omacom/omarchy",
+  "number": 12517,
+  "checked_at": "2026-09-21T11:57:53.803259+00:00",
+  "title": "Position picture-in-picture from its final size, like webcam overlay",
+  "author": "ludagoo",
+  "head_sha": "e22ef91c044cb67c539eea5cc36e23fe4af0f4e7",
+  "base_sha": "60663faf8764253646f1d6166e864b608d4a0fa1",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-19T12:58:22Z",
+  "state": "open",
+  "body": "## What\n\nStock `default/hypr/apps/pip.lua` floats Chromium/Firefox PiP, forces `size = { 600, 338 }`, then parks it with:\n\n```lua\nmove = { \"(monitor_w-window_w-40)\", \"(monitor_h*0.04)\" }\n```\n\nHyprland evaluates `window_w` / `window_h` from the **client's original size**, then applies `size`. Chromium PiP often opens around 200px wide, so on a 1440-wide panel that becomes:\n\n- x = 1440 \u2212 200 \u2212 40 = **1200**\n- resize to 600px\n- right edge at **1800** \u2192 **360px hanging off the right** (about half the overlay)\n\nThis is a kit-wide rule, but it is much more obvious on a lower-res older MacBook Air (this was reproduced on a 2015 Air, eDP-1 1440\u00d7900 @ 1x). On a 2560 or 4K display the same ~360px overflow is a small corner nibble that is easy to miss.\n\n`default/hypr/apps/webcam-overlay.lua` already avoids this: it inlines the same size math in both `size` and `move` instead of using `window_w`. This PR copies that pattern for PiP and the Meet overlay.\n\n```lua\nmove = { \"(monitor_w-600-40)\", \"(monitor_h*0.04)\" }\n```\n\nVerified on the same 1440\u00d7900 Air with a 200\u00d7112 GTK window titled `Picture-in-Picture`:\n\n| | x | size | right edge | vs 1440 |\n| --- | --- | --- | --- | --- |\n| Before | 1200 | 600\u00d7338 | 1800 | 360px off |\n| After | 800 | 600\u00d7338 | 1400 | 40px margin |\n\nY was already correct (`monitor_h*0.04`). Meet's bottom offset had the same `window_h` bug and is inlined to 338 to match.\n\n## Test plan\n\n- [x] `bash test/shell.d/pip-window-rules-test.sh`\n- [x] 200px client under stock rules lands at x=1200 (360px off a 1440-wide Air)\n- [x] 200px client with this move expression lands at x=800 (40px from the right)\n- Pop a YouTube/Chromium PiP on a 1080p or 1440\u00d7900 panel: it should sit in the top-right with a 40px gap, not hang off the right\n- Existing PiP windows do not re-run static move rules; close and re-open to pick this up",
+  "draft": false,
+  "files": [
+    {
+      "sha": "6a2cc734321def726cff1348ebba443e5d9187be",
+      "filename": "default/hypr/apps/pip.lua",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 2,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e22ef91c044cb67c539eea5cc36e23fe4af0f4e7/default%2Fhypr%2Fapps%2Fpip.lua",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e22ef91c044cb67c539eea5cc36e23fe4af0f4e7/default%2Fhypr%2Fapps%2Fpip.lua",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fhypr%2Fapps%2Fpip.lua?ref=e22ef91c044cb67c539eea5cc36e23fe4af0f4e7",
+      "patch": "@@ -1,4 +1,8 @@\n -- Picture-in-picture overlays.\n+-- Inline 600x338 in move the same way webcam-overlay.lua inlines its size\n+-- expressions. Hyprland evaluates window_w / window_h from the client's\n+-- original size, then applies size, so a small Chromium PiP would otherwise\n+-- hang off the right edge.\n o.window({ title = \"(Picture.?in.?[Pp]icture)\" }, { tag = \"+pip\" })\n o.window({ tag = \"pip\" }, {\n   tag = \"-default-opacity\",\n@@ -8,7 +12,7 @@ o.window({ tag = \"pip\" }, {\n   keep_aspect_ratio = true,\n   border_size = 0,\n   opacity = \"1 1\",\n-  move = { \"(monitor_w-window_w-40)\", \"(monitor_h*0.04)\" },\n+  move = { \"(monitor_w-600-40)\", \"(monitor_h*0.04)\" },\n })\n \n -- Google Meet PiP uses the meeting title instead of \"Picture-in-Picture\".\n@@ -20,5 +24,5 @@ o.window({ tag = \"chromium-based-browser\", title = \"^Meet - .+\" }, {\n   keep_aspect_ratio = true,\n   border_size = 0,\n   opacity = \"1 1\",\n-  move = { \"(monitor_w-window_w-40)\", \"(monitor_h-window_h-40)\" },\n+  move = { \"(monitor_w-600-40)\", \"(monitor_h-338-40)\" },\n })"
+    },
+    {
+      "sha": "d66da0dc4c4bb2c5756521fad0584e9bbcdfd0ae",
+      "filename": "test/shell.d/pip-window-rules-test.sh",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e22ef91c044cb67c539eea5cc36e23fe4af0f4e7/test%2Fshell.d%2Fpip-window-rules-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e22ef91c044cb67c539eea5cc36e23fe4af0f4e7/test%2Fshell.d%2Fpip-window-rules-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fpip-window-rules-test.sh?ref=e22ef91c044cb67c539eea5cc36e23fe4af0f4e7",
+      "patch": "@@ -0,0 +1,16 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+pip=\"$ROOT/default/hypr/apps/pip.lua\"\n+\n+if grep -E 'move = .*window_[wh]' \"$pip\" >/dev/null; then\n+  fail \"pip.lua move does not use window_w or window_h\" \"$(grep -n -E 'move = .*window_[wh]' \"$pip\")\"\n+fi\n+\n+grep -F '(monitor_w-600-40)' \"$pip\" >/dev/null || fail \"pip.lua inlines 600 in the move x expression\"\n+grep -F '(monitor_h-338-40)' \"$pip\" >/dev/null || fail \"Meet PiP inlines 338 in the move y expression\"\n+\n+pass \"pip.lua inlines size in move expressions like webcam-overlay.lua\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

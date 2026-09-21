@@ -1,0 +1,642 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7348",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-alsa"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "1963c972b310515a565637c503eb5eea4af85dcd",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7348,
+  "checked_at": "2026-09-21T11:57:15.467390+00:00",
+  "title": "Install PipeWire ALSA support on T2 Macs",
+  "author": "twfyke",
+  "head_sha": "1963c972b310515a565637c503eb5eea4af85dcd",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:41Z",
+  "state": "open",
+  "body": "Section 3 of https://github.com/basecamp/omarchy/issues/7347 only. Does not close the issue (Limine / ESP / enroll remain separate).\n\n`install/hardware/apple/fix-t2.sh` installs `apple-t2-audio-config`, `linux-t2`, firmware, and `t2fanrd`. It does not install PipeWire's ALSA SPA plugin. On a MacBookPro16,3 that came up through t2archinstall + `curl -fsSL https://omarchy.org/install`, WirePlumber logged:\n\n```\nwp-device: SPA handle 'api.alsa.enum.udev' could not be loaded; is it installed?\ns-monitors: PipeWire's ALSA SPA plugin is missing or broken. Sound cards will not be supported\n```\n\nNo speaker sink, volume keys dead, Spotify silent, even though T2 audio hardware `106b:1803` and `apple-t2-audio-config` were present. pacman first installed the missing pieces at `2026-08-17T21:43:44-0400`:\n\n```\npacman -S --needed pipewire-audio pipewire-pulse pipewire-alsa\n```\n\nAfter that: `alsa_output.pci-0000_02_00.3.HiFi__Speaker__sink`.\n\n`install/omarchy-other.packages` already lists `pipewire-alsa` and `pipewire-pulse`, but the overlay path (and any install that runs this leaf without that full package set) still ships a silent T2 machine. T2 audio config without the SPA plugin is not audio support.\n\n## Changes\n- `fix-t2.sh` also `omarchy-pkg-add`s `pipewire-audio`, `pipewire-alsa`, and `pipewire-pulse` (names from quattro's existing package lists and the pacman line that restored sound)\n- `migrations/1787023543.sh` is T2-gated on the same `lspci -nn` / `106b:180[12]` check, so existing overlay installs that already ran the old leaf get those packages on `omarchy update`. Non-T2 exits 0 and installs nothing; already-present packages are `omarchy-pkg-add`'s no-op\n- `test/shell.d/t2-hardware-test.sh` pins the leaf package set and the migration's T2 / non-T2 / already-present behavior\n\nDoes not touch Limine, ESP_PATH, enroll hooks, or hid_apple / fnmode (#7110 / #7343).",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f90db8233f31bf2e9209598ea487d5e58d637f14",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 1,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1963c972b310515a565637c503eb5eea4af85dcd/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1963c972b310515a565637c503eb5eea4af85dcd/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=1963c972b310515a565637c503eb5eea4af85dcd",
+      "patch": "@@ -3,12 +3,17 @@\n if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n   echo \"Detected MacBook with T2 chip. Installing support items...\"\n \n+  # apple-t2-audio-config only tunes cards. WirePlumber still needs PipeWire's\n+  # ALSA SPA plugin or there is no speaker sink (#7347).\n   omarchy-pkg-add \\\n     linux-t2 \\\n     linux-t2-headers \\\n     apple-t2-audio-config \\\n     apple-bcm-firmware \\\n-    t2fanrd\n+    t2fanrd \\\n+    pipewire-audio \\\n+    pipewire-alsa \\\n+    pipewire-pulse\n \n   # Enable T2 fan control\n   systemctl enable t2fanrd.service"
+    },
+    {
+      "sha": "cdfc81cb27fe9584ce2efb2d3adc43589ee4bd22",
+      "filename": "migrations/1787023543.sh",
+      "status": "added",
+      "additions": 14,
+      "deletions": 0,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1963c972b310515a565637c503eb5eea4af85dcd/migrations%2F1787023543.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1963c972b310515a565637c503eb5eea4af85dcd/migrations%2F1787023543.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787023543.sh?ref=1963c972b310515a565637c503eb5eea4af85dcd",
+      "patch": "@@ -0,0 +1,14 @@\n+echo \"Install PipeWire ALSA support on T2 Macs\"\n+\n+# Overlay installs that already ran the old fix-t2.sh have apple-t2-audio-config\n+# but not PipeWire's ALSA SPA plugin, so WirePlumber never sees the speakers\n+# (#7347). omarchy-pkg-add is a no-op when the packages are already present.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add \\\n+  pipewire-audio \\\n+  pipewire-alsa \\\n+  pipewire-pulse"
+    },
+    {
+      "sha": "ec6c82f8d8fb91de957d0bea683e72f070a394b8",
+      "filename": "test/shell.d/t2-hardware-test.sh",
+      "status": "modified",
+      "additions": 97,
+      "deletions": 0,
+      "changes": 97,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1963c972b310515a565637c503eb5eea4af85dcd/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1963c972b310515a565637c503eb5eea4af85dcd/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-hardware-test.sh?ref=1963c972b310515a565637c503eb5eea4af85dcd",
+      "patch": "@@ -22,6 +22,23 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"the ISO no longer caches tiny-dfr\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n+# Overlay installs can run this leaf without omarchy-other.packages, so T2\n+# audio support has to install the full PipeWire audio stack here (#7347).\n+pkg_add_block=$(awk '\n+  $0 ~ /omarchy-pkg-add/ { grab=1 }\n+  grab {\n+    print\n+    line = $0\n+    sub(/[[:space:]]+$/, \"\", line)\n+    if (line !~ /\\\\$/) exit\n+  }\n+' \"$fix_t2\")\n+for pkg in pipewire-audio pipewire-alsa pipewire-pulse; do\n+  grep -Fq \"$pkg\" <<<\"$pkg_add_block\" ||\n+    fail \"T2 setup omarchy-pkg-adds $pkg as part of the PipeWire audio stack\"\n+done\n+pass \"T2 setup installs the full PipeWire audio stack\"\n+\n test_tmp=$(mktemp -d)\n trap 'rm -rf \"$test_tmp\"' EXIT\n \n@@ -212,3 +229,83 @@ grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n   fail \"T2 rerun migration rebuilds the boot image\"\n [[ -f $repair_marker ]] || fail \"T2 rerun migration records the machine-wide repair\"\n pass \"T2 rerun migration repairs installs the broken hardware check skipped\"\n+\n+pipewire_migration=\"$ROOT/migrations/1787023543.sh\"\n+\n+grep -Fq 'lspci -nn | grep \"106b:180[12]\"' \"$pipewire_migration\" ||\n+  fail \"T2 PipeWire migration uses the same PCI check as fix-t2.sh\"\n+! grep -q 'pacman' \"$pipewire_migration\" ||\n+  fail \"T2 PipeWire migration installs with omarchy-pkg-add, not pacman\"\n+for pkg in pipewire-audio pipewire-alsa pipewire-pulse; do\n+  grep -Fq \"$pkg\" \"$pipewire_migration\" ||\n+    fail \"T2 PipeWire migration installs $pkg\"\n+done\n+pass \"T2 PipeWire migration matches the leaf's package set\"\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+chmod +x \"$stub_bin/omarchy-pkg-add\"\n+\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=1 \\\n+  bash -euo pipefail \"$pipewire_migration\" >/dev/null\n+\n+pkg_add_call=$(awk '/^omarchy-pkg-add(\\t| |$)/ { print; exit }' \"$calls\")\n+[[ -n $pkg_add_call ]] ||\n+  fail \"T2 PipeWire migration calls omarchy-pkg-add\" \"$(cat \"$calls\")\"\n+for pkg in pipewire-audio pipewire-alsa pipewire-pulse; do\n+  awk -F '[\\t ]+' -v pkg=\"$pkg\" '{\n+    for (i = 1; i <= NF; i++) if ($i == pkg) found = 1\n+  }\n+  END { exit !found }' <<<\"$pkg_add_call\" ||\n+    fail \"T2 PipeWire migration omarchy-pkg-adds $pkg as part of the PipeWire audio stack\" \"$(cat \"$calls\")\"\n+done\n+pass \"T2 PipeWire migration installs the full PipeWire audio stack on T2 hardware\"\n+\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=0 \\\n+  bash -euo pipefail \"$pipewire_migration\" >/dev/null\n+\n+[[ ! -s $calls ]] || fail \"non-T2 systems skip the PipeWire migration\" \"$(cat \"$calls\")\"\n+pass \"T2 PipeWire migration skips unrelated hardware\"\n+\n+# Already-present packages are omarchy-pkg-add's no-op: missing-check fails,\n+# so pacman never gets -S, and the post-check's pacman -Q is allowed.\n+cat >\"$stub_bin/omarchy-pkg-missing\" <<'SH'\n+#!/bin/bash\n+\n+exit 1\n+SH\n+cat >\"$stub_bin/pacman\" <<'SH'\n+#!/bin/bash\n+\n+printf 'pacman' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+[[ $1 == -Q ]] && exit 0\n+exit 1\n+SH\n+ln -sfn \"$ROOT/bin/omarchy-pkg-add\" \"$stub_bin/omarchy-pkg-add\"\n+chmod +x \"$stub_bin/omarchy-pkg-missing\" \"$stub_bin/pacman\"\n+\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=1 \\\n+  bash -euo pipefail \"$pipewire_migration\" >/dev/null\n+\n+! grep -E $'^pacman\\t-S' \"$calls\" ||\n+  fail \"already-present PipeWire packages are a no-op\" \"$(cat \"$calls\")\"\n+pass \"already-present PipeWire packages are a no-op\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5323532737",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#issuecomment-5323532737",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7348",
+      "id": 5323532737,
+      "node_id": "IC_kwDOO0Cobs8AAAABPU6pwQ",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-18T04:16:52Z",
+      "updated_at": "2026-08-18T04:16:52Z",
+      "body": "On the second Copilot pass:\n\n- No shebang on `migrations/1787023543.sh`. Quattro migrations are invoked with bash and start with `echo \"...\"`.\n- Agree the exact tab-joined `omarchy-pkg-add` line is stricter than the guarantee. The test will assert each of `pipewire-audio`, `pipewire-alsa`, and `pipewire-pulse` appears on an `omarchy-pkg-add` call, not a fixed order.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5323532737/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5328566707",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#issuecomment-5328566707",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7348",
+      "id": 5328566707,
+      "node_id": "IC_kwDOO0Cobs8AAAABPZt5sw",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-18T13:04:50Z",
+      "updated_at": "2026-08-18T13:04:50Z",
+      "body": "Latest Copilot pass, leaving these:\n\nMigrations always echo first so the update log shows the step ran, including on machines that then skip. Same as the rest of quattro.\n\nThe PCI check matches fix-t2.sh on purpose, including `grep >/dev/null` instead of `grep -q`. grep -q can SIGPIPE a chatty lspci and look like \"no T2\".\n\nThe pacman stub accepts `-Q` because that is what omarchy-pkg-add actually calls (`pacman -Q \"$pkg\"`).\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5328566707/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4956965689,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3VLOQ",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds explicit PipeWire audio dependencies to the T2 hardware setup and enforces that expectation in the shell test to ensure WirePlumber can load T2 sound cards in overlay installs.\n\n**Changes:**\n- Install PipeWire audio packages in `fix-t2.sh` for T2 machines.\n- Add a shell test that parses the `omarchy-pkg-add` block and asserts required packages are present.\n\n### Reviewed changes\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated 2 comments.\n\n| File | Description |\n| ---- | ----------- |\n| test/shell.d/t2-hardware-test.sh | Adds assertions that the T2 setup script installs required PipeWire packages. |\n| install/hardware/apple/fix-t2.sh | Extends the T2 package install list to include PipeWire audio components needed by WirePlumber. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4956965689",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4956965689"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "submitted_at": "2026-08-18T03:27:12Z",
+      "commit_id": "aca0a445575655734635d39e9d231b92fe26316b"
+    },
+    {
+      "id": 4956976931,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3V3Iw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**migrations/1787023543.sh:14**\n* This migration script has no shebang and doesn\u2019t set shell safety options, which makes it dependent on how the migration runner invokes it (and can lead to inconsistent behavior if executed directly). Add a bash shebang (or align with the repo\u2019s migration runner expectations) and consider enabling strict mode (`set -euo pipefail`) near the top so failures (e.g., missing commands) don\u2019t silently pass.\n```\necho \"Install PipeWire ALSA support on T2 Macs\"\n\n# Overlay installs that already ran the old fix-t2.sh have apple-t2-audio-config\n# but not PipeWire's ALSA SPA plugin, so WirePlumber never sees the speakers\n# (#7347). omarchy-pkg-add is a no-op when the packages are already present.\n\nif ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n  exit 0\nfi\n\nomarchy-pkg-add \\\n  pipewire-audio \\\n  pipewire-alsa \\\n  pipewire-pulse\n```\n**test/shell.d/t2-hardware-test.sh:259**\n* This assertion is very strict: it requires `omarchy-pkg-add` to be called with exactly these three args in this exact order and with no additional flags/args. That makes the test brittle to harmless changes (e.g., adding options, reordering, or adding another required package). Consider asserting (1) a call begins with `omarchy-pkg-add` and (2) the same call contains each required package token, rather than matching the full tab-joined line exactly.\n```\ngrep -Fq $'omarchy-pkg-add\\tpipewire-audio\\tpipewire-alsa\\tpipewire-pulse' \"$calls\" ||\n  fail \"T2 PipeWire migration omarchy-pkg-adds the ALSA SPA plugin\" \"$(cat \"$calls\")\"\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4956976931",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4956976931"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "submitted_at": "2026-08-18T03:30:13Z",
+      "commit_id": "5f8aff6f90cf02718059448c1e80355ee46dfb71"
+    },
+    {
+      "id": 4957170838,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3hslg",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4957170838",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4957170838"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "submitted_at": "2026-08-18T04:16:50Z",
+      "commit_id": "5f8aff6f90cf02718059448c1e80355ee46dfb71"
+    },
+    {
+      "id": 4957171009,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3htQQ",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4957171009",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4957171009"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "submitted_at": "2026-08-18T04:16:51Z",
+      "commit_id": "5f8aff6f90cf02718059448c1e80355ee46dfb71"
+    },
+    {
+      "id": 4957181868,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3iXrA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (5)</summary>\n\n**migrations/1787023543.sh:1**\n* The script prints \u201cInstall PipeWire\u2026\u201d unconditionally, even on non\u2011T2 hardware where it immediately exits without doing anything. Consider moving the `echo` after the T2 detection check (or wording it as \u201cChecking/Skipping\u2026\u201d), so logs accurately reflect whether an install actually occurred.\n```\necho \"Install PipeWire ALSA support on T2 Macs\"\n```\n**migrations/1787023543.sh:9**\n* The script prints \u201cInstall PipeWire\u2026\u201d unconditionally, even on non\u2011T2 hardware where it immediately exits without doing anything. Consider moving the `echo` after the T2 detection check (or wording it as \u201cChecking/Skipping\u2026\u201d), so logs accurately reflect whether an install actually occurred.\n```\nif ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n  exit 0\nfi\n```\n**migrations/1787023543.sh:7**\n* Using `grep` without `-q` and relying on `>/dev/null` works, but is less idiomatic and slightly harder to read. Prefer a quiet grep (and typically fixed-string when applicable) to make intent explicit (e.g., `grep -q ...`).\n```\nif ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n  exit 0\nfi\n```\n**test/shell.d/t2-hardware-test.sh:236**\n* This assertion is very brittle because it requires the migration to contain the exact pipeline string. Small refactors that keep behavior identical (e.g., adding `-q`, different quoting, redirect placement, or wrapping in a helper) will break the test. Consider asserting on the stable intent instead (e.g., that the PCI ID pattern `106b:180[12]` is present and that `lspci` is used) rather than exact command formatting.\n```\ngrep -Fq 'lspci -nn | grep \"106b:180[12]\"' \"$pipewire_migration\" ||\n  fail \"T2 PipeWire migration uses the same PCI check as fix-t2.sh\"\n```\n**test/shell.d/t2-hardware-test.sh:298**\n* The stubbed `pacman` exits non-zero for any query form other than exactly `-Q`, which can make this test fail if `omarchy-pkg-add` switches to another valid query invocation (e.g., `-Qq`, `-Qi`) while still being correct. To reduce fragility, consider allowing a broader set of query calls (e.g., any `-Q*`) to succeed and keeping the \u201cno `pacman -S`\u201d assertion as the real behavioral check.\n```\ncat >\"$stub_bin/pacman\" <<'SH'\n#!/bin/bash\n\nprintf 'pacman' >>\"$TEST_LOG\"\nprintf '\\t%s' \"$@\" >>\"$TEST_LOG\"\nprintf '\\n' >>\"$TEST_LOG\"\n[[ $1 == -Q ]] && exit 0\nexit 1\nSH\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4957181868",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#pullrequestreview-4957181868"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "submitted_at": "2026-08-18T04:19:11Z",
+      "commit_id": "1963c972b310515a565637c503eb5eea4af85dcd"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800802835",
+      "pull_request_review_id": 4956965689,
+      "id": 3800802835,
+      "node_id": "PRRC_kwDOO0Cobs7ii6YT",
+      "diff_hunk": "@@ -22,6 +22,21 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"the ISO no longer caches tiny-dfr\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n+# Overlay installs can run this leaf without omarchy-other.packages, so T2\n+# audio support has to install the SPA plugin here (#7347).\n+pkg_add_block=$(awk '\n+  $0 ~ /omarchy-pkg-add/ { grab=1 }\n+  grab {\n+    print\n+    if ($0 !~ /\\\\$/) exit",
+      "path": "test/shell.d/t2-hardware-test.sh",
+      "commit_id": "5f8aff6f90cf02718059448c1e80355ee46dfb71",
+      "original_commit_id": "aca0a445575655734635d39e9d231b92fe26316b",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The awk termination condition `/$\\\\\\\\$/` is brittle: if any continued line ends with a backslash followed by trailing whitespace (e.g., `\\\\ `), the capture will exit early and the test will fail even though the package is present. Make the check tolerant of trailing whitespace (e.g., match `\\\\\\\\[[:space:]]*$` or trim right-side whitespace before checking).",
+      "created_at": "2026-08-18T03:27:11Z",
+      "updated_at": "2026-08-18T03:27:12Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800802835",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800802835"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800802835"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800802835/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 31,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800802860",
+      "pull_request_review_id": 4956965689,
+      "id": 3800802860,
+      "node_id": "PRRC_kwDOO0Cobs7ii6Ys",
+      "diff_hunk": "@@ -22,6 +22,21 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"the ISO no longer caches tiny-dfr\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n+# Overlay installs can run this leaf without omarchy-other.packages, so T2\n+# audio support has to install the SPA plugin here (#7347).\n+pkg_add_block=$(awk '\n+  $0 ~ /omarchy-pkg-add/ { grab=1 }\n+  grab {\n+    print\n+    if ($0 !~ /\\\\$/) exit\n+  }\n+' \"$fix_t2\")\n+for pkg in pipewire-audio pipewire-alsa pipewire-pulse; do\n+  grep -Fq \"$pkg\" <<<\"$pkg_add_block\" ||\n+    fail \"T2 setup omarchy-pkg-adds $pkg so WirePlumber can load sound cards\"\n+done",
+      "path": "test/shell.d/t2-hardware-test.sh",
+      "commit_id": "1963c972b310515a565637c503eb5eea4af85dcd",
+      "original_commit_id": "aca0a445575655734635d39e9d231b92fe26316b",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The test comment/message says this is specifically about ensuring the ALSA SPA plugin is installed, but the assertion requires three packages. This makes the test more coupled to the current packaging choices than necessary (e.g., a future change could keep `pipewire-alsa` but drop `pipewire-audio` and still satisfy the stated goal). Either (a) assert only `pipewire-alsa` if that\u2019s the real requirement, or (b) update the comment/message to reflect that the full PipeWire audio stack is intentionally required here.",
+      "created_at": "2026-08-18T03:27:11Z",
+      "updated_at": "2026-08-18T03:27:12Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800802860",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800802860"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800802860"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800802860/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 36,
+      "original_start_line": 34,
+      "start_side": "RIGHT",
+      "line": 39,
+      "original_line": 37,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 16,
+      "position": 18,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800984223",
+      "pull_request_review_id": 4957170838,
+      "id": 3800984223,
+      "node_id": "PRRC_kwDOO0Cobs7ijmqf",
+      "diff_hunk": "@@ -22,6 +22,21 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"the ISO no longer caches tiny-dfr\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n+# Overlay installs can run this leaf without omarchy-other.packages, so T2\n+# audio support has to install the SPA plugin here (#7347).\n+pkg_add_block=$(awk '\n+  $0 ~ /omarchy-pkg-add/ { grab=1 }\n+  grab {\n+    print\n+    if ($0 !~ /\\\\$/) exit",
+      "path": "test/shell.d/t2-hardware-test.sh",
+      "commit_id": "5f8aff6f90cf02718059448c1e80355ee46dfb71",
+      "original_commit_id": "aca0a445575655734635d39e9d231b92fe26316b",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Taking this. The capture will treat a continued line as done only after trimming trailing space, so `\\\\ ` cannot drop the rest of the block.",
+      "created_at": "2026-08-18T04:16:50Z",
+      "updated_at": "2026-08-18T04:16:50Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800984223",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800984223"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800984223"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800984223/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 31,
+      "side": "RIGHT",
+      "in_reply_to_id": 3800802835,
+      "author_association": "NONE",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800984359",
+      "pull_request_review_id": 4957171009,
+      "id": 3800984359,
+      "node_id": "PRRC_kwDOO0Cobs7ijmsn",
+      "diff_hunk": "@@ -22,6 +22,21 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"the ISO no longer caches tiny-dfr\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n+# Overlay installs can run this leaf without omarchy-other.packages, so T2\n+# audio support has to install the SPA plugin here (#7347).\n+pkg_add_block=$(awk '\n+  $0 ~ /omarchy-pkg-add/ { grab=1 }\n+  grab {\n+    print\n+    if ($0 !~ /\\\\$/) exit\n+  }\n+' \"$fix_t2\")\n+for pkg in pipewire-audio pipewire-alsa pipewire-pulse; do\n+  grep -Fq \"$pkg\" <<<\"$pkg_add_block\" ||\n+    fail \"T2 setup omarchy-pkg-adds $pkg so WirePlumber can load sound cards\"\n+done",
+      "path": "test/shell.d/t2-hardware-test.sh",
+      "commit_id": "1963c972b310515a565637c503eb5eea4af85dcd",
+      "original_commit_id": "aca0a445575655734635d39e9d231b92fe26316b",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Keeping all three packages. That is the stack that restored the speaker sink, not just pipewire-alsa. Updating the comment and pass text so they say the full PipeWire audio stack, not only the ALSA SPA plugin.",
+      "created_at": "2026-08-18T04:16:51Z",
+      "updated_at": "2026-08-18T04:16:51Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800984359",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7348",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800984359"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7348#discussion_r3800984359"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7348"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800984359/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 36,
+      "original_start_line": 34,
+      "start_side": "RIGHT",
+      "line": 39,
+      "original_line": 37,
+      "side": "RIGHT",
+      "in_reply_to_id": 3800802860,
+      "author_association": "NONE",
+      "original_position": 16,
+      "position": 18,
+      "subject_type": "line"
+    }
+  ]
+}

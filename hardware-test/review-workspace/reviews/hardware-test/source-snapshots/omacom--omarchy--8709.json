@@ -1,0 +1,239 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8709",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-repository"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5b09c4e9d53330953702744b272cf4103e469ecf",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8709,
+  "checked_at": "2026-09-21T11:57:22.172000+00:00",
+  "title": "fix: arm signature verification for the T2 repo and close the quattro override window",
+  "author": "rmacy",
+  "head_sha": "5b09c4e9d53330953702744b272cf4103e469ecf",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:28Z",
+  "state": "open",
+  "body": "Follow-up to #8072 (Require signed packages from the Omarchy repository). Two repositories in the tree still accept unauthenticated packages as root; this closes what can be closed Omarchy-side and arms the rest.\n\n## 1. `install/hardware/pacman.sh` \u2014 the T2 stanza disables verification outright\n\n```\n[arch-mact2]\nServer = https://github.com/NoaHimesaka1873/arch-mact2-mirror/releases/download/release\nSigLevel = Never\n```\n\n`SigLevel = Never` means pacman performs no package authentication at all for the life of the install: any compromise of the arch-mact2 repository, the `NoaHimesaka1873` account, or GitHub's release delivery path is root code execution on every T2 machine, through routine unattended `pacman -Syu` transactions. The repo ships the T2 kernel (`linux-t2`), firmware, and fan daemon, all executed or loaded at boot.\n\nThis differs from the #8072 finding in one important way: **upstream cannot enforce signatures today.** Verified against the live repository:\n\n- none of the ~40 packages in `arch-mact2.db` carries a `%PGPSIG%` entry except `apple-bcm-wifi-firmware`;\n- standalone `.sig` sidecars 404 for every package checked;\n- `arch-mact2.db.sig` exists but is stale \u2014 it verifies as **BAD** (signed 2022-02-26, key `8BE1FEE1 4302 371D EF6F 910A 0E58 77AC 225D 1980`, \"Noa Himesaka <himesaka@noa.codes>\") against the current database.\n\nSo `SigLevel = Required` would refuse every T2 package and break the install. The stanza instead **arms** verification as far as upstream permits:\n\n- The pinned upstream signing key is imported and locally signed (`pacman-key --recv-keys \u2026 --keyserver keyserver.ubuntu.com`, then `--lsign-key`). A failed import **refuses to enable the repository** rather than silently continuing unverified \u2014 a T2 install without its kernel cannot succeed anyway, and an explicit error beats an unauthenticated stanza.\n- `SigLevel = PackageOptional DatabaseNever`: unsigned packages shipped today are accepted; any package that gains a signature is verified the moment it appears (a present-but-invalid signature is rejected, so a later compromise cannot strip signatures past an already-imported key); the stale database signature is skipped, which a plain `Optional` would find and reject.\n\n**Residual risk, stated plainly:** until upstream signs its packages, this repository is accepted without authentication and origin compromise is still root on T2 machines. This PR cannot fix that; upstream signing can. Disclosed to security@omarchy.org.\n\n## 2. `bin/omarchy-upgrade-to-quattro` \u2014 the bootstrap override outlives the keyring install\n\nThe upgrader regenerates the `[omarchy]` stanza with `SigLevel = Optional TrustAll` because the keyring package that provides trust arrives through the very repository it authenticates. #8072's migration strips that override on the *next* update pass \u2014 but everything the upgrader itself installs in between (hardware transition packages, the entire `install_omarchy_quattro_packages` set) happens unauthenticated.\n\nNew `require_signed_omarchy_repo()` runs immediately after `install_keyrings` and deletes the override line, so every later transaction in the upgrade verifies signatures like a normal post-#8072 machine. If the keyring failed to install, the override is left in place and the machine keeps working \u2014 the log says why.\n\n## Tests\n\nNew `test/shell.d/t2-repo-signature-test.sh`:\n\n- tree-wide guard: no repository stanza anywhere in `install/`, `default/`, `bin/` sets `SigLevel = Never`;\n- behavioral, with mocked `lspci` (T2 PCI ids) and `pacman-key` (arg-validating: only the pinned fingerprint is accepted): stanza written with the armed policy, key imported from the keyserver and locally signed, write is idempotent on a second run;\n- failure path: a `pacman-key` that fails leaves **no stanza** and exits non-zero;\n- quattro guards: the override is still written (bootstrap), the removal step exists, and it runs on the line immediately after `install_keyrings`.\n\n`upgrade-to-quattro-test.sh` passes unchanged (22/22). All touched scripts pass `bash -n`.\n\n## Notes for reviewers\n\n- The behavioral test reaches the install script through `OMARCHY_T2_PACMAN_CONF`, a one-variable seam so the test never touches the real `/etc/pacman.conf`; the variable is unset on real installs and the script writes `/etc/pacman.conf` exactly as before.\n- The stanza keeps a plain heredoc; no shell expansion enters the config file.\n- Key fingerprint source: fetched from keyserver.ubuntu.com and cross-checked against the `arch-mact2.db.sig` issuer keyid; the t2linux wiki documents the same identity.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "1cb51d173adfe94af9a5716fb6cef6387760235a",
+      "filename": "bin/omarchy-upgrade-to-quattro",
+      "status": "modified",
+      "additions": 20,
+      "deletions": 0,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5b09c4e9d53330953702744b272cf4103e469ecf/bin%2Fomarchy-upgrade-to-quattro",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5b09c4e9d53330953702744b272cf4103e469ecf/bin%2Fomarchy-upgrade-to-quattro",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-upgrade-to-quattro?ref=5b09c4e9d53330953702744b272cf4103e469ecf",
+      "patch": "@@ -455,6 +455,25 @@ install_keyrings() {\n   }\n }\n \n+# install_keyrings can only run while the [omarchy] stanza accepts unsigned\n+# packages: the keyring package that provides trust arrives through the very\n+# repository it is meant to authenticate. Once it is installed the override\n+# has served its purpose, so drop it before anything else is fetched -- every\n+# later transaction in this upgrade then verifies signatures like a normal\n+# post-#8072 machine instead of trusting the wire.\n+require_signed_omarchy_repo() {\n+  if ! as_root pacman -Q omarchy-keyring >/dev/null 2>&1; then\n+    warn \"omarchy-keyring did not install; leaving the unsigned-package override in place.\"\n+    return\n+  fi\n+\n+  local tmp\n+  tmp=$(mktemp)\n+  sed '/^\\[omarchy\\]/,/^\\[/{/^SigLevel = Optional TrustAll$/d}' /etc/pacman.conf >\"$tmp\"\n+  as_root install -m 0644 \"$tmp\" /etc/pacman.conf\n+  rm -f \"$tmp\"\n+}\n+\n remove_legacy_installer_package() {\n   if pacman -Q omarchy-installer >/dev/null 2>&1; then\n     log \"Removing legacy omarchy-installer package\"\n@@ -2319,6 +2338,7 @@ suppress_hyprland_config_reload\n create_pre_upgrade_snapshot\n configure_pacman_channel\n install_keyrings\n+require_signed_omarchy_repo\n remove_legacy_installer_package\n remove_legacy_limine_configs\n remove_conflicting_legacy_packages"
+    },
+    {
+      "sha": "8146343d979562df8d5118d9bede137ec7e24a7b",
+      "filename": "install/hardware/pacman.sh",
+      "status": "modified",
+      "additions": 47,
+      "deletions": 3,
+      "changes": 50,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5b09c4e9d53330953702744b272cf4103e469ecf/install%2Fhardware%2Fpacman.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5b09c4e9d53330953702744b272cf4103e469ecf/install%2Fhardware%2Fpacman.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fpacman.sh?ref=5b09c4e9d53330953702744b272cf4103e469ecf",
+      "patch": "@@ -1,12 +1,56 @@\n # Hardware-specific pacman repository extensions that must survive the final\n # pacman.conf restore.\n+#\n+# The t2linux repository publishes no package signatures today, and the\n+# database signature it does publish is stale (it verifies as BAD against the\n+# current database), so full enforcement would refuse every T2 package and\n+# break the install. The stanza below arms verification as far as the current\n+# upstream state allows instead of leaving it off outright:\n+#\n+# - PackageOptional verifies any package that carries a signature the moment\n+#   upstream starts signing, while still accepting the unsigned packages\n+#   shipped today. A signature that is present but invalid is rejected, so an\n+#   already-imported key cannot be walked past with a bad signature. It does\n+#   NOT prevent signature stripping: an attacker who controls the repository\n+#   can simply stop publishing signatures and pacman accepts the unsigned\n+#   result. Stripping is only excluded once upstream signs consistently and\n+#   this policy tightens to PackageRequired.\n+# - DatabaseNever skips the stale database signature, which a plain Optional\n+#   would find and reject.\n+#\n+# The pinned t2linux signing key (upstream: Noa Himesaka\n+# <himesaka@noa.codes>) is imported and locally signed so those future\n+# signatures verify. Residual risk until upstream signs its packages: a\n+# compromise of the arch-mact2 repository or its delivery path is root code\n+# execution on T2 machines. That exposure is disclosed to the Omarchy\n+# security contact and needs an upstream fix (signing the repository); this\n+# stanza is the strongest stance the current upstream state permits.\n+t2_pacman_conf=${OMARCHY_T2_PACMAN_CONF:-/etc/pacman.conf}\n+t2_signing_key=8BE1FEE14302371DEF6F910A0E5877AC225D1980\n+\n if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n-  if ! grep -q '^\\[arch-mact2\\]' /etc/pacman.conf; then\n-    cat >> /etc/pacman.conf <<'EOF'\n+  # Fresh installs append the armed stanza; installs that predate this change\n+  # already carry [arch-mact2] with SigLevel = Never and are reconciled in\n+  # place instead of skipped.\n+  if grep -q '^SigLevel = Never$' \"$t2_pacman_conf\"; then\n+    if pacman-key --recv-keys \"$t2_signing_key\" --keyserver keyserver.ubuntu.com &&\n+       pacman-key --lsign-key \"$t2_signing_key\"; then\n+      sed -i 's/^SigLevel = Never$/SigLevel = PackageOptional DatabaseNever/' \"$t2_pacman_conf\"\n+    else\n+      echo \"Could not import the pinned t2linux signing key ($t2_signing_key); the arch-mact2 repository stays unverified.\" >&2\n+    fi\n+  elif ! grep -q '^\\[arch-mact2\\]' \"$t2_pacman_conf\"; then\n+    if ! pacman-key --recv-keys \"$t2_signing_key\" --keyserver keyserver.ubuntu.com; then\n+      echo \"Could not import the pinned t2linux signing key ($t2_signing_key); refusing to enable the arch-mact2 repository unverified.\" >&2\n+      exit 1\n+    fi\n+    pacman-key --lsign-key \"$t2_signing_key\"\n+\n+    cat >> \"$t2_pacman_conf\" <<'EOF'\n \n [arch-mact2]\n Server = https://github.com/NoaHimesaka1873/arch-mact2-mirror/releases/download/release\n-SigLevel = Never\n+SigLevel = PackageOptional DatabaseNever\n EOF\n   fi\n fi"
+    },
+    {
+      "sha": "755b915f4225a2e9ed53b3a0331cedbbb4fe3d57",
+      "filename": "migrations/1787720000.sh",
+      "status": "added",
+      "additions": 21,
+      "deletions": 0,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5b09c4e9d53330953702744b272cf4103e469ecf/migrations%2F1787720000.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5b09c4e9d53330953702744b272cf4103e469ecf/migrations%2F1787720000.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787720000.sh?ref=5b09c4e9d53330953702744b272cf4103e469ecf",
+      "patch": "@@ -0,0 +1,21 @@\n+# Reconcile existing T2 installs whose arch-mact2 stanza predates signature\n+# arming. Fresh installs get the armed stanza from install/hardware/pacman.sh;\n+# this covers machines that already carry SigLevel = Never and whose normal\n+# update path runs migrations rather than the hardware installer.\n+\n+arch_mact2_never='SigLevel = Never'\n+t2_signing_key=8BE1FEE14302371DEF6F910A0E5877AC225D1980\n+\n+if grep -q '^\\[arch-mact2\\]' /etc/pacman.conf 2>/dev/null &&\n+   grep -q \"^${arch_mact2_never}$\" /etc/pacman.conf; then\n+  # A failed key import leaves the machine exactly as it was: the stanza keeps\n+  # working as it always has, and a later migration retry can import the key.\n+  # Refusing to transact would break a working T2 machine for no immediate\n+  # gain, because packages are unsigned either way.\n+  if sudo pacman-key --recv-keys \"$t2_signing_key\" --keyserver keyserver.ubuntu.com &&\n+     sudo pacman-key --lsign-key \"$t2_signing_key\"; then\n+    sudo sed -i \"s/^${arch_mact2_never}$/SigLevel = PackageOptional DatabaseNever/\" /etc/pacman.conf\n+  else\n+    echo \"Could not import the pinned t2linux signing key; the arch-mact2 repository stays unverified.\" >&2\n+  fi\n+fi"
+    },
+    {
+      "sha": "28f2c44946f698f3b9a15c29f174cca8337195e4",
+      "filename": "test/shell.d/t2-repo-signature-test.sh",
+      "status": "added",
+      "additions": 235,
+      "deletions": 0,
+      "changes": 235,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5b09c4e9d53330953702744b272cf4103e469ecf/test%2Fshell.d%2Ft2-repo-signature-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5b09c4e9d53330953702744b272cf4103e469ecf/test%2Fshell.d%2Ft2-repo-signature-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-repo-signature-test.sh?ref=5b09c4e9d53330953702744b272cf4103e469ecf",
+      "patch": "@@ -0,0 +1,235 @@\n+#!/bin/bash\n+# Guards around package-repository signature policy:\n+#\n+# 1. install/hardware/pacman.sh must never re-add a repository that disables\n+#    signature verification outright, and must arm verification for the\n+#    t2linux repository with the pinned upstream signing key.\n+# 2. bin/omarchy-upgrade-to-quattro may write the unsigned-package override\n+#    only to bootstrap the keyring, and must drop it before any further\n+#    transaction in the upgrade.\n+\n+set -euo pipefail\n+\n+ROOT=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../..\" && pwd)\"\n+# shellcheck source=shell.d/base-test.sh\n+source \"$ROOT/test/shell.d/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+# ---------------------------------------------------------------- T2 stanza\n+\n+fail_guard() {\n+  fail \"$1\" \"${2-}\"\n+}\n+\n+# No repository anywhere in the tree may switch verification off outright.\n+# install/hardware/pacman.sh is exempt from the text scan because it must\n+# mention SigLevel = Never to reconcile pre-arming installs (comments, the\n+# detection gate, and the sed that replaces the line); its appended stanza is\n+# asserted separately below.\n+if grep -rn 'SigLevel = Never' \\\n+     --exclude=pacman.sh \"$ROOT/install\" \"$ROOT/default\" \"$ROOT/bin\" 2>/dev/null; then\n+  fail_guard \"no repository stanza disables signature verification outright\"\n+fi\n+\n+# The stanza pacman.sh appends must itself be the armed policy: check the\n+# heredoc body rather than the whole file.\n+if sed -n '/cat >> \"\\$t2_pacman_conf\"/,/^EOF$/p' \"$ROOT/install/hardware/pacman.sh\" |\n+     grep -q 'SigLevel = Never'; then\n+  fail_guard \"the appended T2 stanza never disables signature verification\"\n+fi\n+sed -n '/cat >> \"\\$t2_pacman_conf\"/,/^EOF$/p' \"$ROOT/install/hardware/pacman.sh\" |\n+  grep -q 'SigLevel = PackageOptional DatabaseNever' ||\n+  fail_guard \"the appended T2 stanza arms verification\"\n+pass \"no repository stanza disables signature verification outright\"\n+\n+mock_bin=\"$test_tmp/bin\"\n+mkdir -p \"$mock_bin\"\n+\n+# A T2 machine reports the Apple T2 PCI vendor:device ids.\n+cat >\"$mock_bin/lspci\" <<'SH'\n+#!/bin/bash\n+printf '00:1f.0 Communication controller [106b:1801]\\n'\n+SH\n+\n+# Record pacman-key usage; validate every key argument against the pinned\n+# fingerprint so a drift or typo cannot silently re-point trust.\n+cat >\"$mock_bin/pacman-key\" <<SH\n+#!/bin/bash\n+printf '%s\\n' \"\\$*\" >>\"$test_tmp/pacman-key-calls\"\n+for arg in \"\\$@\"; do\n+  case \"\\$arg\" in\n+    [0-9A-F]*) [[ \\$arg == 8BE1FEE14302371DEF6F910A0E5877AC225D1980 ]] ||\n+      { echo \"unexpected key: \\$arg\" >&2; exit 1; } ;;\n+  esac\n+done\n+exit 0\n+SH\n+\n+chmod +x \"$mock_bin/\"*\n+\n+conf=\"$test_tmp/pacman.conf\"\n+printf '[options]\\nHoldPkg = pacman glibc\\n' >\"$conf\"\n+\n+run_t2_repo_setup() {\n+  PATH=\"$mock_bin:$PATH\" OMARCHY_T2_PACMAN_CONF=\"$conf\" \\\n+    bash \"$ROOT/install/hardware/pacman.sh\"\n+}\n+\n+run_t2_repo_setup\n+\n+grep -q '^\\[arch-mact2\\]' \"$conf\" ||\n+  fail_guard \"the T2 repository stanza is written for T2 hardware\" \"$(cat \"$conf\")\"\n+grep -q '^SigLevel = PackageOptional DatabaseNever$' \"$conf\" ||\n+  fail_guard \"the T2 stanza arms verification instead of disabling it\" \"$(cat \"$conf\")\"\n+grep -q 'SigLevel = Never' \"$conf\" &&\n+  fail_guard \"the T2 stanza never carries the old disable-verification line\"\n+grep -q 'keyserver.ubuntu.com' \"$test_tmp/pacman-key-calls\" ||\n+  fail_guard \"the pinned t2linux key is imported from a keyserver\" \"$(cat \"$test_tmp/pacman-key-calls\")\"\n+grep -q -- '--lsign-key' \"$test_tmp/pacman-key-calls\" ||\n+  fail_guard \"the imported t2linux key is locally signed\" \"$(cat \"$test_tmp/pacman-key-calls\")\"\n+pass \"the T2 stanza arms verification and pins the upstream signing key\"\n+\n+# A second run must not append a duplicate stanza.\n+run_t2_repo_setup\n+[[ $(grep -c '^\\[arch-mact2\\]' \"$conf\") == 1 ]] ||\n+  fail_guard \"the T2 stanza is idempotent\" \"$(cat \"$conf\")\"\n+pass \"the T2 stanza is idempotent\"\n+\n+# An unusable keyserver must refuse to enable the repository rather than fall\n+# back to an unsigned stanza: failing the install is safer than silently\n+# running an unauthenticated repository as root.\n+cat >\"$mock_bin/pacman-key\" <<'SH'\n+#!/bin/bash\n+exit 1\n+SH\n+chmod +x \"$mock_bin/pacman-key\"\n+\n+conf2=\"$test_tmp/pacman-fail.conf\"\n+printf '[options]\\n' >\"$conf2\"\n+if PATH=\"$mock_bin:$PATH\" OMARCHY_T2_PACMAN_CONF=\"$conf2\" \\\n+    bash \"$ROOT/install/hardware/pacman.sh\" 2>/dev/null; then\n+  fail_guard \"a failed key import refuses to enable the arch-mact2 repository\"\n+fi\n+grep -q '^\\[arch-mact2\\]' \"$conf2\" &&\n+  fail_guard \"a failed key import leaves no repository stanza behind\"\n+pass \"a failed key import refuses to enable the arch-mact2 repository\"\n+\n+# Installs that predate signature arming already carry the stanza with\n+# SigLevel = Never. The script must reconcile those in place -- import the\n+# key and upgrade the policy -- rather than skipping them because the stanza\n+# exists.\n+cat >\"$mock_bin/pacman-key\" <<SH\n+#!/bin/bash\n+printf '%s\\n' \"\\$*\" >>\"$test_tmp/pacman-key-calls\"\n+for arg in \"\\$@\"; do\n+  case \"\\$arg\" in\n+    [0-9A-F]*) [[ \\$arg == 8BE1FEE14302371DEF6F910A0E5877AC225D1980 ]] ||\n+      { echo \"unexpected key: \\$arg\" >&2; exit 1; } ;;\n+  esac\n+done\n+exit 0\n+SH\n+chmod +x \"$mock_bin/pacman-key\"\n+\n+conf3=\"$test_tmp/pacman-legacy.conf\"\n+cat >\"$conf3\" <<'EOF'\n+[options]\n+HoldPkg = pacman glibc\n+\n+[arch-mact2]\n+Server = https://github.com/NoaHimesaka1873/arch-mact2-mirror/releases/download/release\n+SigLevel = Never\n+EOF\n+: >\"$test_tmp/pacman-key-calls\"\n+\n+run_t2_repo_setup_with() { # $1 = conf path\n+  PATH=\"$mock_bin:$PATH\" OMARCHY_T2_PACMAN_CONF=\"$1\" \\\n+    bash \"$ROOT/install/hardware/pacman.sh\"\n+}\n+\n+run_t2_repo_setup_with \"$conf3\"\n+\n+grep -q '^SigLevel = PackageOptional DatabaseNever$' \"$conf3\" ||\n+  fail_guard \"a legacy Never stanza is upgraded in place\" \"$(cat \"$conf3\")\"\n+grep -q 'SigLevel = Never' \"$conf3\" &&\n+  fail_guard \"the legacy Never line is gone after reconciliation\"\n+[[ $(grep -c '^\\[arch-mact2\\]' \"$conf3\") == 1 ]] ||\n+  fail_guard \"reconciliation does not duplicate the stanza\"\n+grep -q -- '--lsign-key' \"$test_tmp/pacman-key-calls\" ||\n+  fail_guard \"reconciliation imports and signs the pinned key\" \"$(cat \"$test_tmp/pacman-key-calls\")\"\n+pass \"a legacy Never stanza is reconciled in place\"\n+\n+# A failed key import during reconciliation cannot fix the machine, but it\n+# must also not break it: the stanza keeps working exactly as before and the\n+# script exits zero so the hardware stage continues.\n+cat >\"$mock_bin/pacman-key\" <<'SH'\n+#!/bin/bash\n+exit 1\n+SH\n+chmod +x \"$mock_bin/pacman-key\"\n+cp \"$conf3\" \"$test_tmp/pacman-legacy-fail.conf\"\n+sed -i 's/^SigLevel = PackageOptional DatabaseNever$/SigLevel = Never/' \"$test_tmp/pacman-legacy-fail.conf\"\n+\n+if ! PATH=\"$mock_bin:$PATH\" OMARCHY_T2_PACMAN_CONF=\"$test_tmp/pacman-legacy-fail.conf\" \\\n+    bash \"$ROOT/install/hardware/pacman.sh\" 2>/dev/null; then\n+  fail_guard \"a failed reconciliation import does not fail the hardware stage\"\n+fi\n+grep -q '^SigLevel = Never$' \"$test_tmp/pacman-legacy-fail.conf\" ||\n+  fail_guard \"a failed reconciliation leaves the working stanza untouched\"\n+pass \"a failed reconciliation import leaves the machine working as it was\"\n+\n+# ------------------------------------------------------------ quattro override\n+\n+quattro=\"$ROOT/bin/omarchy-upgrade-to-quattro\"\n+\n+# The override exists only as a keyring bootstrap: it may be written, but the\n+# script must drop it again before any further transaction.\n+grep -q 'SigLevel = Optional TrustAll' \"$quattro\" ||\n+  fail_guard \"the quattro bootstrap override is still written for the keyring install\"\n+grep -q 'require_signed_omarchy_repo()' \"$quattro\" ||\n+  fail_guard \"quattro defines the override removal step\"\n+grep -q 'SigLevel = Optional TrustAll' \"$quattro\" &&\n+  ! sed -n '/^require_signed_omarchy_repo()/,/^}/p' \"$quattro\" |\n+      grep -q '/\\^SigLevel = Optional TrustAll\\$/d' &&\n+  fail_guard \"the removal step deletes the bootstrap override line\"\n+\n+# The removal must run immediately after the keyring install, before any\n+# package-bearing step.\n+keyring_line=$(grep -n '^install_keyrings$' \"$quattro\" | cut -d: -f1)\n+removal_line=$(grep -n '^require_signed_omarchy_repo$' \"$quattro\" | cut -d: -f1)\n+next_line=$((keyring_line + 1))\n+[[ $removal_line == \"$next_line\" ]] ||\n+  fail_guard \"the override removal runs immediately after install_keyrings\" \\\n+    \"install_keyrings at $keyring_line, removal at $removal_line\"\n+pass \"quattro drops the bootstrap override right after the keyring install\"\n+\n+# ---------------------------------------------------------------- migration\n+\n+# Normal updates run migrations, not the hardware installer, so existing T2\n+# machines are reconciled by a migration with the same fingerprint and the\n+# same replacement line as the installer.\n+migration=\"$ROOT/migrations/1787720000.sh\"\n+\n+grep -q '8BE1FEE14302371DEF6F910A0E5877AC225D1980' \"$migration\" ||\n+  fail_guard \"the migration pins the same t2linux signing key\"\n+grep -q 'keyserver.ubuntu.com' \"$migration\" ||\n+  fail_guard \"the migration imports the key from the keyserver\"\n+grep -q -- '--lsign-key' \"$migration\" ||\n+  fail_guard \"the migration locally signs the imported key\"\n+grep -q 'SigLevel = PackageOptional DatabaseNever' \"$migration\" ||\n+  fail_guard \"the migration upgrades the stanza to the armed policy\"\n+grep -q \"arch_mact2_never='SigLevel = Never'\" \"$migration\" &&\n+  grep -q '\\${arch_mact2_never}' \"$migration\" &&\n+  grep -q 'if .*pacman-key' \"$migration\" ||\n+  fail_guard \"the migration is gated on a legacy Never stanza and a successful import\"\n+\n+# Self-detecting and idempotent by construction: the Never check gates the\n+# sed, so a rerun after a successful upgrade (or on a machine without the\n+# stanza) never touches pacman.conf again.\n+never_line=$(grep -n 'arch_mact2_never}' \"$migration\" | cut -d: -f1 | head -1)\n+sed_line=$(grep -n 'sed -i' \"$migration\" | cut -d: -f1 | head -1)\n+[[ -n $never_line && -n $sed_line && $sed_line -gt $never_line ]] ||\n+  fail_guard \"the migration only mutates pacman.conf under the Never gate\"\n+pass \"the migration reconciles legacy T2 installs with the same pinning\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5447952921",
+      "html_url": "https://github.com/omacom/omarchy/pull/8709#issuecomment-5447952921",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8709",
+      "id": 5447952921,
+      "node_id": "IC_kwDOO0Cobs8AAAABRLkqGQ",
+      "user": {
+        "login": "rmacy",
+        "id": 829581,
+        "node_id": "MDQ6VXNlcjgyOTU4MQ==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/829581?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rmacy",
+        "html_url": "https://github.com/rmacy",
+        "followers_url": "https://api.github.com/users/rmacy/followers",
+        "following_url": "https://api.github.com/users/rmacy/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rmacy/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rmacy/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rmacy/subscriptions",
+        "organizations_url": "https://api.github.com/users/rmacy/orgs",
+        "repos_url": "https://api.github.com/users/rmacy/repos",
+        "events_url": "https://api.github.com/users/rmacy/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rmacy/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-28T03:15:49Z",
+      "updated_at": "2026-08-28T03:15:49Z",
+      "body": "Addressed both review comments in 5b09c4e9:\n\n**1. Signature-stripping caveat (line 14)** \u2014 correct. `PackageOptional` rejects a present-but-invalid signature; it does not stop a compromised repository from simply not publishing signatures. The comment now states the guarantee precisely (present-but-invalid rejected; stripping excluded only once upstream signs consistently and the policy tightens to `PackageRequired`). The honest bottom line is unchanged and stated in the PR body: until upstream signs, this repository is accepted without authentication.\n\n**2. Existing T2 installs skipped by the stanza guard (line 29)** \u2014 real defect, and the more important of the two: every T2 machine installed before this change already carries `[arch-mact2]` with `SigLevel = Never`, and normal updates run migrations rather than the hardware installer, so the original version only fixed fresh installs. Now:\n\n- `install/hardware/pacman.sh` reconciles in place: if the stanza exists with `SigLevel = Never`, the pinned key is imported/locally signed and the line is upgraded to `PackageOptional DatabaseNever`. A failed import there is non-fatal (packages are unsigned either way, so the machine keeps working and a later retry can succeed) \u2014 asymmetric with the fresh-install path, which still fails closed because an install without its kernel cannot proceed anyway.\n- New `migrations/1787720000.sh` performs the same gated reconciliation for the installed base via the normal update path. Self-detecting and idempotent: it acts only when the stanza exists AND still says `Never`, and touches nothing when the key import fails.\n\nTests extended to cover both: legacy-stanza reconciliation (in-place upgrade, no duplicate stanza, key imported and signed), reconciliation failure non-fatality, and migration guards (pinned fingerprint, keyserver, lsign, armed policy, Never-gated mutation). Full suite green; `upgrade-to-quattro-test.sh` 22/22 unchanged.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5447952921/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5047558890,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLNui6g",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nHardens package verification for T2 systems and the Quattro upgrade path.\n\n**Changes:**\n- Imports and trusts the pinned T2 signing key.\n- Enables optional T2 package-signature verification.\n- Removes Quattro\u2019s unsigned bootstrap override after keyring installation.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 2 out of 3 changed files in this pull request and generated 1 comment.\n\n| File | Description |\n| ---- | ----------- |\n| `install/hardware/pacman.sh` | Arms T2 package verification and imports its signing key. |\n| `bin/omarchy-upgrade-to-quattro` | Restores signed Omarchy repository enforcement after bootstrap. |\n| `test/shell.d/t2-repo-signature-test.sh` | Adds signature-policy and upgrade-ordering checks. |\n\n\n\n\n<details>\n<summary>Suppressed comments (1)</summary>\n\n**install/hardware/pacman.sh:29**\n* This guard leaves the vulnerable policy unchanged on existing T2 installations: their config already contains `[arch-mact2]`, so the key import and `SigLevel` replacement are both skipped. Normal updates run migrations (`bin/omarchy-update:48`), not the hardware installer, and even a manual hardware reapply takes this branch. Add a migration/reconciliation path that imports and locally signs the pinned key before replacing the old `SigLevel = Never` entry.\n```\n  if ! grep -q '^\\[arch-mact2\\]' \"$t2_pacman_conf\"; then\n```\n</details>\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8709#pullrequestreview-5047558890",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8709",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8709#pullrequestreview-5047558890"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8709"
+        }
+      },
+      "submitted_at": "2026-08-28T02:59:59Z",
+      "commit_id": "28d7a5810a562fae5d96b8aa21061ff34ed2332b"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3877584508",
+      "pull_request_review_id": 5047558890,
+      "id": 3877584508,
+      "node_id": "PRRC_kwDOO0Cobs7nHz58",
+      "diff_hunk": "@@ -1,12 +1,43 @@\n # Hardware-specific pacman repository extensions that must survive the final\n # pacman.conf restore.\n+#\n+# The t2linux repository publishes no package signatures today, and the\n+# database signature it does publish is stale (it verifies as BAD against the\n+# current database), so full enforcement would refuse every T2 package and\n+# break the install. The stanza below arms verification as far as the current\n+# upstream state allows instead of leaving it off outright:\n+#\n+# - PackageOptional verifies any package that carries a signature the moment\n+#   upstream starts signing, while still accepting the unsigned packages\n+#   shipped today. A present-but-invalid signature is rejected, so a later\n+#   compromise cannot rely on swapping signatures past an already-imported\n+#   key.",
+      "path": "install/hardware/pacman.sh",
+      "commit_id": "28d7a5810a562fae5d96b8aa21061ff34ed2332b",
+      "original_commit_id": "28d7a5810a562fae5d96b8aa21061ff34ed2332b",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "`PackageOptional` does not prevent signature stripping: a compromised repository can remove a valid signature and pacman will accept the resulting unsigned package. State that signatures are verified only while present; anti-stripping is possible only after upstream signs consistently and this policy becomes `PackageRequired`.\n\nThis issue also appears on line 29 of the same file.",
+      "created_at": "2026-08-28T02:59:59Z",
+      "updated_at": "2026-08-28T02:59:59Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8709#discussion_r3877584508",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8709",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3877584508"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8709#discussion_r3877584508"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8709"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3877584508/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 10,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 14,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

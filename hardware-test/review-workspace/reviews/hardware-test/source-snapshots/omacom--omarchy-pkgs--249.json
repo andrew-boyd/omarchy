@@ -1,0 +1,110 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+      "state": "open"
+    },
+    {
+      "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+      "state": "open",
+      "updated_at": "2026-09-18T19:18:24Z"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 249,
+  "checked_at": "2026-09-21T11:56:17.582529+00:00",
+  "title": "Add snd-hda-macbookpro-dkms for pre-T2 MacBook and iMac speakers",
+  "author": "j7j7",
+  "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+  "base_sha": "28a4cfc6626801398b5748e0793509f5a19f6aeb",
+  "base_ref": "master",
+  "updated_at": "2026-09-18T19:18:24Z",
+  "state": "open",
+  "body": "## Summary\n- Adds `snd-hda-macbookpro-dkms` for the Cirrus CS8409 Apple speaker path ([davidjo/snd_hda_macbookpro](https://github.com/davidjo/snd_hda_macbookpro)).\n- Includes @shawnyeager's packaging from #155 (full tree, `wget`/`patch` deps, correct `PACKAGE_NAME` install path) and widens `pkgdesc` / comments for **2017\u20132019 iMacs** as well as 2016\u20132017 MacBook Pros.\n- Pairs with the omarchy install hook PR that detects `MacBookPro13,x` / `14,x` and `iMac18,x` / `iMac19,x`.\n\nPins commit `6c324f6` (verified on MacBookPro14,3 / linux 7.1.8). Same Apple CS8409 path applies to iMacs such as iMac18,3 (subsystem `0x106b1000`).\n\n`source: local` so an AUR sync does not replace it. Provides/conflicts with `snd-hda-macbookpro-dkms-git`.\n\n## Test plan\n- [ ] Package builds in omarchy-pkgs pipeline\n- [ ] On a CS8409 Mac: `omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms` \u2192 DKMS install succeeds \u2192 reboot \u2192 speakers work\n\nCan close #155 in favor of this once reviewed.\n\nMade with [Cursor](https://cursor.com)",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2a9719d3fbb0a9054048dda881eae277703d01e2",
+      "filename": "pkgbuilds/snd-hda-macbookpro-dkms/.omarchy/package.json",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/a346e20667fd163eed792f74d3523b34c5ff6df4/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2F.omarchy%2Fpackage.json",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/a346e20667fd163eed792f74d3523b34c5ff6df4/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2F.omarchy%2Fpackage.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2F.omarchy%2Fpackage.json?ref=a346e20667fd163eed792f74d3523b34c5ff6df4",
+      "patch": "@@ -0,0 +1,3 @@\n+{\n+  \"source\": \"local\"\n+}"
+    },
+    {
+      "sha": "328fcea7c7e67162add71488232f6fb428e92f18",
+      "filename": "pkgbuilds/snd-hda-macbookpro-dkms/PKGBUILD",
+      "status": "added",
+      "additions": 45,
+      "deletions": 0,
+      "changes": 45,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/a346e20667fd163eed792f74d3523b34c5ff6df4/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/a346e20667fd163eed792f74d3523b34c5ff6df4/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fsnd-hda-macbookpro-dkms%2FPKGBUILD?ref=a346e20667fd163eed792f74d3523b34c5ff6df4",
+      "patch": "@@ -0,0 +1,45 @@\n+# Maintainer: Omarchy <https://omarchy.org>\n+# Upstream: https://github.com/davidjo/snd_hda_macbookpro\n+#\n+# The AUR package (snd-hda-macbookpro-dkms-git) copies only a subset of\n+# the tree and does not depend on wget, which PRE_BUILD needs to fetch\n+# matching kernel sources. This package installs the whole driver and\n+# pins the commit verified on MacBookPro14,3 / linux 7.1.8. The same\n+# Apple CS8409 path covers 2017\u20132019 iMacs (e.g. iMac18,3 subsystem\n+# 0x106b1000).\n+\n+_pkgbase=snd-hda-macbookpro\n+# Must match PACKAGE_NAME in upstream dkms.conf. The AUR dest uses hyphens\n+# (snd-hda-macbookpro-0.1); Arch's alpm hook then runs\n+# `dkms install snd-hda-macbookpro/0.1`, which exits 7 because PACKAGE_NAME\n+# is snd_hda_macbookpro. omarchy-pkg-add relies on that hook.\n+_srcname=snd_hda_macbookpro\n+pkgname=${_pkgbase}-dkms\n+pkgver=0.1\n+pkgrel=3\n+pkgdesc=\"DKMS driver for Cirrus CS8409 HDA on 2016\u20132017 MacBook Pros and 2017\u20132019 iMacs\"\n+arch=('x86_64')\n+url=\"https://github.com/davidjo/snd_hda_macbookpro\"\n+license=('GPL-2.0-only')\n+depends=('dkms' 'wget' 'patch')\n+makedepends=('git')\n+optdepends=('linux-headers: build against the Arch kernel')\n+provides=('snd-hda-macbookpro-dkms-git')\n+conflicts=('snd-hda-macbookpro-dkms-git')\n+# 6c324f6: dkms.conf for current kernels; 6.17+ install path.\n+_commit=6c324f6c9262faa853fdd74d798c5686937a9d0f\n+source=(\"git+https://github.com/davidjo/snd_hda_macbookpro.git#commit=${_commit}\")\n+sha256sums=('SKIP')\n+\n+package() {\n+    local dest=\"${pkgdir}/usr/src/${_srcname}-${pkgver}\"\n+\n+    install -dm755 \"$dest\"\n+    cp -a snd_hda_macbookpro/. \"$dest/\"\n+    rm -rf \"$dest/.git\" \"$dest/build\"\n+\n+    # PRE_BUILD runs install.cirrus.driver.sh; the AUR package left these 0644.\n+    chmod 755 \"$dest\"/install.cirrus.driver.sh \\\n+              \"$dest\"/install.cirrus.driver.pre617.sh \\\n+              \"$dest\"/dkms.sh\n+}"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5511880391",
+      "html_url": "https://github.com/omacom/omarchy-pkgs/pull/249#issuecomment-5511880391",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/249",
+      "id": 5511880391,
+      "node_id": "IC_kwDOPjeh9M8AAAABSIiexw",
+      "user": {
+        "login": "ari-ahm",
+        "id": 154451491,
+        "node_id": "U_kgDOCTS-Iw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/154451491?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ari-ahm",
+        "html_url": "https://github.com/ari-ahm",
+        "followers_url": "https://api.github.com/users/ari-ahm/followers",
+        "following_url": "https://api.github.com/users/ari-ahm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ari-ahm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ari-ahm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ari-ahm/subscriptions",
+        "organizations_url": "https://api.github.com/users/ari-ahm/orgs",
+        "repos_url": "https://api.github.com/users/ari-ahm/repos",
+        "events_url": "https://api.github.com/users/ari-ahm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ari-ahm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-02T15:17:53Z",
+      "updated_at": "2026-09-02T15:22:44Z",
+      "body": "Heads-up on `PRE_BUILD` before this lands, because as written it ships a\n~151 MB download to every affected user on **every kernel update**.\n\n`package()` copies the whole tree and removes only `.git` and `build/`, so\nupstream's `dkms.conf` ships verbatim \u2014 including:\n\n```\nPRE_BUILD=\"install.cirrus.driver.sh -k $kernelver --dkms\"\n```\n\nThat script is what `wget` is a dependency for:\n\n```\nwget -c https://cdn.kernel.org/pub/linux/kernel/v$major_version.x/linux-$kernel_version.tar.xz -P $build_dir\n```\n\nFor linux-7.1.9 that's 158,435,316 bytes, of which it uses **2,490,543** \u2014 only\n`sound/hda`. Because `AUTOINSTALL=\"yes\"`, it re-runs on every kernel bump, per\nmachine. Offline, behind a proxy, on a metered link, or on a box with a local\npacman mirror but no general internet, the DKMS build fails inside the pacman\ntransaction and the user's speakers go silent again after a routine update.\n\n### This is avoidable, and omarchy-pkgs is the ideal place to avoid it\n\nEverything `PRE_BUILD` does is deterministic and kernel-source-only: fetch\n`sound/hda`, swap in upstream's cut-down `makefiles/`, copy the `patch_cirrus/`\nheaders, apply `patch_cs8409.{c,h}.diff`. None of it needs to happen on the\nuser's machine.\n\nSince omarchy-pkgs builds packages centrally, doing it in `prepare()` means the\ntarball is fetched **once in your pipeline**, not once per user per kernel. Ship\nthe prepared tree and drop `PRE_BUILD`; `dkms.conf` then reduces to:\n\n```\nMAKE[0]=\"make KERNELRELEASE=${kernelver}\"\nAUTOINSTALL=\"yes\"\n```\n\nDKMS rebuilds run `make` and nothing else, and `wget` leaves `depends`.\n\nRough shape \u2014 add the kernel tarball to `source=()` with `noextract`, then:\n\n```bash\nprepare() {\n  cd \"$srcdir/snd_hda_macbookpro\"\n  install -d build\n  tar --strip-components=2 -xf \"$srcdir/linux-${_ksrcver}.tar.xz\" \\\n      -C build \"linux-${_ksrcver}/sound/hda\"\n  # upstream's cut-down Makefiles + patch_cirrus headers, then:\n  cd build/hda\n  patch -b -p1 <\"$srcdir/snd_hda_macbookpro/patch_cs8409.c.diff\"\n  patch -b -p1 <\"$srcdir/snd_hda_macbookpro/patch_cs8409.h.diff\"\n}\n```\n\nA working version is at\n**https://github.com/ari-ahm/snd-hda-macbookpro-dkms** (GPL-2.0-only, same\n`_commit` 6c324f6 you pin). It vendors its sources, which suits a local build\nbut probably isn't what you want in-repo \u2014 the `prepare()` and `dkms.conf` are\nthe transferable parts. Take, adapt or ignore; no attribution needed.\n\nVerified under `unshare -n` with no network interfaces: both the DKMS rebuild\nand `makepkg` itself succeed with cdn.kernel.org unreachable.\n\nThere's a second benefit for a distro package: patching at build time means a\nconflict against a newer kernel fails your pipeline, instead of silently\nbreaking users' audio on a kernel update months later. The two diffs currently\napply to 7.1.9 with offsets and some fuzz, so that will matter eventually.\n\n### Two smaller things\n\n- The header comment says the AUR package *\"does not depend on wget\"*. It does \u2014\n  `snd-hda-macbookpro-dkms-git` `0.1-3` lists `wget` in `depends`. The other\n  reasons for a separate package still hold (partial tree, exec bits, the\n  `PACKAGE_NAME` mismatch making `dkms install` exit 7), so only the premise is\n  off.\n- `optdepends=('linux-headers: ...')` makes headers optional, which reproduces\n  the silent failure described in omarchy#8285: with no headers, Arch's DKMS\n  hook globs `usr/lib/modules/*/build`, matches nothing, builds nothing and\n  exits 0, leaving `dkms status` empty and no error anywhere. It works today\n  only because the install hook adds `linux-headers` separately. A hard\n  `depends` would make the package correct on its own.\n\n### Coverage data point\n\nConfirmed working on **MacBookPro14,1** (codec subsystem `0x106b3300`), Omarchy\n4.0.2, linux 7.1.9-arch1-2, gcc 16.2.1 \u2014 no source changes beyond upstream's own\ntwo diffs \u2014 alongside the 14,3 and iMac18,3 already verified. Upstream handles `0x106b3300` and `0x106b3600` in the\nsame branch, so 13,1/14,1/14,2 come together.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5511880391/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

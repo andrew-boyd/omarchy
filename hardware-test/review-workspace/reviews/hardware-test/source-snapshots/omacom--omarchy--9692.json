@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9692",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+      "state": "open"
+    },
+    {
+      "head_sha": "7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:19Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9692,
+  "checked_at": "2026-09-21T11:56:39.143964+00:00",
+  "title": "Use DKMS for Broadcom wl across kernel updates",
+  "author": "peterholko",
+  "head_sha": "7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:19Z",
+  "state": "open",
+  "body": "Fixes #9386\n\n## Summary\n\n- replace the kernel-specific `broadcom-wl` package in the offline package set with `broadcom-wl-dkms`\n- install the DKMS variant for detected BCM4360 and BCM4331 hardware\n\n`fix-bcm43xx.sh` already installs `dkms` and `linux-headers`, so the module can rebuild when the kernel changes instead of remaining tied to one kernel package.\n\n## Testing\n\n- `bash -n install/hardware/fix-bcm43xx.sh`\n- verified both package-selection sites use `broadcom-wl-dkms`\n- `git diff --check`",
+  "draft": false,
+  "files": [
+    {
+      "sha": "8d1bd8f1fb0a47674b49be81c33fda5b34ccd205",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7e5cb68316b096cc66669e5c6b78bb21c6129c55/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7e5cb68316b096cc66669e5c6b78bb21c6129c55/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+      "patch": "@@ -6,5 +6,5 @@ pci_info=$(lspci -nn)\n \n if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n   echo \"BCM4360 / BCM4331 detected\"\n-  omarchy-pkg-add broadcom-wl dkms linux-headers\n+  omarchy-pkg-add broadcom-wl-dkms dkms linux-headers\n fi"
+    },
+    {
+      "sha": "3214657a66307a5d629b2b99ddaa6ae84524555f",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7e5cb68316b096cc66669e5c6b78bb21c6129c55/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7e5cb68316b096cc66669e5c6b78bb21c6129c55/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=7e5cb68316b096cc66669e5c6b78bb21c6129c55",
+      "patch": "@@ -5,7 +5,7 @@ autoconf-archive\n asusctl\n base\n base-devel\n-broadcom-wl\n+broadcom-wl-dkms\n btrfs-progs\n dkms\n egl-wayland"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

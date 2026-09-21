@@ -1,0 +1,1057 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6928",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-trackpad"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 6928,
+  "checked_at": "2026-09-21T11:57:28.705923+00:00",
+  "title": "Enable palm rejection on T2 MacBooks",
+  "author": "marashiai",
+  "head_sha": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:44Z",
+  "state": "open",
+  "body": "## Summary\n\n- classify the built-in T2 MacBook touchpad as internally integrated\n- install the udev rule during fresh T2 hardware setup\n- migrate existing T2 installations and request a reboot\n- cover installation, migration, idempotence, and non-T2 exclusion in tests\n\n## Why\n\nThe `t2bce` driver exposes the built-in keyboard and trackpad through a virtual USB bus. systemd therefore labels the touchpad as externally integrated, so libinput does not pair it with the internal keyboard for disable-while-typing. Palm contact can then scroll or move the pointer while typing.\n\nThe rule is limited to Apple `05ac:0340` event devices already identified as touchpads and changes only `ID_INPUT_TOUCHPAD_INTEGRATION` to `internal`.\n\n## Validation\n\n- `udevadm verify default/udev/apple-t2-touchpad.rules`\n- `bash -n install/hardware/apple/fix-t2.sh migrations/1786776556.sh test/shell.d/t2-hardware-test.sh`\n- `bash test/shell.d/t2-hardware-test.sh`\n- `git diff --check`\n- verified on a 2019 Intel MacBook Pro with T2 (`linux-t2` 7.1.8): udev changed the built-in touchpad from `external` to `internal`\n\n`./test/shell` reaches and passes the added T2 coverage. Its unrelated environment-dependent checks require the separate `omarchy-pkgs` checkout; the runtime smoke test also conflicts with the active desktop shell.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f10b39c1973b49d187fe1b6c7367031247683184",
+      "filename": "default/udev/apple-t2-touchpad.rules",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a18b7615ea698accc3bcde0c64551b7a020ce5e0/default%2Fudev%2Fapple-t2-touchpad.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a18b7615ea698accc3bcde0c64551b7a020ce5e0/default%2Fudev%2Fapple-t2-touchpad.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Fapple-t2-touchpad.rules?ref=a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "patch": "@@ -0,0 +1,7 @@\n+# The T2 BCE driver exposes the built-in MacBook touchpad over a virtual USB\n+# bus, causing systemd's input_id helper to classify it as external. Mark only\n+# the touchpad interface as internal so libinput can enable disable-while-typing.\n+#\n+# The product ID varies by model: these are every WELLSPRINGT2 keyboard/trackpad\n+# ID hid-apple binds to, which is the device the trackpad hangs off.\n+ACTION==\"add|change\", SUBSYSTEM==\"input\", KERNEL==\"event*\", ENV{ID_VENDOR_ID}==\"05ac\", ENV{ID_MODEL_ID}==\"0278|027[a-f]|0280|0340\", ENV{ID_INPUT_TOUCHPAD}==\"1\", ENV{ID_INTEGRATION}=\"internal\", ENV{ID_INPUT_TOUCHPAD_INTEGRATION}=\"internal\""
+    },
+    {
+      "sha": "3ed895fe75fc020473036eebf5edbcd3c4f4f1fb",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a18b7615ea698accc3bcde0c64551b7a020ce5e0/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a18b7615ea698accc3bcde0c64551b7a020ce5e0/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "patch": "@@ -19,6 +19,11 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n     echo \"hci_bcm4377\"\n   } > /etc/modules-load.d/t2.conf\n \n+  # The virtual USB bus makes udev mistake the built-in touchpad for an\n+  # external one, preventing libinput from disabling it while typing.\n+  install -D -m 0644 \"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\" \\\n+    /etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n   # linux-t2 7.1.4 replaced the apple-bce driver with t2bce; t2bce_vhci is the\n   # virtual USB host controller the internal keyboard hangs off, and mkinitcpio\n   # pulls t2bce_core/t2bce_dma in via module dependencies."
+    },
+    {
+      "sha": "781adc1838ac93ead9165523294cf9a3c8c20fb5",
+      "filename": "migrations/1786776556.sh",
+      "status": "added",
+      "additions": 17,
+      "deletions": 0,
+      "changes": 17,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a18b7615ea698accc3bcde0c64551b7a020ce5e0/migrations%2F1786776556.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a18b7615ea698accc3bcde0c64551b7a020ce5e0/migrations%2F1786776556.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786776556.sh?ref=a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "patch": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then\n+  exit 0\n+fi\n+\n+sudo install -D -m 0644 \"$source_rule\" \"$rule\"\n+\n+# Libinput must reopen the device to pick up its new integration type.\n+omarchy-state set reboot-required"
+    },
+    {
+      "sha": "5b988e51857d879c24343ba5a047bc23e42d596c",
+      "filename": "test/shell.d/t2-hardware-test.sh",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a18b7615ea698accc3bcde0c64551b7a020ce5e0/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a18b7615ea698accc3bcde0c64551b7a020ce5e0/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-hardware-test.sh?ref=a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "patch": "@@ -7,6 +7,8 @@ source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n other_packages=\"$ROOT/install/omarchy-other.packages\"\n migration=\"$ROOT/migrations/1785944594.sh\"\n+touchpad_rule=\"$ROOT/default/udev/apple-t2-touchpad.rules\"\n+touchpad_migration=\"$ROOT/migrations/1786776556.sh\"\n \n grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep\"' \"$fix_t2\" ||\n   fail \"T2 setup installs the suspend kernel parameters\"\n@@ -20,6 +22,19 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"T2 setup leaves optional Touch Bar customization uninstalled\"\n ! grep -qx 'tiny-dfr' \"$other_packages\" ||\n   fail \"the ISO no longer caches tiny-dfr\"\n+grep -Fq 'ID_INPUT_TOUCHPAD_INTEGRATION}=\"internal\"' \"$touchpad_rule\" ||\n+  fail \"T2 touchpad rule enables libinput disable-while-typing\"\n+grep -Fq 'ID_INTEGRATION}=\"internal\"' \"$touchpad_rule\" ||\n+  fail \"T2 touchpad rule sets systemd's canonical integration property\"\n+grep -Fq 'ID_VENDOR_ID}==\"05ac\"' \"$touchpad_rule\" &&\n+  grep -Fq 'ID_MODEL_ID}==\"0278|027[a-f]|0280|0340\"' \"$touchpad_rule\" &&\n+  grep -Fq 'ID_INPUT_TOUCHPAD}==\"1\"' \"$touchpad_rule\" ||\n+  fail \"T2 touchpad rule covers every T2 keyboard/trackpad and nothing else\"\n+grep -Fq 'install -D -m 0644' \"$fix_t2\" &&\n+  grep -Fq '99-omarchy-apple-t2-touchpad.rules' \"$fix_t2\" ||\n+  fail \"fresh T2 setup installs the touchpad integration rule with fixed permissions\"\n+grep -Fq '106b:180[12]' \"$touchpad_migration\" ||\n+  fail \"T2 touchpad migration is limited to T2 hardware\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n test_tmp=$(mktemp -d)"
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4943288334,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqSYDg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds support for correctly classifying Apple T2 MacBook touchpads as *internal* so libinput can enable disable-while-typing (palm rejection), for both fresh installs and existing systems via a migration.\n\n**Changes:**\n- Add a udev rule to mark the affected Apple T2 touchpad interface as internal.\n- Install the udev rule during fresh T2 setup and add a migration to apply it on existing T2 machines.\n- Extend the T2 hardware shell test to validate rule content and installation/migration gating.\n\n### Reviewed changes\n\nCopilot reviewed 4 out of 4 changed files in this pull request and generated 3 comments.\n\n| File | Description |\n| ---- | ----------- |\n| test/shell.d/t2-hardware-test.sh | Adds assertions ensuring the new udev rule and migration are present and properly scoped. |\n| migrations/1786776556.sh | New migration that installs the udev rule only on T2 hardware and marks reboot required. |\n| install/hardware/apple/fix-t2.sh | Installs the udev rule as part of the fresh T2 setup path. |\n| default/udev/apple-t2-touchpad.rules | New udev rule that tags the Apple T2 touchpad as internal for libinput behavior. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943288334",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943288334"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T07:47:39Z",
+      "commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81"
+    },
+    {
+      "id": 4943311973,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqT0ZQ",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 4 out of 4 changed files in this pull request and generated 2 comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (1)</summary>\n\n**migrations/1786776556.sh:3**\n* Consider using `grep -q` instead of redirecting grep output to `/dev/null` (e.g., `... | grep -q '106b:180[12]'`). It\u2019s clearer and avoids relying on redirection for control flow.\n```\nif ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943311973",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943311973"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T07:59:53Z",
+      "commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81"
+    },
+    {
+      "id": 4943314112,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqT8wA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 4 out of 4 changed files in this pull request and generated 1 comment.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**migrations/1786776556.sh:15**\n* Using `sudo` inside a migration can block or fail in non-interactive runs (e.g., when migrations are applied automatically). Prefer requiring the migration runner to execute as root and call `install` directly, or use `sudo -n` and fail with a clear message if elevation isn\u2019t available.\n```\nsudo install -D -m 0644 \"$source_rule\" \"$rule\"\n```\n**test/shell.d/t2-hardware-test.sh:32**\n* This reads the same small file three times and relies on `&&/||` chaining for control flow. Consider collapsing to a single assertion (e.g., one `grep -Fq` for a combined substring that includes all three properties, or grouping the multi-grep with `{ ...; } || fail ...`) to make the test easier to read and less error-prone.\n```\ngrep -Fq 'ID_VENDOR_ID}==\"05ac\"' \"$touchpad_rule\" &&\n  grep -Fq 'ID_MODEL_ID}==\"0340\"' \"$touchpad_rule\" &&\n  grep -Fq 'ID_INPUT_TOUCHPAD}==\"1\"' \"$touchpad_rule\" ||\n  fail \"T2 touchpad rule is limited to the affected Apple touchpad\"\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943314112",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943314112"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T08:00:53Z",
+      "commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733"
+    },
+    {
+      "id": 4943332864,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqVGAA",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?u=7196d3f3945c10a2af88f2c539688100809cf2da&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943332864",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943332864"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T08:13:38Z",
+      "commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733"
+    },
+    {
+      "id": 4943332885,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqVGFQ",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?u=7196d3f3945c10a2af88f2c539688100809cf2da&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943332885",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943332885"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T08:13:38Z",
+      "commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733"
+    },
+    {
+      "id": 4943332893,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqVGHQ",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?u=7196d3f3945c10a2af88f2c539688100809cf2da&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943332893",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943332893"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T08:13:38Z",
+      "commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733"
+    },
+    {
+      "id": 4943638671,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqnwjw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 4 out of 4 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**test/shell.d/t2-hardware-test.sh:37**\n* These assertions only inspect source text; they never execute either new installation path. In particular, the migration can fail to copy the rule, omit `reboot-required`, or lose idempotence/non-T2 behavior while this test still passes because it checks only the hardware-regex string. Add overridable target paths and execute the new migration with the existing `lspci`/`sudo` harness for T2, rerun, and non-T2 cases.\n```\ngrep -Fq 'install -D -m 0644' \"$fix_t2\" &&\n  grep -Fq '99-omarchy-apple-t2-touchpad.rules' \"$fix_t2\" ||\n  fail \"fresh T2 setup installs the touchpad integration rule with fixed permissions\"\ngrep -Fq '106b:180[12]' \"$touchpad_migration\" ||\n  fail \"T2 touchpad migration is limited to T2 hardware\"\n```\n**default/udev/apple-t2-touchpad.rules:7**\n* The PR description says this rule is limited to Apple `05ac:0340`, but this pattern also matches `0278`, `027a`\u2013`027f`, and `0280`. Please either narrow the rule to the documented device or update the description and validation to establish that the broader IDs are intentionally in scope; currently the claimed and implemented device scopes differ.\n```\nACTION==\"add|change\", SUBSYSTEM==\"input\", KERNEL==\"event*\", ENV{ID_VENDOR_ID}==\"05ac\", ENV{ID_MODEL_ID}==\"0278|027[a-f]|0280|0340\", ENV{ID_INPUT_TOUCHPAD}==\"1\", ENV{ID_INTEGRATION}=\"internal\", ENV{ID_INPUT_TOUCHPAD_INTEGRATION}=\"internal\"\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943638671",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#pullrequestreview-4943638671"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "submitted_at": "2026-08-15T10:19:47Z",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893402",
+      "pull_request_review_id": 4943288334,
+      "id": 3788893402,
+      "node_id": "PRRC_kwDOO0Cobs7h1eza",
+      "diff_hunk": "@@ -0,0 +1,4 @@\n+# The T2 BCE driver exposes the built-in MacBook touchpad over a virtual USB\n+# bus, causing systemd's input_id helper to classify it as external. Mark only\n+# the touchpad interface as internal so libinput can enable disable-while-typing.\n+ACTION==\"add|change\", SUBSYSTEM==\"input\", KERNEL==\"event*\", ENV{ID_VENDOR_ID}==\"05ac\", ENV{ID_MODEL_ID}==\"0340\", ENV{ID_INPUT_TOUCHPAD}==\"1\", ENV{ID_INPUT_TOUCHPAD_INTEGRATION}=\"internal\"",
+      "path": "default/udev/apple-t2-touchpad.rules",
+      "commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "`ENV{ID_INPUT_TOUCHPAD_INTEGRATION}=\"internal\"` is assignable and could still be overridden by later rules if any exist after this one (or by unexpected ordering). For a \u201cforce final value\u201d override, udev best practice is to use `:=` (final assignment) for properties you need to ensure stay set, e.g. `ENV{ID_INPUT_TOUCHPAD_INTEGRATION}:=\"internal\"`. This makes the override more robust and aligns with the intent of ensuring libinput sees the device as internal.",
+      "created_at": "2026-08-15T07:47:38Z",
+      "updated_at": "2026-08-15T07:47:39Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788893402",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893402"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788893402"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893402/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 4,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 4,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893412",
+      "pull_request_review_id": 4943288334,
+      "id": 3788893412,
+      "node_id": "PRRC_kwDOO0Cobs7h1ezk",
+      "diff_hunk": "@@ -19,6 +19,12 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n     echo \"hci_bcm4377\"\n   } > /etc/modules-load.d/t2.conf\n \n+  # The virtual USB bus makes udev mistake the built-in touchpad for an\n+  # external one, preventing libinput from disabling it while typing.\n+  mkdir -p /etc/udev/rules.d\n+  cp -f \"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\" \\",
+      "path": "install/hardware/apple/fix-t2.sh",
+      "commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Using `cp` here makes file mode/ownership dependent on `cp` behavior and the runtime umask. To ensure consistent permissions (and match the migration\u2019s approach), prefer `install -D -m 0644` to write into `/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules`. This reduces variability across environments and makes the fresh-install path consistent with the migration.",
+      "created_at": "2026-08-15T07:47:39Z",
+      "updated_at": "2026-08-15T07:47:39Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788893412",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893412"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788893412"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893412/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 24,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 25,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 7,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893424",
+      "pull_request_review_id": 4943288334,
+      "id": 3788893424,
+      "node_id": "PRRC_kwDOO0Cobs7h1ezw",
+      "diff_hunk": "@@ -19,6 +19,12 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n     echo \"hci_bcm4377\"\n   } > /etc/modules-load.d/t2.conf\n \n+  # The virtual USB bus makes udev mistake the built-in touchpad for an\n+  # external one, preventing libinput from disabling it while typing.\n+  mkdir -p /etc/udev/rules.d\n+  cp -f \"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\" \\\n+    /etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules",
+      "path": "install/hardware/apple/fix-t2.sh",
+      "commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration explicitly notes libinput must reopen the device and sets `reboot-required`, but the fresh-install path installs the same rule without triggering a reload/reenumeration or marking a reboot required. If `fix-t2.sh` can run on an already-booted system (not only during image build/chroot), users may not see the change take effect until a reboot/session restart. Consider either reloading and triggering udev rules (and/or restarting the relevant stack) or marking `reboot-required` here as well for consistent operational behavior.",
+      "created_at": "2026-08-15T07:47:39Z",
+      "updated_at": "2026-08-15T07:47:39Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788893424",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893424"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788893424"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788893424/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 25,
+      "original_line": 26,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 8,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788914914",
+      "pull_request_review_id": 4943311973,
+      "id": 3788914914,
+      "node_id": "PRRC_kwDOO0Cobs7h1kDi",
+      "diff_hunk": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then",
+      "path": "migrations/1786776556.sh",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This new migration script has no shebang but uses Bash-specific syntax (`[[ ... ]]`). If the migration runner executes scripts with `/bin/sh`, this will fail. Add an explicit Bash shebang (and keep Bash syntax), or rewrite the conditionals to POSIX `[ ... ]` and avoid other bashisms.",
+      "created_at": "2026-08-15T07:59:52Z",
+      "updated_at": "2026-08-15T07:59:53Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788914914",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788914914"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788914914"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788914914/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 10,
+      "original_line": 10,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 10,
+      "position": 10,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788914922",
+      "pull_request_review_id": 4943311973,
+      "id": 3788914922,
+      "node_id": "PRRC_kwDOO0Cobs7h1kDq",
+      "diff_hunk": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then\n+  exit 0\n+fi\n+\n+sudo install -D -m 0644 \"$source_rule\" \"$rule\"\n+",
+      "path": "migrations/1786776556.sh",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Using `sudo` inside a migration can hang or fail in non-interactive environments (prompts for password) and can behave inconsistently depending on how migrations are invoked. Prefer running migrations with the required privileges (remove `sudo`), or use non-interactive `sudo -n` with an explicit error path if elevation isn\u2019t available.",
+      "created_at": "2026-08-15T07:59:52Z",
+      "updated_at": "2026-08-15T07:59:53Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788914922",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788914922"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788914922"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788914922/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 14,
+      "original_start_line": 14,
+      "start_side": "RIGHT",
+      "line": 15,
+      "original_line": 15,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 15,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788916541",
+      "pull_request_review_id": 4943314112,
+      "id": 3788916541,
+      "node_id": "PRRC_kwDOO0Cobs7h1kc9",
+      "diff_hunk": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then",
+      "path": "migrations/1786776556.sh",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "original_commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This migration script has no shebang, but uses bash-specific `[[ ... ]]`. If migrations are executed via `/bin/sh` (or any non-bash shell), this will fail. Add a `#!/usr/bin/env bash` shebang (and ensure it\u2019s executed with bash), or rewrite the condition using POSIX `[ ... ]`.",
+      "created_at": "2026-08-15T08:00:53Z",
+      "updated_at": "2026-08-15T08:00:53Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788916541",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788916541"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788916541"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788916541/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 10,
+      "original_line": 10,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788934998",
+      "pull_request_review_id": 4943332864,
+      "id": 3788934998,
+      "node_id": "PRRC_kwDOO0Cobs7h1o9W",
+      "diff_hunk": "@@ -19,6 +19,12 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n     echo \"hci_bcm4377\"\n   } > /etc/modules-load.d/t2.conf\n \n+  # The virtual USB bus makes udev mistake the built-in touchpad for an\n+  # external one, preventing libinput from disabling it while typing.\n+  mkdir -p /etc/udev/rules.d\n+  cp -f \"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\" \\\n+    /etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules",
+      "path": "install/hardware/apple/fix-t2.sh",
+      "commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The fresh-install hardware path is followed by a reboot (other install scripts rely on the same lifecycle), and this T2 path also installs a new kernel and boot-time modules. Existing running installations are handled separately by the migration, which marks the reboot required, so adding another reboot marker here would be redundant.",
+      "created_at": "2026-08-15T08:13:38Z",
+      "updated_at": "2026-08-15T08:13:38Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788934998",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788934998"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788934998"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788934998/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 25,
+      "original_line": 26,
+      "side": "RIGHT",
+      "in_reply_to_id": 3788893424,
+      "author_association": "NONE",
+      "original_position": 8,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935001",
+      "pull_request_review_id": 4943332864,
+      "id": 3788935001,
+      "node_id": "PRRC_kwDOO0Cobs7h1o9Z",
+      "diff_hunk": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then\n+  exit 0\n+fi\n+\n+sudo install -D -m 0644 \"$source_rule\" \"$rule\"\n+",
+      "path": "migrations/1786776556.sh",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Omarchy migrations run as the logged-in user and use sudo for machine-wide changes; neighboring migrations follow the same convention. Removing sudo would make this write to /etc/udev/rules.d fail in the normal migration path.",
+      "created_at": "2026-08-15T08:13:38Z",
+      "updated_at": "2026-08-15T08:13:59Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788935001",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935001"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788935001"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935001/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 14,
+      "original_start_line": 14,
+      "start_side": "RIGHT",
+      "line": 15,
+      "original_line": 15,
+      "side": "RIGHT",
+      "in_reply_to_id": 3788914922,
+      "author_association": "NONE",
+      "original_position": 15,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935006",
+      "pull_request_review_id": 4943332885,
+      "id": 3788935006,
+      "node_id": "PRRC_kwDOO0Cobs7h1o9e",
+      "diff_hunk": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then",
+      "path": "migrations/1786776556.sh",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "original_commit_id": "1becb9785bee88aec79fb0cb7233455097c5fd81",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Omarchy's migration runner explicitly invokes every migration using Bash with strict-mode flags (see bin/omarchy-migrate), and migrations conventionally omit shebangs. The Bash syntax is therefore intentional and safe here.",
+      "created_at": "2026-08-15T08:13:38Z",
+      "updated_at": "2026-08-15T08:13:59Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788935006",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935006"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788935006"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935006/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 10,
+      "original_line": 10,
+      "side": "RIGHT",
+      "in_reply_to_id": 3788914914,
+      "author_association": "NONE",
+      "original_position": 10,
+      "position": 10,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935014",
+      "pull_request_review_id": 4943332893,
+      "id": 3788935014,
+      "node_id": "PRRC_kwDOO0Cobs7h1o9m",
+      "diff_hunk": "@@ -0,0 +1,17 @@\n+echo \"Enable palm rejection on T2 MacBook touchpads\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+source_rule=\"$OMARCHY_PATH/default/udev/apple-t2-touchpad.rules\"\n+rule=/etc/udev/rules.d/99-omarchy-apple-t2-touchpad.rules\n+\n+if [[ -f $rule ]] && cmp -s \"$source_rule\" \"$rule\"; then",
+      "path": "migrations/1786776556.sh",
+      "commit_id": "a18b7615ea698accc3bcde0c64551b7a020ce5e0",
+      "original_commit_id": "164e4d4027af9c6bfdc144bd892407a13962b733",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This duplicates the other shebang thread. bin/omarchy-migrate explicitly runs migration files using Bash with strict-mode flags, so the Bash-specific conditional is supported without a shebang.",
+      "created_at": "2026-08-15T08:13:38Z",
+      "updated_at": "2026-08-15T08:13:59Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788935014",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6928",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935014"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6928#discussion_r3788935014"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6928"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788935014/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 10,
+      "original_line": 10,
+      "side": "RIGHT",
+      "in_reply_to_id": 3788916541,
+      "author_association": "NONE",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

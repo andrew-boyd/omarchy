@@ -1,0 +1,51 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9131",
+  "origins": [
+    "explicit-successor-of-8572"
+  ],
+  "groups": [
+    "bluetooth-discovery"
+  ],
+  "prior_snapshots": [],
+  "repository": "omacom/omarchy",
+  "number": 9131,
+  "checked_at": "2026-09-21T12:00:10.805843+00:00",
+  "title": "Wait for Bluetooth before starting its agent",
+  "author": "yashranaway",
+  "head_sha": "0ba6680fc09af8b4a084dd0b3312bada08d4b7a2",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T14:05:07Z",
+  "state": "open",
+  "body": "Keeps Bluetooth pairing available when the user session starts before `bluetooth.service`. Fixes #8962.\n\n<<<< AI wording below >>>>\n\n## Problem\n\nThe user unit checks the system Bluetooth service with `ExecCondition`. A failed condition is a clean, permanent skip, so a three-second boot race can leave the pairing agent absent for the whole session.\n\n## Fix\n\nWait up to 30 seconds for the system service in `ExecStartPre`. A timeout is a real service failure, so the existing restart policy retries it, with systemd start limits bounding repeated failures.\n\n## Verification\n\n- `bash test/shell.d/systemd-test.sh`\n- `bash test/shell.d/bluetooth-test.sh`\n- `git diff --check`\n- `systemd-analyze verify` parsed the unit but could not complete because this checkout does not have `/usr/bin/bt-agent` or its man page.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "79a37623d383098b1ad20114d3b6f2a6b1c14d53",
+      "filename": "default/systemd/user/bt-agent.service",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 3,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0ba6680fc09af8b4a084dd0b3312bada08d4b7a2/default%2Fsystemd%2Fuser%2Fbt-agent.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0ba6680fc09af8b4a084dd0b3312bada08d4b7a2/default%2Fsystemd%2Fuser%2Fbt-agent.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fuser%2Fbt-agent.service?ref=0ba6680fc09af8b4a084dd0b3312bada08d4b7a2",
+      "patch": "@@ -5,12 +5,14 @@ ConditionPathIsDirectory=/sys/class/bluetooth\n # bluez must be reachable on the system bus before we can register.\n After=dbus.socket\n Requires=dbus.socket\n+StartLimitIntervalSec=120\n+StartLimitBurst=3\n \n [Service]\n Type=simple\n-# If bluetoothd is unavailable (for example in VMs or machines without a\n-# usable adapter), skip cleanly instead of entering a restart loop.\n-ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service\n+# The user manager cannot order this unit after the system manager's Bluetooth\n+# service, so wait through the normal boot race instead of skipping forever.\n+ExecStartPre=/usr/bin/timeout 30 /bin/bash -c 'until /usr/bin/systemctl is-active --quiet bluetooth.service; do sleep 1; done'\n # NoInputNoOutput auto-accepts pair requests. Safe because the adapter\n # is only `pairable: true` when the user explicitly opens the omarchy\n # bluetoothPanel and starts scanning; outside that window bluez refuses"
+    },
+    {
+      "sha": "5a12477987566d94320924fab25233b9cc67477f",
+      "filename": "test/shell.d/systemd-test.sh",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 2,
+      "changes": 10,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0ba6680fc09af8b4a084dd0b3312bada08d4b7a2/test%2Fshell.d%2Fsystemd-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0ba6680fc09af8b4a084dd0b3312bada08d4b7a2/test%2Fshell.d%2Fsystemd-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fsystemd-test.sh?ref=0ba6680fc09af8b4a084dd0b3312bada08d4b7a2",
+      "patch": "@@ -6,8 +6,14 @@ source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n \n service=\"$ROOT/default/systemd/user/bt-agent.service\"\n \n-grep -Fx 'ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service' \"$service\" >/dev/null\n-pass \"bt-agent skips when bluetooth.service is inactive\"\n+grep -Fx \"ExecStartPre=/usr/bin/timeout 30 /bin/bash -c 'until /usr/bin/systemctl is-active --quiet bluetooth.service; do sleep 1; done'\" \"$service\" >/dev/null ||\n+  fail \"bt-agent waits for the system Bluetooth service during login\"\n+if grep -q '^ExecCondition=.*bluetooth.service' \"$service\"; then\n+  fail \"bt-agent no longer turns an early Bluetooth check into a permanent skip\"\n+fi\n+grep -Fx 'StartLimitIntervalSec=120' \"$service\" >/dev/null || fail \"bt-agent bounds failed startup retries\"\n+grep -Fx 'StartLimitBurst=3' \"$service\" >/dev/null || fail \"bt-agent bounds failed startup retries\"\n+pass \"bt-agent waits through the system service startup race\"\n \n grep -Fx 'Restart=on-failure' \"$service\" >/dev/null\n pass \"bt-agent still restarts after runtime failures\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

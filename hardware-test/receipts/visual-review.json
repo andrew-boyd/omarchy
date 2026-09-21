@@ -1,0 +1,41 @@
+{
+  "recorded_at": "2026-09-21T14:28:02.308214+00:00",
+  "scope": "Selected virtual screenshots inspected, not all frames or physical displays. Encryption evidence also includes installer luks2 formatting and boot logs using /dev/mapper/root.",
+  "viewed": [
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-100614-hardware-runtime-clean-rechecks/password-lock/locked.png",
+      "sha256": "ca3d807cc9356c8fd6d9f822ed263bb1552adbd440e20c71331d654f61b92dcf",
+      "observation": "Password entry surface renders."
+    },
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-100614-hardware-runtime-clean-rechecks/password-lock/correct-password-unlocked.png",
+      "sha256": "1f133d193c24efc7046f3311bab4413dbbc6ae9520a52d7256e25085f88268e4",
+      "observation": "Desktop and panel are visible after successful password unlock."
+    },
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-100614-hardware-runtime-clean-rechecks/mac-desktop-checks/success-layout-de.png",
+      "sha256": "12ca39e28bb49431c31339c4d6575c09d36265a97cf60e27f92527548dab2cef",
+      "observation": "The bar shows DE after the recorded virtual-keyboard switch."
+    },
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-encrypted/runs/20260921-101105/omarchy-acceptance/success-app-neovim.png",
+      "sha256": "6cd2b87e9e3a620f89b48ce2e8aa3e0cdb9bf4b26b5fc767e6ebbbe60ab3f500",
+      "observation": "LazyVim opens; visible messages concern initial parser downloads, with no displayed startup exception."
+    },
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-encrypted/runs/20260921-101105/success-acceptance-final.png",
+      "sha256": "e0e56dcec43a03e9d183cb28865b2dbd3bb98802440f0c177a8d9300b2674eb1",
+      "observation": "Desktop and panel are visible at the end of encrypted acceptance."
+    },
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-encrypted/runs/20260921-101105/success-first-boot-01-luks-prompt.png",
+      "sha256": "76d78f244b2e72ad326cbdfa06719298f7af9c3df4738925f3458bf2ef495b11",
+      "observation": "Despite its harness filename, this frame shows the bootloader menu, not a LUKS dialog."
+    },
+    {
+      "path": "sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-encrypted/runs/20260921-101105/success-first-boot-02-luks-passphrase.png",
+      "sha256": "8f12d9cdb9ca00e0bc1ecaa1f513168a77fa8e57a8726f433529338fc572d9dd",
+      "observation": "This early frame also shows the bootloader menu; do not cite it alone as proof of passphrase entry."
+    }
+  ]
+}

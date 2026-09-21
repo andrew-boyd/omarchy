@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11312",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "brightness-routing"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "7ac552c120746df1c6675c831ddf49775d874f03",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11312,
+  "checked_at": "2026-09-21T11:56:09.806530+00:00",
+  "title": "Software brightness fallback when DRM backlight is missing",
+  "author": "Infringer13",
+  "head_sha": "7ac552c120746df1c6675c831ddf49775d874f03",
+  "base_sha": "b5589faaf80c6f87c07d4560fca37c4a81722f28",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-11T12:04:11Z",
+  "state": "open",
+  "body": "## Summary\nOn some older Apple notebooks with **NVIDIA + nouveau**, Fn brightness keys do nothing because there is **no** `/sys/class/backlight` device.\n\n### Kernel symptoms (Omarchy 4.0.3, GeForce 9400M / LVDS-1)\n- `nouveau: Apple GMUX detected: not registering Nouveau backlight interface`\n- `apple_gmux: gmux device not present`\n- `omarchy-hw-display` fails \u2192 `omarchy-brightness-display` exits\n- Keyboard backlight (`smc::kbd_backlight`) still works via `omarchy-brightness-keyboard`\n\n### What we tried on real hardware\n- hyprsunset gamma / CTM: **no visible change** on this GPU\n- Hyprland `decoration.screen_shader` with **`#version 300 es`** (matching Hyprland\u2019s own passthru shader): **visible** dim/brighten\n- Older GLSL 100 shaders fail with: `error linking program: all shaders must use same shading language version`\n\n### What this changes\n- Adds `omarchy-brightness-display-soft` to drive a per-user GLES3 screen shader multiplier (15\u2013100%)\n- `omarchy-brightness-display` falls back to that helper **only** when the focused output is internal (`LVDS`/`eDP`/`DSI`) and no DRM backlight exists\n- Existing brightnessctl / DDC / Apple Studio Display paths are unchanged\n\n## Test plan\n- [ ] Machine with normal backlight: existing brightnessctl path unchanged\n- [ ] Machine with empty `/sys/class/backlight` (nouveau GMUX gap): Fn brightness keys visibly change the panel; OSD updates\n- [ ] Keyboard backlight keys still work\n- [ ] Shader uses `#version 300 es` and does not show link errors\n- [ ] External monitors still use DDC path when applicable",
+  "draft": false,
+  "files": [
+    {
+      "sha": "54cf18b65dbe8df2cf7e42dae8d76d17bd05b539",
+      "filename": "bin/omarchy-brightness-display",
+      "status": "modified",
+      "additions": 21,
+      "deletions": 3,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7ac552c120746df1c6675c831ddf49775d874f03/bin%2Fomarchy-brightness-display",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7ac552c120746df1c6675c831ddf49775d874f03/bin%2Fomarchy-brightness-display",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display?ref=7ac552c120746df1c6675c831ddf49775d874f03",
+      "patch": "@@ -52,7 +52,13 @@ if (( $# == 0 )); then\n     exit\n   fi\n \n-  device=\"$(omarchy-hw-display)\" || exit 1\n+  if ! device=\"$(omarchy-hw-display)\"; then\n+    if monitor_is_internal; then\n+      omarchy-brightness-display-soft get\n+      exit\n+    fi\n+    exit 1\n+  fi\n   backlight_brightness \"$device\"\n   exit\n fi\n@@ -86,8 +92,20 @@ elif use_ddc_display; then\n   brightness=\"$(omarchy-brightness-display-ddc \"$monitor\" \"$step\")\" || exit 1\n   (( no_osd )) || omarchy-osd -i brightness -p \"$brightness\"\n else\n-  # Current device highlighted\n-  device=\"$(omarchy-hw-display)\" || exit 1\n+  # Current device highlighted. When the kernel exposes no DRM backlight\n+  # (notably older Apple + nouveau systems where GMUX is detected but never\n+  # binds), fall back to software brightness on internal panels.\n+  if ! device=\"$(omarchy-hw-display)\"; then\n+    if monitor_is_internal; then\n+      if (( no_osd )); then\n+        omarchy-brightness-display-soft --no-osd \"$step\"\n+      else\n+        omarchy-brightness-display-soft \"$step\"\n+      fi\n+      exit\n+    fi\n+    exit 1\n+  fi\n \n   # Current brightness percentage\n   current=$(backlight_brightness \"$device\") || exit 1"
+    },
+    {
+      "sha": "58cb43a3d203e10d624d156f4d688103a99ccd14",
+      "filename": "bin/omarchy-brightness-display-soft",
+      "status": "added",
+      "additions": 97,
+      "deletions": 0,
+      "changes": 97,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7ac552c120746df1c6675c831ddf49775d874f03/bin%2Fomarchy-brightness-display-soft",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7ac552c120746df1c6675c831ddf49775d874f03/bin%2Fomarchy-brightness-display-soft",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display-soft?ref=7ac552c120746df1c6675c831ddf49775d874f03",
+      "patch": "@@ -0,0 +1,97 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Adjust software display brightness via Hyprland screen shader when no DRM backlight exists.\n+# omarchy:args=[--no-osd] <+N%|N%-|N%|get>\n+# omarchy:examples=omarchy brightness display soft +5% | omarchy brightness display soft 50% | omarchy brightness display soft get\n+# omarchy:hidden=true\n+\n+# Used on older Apple/NVIDIA systems where nouveau skips registering a backlight\n+# after detecting Apple GMUX, but apple_gmux never binds \u2014 leaving no\n+# /sys/class/backlight device. Keyboard backlight is unrelated and still works.\n+\n+no_osd=0\n+if [[ ${1:-} == --no-osd ]]; then\n+  no_osd=1\n+  shift\n+fi\n+\n+step=\"${1:-}\"\n+[[ -n $step ]] || {\n+  echo \"usage: omarchy-brightness-display-soft [--no-osd] <+N%|N%-|N%|get>\" >&2\n+  exit 1\n+}\n+\n+state_dir=\"${XDG_STATE_HOME:-$HOME/.local/state}/omarchy\"\n+shader_dir=\"$HOME/.config/hypr/shaders\"\n+shader=\"$shader_dir/omarchy-brightness.frag\"\n+state_file=\"$state_dir/display-brightness\"\n+looknfeel=\"$HOME/.config/hypr/looknfeel.lua\"\n+\n+mkdir -p \"$state_dir\" \"$shader_dir\"\n+\n+min_g=15\n+max_g=100\n+\n+current=100\n+if [[ -f $state_file ]]; then\n+  current=\"$(tr -d '[:space:]' <\"$state_file\")\"\n+fi\n+[[ $current =~ ^[0-9]+$ ]] || current=100\n+\n+clamp() {\n+  local v=\"$1\"\n+  ((v < min_g)) && v=$min_g\n+  ((v > max_g)) && v=$max_g\n+  printf '%s\\n' \"$v\"\n+}\n+\n+if [[ $step =~ ^\\+([0-9]+)%$ ]]; then\n+  target=$(clamp $((current + BASH_REMATCH[1])))\n+elif [[ $step =~ ^([0-9]+)%-$ ]]; then\n+  target=$(clamp $((current - BASH_REMATCH[1])))\n+elif [[ $step =~ ^([0-9]+)%$ ]]; then\n+  target=$(clamp \"${BASH_REMATCH[1]}\")\n+elif [[ $step == get ]]; then\n+  printf '%s\\n' \"$current\"\n+  exit 0\n+else\n+  echo \"unsupported step: $step\" >&2\n+  exit 1\n+fi\n+\n+mult=\"$(awk -v p=\"$target\" 'BEGIN { printf \"%.2f\", p / 100 }')\"\n+\n+cat >\"$shader\" <<SHADER\n+#version 300 es\n+\n+precision highp float;\n+in vec2 v_texcoord;\n+uniform sampler2D tex;\n+\n+layout(location = 0) out vec4 fragColor;\n+void main() {\n+    vec4 c = texture(tex, v_texcoord);\n+    fragColor = vec4(c.rgb * ${mult}, c.a);\n+}\n+SHADER\n+\n+printf '%s\\n' \"$target\" >\"$state_file\"\n+\n+# Ensure Hyprland loads this shader (same pattern as nouveau cursor looknfeel append).\n+if [[ -f $looknfeel ]] && ! grep -q 'omarchy-brightness.frag' \"$looknfeel\"; then\n+  cat >>\"$looknfeel\" <<'LUA'\n+\n+-- Software brightness when the kernel exposes no DRM backlight (e.g. nouveau +\n+-- Apple GMUX detected but unbound). Driven by omarchy-brightness-display-soft.\n+hl.config({\n+  decoration = {\n+    screen_shader = os.getenv(\"HOME\") .. \"/.config/hypr/shaders/omarchy-brightness.frag\",\n+  },\n+})\n+LUA\n+fi\n+\n+hyprctl reload >/dev/null 2>&1 || true\n+\n+((no_osd)) || omarchy-osd -i brightness -p \"$target\" || true\n+printf '%s\\n' \"$target\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

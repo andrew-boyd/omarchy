@@ -1,0 +1,580 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7589",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-pre-t2-resume"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7589,
+  "checked_at": "2026-09-21T11:57:46.207491+00:00",
+  "title": "Fix Mac suspend loop after the first resume from sleep",
+  "author": "marcindyguda",
+  "head_sha": "37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:38:57Z",
+  "state": "closed",
+  "body": "## Problem\n\nOn Macs with Broadcom BCM43602 Wi-Fi driven by brcmfmac (MacBook Pro 2015\u20132017, MacBook 2016+, same-era iMacs), the firmware wedges on the first resume from S3:\n`brcmf_msgbuf_query_dcmd` times out forever, and wpa_supplicant blocks in D state.\n\nFrom then on every suspend fails when `brcmf_pcie_pm_enter_D3` returns `-EIO` (`PM: failed to suspend async: error -5`). systemd-logind retries the suspend every ~30 seconds indefinitely \u2014 338 failed attempts were logged over a two-hour lid-closed window on the machine that motivated this change. Each retry powers the panel back up, so a closed laptop visibly \"wakes\" in a loop.\n\n`rmmod` cannot cleanly unload `brcmfmac` (its refcount never returns to zero while the driver is bound), so the reliable workaround is to detach the PCI device itself.\n\n## Change\n\n- `default/systemd/system-sleep/brcmfmac-suspend` \u2014 sleep hook that unbinds `0000:03:00.0` from `brcmfmac` in `pre` and rebinds it in `post` (with a retry loop for the rfkill re-enumeration race), forcing a clean firmware load on every wake. It is a strict no-op unless it did the work itself: `pre` only acts when the device is bound to `brcmfmac` and records the unbind in a `/run` marker, and `post` only rebinds when that marker exists \u2014 an intentionally disabled Wi-Fi stays off.\n- `install/hardware/apple/fix-brcmfmac-suspend.sh` \u2014 installs the hook at install time, gated on the DMI vendor (`Apple*`) and `lspci` finding a BCM43602 (`14e4:43ba`) at `03:00.0`, mirroring the WPA-handshake quirk beside it. T2 Macs (2018+) are out of scope: their Wi-Fi sits on a different PCI bus.\n- `install/hardware/all.sh` \u2014 runs the new leaf as part of hardware setup.\n- `docs/file-layout.md` \u2014 documents the new hook.\n- `test/shell.d/brcmfmac-suspend-test.sh` \u2014 new tests covering the installer gate (Apple/BCM43602, older Apple vendor string, non-Apple same part, wl-driven part, no Wi-Fi), the hook's executable bit, and all four hook paths (bound pre, marker-gated post, non-brcmfmac device, post without a prior unbind) against a sandbox sysfs.\n\n## Verification\n\n- Hook exercised end-to-end on a MacBookPro13,2 (pre \u2192 unbind confirmed via `/sys/bus/pci/devices/0000:03:00.0/driver`, post \u2192 device re-bound and NetworkManager reconnected within seconds).\n- `./test/all` passes except four pre-existing environment-dependent test files that also fail on a clean tree (`config-test`, `snapper-test`, `unowned-system-paths-test` need the private omarchy-pkgs checkout; `bar-icon-geometry-test` fails in test rendering).\n- The new install script writes `/usr/lib/systemd/system-sleep`, which is the recorded hardware-conditional-hooks exception in `unowned-system-paths-test`.\n\n## Notes\n\n- The underlying firmware hang is a brcmfmac/kernel issue; this is a distro-side mitigation in the spirit of the existing `force-igpu` and `keyboard-backlight` hooks.\n- For already-installed systems the hook can be applied manually:\n  `sudo cp -p /usr/share/omarchy/default/systemd/system-sleep/brcmfmac-suspend /usr/lib/systemd/system-sleep/ && sudo chmod +x /usr/lib/systemd/system-sleep/brcmfmac-suspend`\n  (after the next `omarchy update` that ships this file).\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "56f20dc38fb428e25796c38bb021565d69375c8e",
+      "filename": "default/systemd/system-sleep/brcmfmac-suspend",
+      "status": "added",
+      "additions": 43,
+      "deletions": 0,
+      "changes": 43,
+      "blob_url": "https://github.com/omacom/omarchy/blob/37c0f52fc535153f9c924eda6fc3c865fbae36a3/default%2Fsystemd%2Fsystem-sleep%2Fbrcmfmac-suspend",
+      "raw_url": "https://github.com/omacom/omarchy/raw/37c0f52fc535153f9c924eda6fc3c865fbae36a3/default%2Fsystemd%2Fsystem-sleep%2Fbrcmfmac-suspend",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem-sleep%2Fbrcmfmac-suspend?ref=37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "patch": "@@ -0,0 +1,43 @@\n+#!/bin/bash\n+\n+# The brcmfmac firmware in Apple's Broadcom BCM43602 Wi-Fi wedges on the first\n+# resume from S3. Every suspend after that fails when brcmf_pcie_pm_enter_D3\n+# returns -EIO, and systemd-logind keeps retrying: the machine wakes, its panel\n+# lights up, and the cycle repeats until the lid is opened and the driver is\n+# restarted.\n+#\n+# rmmod cannot pull the module out cleanly (its refcount never reaches zero),\n+# so detach the PCI device from the driver before sleep and bind it again on\n+# wake, which reloads the firmware. The driver check makes this a no-op on\n+# machines whose Wi-Fi at this address is not brcmfmac, and the marker keeps\n+# post a no-op unless pre actually unbound the device, so a Wi-Fi that was\n+# switched off intentionally stays off.\n+\n+pci=\"/sys/bus/pci/devices/0000:03:00.0\"\n+driver=\"/sys/bus/pci/drivers/brcmfmac\"\n+marker=\"/run/omarchy-brcmfmac-suspend\"\n+\n+bound() {\n+  readlink \"$pci/driver\" 2>/dev/null | grep -q brcmfmac\n+}\n+\n+if [[ -d $pci ]] && [[ $1 == \"pre\" ]] && bound; then\n+  if echo \"0000:03:00.0\" > \"$driver/unbind\"; then\n+    : > \"$marker\"\n+  fi\n+fi\n+\n+if [[ $1 == \"post\" ]] && [[ -f $marker ]]; then\n+  # Bind again until the driver returns, or give up after 40 seconds. The\n+  # kernel can re-enumerate the card itself through brcmfmac's rfkill, in\n+  # which case the device races the loop back onto the bus and the retries\n+  # all fail harmlessly.\n+  for attempt in {1..20}; do\n+    echo \"0000:03:00.0\" > \"$driver/bind\" 2>/dev/null\n+    if bound; then\n+      break\n+    fi\n+    (( attempt < 20 )) && sleep 2\n+  done\n+  rm -f \"$marker\"\n+fi"
+    },
+    {
+      "sha": "851da1a89d1ae24341bf5e4107ac7b1d6262029d",
+      "filename": "docs/file-layout.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 1,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/37c0f52fc535153f9c924eda6fc3c865fbae36a3/docs%2Ffile-layout.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/37c0f52fc535153f9c924eda6fc3c865fbae36a3/docs%2Ffile-layout.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/docs%2Ffile-layout.md?ref=37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "patch": "@@ -125,7 +125,8 @@ default/**                     \u2500\u2500\u25ba  omarchy-settings    /usr/share/omarchy\n   \u251c\u2500 systemd/user/*.service                             /usr/lib/systemd/user/\n   \u251c\u2500 systemd/user/app.slice.d/10-oomd.conf              /usr/lib/systemd/user/app.slice.d/\n   \u251c\u2500 systemd/system-sleep/{force-igpu,\n-  \u2502    keyboard-backlight,unmount-fuse}                 /usr/lib/systemd/system-sleep/\n+  \u2502    keyboard-backlight, brcmfmac-suspend,\n+  \u2502    unmount-fuse}                                    /usr/lib/systemd/system-sleep/\n   \u251c\u2500 systemd/zram-generator.conf.d/90-omarchy.conf      /usr/lib/systemd/zram-generator.conf.d/\n   \u251c\u2500 fonts/omarchy/omarchy.ttf                          /usr/share/fonts/omarchy/\n   \u251c\u2500 sddm/omarchy/                                      /usr/share/sddm/themes/omarchy/"
+    },
+    {
+      "sha": "11f83f528950a004082b77936a56331a99b3f38c",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/37c0f52fc535153f9c924eda6fc3c865fbae36a3/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/37c0f52fc535153f9c924eda6fc3c865fbae36a3/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "patch": "@@ -36,6 +36,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "82cd4971eb326d0e01ea1de40020b21d7b9991e6",
+      "filename": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "status": "added",
+      "additions": 18,
+      "deletions": 0,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/37c0f52fc535153f9c924eda6fc3c865fbae36a3/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/37c0f52fc535153f9c924eda6fc3c865fbae36a3/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh?ref=37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "patch": "@@ -0,0 +1,18 @@\n+# Macs with Broadcom BCM43602 Wi-Fi (MacBook Pro 2015-2017, MacBook 2016+,\n+# and same-era iMacs) wedge the brcmfmac firmware on the first resume from S3.\n+# The driver can no longer put the card into D3, so every suspend after that\n+# fails with pci_pm_suspend returning -EIO and systemd-logind retries it in a\n+# loop, lighting the panel each time.\n+#\n+# Install a sleep hook that detaches the PCI device from brcmfmac before sleep\n+# and rebinds it on wake, forcing a clean firmware load. Non-Apple systems run\n+# brcmfmac too without sharing the firmware bug, so the install is gated on the\n+# DMI vendor like the WPA handshake quirk beside this file. The T2 Macs from\n+# 2018 on are also out of scope: their Wi-Fi sits on a different PCI bus.\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]] && lspci -nn -s 03:00.0 | grep \"14e4:43ba\" >/dev/null; then\n+  echo \"Detected BCM43602 Wi-Fi; installing a suspend workaround\"\n+  sudo mkdir -p /usr/lib/systemd/system-sleep\n+  sudo cp -p \"$OMARCHY_PATH/default/systemd/system-sleep/brcmfmac-suspend\" /usr/lib/systemd/system-sleep/\n+fi"
+    },
+    {
+      "sha": "6808cc41143f9bf88c07783ddc8b2d322610e824",
+      "filename": "test/shell.d/brcmfmac-suspend-test.sh",
+      "status": "added",
+      "additions": 149,
+      "deletions": 0,
+      "changes": 149,
+      "blob_url": "https://github.com/omacom/omarchy/blob/37c0f52fc535153f9c924eda6fc3c865fbae36a3/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/37c0f52fc535153f9c924eda6fc3c865fbae36a3/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh?ref=37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "patch": "@@ -0,0 +1,149 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-brcmfmac-suspend.sh\"\n+hook=\"$ROOT/default/systemd/system-sleep/brcmfmac-suspend\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+\n+grep -q 'apple/fix-brcmfmac-suspend.sh' \"$all\" ||\n+  fail \"the brcmfmac suspend workaround runs during hardware setup\"\n+pass \"the brcmfmac suspend workaround runs during setup\"\n+\n+[[ -x $hook ]] || fail \"the sleep hook ships executable\"\n+pass \"the sleep hook ships executable\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no such hardware\" (#6608).\n+if [[ -n ${WIFI_ID:-} ]]; then\n+  echo \"03:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]\"\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+# The leaf reads the vendor from an absolute path, so point it at a fixture by\n+# running with a fake root on PATH-independent state. Its destination under\n+# /usr is sed-rewritten into the sandbox, and pipefail is on, so a grep -q\n+# gate would go silent here the way #6608 did.\n+run_leaf() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\"\n+  rm -rf \"$test_tmp/dmi/sys_vendor\" \"$test_tmp/system-sleep\"\n+  mkdir -p \"$test_tmp/dmi\" \"$test_tmp/system-sleep\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+\n+  local script=\"$test_tmp/leaf.sh\"\n+  sed -e \"s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g\" \\\n+      -e \"s|/usr/lib/systemd/system-sleep|$test_tmp/system-sleep|g\" \\\n+      \"$leaf\" >\"$script\"\n+\n+  : >\"$calls\"\n+  WIFI_ID=\"$wifi_id\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" OMARCHY_PATH=\"$ROOT\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+run_leaf \"Apple Inc.\" 43ba >/dev/null\n+[[ -f $test_tmp/system-sleep/brcmfmac-suspend ]] ||\n+  fail \"a Mac with BCM43602 Wi-Fi at 03:00.0 gets the hook\" \"$(ls -R \"$test_tmp/system-sleep\" 2>&1)\"\n+pass \"a Mac with BCM43602 Wi-Fi at 03:00.0 gets the hook\"\n+\n+run_leaf \"Apple Computer, Inc.\" 43ba >/dev/null\n+[[ -f $test_tmp/system-sleep/brcmfmac-suspend ]] ||\n+  fail \"the older Apple vendor string is recognized\" \"$(ls -R \"$test_tmp/system-sleep\" 2>&1)\"\n+pass \"the older Apple vendor string is recognized\"\n+\n+run_leaf \"LENOVO\" 43ba >/dev/null\n+[[ ! -e $test_tmp/system-sleep/brcmfmac-suspend ]] ||\n+  fail \"non-Apple hardware with the same Wi-Fi part is left alone\"\n+pass \"non-Apple hardware with the same Wi-Fi part is left alone\"\n+\n+run_leaf \"Apple Inc.\" 43a0 >/dev/null\n+[[ ! -e $test_tmp/system-sleep/brcmfmac-suspend ]] ||\n+  fail \"a Mac whose Wi-Fi runs the out-of-tree wl driver is left alone\"\n+pass \"a Mac whose Wi-Fi runs the out-of-tree wl driver is left alone\"\n+\n+run_leaf \"Apple Inc.\" \"\" >/dev/null\n+[[ ! -e $test_tmp/system-sleep/brcmfmac-suspend ]] ||\n+  fail \"a Mac with no wireless device is left alone\"\n+pass \"a Mac with no wireless device is left alone\"\n+\n+# The hook itself, against a sandbox sysfs. sysfs attributes are write-only\n+# files, so a stub cannot sit inside them: instead the two sysfs writes in the\n+# hook are sed-rewritten into stub invocations that maintain the device's\n+# driver symlink the way the PCI core does.\n+pci_dir=\"$test_tmp/sys/bus/pci/devices/0000:03:00.0\"\n+drv_dir=\"$test_tmp/sys/bus/pci/drivers/brcmfmac\"\n+marker=\"$test_tmp/marker\"\n+bind_calls=\"$test_tmp/bind_calls.log\"\n+mkdir -p \"$pci_dir\" \"$drv_dir\"\n+\n+cat >\"$drv_dir/unbind\" <<SH\n+#!/bin/bash\n+rm -f \"$pci_dir/driver\"\n+SH\n+cat >\"$drv_dir/bind\" <<SH\n+#!/bin/bash\n+printf '%s\\n' bind >>\"$bind_calls\"\n+ln -sfn ../../../../bus/pci/drivers/brcmfmac \"$pci_dir/driver\"\n+SH\n+chmod +x \"$drv_dir/unbind\" \"$drv_dir/bind\"\n+\n+run_hook() {\n+  local script=\"$test_tmp/hook.sh\"\n+  # Path rewrites first; the sysfs writes are rewritten last because their\n+  # replacement text carries the sandbox path, which the path patterns would\n+  # otherwise match a second time.\n+  sed -e \"s|/sys/bus/pci/devices/0000:03:00.0|$pci_dir|g\" \\\n+      -e \"s|/sys/bus/pci/drivers/brcmfmac|$drv_dir|g\" \\\n+      -e \"s|/run/omarchy-brcmfmac-suspend|$marker|g\" \\\n+      -e \"s|echo \\\"0000:03:00.0\\\" > \\\"\\\\\\$driver/unbind\\\"|\\\"$drv_dir/unbind\\\"|\" \\\n+      -e \"s|echo \\\"0000:03:00.0\\\" > \\\"\\\\\\$driver/bind\\\" 2>/dev/null|\\\"$drv_dir/bind\\\"|\" \\\n+      \"$hook\" >\"$script\"\n+  : >\"$bind_calls\"\n+  bash \"$script\" \"$@\"\n+}\n+\n+ln -sfn ../../../../bus/pci/drivers/brcmfmac \"$pci_dir/driver\"\n+run_hook pre suspend\n+[[ ! -L $pci_dir/driver ]] || fail \"pre unbinds a brcmfmac device\"\n+[[ -f $marker ]] || fail \"pre records that it unbound the device\"\n+pass \"pre unbinds a brcmfmac device and records it\"\n+\n+run_hook post suspend\n+[[ -L $pci_dir/driver ]] || fail \"post binds the device again\"\n+[[ ! -e $marker ]] || fail \"post clears the marker\"\n+pass \"post binds the device again and clears the marker\"\n+\n+rm -f \"$pci_dir/driver\"\n+run_hook pre suspend\n+[[ ! -e $marker ]] || fail \"pre leaves a device that is not brcmfmac alone\"\n+pass \"pre leaves a device that is not brcmfmac alone\"\n+\n+run_hook post suspend\n+[[ ! -s $bind_calls ]] || fail \"post leaves alone a device pre did not unbind\" \"$(cat \"$bind_calls\")\"\n+pass \"post leaves alone a device pre did not unbind\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758423265",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#issuecomment-5758423265",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7589",
+      "id": 5758423265,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzqQ4Q",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:38:56Z",
+      "updated_at": "2026-09-21T09:38:56Z",
+      "body": "Automated duplication check: this pull request looks similar to #10332, which covers the same BCM43602 suspend hook. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758423265/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4980751704,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKOA9WA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds a BCM43602 suspend workaround for affected Macs by cycling the brcmfmac PCI binding across sleep.\n\n**Changes:**\n- Adds and installs a brcmfmac system-sleep hook.\n- Integrates installation into Apple hardware setup.\n- Documents the new hook.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 4 out of 4 changed files in this pull request and generated 2 comments.\n\n| File | Description |\n| ---- | ----------- |\n| `install/hardware/apple/fix-brcmfmac-suspend.sh` | Detects BCM43602 hardware and installs the hook. |\n| `install/hardware/all.sh` | Runs the new installer during hardware setup. |\n| `default/systemd/system-sleep/brcmfmac-suspend` | Unbinds and rebinds brcmfmac across sleep. |\n| `docs/file-layout.md` | Lists the new system-sleep hook. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980751704",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980751704"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "submitted_at": "2026-08-20T08:46:04Z",
+      "commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685"
+    },
+    {
+      "id": 4980903024,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKOKMcA",
+      "user": {
+        "login": "marcindyguda",
+        "id": 4534877,
+        "node_id": "MDQ6VXNlcjQ1MzQ4Nzc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4534877?u=3c92378ede6fb8df6cdd9646c56e8dbd3faea2ec&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marcindyguda",
+        "html_url": "https://github.com/marcindyguda",
+        "followers_url": "https://api.github.com/users/marcindyguda/followers",
+        "following_url": "https://api.github.com/users/marcindyguda/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marcindyguda/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marcindyguda/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marcindyguda/subscriptions",
+        "organizations_url": "https://api.github.com/users/marcindyguda/orgs",
+        "repos_url": "https://api.github.com/users/marcindyguda/repos",
+        "events_url": "https://api.github.com/users/marcindyguda/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marcindyguda/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980903024",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980903024"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "submitted_at": "2026-08-20T09:00:41Z",
+      "commit_id": "37c0f52fc535153f9c924eda6fc3c865fbae36a3"
+    },
+    {
+      "id": 4980904959,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKOKT_w",
+      "user": {
+        "login": "marcindyguda",
+        "id": 4534877,
+        "node_id": "MDQ6VXNlcjQ1MzQ4Nzc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4534877?u=3c92378ede6fb8df6cdd9646c56e8dbd3faea2ec&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marcindyguda",
+        "html_url": "https://github.com/marcindyguda",
+        "followers_url": "https://api.github.com/users/marcindyguda/followers",
+        "following_url": "https://api.github.com/users/marcindyguda/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marcindyguda/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marcindyguda/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marcindyguda/subscriptions",
+        "organizations_url": "https://api.github.com/users/marcindyguda/orgs",
+        "repos_url": "https://api.github.com/users/marcindyguda/repos",
+        "events_url": "https://api.github.com/users/marcindyguda/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marcindyguda/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980904959",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980904959"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "submitted_at": "2026-08-20T09:00:50Z",
+      "commit_id": "37c0f52fc535153f9c924eda6fc3c865fbae36a3"
+    },
+    {
+      "id": 4980928831,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKOLxPw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 5 out of 5 changed files in this pull request and generated no new comments.\n\n\n\n\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980928831",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#pullrequestreview-4980928831"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "submitted_at": "2026-08-20T09:03:03Z",
+      "commit_id": "37c0f52fc535153f9c924eda6fc3c865fbae36a3"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3819979033",
+      "pull_request_review_id": 4980751704,
+      "id": 3819979033,
+      "node_id": "PRRC_kwDOO0Cobs7jsEEZ",
+      "diff_hunk": "@@ -0,0 +1,14 @@\n+# Macs with Broadcom BCM43602 Wi-Fi (MacBook Pro 2015-2017, MacBook 2016+,\n+# and same-era iMacs) wedge the brcmfmac firmware on the first resume from S3.\n+# The driver can no longer put the card into D3, so every suspend after that\n+# fails with pci_pm_suspend returning -EIO and systemd-logind retries it in a\n+# loop, lighting the panel each time.\n+#\n+# Install a sleep hook that detaches the PCI device from brcmfmac before sleep\n+# and rebinds it on wake, forcing a clean firmware load. The T2 Macs from 2018\n+# on are deliberately out of scope: their Wi-Fi sits on a different PCI bus.\n+if lspci -nn -s 03:00.0 | grep -q \"14e4:43ba\"; then",
+      "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685",
+      "original_commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This gate checks only the PCI ID and slot, so a non-Apple machine with a BCM43602 at `03:00.0` also receives this Mac-specific workaround. The neighboring brcmfmac installer documents and tests that non-Apple BCM43602 systems do not share the firmware bug (`test/shell.d/brcmfmac-supplicant-test.sh:111-114`). Add the same Apple DMI-vendor guard here.",
+      "created_at": "2026-08-20T08:46:04Z",
+      "updated_at": "2026-08-20T08:46:04Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#discussion_r3819979033",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3819979033"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#discussion_r3819979033"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3819979033/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 10,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3819979081",
+      "pull_request_review_id": 4980751704,
+      "id": 3819979081,
+      "node_id": "PRRC_kwDOO0Cobs7jsEFJ",
+      "diff_hunk": "@@ -0,0 +1,39 @@\n+#!/bin/bash\n+\n+# The brcmfmac firmware in Apple's Broadcom BCM43602 Wi-Fi wedges on the first\n+# resume from S3. Every suspend after that fails when brcmf_pcie_pm_enter_D3\n+# returns -EIO, and systemd-logind keeps retrying: the machine wakes, its panel\n+# lights up, and the cycle repeats until the lid is opened and the driver is\n+# restarted.\n+#\n+# rmmod cannot pull the module out cleanly (its refcount never reaches zero),\n+# so detach the PCI device from the driver before sleep and bind it again on\n+# wake, which reloads the firmware. The driver check makes this a no-op on\n+# machines whose Wi-Fi at this address is not brcmfmac.\n+\n+pci=\"/sys/bus/pci/devices/0000:03:00.0\"\n+driver=\"/sys/bus/pci/drivers/brcmfmac\"\n+\n+bound() {\n+  readlink \"$pci/driver\" 2>/dev/null | grep -q brcmfmac\n+}\n+\n+if [[ -d $pci ]]; then\n+  if [[ $1 == \"pre\" ]] && bound; then\n+    echo \"0000:03:00.0\" > \"$driver/unbind\"\n+  fi\n+\n+  if [[ $1 == \"post\" ]] && ! bound; then\n+    # Bind again until the driver returns, or give up after 40 seconds. The\n+    # kernel can re-enumerate the card itself through brcmfmac's rfkill, in\n+    # which case the device races the loop back onto the bus and the retries\n+    # all fail harmlessly.\n+    for attempt in {1..20}; do\n+      echo \"0000:03:00.0\" > \"$driver/bind\" 2>/dev/null\n+      if bound; then\n+        break\n+      fi\n+      (( attempt < 20 )) && sleep 2\n+    done\n+  fi\n+fi",
+      "path": "default/systemd/system-sleep/brcmfmac-suspend",
+      "commit_id": "37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "original_commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Track whether this hook actually performed the unbind. As written, every `post` invocation where the device was already unbound or uses another driver enters the retry loop; that can bind an intentionally disabled device or delay resume by roughly 40 seconds. A `/run` marker created only after a successful `pre` unbind keeps the documented non-brcmfmac path a true no-op.",
+      "created_at": "2026-08-20T08:46:04Z",
+      "updated_at": "2026-08-20T08:46:04Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#discussion_r3819979081",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3819979081"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#discussion_r3819979081"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3819979081/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 20,
+      "original_start_line": 17,
+      "start_side": "RIGHT",
+      "line": 43,
+      "original_line": 39,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 39,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3820089933",
+      "pull_request_review_id": 4980903024,
+      "id": 3820089933,
+      "node_id": "PRRC_kwDOO0Cobs7jsfJN",
+      "diff_hunk": "@@ -0,0 +1,14 @@\n+# Macs with Broadcom BCM43602 Wi-Fi (MacBook Pro 2015-2017, MacBook 2016+,\n+# and same-era iMacs) wedge the brcmfmac firmware on the first resume from S3.\n+# The driver can no longer put the card into D3, so every suspend after that\n+# fails with pci_pm_suspend returning -EIO and systemd-logind retries it in a\n+# loop, lighting the panel each time.\n+#\n+# Install a sleep hook that detaches the PCI device from brcmfmac before sleep\n+# and rebinds it on wake, forcing a clean firmware load. The T2 Macs from 2018\n+# on are deliberately out of scope: their Wi-Fi sits on a different PCI bus.\n+if lspci -nn -s 03:00.0 | grep -q \"14e4:43ba\"; then",
+      "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685",
+      "original_commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685",
+      "user": {
+        "login": "marcindyguda",
+        "id": 4534877,
+        "node_id": "MDQ6VXNlcjQ1MzQ4Nzc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4534877?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marcindyguda",
+        "html_url": "https://github.com/marcindyguda",
+        "followers_url": "https://api.github.com/users/marcindyguda/followers",
+        "following_url": "https://api.github.com/users/marcindyguda/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marcindyguda/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marcindyguda/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marcindyguda/subscriptions",
+        "organizations_url": "https://api.github.com/users/marcindyguda/orgs",
+        "repos_url": "https://api.github.com/users/marcindyguda/repos",
+        "events_url": "https://api.github.com/users/marcindyguda/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marcindyguda/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Added. The leaf now gates on the DMI vendor first (`[[ $sys_vendor == Apple* ]]`) exactly like fix-brcmfmac-supplicant.sh, so non-Apple BCM43602 systems are left alone. Also swapped `grep -q` for a full-read grep to avoid the #6608 pipefail/SIGPIPE false-negative pattern, and covered both cases in the new test file (`test/shell.d/brcmfmac-suspend-test.sh`), including non-Apple and wl-driven Mac hardware.",
+      "created_at": "2026-08-20T09:00:40Z",
+      "updated_at": "2026-08-20T09:00:41Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#discussion_r3820089933",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3820089933"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#discussion_r3820089933"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3820089933/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 10,
+      "side": "RIGHT",
+      "in_reply_to_id": 3819979033,
+      "author_association": "NONE",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3820091501",
+      "pull_request_review_id": 4980904959,
+      "id": 3820091501,
+      "node_id": "PRRC_kwDOO0Cobs7jsfht",
+      "diff_hunk": "@@ -0,0 +1,39 @@\n+#!/bin/bash\n+\n+# The brcmfmac firmware in Apple's Broadcom BCM43602 Wi-Fi wedges on the first\n+# resume from S3. Every suspend after that fails when brcmf_pcie_pm_enter_D3\n+# returns -EIO, and systemd-logind keeps retrying: the machine wakes, its panel\n+# lights up, and the cycle repeats until the lid is opened and the driver is\n+# restarted.\n+#\n+# rmmod cannot pull the module out cleanly (its refcount never reaches zero),\n+# so detach the PCI device from the driver before sleep and bind it again on\n+# wake, which reloads the firmware. The driver check makes this a no-op on\n+# machines whose Wi-Fi at this address is not brcmfmac.\n+\n+pci=\"/sys/bus/pci/devices/0000:03:00.0\"\n+driver=\"/sys/bus/pci/drivers/brcmfmac\"\n+\n+bound() {\n+  readlink \"$pci/driver\" 2>/dev/null | grep -q brcmfmac\n+}\n+\n+if [[ -d $pci ]]; then\n+  if [[ $1 == \"pre\" ]] && bound; then\n+    echo \"0000:03:00.0\" > \"$driver/unbind\"\n+  fi\n+\n+  if [[ $1 == \"post\" ]] && ! bound; then\n+    # Bind again until the driver returns, or give up after 40 seconds. The\n+    # kernel can re-enumerate the card itself through brcmfmac's rfkill, in\n+    # which case the device races the loop back onto the bus and the retries\n+    # all fail harmlessly.\n+    for attempt in {1..20}; do\n+      echo \"0000:03:00.0\" > \"$driver/bind\" 2>/dev/null\n+      if bound; then\n+        break\n+      fi\n+      (( attempt < 20 )) && sleep 2\n+    done\n+  fi\n+fi",
+      "path": "default/systemd/system-sleep/brcmfmac-suspend",
+      "commit_id": "37c0f52fc535153f9c924eda6fc3c865fbae36a3",
+      "original_commit_id": "9cd90cc9ebf3721ba4711c462dddb8b91b20d685",
+      "user": {
+        "login": "marcindyguda",
+        "id": 4534877,
+        "node_id": "MDQ6VXNlcjQ1MzQ4Nzc=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/4534877?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marcindyguda",
+        "html_url": "https://github.com/marcindyguda",
+        "followers_url": "https://api.github.com/users/marcindyguda/followers",
+        "following_url": "https://api.github.com/users/marcindyguda/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marcindyguda/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marcindyguda/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marcindyguda/subscriptions",
+        "organizations_url": "https://api.github.com/users/marcindyguda/orgs",
+        "repos_url": "https://api.github.com/users/marcindyguda/repos",
+        "events_url": "https://api.github.com/users/marcindyguda/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marcindyguda/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Fixed. `pre` now writes a marker (/run/omarchy-brcmfmac-suspend) only after a successful unbind, and `post` runs the bind loop only when the marker exists (removing it afterwards). A device that was already off or not driven by brcmfmac at 03:00.0 stays untouched, and an intentionally disabled Wi-Fi is not re-enabled. The new test exercises all four paths: bound pre, marker-gated post, non-brcmfmac device, and post without a prior unbind.",
+      "created_at": "2026-08-20T09:00:50Z",
+      "updated_at": "2026-08-20T09:00:50Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7589#discussion_r3820091501",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7589",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3820091501"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7589#discussion_r3820091501"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7589"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3820091501/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 20,
+      "original_start_line": 17,
+      "start_side": "RIGHT",
+      "line": 43,
+      "original_line": 39,
+      "side": "RIGHT",
+      "in_reply_to_id": 3819979081,
+      "author_association": "NONE",
+      "original_position": 39,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9735",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "spi-pio"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "state": "open"
+    },
+    {
+      "head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "state": "open",
+      "updated_at": "2026-09-12T06:13:21Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9735,
+  "checked_at": "2026-09-21T11:57:04.146246+00:00",
+  "title": "Force SPI PIO on MacBook8,1 so the built-in keyboard works",
+  "author": "jeissonneira",
+  "head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T06:13:21Z",
+  "state": "open",
+  "body": "## Summary\n\nOn MacBook8,1 (12-inch Early 2015) the installer already loads `applespi` and the PXA SPI modules. That is not enough. The GSPI controller (`00:15.4`) does transfers through the companion DesignWare DMA engine (`00:15.0`), and on this board those DMA transfers never complete. `applespi` times out with `-110`, IRQ 21 stays at zero, and the built-in keyboard and trackpad never work. #1954.\n\nForce the controller into PIO and it probes immediately. `dw_dmac_pci` is builtin, so the switch is a kernel parameter:\n\n```\ninitcall_blacklist=dw_pci_driver_init\n```\n\nDeep/S3 then wedges the same SPI device until reboot, so sleep defaults to `s2idle`.\n\nSame shape as the ASUS Panther Lake backlight leaf: detect the machine, write a Limine drop-in. No new package. No vendored C.\n\n## Changes\n\n- `install/hardware/apple/fix-spi-keyboard.sh` \u2014 on MacBook8,1 only, write `/etc/limine-entry-tool.d/macbook81-spi-pio.conf`. Other SPI MacBooks are unchanged.\n- Migration `1788318101.sh` for existing installs. Idempotent. Rebuilds the UKI. No-ops on anything that is not MacBook8,1.\n- `test/shell.d/macbook81-spi-pio-test.sh`\n- Manual note: USB keyboard for the installer itself; glass keys after the first reboot.\n\n## Tested\n\nMacBook8,1 (A1534, Early 2015), Core M-5Y31, Omarchy 4.0.2, kernel 7.1.9-arch1-2. Keyboard and trackpad work at LUKS, at the login screen, and after lid close.\n\nThe same PIO cmdline is what [matthiasjg](https://gist.github.com/matthiasjg/78aaf7802146f0b89be3da9e4feb111f) documented on #1954; the original reporter and two other MacBook8,1s confirmed it.\n\nSpeakers, camera, and Bluetooth stay out of this PR.\n\nFixes #1954",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2a5cbc34b85717b195d73d4f8fc18bdbd645a6cf",
+      "filename": "install/hardware/apple/fix-spi-keyboard.sh",
+      "status": "modified",
+      "additions": 12,
+      "deletions": 0,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/abba2c44f500717fe1e28f9efd7e3873c94c9b73/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/abba2c44f500717fe1e28f9efd7e3873c94c9b73/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh?ref=abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "patch": "@@ -8,6 +8,18 @@ if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPr\n   if [[ $product_name == \"MacBook8,1\" ]]; then\n     echo \"MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\" | \\\n       sudo tee /etc/mkinitcpio.conf.d/macbook_spi_modules.conf >/dev/null\n+\n+    # The Wildcat Point GSPI controller (00:15.4) does transfers through the\n+    # companion DesignWare DMA engine (00:15.0). On this board those DMA\n+    # transfers never complete: applespi times out with -110 and IRQ 21 stays\n+    # at zero. dw_dmac_pci is builtin, so it cannot be blacklisted as a module.\n+    # Blacklisting its initcall forces spi-pxa2xx into PIO, which works.\n+    # Deep/S3 sleep then wedges the same SPI device until reboot; s2idle does not.\n+    sudo mkdir -p /etc/limine-entry-tool.d\n+    sudo tee /etc/limine-entry-tool.d/macbook81-spi-pio.conf >/dev/null <<'EOF'\n+# MacBook8,1: DesignWare DMA never completes GSPI transfers.\n+KERNEL_CMDLINE[default]+=\" initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle\"\n+EOF\n   else\n     echo \"MODULES=(applespi intel_lpss_pci spi_pxa2xx_platform)\" | \\\n       sudo tee /etc/mkinitcpio.conf.d/macbook_spi_modules.conf >/dev/null"
+    },
+    {
+      "sha": "20a3faba252a3a833cb2981fdce6865e26cd96a1",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/abba2c44f500717fe1e28f9efd7e3873c94c9b73/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/abba2c44f500717fe1e28f9efd7e3873c94c9b73/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "patch": "@@ -37,6 +37,8 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n \n The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n \n+The 12-inch Early 2015 (MacBook8,1) needs a USB keyboard for the installer itself. After the first reboot the built-in keyboard and trackpad work: DMA on that board never completes SPI transfers, so the installer forces the controller into PIO and defaults sleep to s2idle.\n+\n ### Known Limitations\n \n Members of the community are constantly working on solutions to these challenges so if these are problematic for you, join #omarchy-on-other in our [Discord](https://discord.gg/tXFUdasqhY) and see if there's any up-to-date methods for resolving these."
+    },
+    {
+      "sha": "69f147542f769dfcecb52e36302a71efaeeb78e7",
+      "filename": "migrations/1788318101.sh",
+      "status": "added",
+      "additions": 42,
+      "deletions": 0,
+      "changes": 42,
+      "blob_url": "https://github.com/omacom/omarchy/blob/abba2c44f500717fe1e28f9efd7e3873c94c9b73/migrations%2F1788318101.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/abba2c44f500717fe1e28f9efd7e3873c94c9b73/migrations%2F1788318101.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788318101.sh?ref=abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "patch": "@@ -0,0 +1,42 @@\n+echo \"Force SPI PIO on MacBook8,1 so the built-in keyboard works\"\n+\n+# The install-time leaf already loads applespi for this model, but that is not\n+# enough: DesignWare DMA on 00:15.0 never completes GSPI transfers, so the\n+# keyboard and trackpad time out until the controller is forced into PIO.\n+# See install/hardware/apple/fix-spi-keyboard.sh.\n+product=\"${OMARCHY_MACBOOK81_DMI_PRODUCT:-/sys/class/dmi/id/product_name}\"\n+limine_conf=\"${OMARCHY_MACBOOK81_LIMINE_CONF:-/etc/limine-entry-tool.d/macbook81-spi-pio.conf}\"\n+repair_marker=\"${OMARCHY_MACBOOK81_REPAIR_MARKER:-/var/lib/omarchy/migrations/1788318101}\"\n+running_cmdline=\"${OMARCHY_MACBOOK81_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+product_name=\"$(cat \"$product\" 2>/dev/null || true)\"\n+if [[ $product_name != \"MacBook8,1\" ]]; then\n+  exit 0\n+fi\n+\n+needs_limine_rebuild=0\n+\n+if [[ ! -f $limine_conf ]] || ! grep -q 'initcall_blacklist=dw_pci_driver_init' \"$limine_conf\"; then\n+  sudo mkdir -p \"$(dirname \"$limine_conf\")\"\n+  sudo tee \"$limine_conf\" >/dev/null <<'EOF'\n+# MacBook8,1: DesignWare DMA never completes GSPI transfers.\n+KERNEL_CMDLINE[default]+=\" initcall_blacklist=dw_pci_driver_init mem_sleep_default=s2idle\"\n+EOF\n+  needs_limine_rebuild=1\n+fi\n+\n+# The current kernel keeps its old command line until reboot. Record a\n+# successful machine-wide rebuild so another user's migration does not repeat\n+# it before then, while a missing marker still retries an interrupted rebuild.\n+if [[ -f $limine_conf ]] &&\n+  [[ ! -e $repair_marker ]] &&\n+  grep -q 'initcall_blacklist=dw_pci_driver_init' \"$limine_conf\" &&\n+  { [[ ! -r $running_cmdline ]] ||\n+    ! grep -Eq '(^| )initcall_blacklist=dw_pci_driver_init( |$)' \"$running_cmdline\"; }; then\n+  needs_limine_rebuild=1\n+fi\n+\n+if (( needs_limine_rebuild )); then\n+  sudo limine-mkinitcpio\n+  sudo install -Dm644 /dev/null \"$repair_marker\"\n+fi"
+    },
+    {
+      "sha": "74ae221f4307ab94297835c753e5676b80fe2beb",
+      "filename": "test/shell.d/macbook81-spi-pio-test.sh",
+      "status": "added",
+      "additions": 144,
+      "deletions": 0,
+      "changes": 144,
+      "blob_url": "https://github.com/omacom/omarchy/blob/abba2c44f500717fe1e28f9efd7e3873c94c9b73/test%2Fshell.d%2Fmacbook81-spi-pio-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/abba2c44f500717fe1e28f9efd7e3873c94c9b73/test%2Fshell.d%2Fmacbook81-spi-pio-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmacbook81-spi-pio-test.sh?ref=abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+      "patch": "@@ -0,0 +1,144 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-spi-keyboard.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1788318101.sh\"\n+\n+grep -q 'apple/fix-spi-keyboard.sh' \"$all\" ||\n+  fail \"the SPI keyboard leaf runs during hardware setup\"\n+grep -q 'initcall_blacklist=dw_pci_driver_init' \"$leaf\" ||\n+  fail \"MacBook8,1 setup forces SPI PIO\"\n+grep -q 'mem_sleep_default=s2idle' \"$leaf\" ||\n+  fail \"MacBook8,1 setup defaults sleep to s2idle\"\n+pass \"MacBook8,1 SPI PIO is part of hardware setup\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local product=\"$1\"\n+  rm -rf \"$test_tmp/etc\"\n+  mkdir -p \"$test_tmp/etc\"\n+  printf '%s' \"$product\" >\"$test_tmp/dmi/product_name\"\n+  : >\"$calls\"\n+\n+  local script=\"$test_tmp/leaf.sh\"\n+  sed -e \"s|/sys/class/dmi/id/product_name|$test_tmp/dmi/product_name|g\" \\\n+      -e \"s|/etc/mkinitcpio.conf.d|$test_tmp/etc/mkinitcpio.conf.d|g\" \\\n+      -e \"s|/etc/limine-entry-tool.d|$test_tmp/etc/limine-entry-tool.d|g\" \\\n+      \"$leaf\" >\"$script\"\n+\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+run_leaf \"MacBook8,1\" >/dev/null\n+modules=\"$test_tmp/etc/mkinitcpio.conf.d/macbook_spi_modules.conf\"\n+pio=\"$test_tmp/etc/limine-entry-tool.d/macbook81-spi-pio.conf\"\n+grep -Fq 'MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)' \"$modules\" ||\n+  fail \"MacBook8,1 still gets the SPI initramfs modules\" \"$(cat \"$modules\" 2>/dev/null)\"\n+grep -Fq 'initcall_blacklist=dw_pci_driver_init' \"$pio\" ||\n+  fail \"MacBook8,1 gets the PIO kernel parameter\" \"$(cat \"$pio\" 2>/dev/null)\"\n+grep -Fq 'mem_sleep_default=s2idle' \"$pio\" ||\n+  fail \"MacBook8,1 gets s2idle\" \"$(cat \"$pio\" 2>/dev/null)\"\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-spi-driver-dkms' \"$calls\" ||\n+  fail \"MacBook8,1 still installs the SPI DKMS package\" \"$(cat \"$calls\")\"\n+pass \"MacBook8,1 setup writes SPI modules and the PIO drop-in\"\n+\n+run_leaf \"MacBook10,1\" >/dev/null\n+[[ -f $modules ]] || fail \"MacBook10,1 still gets SPI modules\"\n+[[ ! -e $pio ]] || fail \"later 12-inch MacBooks do not get the 8,1 PIO quirk\" \"$(cat \"$pio\")\"\n+pass \"later SPI MacBooks are left on DMA\"\n+\n+run_leaf \"MacBookPro14,1\" >/dev/null\n+[[ ! -e $pio ]] || fail \"MacBookPro models do not get the 8,1 PIO quirk\"\n+pass \"MacBookPro SPI models are left on DMA\"\n+\n+run_leaf \"ThinkPad X1 Carbon\" >/dev/null\n+[[ ! -e $modules ]] || fail \"non-Apple hardware is left alone\"\n+[[ ! -e $pio ]] || fail \"non-Apple hardware is left alone\"\n+[[ ! -s $calls ]] || fail \"non-Apple hardware escalates nothing\" \"$(cat \"$calls\")\"\n+pass \"non-Apple hardware is left alone\"\n+\n+run_migration() {\n+  local product=\"$1\"\n+  printf '%s' \"$product\" >\"$test_tmp/dmi/product_name\"\n+  : >\"$calls\"\n+\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_MACBOOK81_DMI_PRODUCT=\"$test_tmp/dmi/product_name\" \\\n+    OMARCHY_MACBOOK81_LIMINE_CONF=\"$pio\" \\\n+    OMARCHY_MACBOOK81_REPAIR_MARKER=\"$test_tmp/repair-complete\" \\\n+    OMARCHY_MACBOOK81_RUNNING_CMDLINE=\"$test_tmp/cmdline\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+rm -rf \"$test_tmp/etc\" \"$test_tmp/repair-complete\"\n+mkdir -p \"$test_tmp/etc\"\n+echo 'quiet splash' >\"$test_tmp/cmdline\"\n+run_migration \"MacBook8,1\"\n+grep -Fq 'initcall_blacklist=dw_pci_driver_init' \"$pio\" ||\n+  fail \"the migration writes the PIO drop-in\" \"$(cat \"$pio\" 2>/dev/null)\"\n+grep -Fq 'mem_sleep_default=s2idle' \"$pio\" ||\n+  fail \"the migration writes s2idle\" \"$(cat \"$pio\" 2>/dev/null)\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"the migration rebuilds the boot image\" \"$(cat \"$calls\")\"\n+[[ -f $test_tmp/repair-complete ]] || fail \"the migration records the machine-wide repair\"\n+pass \"the migration repairs an existing MacBook8,1\"\n+\n+: >\"$calls\"\n+run_migration \"MacBook8,1\"\n+[[ ! -s $calls ]] || fail \"an already repaired MacBook8,1 is left unchanged\" \"$(cat \"$calls\")\"\n+pass \"the migration is machine-idempotent before reboot\"\n+\n+rm -f \"$test_tmp/repair-complete\"\n+: >\"$calls\"\n+run_migration \"MacBook8,1\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"the migration retries an interrupted boot image rebuild\"\n+[[ -f $test_tmp/repair-complete ]] || fail \"a retried repair records completion\"\n+! grep -Eq $'^(sudo\\t)?tee(\\t|$)' \"$calls\" ||\n+  fail \"rebuild retry leaves a complete drop-in alone\" \"$(cat \"$calls\")\"\n+pass \"the migration retries an interrupted boot image rebuild\"\n+\n+rm -rf \"$test_tmp/etc\" \"$test_tmp/repair-complete\"\n+mkdir -p \"$test_tmp/etc\"\n+: >\"$calls\"\n+run_migration \"MacBook10,1\"\n+[[ ! -e $pio ]] || fail \"the migration skips later 12-inch MacBooks\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on unrelated Macs\" \"$(cat \"$calls\")\"\n+pass \"the migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5518806285",
+      "html_url": "https://github.com/omacom/omarchy/pull/9735#issuecomment-5518806285",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9735",
+      "id": 5518806285,
+      "node_id": "IC_kwDOO0Cobs8AAAABSPJNDQ",
+      "user": {
+        "login": "Jackwwg83",
+        "id": 173434472,
+        "node_id": "U_kgDOClZmaA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/173434472?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Jackwwg83",
+        "html_url": "https://github.com/Jackwwg83",
+        "followers_url": "https://api.github.com/users/Jackwwg83/followers",
+        "following_url": "https://api.github.com/users/Jackwwg83/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Jackwwg83/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Jackwwg83/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Jackwwg83/subscriptions",
+        "organizations_url": "https://api.github.com/users/Jackwwg83/orgs",
+        "repos_url": "https://api.github.com/users/Jackwwg83/repos",
+        "events_url": "https://api.github.com/users/Jackwwg83/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Jackwwg83/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-03T01:14:12Z",
+      "updated_at": "2026-09-03T01:14:12Z",
+      "body": "**Independent confirmation on a second MacBook8,1, plus some register-level measurements of *why* the DMA path is dead \u2014 in case they help the review or the upstream quirk.**\n\n**Setup:** MacBook8,1 (A1534), Omarchy 4.0.0.alpha, kernel `7.1.9-arch1-2`, limine UKI, LUKS root. Applied `initcall_blacklist=dw_pci_driver_init` (via `/etc/default/limine`, before seeing this PR).\n\n**Result after cold boot:** `pxa2xx_spi_pci 0000:00:15.4: no DMA channels available, using PIO` \u2192 `applespi \u2026 modeswitch done.` at t=1.4 s; keyboard and trackpad registered; `touchpad_dimensions=-5087x-182+10666+6271`; 0 timeouts; idle IRQ 21 rate 0/s, CPU 97% idle. Internal keyboard works at the LUKS prompt. The same switch at runtime (unbind `dw_dmac_pci` \u2192 rebind `pxa2xx_spi_pci`) flips the machine between \"-110 every 200 ms, no touchpad\" and \"works\" deterministically, in both directions.\n\n**What the failure looks like at the register level** (driver bound, applespi retrying, read from a small probe module):\n\n- `SSCR1 = 0x00701dc0` \u2192 `TSRE|RSRE|TRAIL` set, `TIE|RIE` clear (DMA mode). `SSSR = 0x0000f024` \u2192 `TFS=1, TFL=0, BSY=0`. The controller is asserting its TX DMA request and nothing ever moves \u2014 the DesignWare engine never services the request at all, rather than starting a transfer that doesn't finish.\n- The SSP and its IRQ path are fine: with the driver unbound, driving `SSCR0/SSCR1/SSDR` by hand clocks data out (FIFO drains, RX fills), and setting `TIE` asserts PCI `INTx` (STATUS bit 3). A sniffer `request_irq()`'d on GSI 16\u201323 caught that interrupt on **GSI 21** (100k+ hits in 2 s). So IRQ routing, IOMMU, interrupt remapping, `PWM_LPSS` etc. are not involved. `intel_iommu=off` was also tested: no effect.\n- One more firmware inconsistency worth knowing: ACPI `_PRT` gives the DMA engine (`00:15.0`, INTB) GSI 20, but the PCH routing register `D21IR = 0x5554` routes INTB \u2192 PIRQF = **GSI 21**. Linux waits for `dw_dmac` completions on IRQ 20; this board would deliver them on 21. So even if DMA moved data, its completion interrupt could never reach the driver here.\n\nUpstream is converging on the same answer: fourdollars' series *\"spi: pxa2xx: MacBook8,1 quirk, runtime PM, and LPSS S3 resume state fixes\"* (v14, 2026-07-18) adds the DMI quirk in-kernel. Until that reaches Arch's `linux`, the initcall blacklist in this PR is the right shape. +1 on `mem_sleep_default=s2idle` too \u2014 this box defaults to `[deep]`.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5518806285/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5644116410",
+      "html_url": "https://github.com/omacom/omarchy/pull/9735#issuecomment-5644116410",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9735",
+      "id": 5644116410,
+      "node_id": "IC_kwDOO0Cobs8AAAABUGphug",
+      "user": {
+        "login": "ken3yang",
+        "id": 355368,
+        "node_id": "MDQ6VXNlcjM1NTM2OA==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/355368?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ken3yang",
+        "html_url": "https://github.com/ken3yang",
+        "followers_url": "https://api.github.com/users/ken3yang/followers",
+        "following_url": "https://api.github.com/users/ken3yang/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ken3yang/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ken3yang/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ken3yang/subscriptions",
+        "organizations_url": "https://api.github.com/users/ken3yang/orgs",
+        "repos_url": "https://api.github.com/users/ken3yang/repos",
+        "events_url": "https://api.github.com/users/ken3yang/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ken3yang/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-12T06:13:21Z",
+      "updated_at": "2026-09-12T06:13:21Z",
+      "body": "I can confirm the fix worked on my Macbook 8,1 ( Macbbok 12-inch 2015)",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5644116410/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 1,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

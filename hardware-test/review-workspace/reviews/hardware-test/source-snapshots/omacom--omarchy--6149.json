@@ -1,0 +1,728 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6149",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-suspend"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "1faf6a0b2ce5a32970c54b144ef40367865fbb17",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 6149,
+  "checked_at": "2026-09-21T11:57:24.378161+00:00",
+  "title": "Fix intermittent suspend hang on T2 MacBooks (force synchronous device suspend)",
+  "author": "andyhoops",
+  "head_sha": "1faf6a0b2ce5a32970c54b144ef40367865fbb17",
+  "base_sha": "9cf1852525a5f7de26d3162db9d61e2f5c1d5523",
+  "base_ref": "dev",
+  "updated_at": "2026-07-25T16:59:38Z",
+  "state": "open",
+  "body": "Refs: #1840\r\n\r\n## Problem\r\n\r\nOn T2 MacBooks, `systemctl suspend` / lid-close intermittently **hard-hangs** the\r\nmachine the instant it enters suspend \u2014 black screen, dead keyboard/trackpad/\r\nTouch Bar, no wake; only a forced power-off recovers. This is the core of the\r\nwidely-reported #1840 across many T2 models (13\"/15\"/16\", 2018\u20132020).\r\n\r\n## Root cause\r\n\r\nAn **asynchronous device-suspend race**. The kernel default\r\n(`/sys/power/pm_async=1`) suspends devices in parallel; on T2 hardware this\r\nraces and deadlocks. `pm_trace` localises the hang to the async suspend core\r\n(`drivers/base/power/main.c`), **not** to any single driver \u2014 which is why\r\nunloading individual drivers (brcmfmac, apple-bce) and PCI D3cold tweaks don't\r\nhelp. Forcing synchronous device suspend (`pm_async=0`) eliminates the race.\r\n\r\nThe existing `install/config/hardware/apple/fix-suspend-nvme.sh` does not cover\r\nthese machines: it excludes 16,x/15,x models and targets a discrete NVMe at PCI\r\n`0000:01:00.0`, whereas 16,2-class storage is the T2-bridged ANS2 controller at\r\n`e6:00.0`. This fix is independent of that one.\r\n\r\n## Fix\r\n\r\nAdd `install/config/hardware/apple/fix-suspend-async.sh`: on T2 Macs\r\n(`lspci 106b:180[12]`), install + enable a oneshot service that writes\r\n`0` to `/sys/power/pm_async` at boot. Mirrors the structure of the existing\r\n`fix-suspend-nvme.sh`. No change to mem_sleep / logind.conf / sleep.conf /\r\nbootloader cmdline is required.\r\n\r\n## Testing\r\n\r\n- MacBookPro16,2, Omarchy 3.8.2, `linux-t2` 7.0.12: **5/5 clean** suspend/resume\r\n  cycles with the fix vs **5/5 hard hangs** without (same `deep` mode). Lid\r\n  close/reopen confirmed. Persists across reboot.\r\n- Low risk: serial device suspend is marginally slower (sub-second) and is a\r\n  no-op on hardware that wasn't racing.\r\n\r\n## Changes\r\n\r\n1. `install/config/hardware/apple/fix-suspend-async.sh` (new)\r\n2. `install/config/all.sh` \u2014 add one line after the `fix-suspend-nvme.sh` entry:\r\n   `run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-suspend-async.sh`\r\n3. `migrations/<unix-timestamp>.sh` (new) \u2014 sources the script so existing\r\n   installs get it on `omarchy update`.\r\n\r\n## Note for reviewers\r\n\r\nGated to T2 Macs (where it's proven). `pm_async=0` is harmless on non-racing\r\nhardware, so the gate could be widened to all Apple MacBooks (`#1840` includes a\r\ncouple of non-T2 reports) if preferred. Co-testers from #1840 on 13\"/15\" models\r\nwould help confirm breadth.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e17de875f24077b241a8fb8d8fd81ec550d87fb7",
+      "filename": "install/config/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1faf6a0b2ce5a32970c54b144ef40367865fbb17/install%2Fconfig%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1faf6a0b2ce5a32970c54b144ef40367865fbb17/install%2Fconfig%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fall.sh?ref=1faf6a0b2ce5a32970c54b144ef40367865fbb17",
+      "patch": "@@ -63,6 +63,7 @@ run_logged $OMARCHY_INSTALL/config/hardware/framework/qmk-hid.sh\n \n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-spi-keyboard.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-suspend-nvme.sh\n+run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-suspend-async.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-t2.sh\n \n run_logged $OMARCHY_INSTALL/config/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+    },
+    {
+      "sha": "7cd3d903e4500c47b67d643a0e9f87227643f116",
+      "filename": "install/config/hardware/apple/fix-suspend-async.sh",
+      "status": "added",
+      "additions": 41,
+      "deletions": 0,
+      "changes": 41,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1faf6a0b2ce5a32970c54b144ef40367865fbb17/install%2Fconfig%2Fhardware%2Fapple%2Ffix-suspend-async.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1faf6a0b2ce5a32970c54b144ef40367865fbb17/install%2Fconfig%2Fhardware%2Fapple%2Ffix-suspend-async.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fhardware%2Fapple%2Ffix-suspend-async.sh?ref=1faf6a0b2ce5a32970c54b144ef40367865fbb17",
+      "patch": "@@ -0,0 +1,41 @@\n+# Fix intermittent suspend hang on T2 MacBooks caused by async device suspend.\n+#\n+# On T2 Macs the kernel default of asynchronous (parallel) device suspend\n+# (/sys/power/pm_async=1) intermittently HARD-HANGS the machine the instant it\n+# enters suspend: black screen, dead keyboard/trackpad/Touch Bar, no wake, only\n+# a forced power-off recovers. pm_trace fingerprints the hang in the async\n+# device-suspend core (drivers/base/power/main.c), not in any single driver.\n+# Forcing synchronous device suspend serialises it and resolves the hang.\n+#\n+# Confirmed on MacBookPro16,2 (5/5 clean suspend cycles with the fix vs 5/5\n+# hangs without). Independent of suspend mode (deep or s2idle). See\n+# basecamp/omarchy#1840 for the broader set of affected T2 models.\n+if lspci -nn | grep -q \"106b:180[12]\"; then\n+  echo \"Detected MacBook with T2 chip. Applying synchronous device-suspend fix...\"\n+\n+  cat <<EOF | sudo tee /etc/systemd/system/omarchy-pm-async-suspend-fix.service >/dev/null\n+[Unit]\n+Description=Omarchy synchronous device-suspend fix for T2 MacBook\n+ConditionPathExists=/sys/power/pm_async\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/bin/bash -c 'echo 0 > /sys/power/pm_async'\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+  # The installer defines this helper via install/helpers/all.sh, but migrations\n+  # run in a fresh shell, so pull it in directly when it isn't already defined.\n+  # (OMARCHY_INSTALL is installer-only; OMARCHY_PATH is in the user environment.)\n+  declare -F chrootable_systemctl_enable >/dev/null ||\n+    source \"$OMARCHY_PATH/install/helpers/chroot.sh\"\n+\n+  if ! chrootable_systemctl_enable omarchy-pm-async-suspend-fix.service; then\n+    echo \"Failed to enable omarchy-pm-async-suspend-fix.service\" >&2\n+    exit 1\n+  fi\n+\n+  sudo systemctl daemon-reload\n+fi"
+    },
+    {
+      "sha": "b7471bbb1751b6f26ef076054db67f00f33a3e02",
+      "filename": "migrations/1782742549.sh",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1faf6a0b2ce5a32970c54b144ef40367865fbb17/migrations%2F1782742549.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1faf6a0b2ce5a32970c54b144ef40367865fbb17/migrations%2F1782742549.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1782742549.sh?ref=1faf6a0b2ce5a32970c54b144ef40367865fbb17",
+      "patch": "@@ -0,0 +1,3 @@\n+echo \"Fix intermittent suspend hang on T2 MacBooks (force synchronous device suspend)\"\n+\n+source $OMARCHY_PATH/install/config/hardware/apple/fix-suspend-async.sh"
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4592743396,
+      "node_id": "PRR_kwDOO0Cobs8AAAABEb-z5A",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nThis PR addresses intermittent hard hangs during suspend on T2 MacBooks by forcing **synchronous device suspend** (setting `/sys/power/pm_async=0`) via a boot-time systemd oneshot service, and ensures existing installations receive the fix via a migration.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n**Changes:**\n- Add a T2-gated hardware script that installs/enables a systemd oneshot service to set `pm_async=0` at boot.\n- Wire the new script into the standard install/config stage.\n- Add a migration to apply the same fix to existing installs on update.\n\n### Reviewed changes\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated 2 comments.\n\n| File | Description |\n| ---- | ----------- |\n| `migrations/1782742549.sh` | Runs the new Apple T2 suspend fix for existing installs via migration. |\n| `install/config/hardware/apple/fix-suspend-async.sh` | New T2-detection script that installs/enables a oneshot systemd unit to set `pm_async=0`. |\n| `install/config/all.sh` | Invokes the new Apple suspend async fix during install/config. |\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/dev?filename=.github/instructions/*.instructions.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add Copilot custom instructions</a> for smarter, more guided reviews. <a href=\"https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn how to get started</a>.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4592743396",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4592743396"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "submitted_at": "2026-06-29T14:34:28Z",
+      "commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d"
+    },
+    {
+      "id": 4593491256,
+      "node_id": "PRR_kwDOO0Cobs8AAAABEcsdOA",
+      "user": {
+        "login": "andyhoops",
+        "id": 15028530,
+        "node_id": "MDQ6VXNlcjE1MDI4NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15028530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andyhoops",
+        "html_url": "https://github.com/andyhoops",
+        "followers_url": "https://api.github.com/users/andyhoops/followers",
+        "following_url": "https://api.github.com/users/andyhoops/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andyhoops/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andyhoops/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andyhoops/subscriptions",
+        "organizations_url": "https://api.github.com/users/andyhoops/orgs",
+        "repos_url": "https://api.github.com/users/andyhoops/repos",
+        "events_url": "https://api.github.com/users/andyhoops/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andyhoops/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4593491256",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4593491256"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "submitted_at": "2026-06-29T16:13:46Z",
+      "commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d"
+    },
+    {
+      "id": 4593493741,
+      "node_id": "PRR_kwDOO0Cobs8AAAABEcsm7Q",
+      "user": {
+        "login": "andyhoops",
+        "id": 15028530,
+        "node_id": "MDQ6VXNlcjE1MDI4NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15028530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andyhoops",
+        "html_url": "https://github.com/andyhoops",
+        "followers_url": "https://api.github.com/users/andyhoops/followers",
+        "following_url": "https://api.github.com/users/andyhoops/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andyhoops/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andyhoops/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andyhoops/subscriptions",
+        "organizations_url": "https://api.github.com/users/andyhoops/orgs",
+        "repos_url": "https://api.github.com/users/andyhoops/repos",
+        "events_url": "https://api.github.com/users/andyhoops/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andyhoops/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4593493741",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4593493741"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "submitted_at": "2026-06-29T16:14:11Z",
+      "commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d"
+    },
+    {
+      "id": 4731233145,
+      "node_id": "PRR_kwDOO0Cobs8AAAABGgDjeQ",
+      "user": {
+        "login": "dhh",
+        "id": 2741,
+        "node_id": "MDQ6VXNlcjI3NDE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/2741?u=cf26c70bb0d6aa9c644f40d257e8757b7fe00a50&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dhh",
+        "html_url": "https://github.com/dhh",
+        "followers_url": "https://api.github.com/users/dhh/followers",
+        "following_url": "https://api.github.com/users/dhh/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dhh/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dhh/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dhh/subscriptions",
+        "organizations_url": "https://api.github.com/users/dhh/orgs",
+        "repos_url": "https://api.github.com/users/dhh/repos",
+        "events_url": "https://api.github.com/users/dhh/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dhh/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4731233145",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4731233145"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "submitted_at": "2026-07-19T18:06:53Z",
+      "commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44"
+    },
+    {
+      "id": 4779481623,
+      "node_id": "PRR_kwDOO0Cobs8AAAABHOEaFw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated no new comments.\n\n\n\n\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4779481623",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4779481623"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "submitted_at": "2026-07-25T15:09:13Z",
+      "commit_id": "1faf6a0b2ce5a32970c54b144ef40367865fbb17"
+    },
+    {
+      "id": 4779694569,
+      "node_id": "PRR_kwDOO0Cobs8AAAABHORZ6Q",
+      "user": {
+        "login": "andyhoops",
+        "id": 15028530,
+        "node_id": "MDQ6VXNlcjE1MDI4NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15028530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andyhoops",
+        "html_url": "https://github.com/andyhoops",
+        "followers_url": "https://api.github.com/users/andyhoops/followers",
+        "following_url": "https://api.github.com/users/andyhoops/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andyhoops/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andyhoops/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andyhoops/subscriptions",
+        "organizations_url": "https://api.github.com/users/andyhoops/orgs",
+        "repos_url": "https://api.github.com/users/andyhoops/repos",
+        "events_url": "https://api.github.com/users/andyhoops/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andyhoops/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4779694569",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#pullrequestreview-4779694569"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "submitted_at": "2026-07-25T16:59:38Z",
+      "commit_id": "1faf6a0b2ce5a32970c54b144ef40367865fbb17"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3492479936",
+      "pull_request_review_id": 4592743396,
+      "id": 3492479936,
+      "node_id": "PRRC_kwDOO0Cobs7QKwPA",
+      "diff_hunk": "@@ -0,0 +1,11 @@\n+# Omarchy migration \u2014 apply the T2 synchronous device-suspend fix to existing\n+# installs. At submission time, RENAME this file to a fresh unix timestamp that\n+# is greater than the newest existing migration, e.g.:\n+#\n+#     mv migration.sh \"migrations/$(date +%s).sh\"\n+#\n+# (Verify it sorts after the current latest in migrations/.)\n+\n+echo \"Fix intermittent suspend hang on T2 MacBooks (force synchronous device suspend)\"\n+\n+source $OMARCHY_PATH/install/config/hardware/apple/fix-suspend-async.sh",
+      "path": "migrations/1782742549.sh",
+      "commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d",
+      "original_commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Migration files in this repo consistently start with the leading `echo \"...\"` line (e.g. migrations/1755208929.sh:1, migrations/1775059710.sh:1). The current header block pushes the echo down and includes \"RENAME this file\" instructions that will be incorrect once merged (the filename is already the timestamp). Consider removing/moving the header so the migration begins with the echo, and keep any brief context below it.",
+      "created_at": "2026-06-29T14:34:27Z",
+      "updated_at": "2026-06-29T14:34:28Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#discussion_r3492479936",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3492479936"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#discussion_r3492479936"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3492479936/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 11,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 11,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3492479993",
+      "pull_request_review_id": 4592743396,
+      "id": 3492479993,
+      "node_id": "PRRC_kwDOO0Cobs7QKwP5",
+      "diff_hunk": "@@ -0,0 +1,30 @@\n+# Fix intermittent suspend hang on T2 MacBooks caused by async device suspend.\n+#\n+# On T2 Macs the kernel default of asynchronous (parallel) device suspend\n+# (/sys/power/pm_async=1) intermittently HARD-HANGS the machine the instant it\n+# enters suspend: black screen, dead keyboard/trackpad/Touch Bar, no wake, only\n+# a forced power-off recovers. pm_trace fingerprints the hang in the async\n+# device-suspend core (drivers/base/power/main.c), not in any single driver.\n+# Forcing synchronous device suspend serialises it and resolves the hang.\n+#\n+# Confirmed on MacBookPro16,2 (5/5 clean suspend cycles with the fix vs 5/5\n+# hangs without). Independent of suspend mode (deep or s2idle). See\n+# basecamp/omarchy#1840 for the broader set of affected T2 models.\n+if lspci -nn | grep -q \"106b:180[12]\"; then\n+  echo \"Detected MacBook with T2 chip. Applying synchronous device-suspend fix...\"\n+\n+  cat <<EOF | sudo tee /etc/systemd/system/omarchy-pm-async-suspend-fix.service >/dev/null\n+[Unit]\n+Description=Omarchy synchronous device-suspend fix for T2 MacBook\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/bin/bash -c 'echo 0 > /sys/power/pm_async'\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF",
+      "path": "install/config/hardware/apple/fix-suspend-async.sh",
+      "commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44",
+      "original_commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The generated systemd unit will fail (and show as failed in `systemctl --failed`) if `/sys/power/pm_async` is absent or renamed by a kernel/config. Adding a `ConditionPathExists=/sys/power/pm_async` makes the fix safer and avoids boot-time noise while preserving behavior on T2 systems where the file exists.",
+      "created_at": "2026-06-29T14:34:28Z",
+      "updated_at": "2026-06-29T14:34:28Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#discussion_r3492479993",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3492479993"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#discussion_r3492479993"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3492479993/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 16,
+      "original_start_line": 16,
+      "start_side": "RIGHT",
+      "line": 27,
+      "original_line": 26,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 26,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3493133993",
+      "pull_request_review_id": 4593491256,
+      "id": 3493133993,
+      "node_id": "PRRC_kwDOO0Cobs7QNP6p",
+      "diff_hunk": "@@ -0,0 +1,11 @@\n+# Omarchy migration \u2014 apply the T2 synchronous device-suspend fix to existing\n+# installs. At submission time, RENAME this file to a fresh unix timestamp that\n+# is greater than the newest existing migration, e.g.:\n+#\n+#     mv migration.sh \"migrations/$(date +%s).sh\"\n+#\n+# (Verify it sorts after the current latest in migrations/.)\n+\n+echo \"Fix intermittent suspend hang on T2 MacBooks (force synchronous device suspend)\"\n+\n+source $OMARCHY_PATH/install/config/hardware/apple/fix-suspend-async.sh",
+      "path": "migrations/1782742549.sh",
+      "commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d",
+      "original_commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d",
+      "user": {
+        "login": "andyhoops",
+        "id": 15028530,
+        "node_id": "MDQ6VXNlcjE1MDI4NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15028530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andyhoops",
+        "html_url": "https://github.com/andyhoops",
+        "followers_url": "https://api.github.com/users/andyhoops/followers",
+        "following_url": "https://api.github.com/users/andyhoops/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andyhoops/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andyhoops/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andyhoops/subscriptions",
+        "organizations_url": "https://api.github.com/users/andyhoops/orgs",
+        "repos_url": "https://api.github.com/users/andyhoops/repos",
+        "events_url": "https://api.github.com/users/andyhoops/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andyhoops/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Done in 0fe6d3f1 \u2014 migration now leads with the echo like the others",
+      "created_at": "2026-06-29T16:13:46Z",
+      "updated_at": "2026-06-29T16:13:46Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#discussion_r3493133993",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3493133993"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#discussion_r3493133993"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3493133993/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 11,
+      "side": "RIGHT",
+      "in_reply_to_id": 3492479936,
+      "author_association": "NONE",
+      "original_position": 11,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3493136346",
+      "pull_request_review_id": 4593493741,
+      "id": 3493136346,
+      "node_id": "PRRC_kwDOO0Cobs7QNQfa",
+      "diff_hunk": "@@ -0,0 +1,30 @@\n+# Fix intermittent suspend hang on T2 MacBooks caused by async device suspend.\n+#\n+# On T2 Macs the kernel default of asynchronous (parallel) device suspend\n+# (/sys/power/pm_async=1) intermittently HARD-HANGS the machine the instant it\n+# enters suspend: black screen, dead keyboard/trackpad/Touch Bar, no wake, only\n+# a forced power-off recovers. pm_trace fingerprints the hang in the async\n+# device-suspend core (drivers/base/power/main.c), not in any single driver.\n+# Forcing synchronous device suspend serialises it and resolves the hang.\n+#\n+# Confirmed on MacBookPro16,2 (5/5 clean suspend cycles with the fix vs 5/5\n+# hangs without). Independent of suspend mode (deep or s2idle). See\n+# basecamp/omarchy#1840 for the broader set of affected T2 models.\n+if lspci -nn | grep -q \"106b:180[12]\"; then\n+  echo \"Detected MacBook with T2 chip. Applying synchronous device-suspend fix...\"\n+\n+  cat <<EOF | sudo tee /etc/systemd/system/omarchy-pm-async-suspend-fix.service >/dev/null\n+[Unit]\n+Description=Omarchy synchronous device-suspend fix for T2 MacBook\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/bin/bash -c 'echo 0 > /sys/power/pm_async'\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF",
+      "path": "install/config/hardware/apple/fix-suspend-async.sh",
+      "commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44",
+      "original_commit_id": "c6fb136ae460609e004cff16d365e498f5f0ac2d",
+      "user": {
+        "login": "andyhoops",
+        "id": 15028530,
+        "node_id": "MDQ6VXNlcjE1MDI4NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15028530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andyhoops",
+        "html_url": "https://github.com/andyhoops",
+        "followers_url": "https://api.github.com/users/andyhoops/followers",
+        "following_url": "https://api.github.com/users/andyhoops/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andyhoops/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andyhoops/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andyhoops/subscriptions",
+        "organizations_url": "https://api.github.com/users/andyhoops/orgs",
+        "repos_url": "https://api.github.com/users/andyhoops/repos",
+        "events_url": "https://api.github.com/users/andyhoops/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andyhoops/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Added ConditionPathExists=/sys/power/pm_async in 0fe6d3f1, thanks.",
+      "created_at": "2026-06-29T16:14:11Z",
+      "updated_at": "2026-06-29T16:14:11Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#discussion_r3493136346",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3493136346"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#discussion_r3493136346"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3493136346/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 16,
+      "original_start_line": 16,
+      "start_side": "RIGHT",
+      "line": 27,
+      "original_line": 26,
+      "side": "RIGHT",
+      "in_reply_to_id": 3492479993,
+      "author_association": "NONE",
+      "original_position": 26,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3611081682",
+      "pull_request_review_id": 4731233145,
+      "id": 3611081682,
+      "node_id": "PRRC_kwDOO0Cobs7XPLvS",
+      "diff_hunk": "@@ -0,0 +1,31 @@\n+# Fix intermittent suspend hang on T2 MacBooks caused by async device suspend.\n+#\n+# On T2 Macs the kernel default of asynchronous (parallel) device suspend\n+# (/sys/power/pm_async=1) intermittently HARD-HANGS the machine the instant it\n+# enters suspend: black screen, dead keyboard/trackpad/Touch Bar, no wake, only\n+# a forced power-off recovers. pm_trace fingerprints the hang in the async\n+# device-suspend core (drivers/base/power/main.c), not in any single driver.\n+# Forcing synchronous device suspend serialises it and resolves the hang.\n+#\n+# Confirmed on MacBookPro16,2 (5/5 clean suspend cycles with the fix vs 5/5\n+# hangs without). Independent of suspend mode (deep or s2idle). See\n+# basecamp/omarchy#1840 for the broader set of affected T2 models.\n+if lspci -nn | grep -q \"106b:180[12]\"; then\n+  echo \"Detected MacBook with T2 chip. Applying synchronous device-suspend fix...\"\n+\n+  cat <<EOF | sudo tee /etc/systemd/system/omarchy-pm-async-suspend-fix.service >/dev/null\n+[Unit]\n+Description=Omarchy synchronous device-suspend fix for T2 MacBook\n+ConditionPathExists=/sys/power/pm_async\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/bin/bash -c 'echo 0 > /sys/power/pm_async'\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+  chrootable_systemctl_enable omarchy-pm-async-suspend-fix.service",
+      "path": "install/config/hardware/apple/fix-suspend-async.sh",
+      "commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44",
+      "original_commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44",
+      "user": {
+        "login": "dhh",
+        "id": 2741,
+        "node_id": "MDQ6VXNlcjI3NDE=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/2741?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dhh",
+        "html_url": "https://github.com/dhh",
+        "followers_url": "https://api.github.com/users/dhh/followers",
+        "following_url": "https://api.github.com/users/dhh/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dhh/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dhh/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dhh/subscriptions",
+        "organizations_url": "https://api.github.com/users/dhh/orgs",
+        "repos_url": "https://api.github.com/users/dhh/repos",
+        "events_url": "https://api.github.com/users/dhh/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dhh/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This script is also sourced by the migration, but `chrootable_systemctl_enable` is only defined when the installer loads `install/helpers/all.sh`. `omarchy-migrate` runs each migration in a fresh shell, so the function is unavailable on existing installations.\n\nOn a T2 Mac, this produces `chrootable_systemctl_enable: command not found`. The following `systemctl daemon-reload` can still succeed, causing the migration to exit successfully and be marked complete even though the service was never enabled or started.\n\nCould you make this script self-contained for the migration path, or explicitly load the helper and ensure an enable failure propagates as a non-zero exit?",
+      "created_at": "2026-07-19T18:06:53Z",
+      "updated_at": "2026-07-19T18:06:53Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#discussion_r3611081682",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3611081682"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#discussion_r3611081682"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3611081682/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 29,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 29,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3650592477",
+      "pull_request_review_id": 4779694569,
+      "id": 3650592477,
+      "node_id": "PRRC_kwDOO0Cobs7Zl57d",
+      "diff_hunk": "@@ -0,0 +1,31 @@\n+# Fix intermittent suspend hang on T2 MacBooks caused by async device suspend.\n+#\n+# On T2 Macs the kernel default of asynchronous (parallel) device suspend\n+# (/sys/power/pm_async=1) intermittently HARD-HANGS the machine the instant it\n+# enters suspend: black screen, dead keyboard/trackpad/Touch Bar, no wake, only\n+# a forced power-off recovers. pm_trace fingerprints the hang in the async\n+# device-suspend core (drivers/base/power/main.c), not in any single driver.\n+# Forcing synchronous device suspend serialises it and resolves the hang.\n+#\n+# Confirmed on MacBookPro16,2 (5/5 clean suspend cycles with the fix vs 5/5\n+# hangs without). Independent of suspend mode (deep or s2idle). See\n+# basecamp/omarchy#1840 for the broader set of affected T2 models.\n+if lspci -nn | grep -q \"106b:180[12]\"; then\n+  echo \"Detected MacBook with T2 chip. Applying synchronous device-suspend fix...\"\n+\n+  cat <<EOF | sudo tee /etc/systemd/system/omarchy-pm-async-suspend-fix.service >/dev/null\n+[Unit]\n+Description=Omarchy synchronous device-suspend fix for T2 MacBook\n+ConditionPathExists=/sys/power/pm_async\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/bin/bash -c 'echo 0 > /sys/power/pm_async'\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+  chrootable_systemctl_enable omarchy-pm-async-suspend-fix.service",
+      "path": "install/config/hardware/apple/fix-suspend-async.sh",
+      "commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44",
+      "original_commit_id": "0fe6d3f176b2c5aeae294cab6b4979943c584b44",
+      "user": {
+        "login": "andyhoops",
+        "id": 15028530,
+        "node_id": "MDQ6VXNlcjE1MDI4NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15028530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/andyhoops",
+        "html_url": "https://github.com/andyhoops",
+        "followers_url": "https://api.github.com/users/andyhoops/followers",
+        "following_url": "https://api.github.com/users/andyhoops/following{/other_user}",
+        "gists_url": "https://api.github.com/users/andyhoops/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/andyhoops/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/andyhoops/subscriptions",
+        "organizations_url": "https://api.github.com/users/andyhoops/orgs",
+        "repos_url": "https://api.github.com/users/andyhoops/repos",
+        "events_url": "https://api.github.com/users/andyhoops/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/andyhoops/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Good catch, thank you \u2014 that's a real hole and it would have hit every existing\nT2 install on `omarchy update`, silently. Fixed in `1faf6a0`.\n\nI went with your second option, loading the helper rather than inlining the\nchroot branch, so the chroot logic stays in one place:\n\n```bash\n# The installer defines this helper via install/helpers/all.sh, but migrations\n# run in a fresh shell, so pull it in directly when it isn't already defined.\n# (OMARCHY_INSTALL is installer-only; OMARCHY_PATH is in the user environment.)\ndeclare -F chrootable_systemctl_enable >/dev/null ||\n  source \"$OMARCHY_PATH/install/helpers/chroot.sh\"\n\nif ! chrootable_systemctl_enable omarchy-pm-async-suspend-fix.service; then\n  echo \"Failed to enable omarchy-pm-async-suspend-fix.service\" >&2\n  exit 1\nfi\n\nsudo systemctl daemon-reload\n```\n\nTwo notes on the details:\n\n- It sources via `$OMARCHY_PATH/install/helpers/chroot.sh`, not\n  `$OMARCHY_INSTALL`. `OMARCHY_INSTALL` is exported only by `install.sh`, so on\n  the migration path it's empty \u2014 using it would have reintroduced the same class\n  of bug one level down.\n- The `declare -F` guard means the installer path is untouched: `chroot.sh` does\n  `export -f`, so the function is already present in `run_logged`'s subshell and\n  nothing is re-sourced.\n\nI verified both call paths with stubbed `lspci`/`sudo`/`systemctl` \u2014 `bash $file`\nfor the migration and `bash -c \"source $script\"` to match `run_logged`:\n\n| case | before | after |\n| --- | --- | --- |\n| migration, enable succeeds | (never enabled) | exit 0, enabled |\n| migration, enable fails | **exit 0, marked complete** | exit 1, migration reports failure |\n| installer, helper present, enable fails | exit 0 | exit 1 |\n| installer, `OMARCHY_CHROOT_INSTALL=1` | `enable` (no `--now`) | unchanged |\n| non-T2 hardware | no-op | no-op |\n\nHowever, please note that I had to revert this machine to macOS \u2014 external\ndisplays, BLE Bluetooth and the Thunderbolt dock were all broken under T2 Linux\nin ways I couldn't fix at the config or distro level. The original\n5/5-clean-vs-5/5-hang result on the MacBookPro16,2 still stands for the installer\npath, but I can't re-test on the hardware now, so this last change is verified by\ncode reading and the simulation above rather than on a live T2 Mac. If you'd\nrather have a hardware confirmation of the migration path before merging, the\nco-tester call is still open on #1840 and I'm happy to wait on it.\n\nUnrelated to this PR, but noticed while tracing it: the existing\n`install/config/hardware/apple/fix-suspend-nvme.sh` has the same latent issue \u2014\nit calls `chrootable_systemctl_enable` and would break identically if it were\never sourced from a migration. No migration does today, so it's harmless, but\nhappy to send a follow-up applying the same guard there if you want it.\n",
+      "created_at": "2026-07-25T16:59:38Z",
+      "updated_at": "2026-07-25T16:59:38Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6149#discussion_r3650592477",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6149",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3650592477"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6149#discussion_r3650592477"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6149"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3650592477/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 29,
+      "side": "RIGHT",
+      "in_reply_to_id": 3611081682,
+      "author_association": "NONE",
+      "original_position": 29,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

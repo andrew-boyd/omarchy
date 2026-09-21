@@ -1,0 +1,422 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/5970",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "alpine-ridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 5970,
+  "checked_at": "2026-09-21T11:55:57.967602+00:00",
+  "title": "Fix suspend/resume on MacBookPro14,1",
+  "author": "erikwb",
+  "head_sha": "84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da",
+  "base_sha": "961d4241f0016636439f082705a9fa2ce1e135c9",
+  "base_ref": "dev",
+  "updated_at": "2026-05-24T23:13:37Z",
+  "state": "open",
+  "body": "These 2017 Kaby Lake, non T1, Intel MacBook Pros fail to resume from the firmware default S3 or even s2idle sleep. Two changes make s2idle suspend reliable:\r\n\r\n  - default mem_sleep to s2idle (via a limine-entry-tool drop-in)\r\n  - blacklist the thunderbolt module, which otherwise blocks a clean resume\r\n\r\nWired into install/config/all.sh next to the existing apple fixes and scoped by DMI product name to MacBookPro14,1.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b2644b3d354634b7b4e8656103a34b135255f35c",
+      "filename": "install/config/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da/install%2Fconfig%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da/install%2Fconfig%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fall.sh?ref=84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da",
+      "patch": "@@ -63,6 +63,7 @@ run_logged $OMARCHY_INSTALL/config/hardware/framework/qmk-hid.sh\n \n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-spi-keyboard.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-suspend-nvme.sh\n+run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-suspend-s2idle.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-t2.sh\n \n run_logged $OMARCHY_INSTALL/config/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh"
+    },
+    {
+      "sha": "8d57e014235c2018da6fb7106ad883e0344b6a66",
+      "filename": "install/config/hardware/apple/fix-suspend-s2idle.sh",
+      "status": "added",
+      "additions": 37,
+      "deletions": 0,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da/install%2Fconfig%2Fhardware%2Fapple%2Ffix-suspend-s2idle.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da/install%2Fconfig%2Fhardware%2Fapple%2Ffix-suspend-s2idle.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fhardware%2Fapple%2Ffix-suspend-s2idle.sh?ref=84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da",
+      "patch": "@@ -0,0 +1,37 @@\n+# Fix suspend/resume on MacBookPro14,1 (2017 13\" Intel, no Touch Bar).\n+#\n+# This machine hangs or fails to resume from the firmware's default S3 (\"deep\")\n+# sleep. Two changes make s2idle suspend reliable:\n+#   1. Default to s2idle instead of deep (S3 is broken on this platform).\n+#   2. Blacklist the thunderbolt module, which otherwise prevents a clean resume.\n+#\n+# Trade-off: blacklisting thunderbolt disables Thunderbolt device tunneling\n+# (TB3 docks, eGPUs). USB-C charging, USB, and DisplayPort alt-mode are\n+# unaffected, as those run through the xHCI / DP controllers, not the TB driver.\n+#\n+# Scope is limited to MacBookPro14,1 \u2014 the only model this was verified on. The\n+# sibling 14,2/14,3 share the platform and likely benefit, but were untested\n+# (and 14,3's discrete GPU may need more), so they are deliberately excluded.\n+MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+\n+if [[ $MACBOOK_MODEL == \"MacBookPro14,1\" ]]; then\n+  echo \"Detected MacBook model: $MACBOOK_MODEL\"\n+  echo \"Applying s2idle suspend fix...\"\n+\n+  # 1. Blacklist the thunderbolt driver (the resume blocker).\n+  cat <<EOF | sudo tee /etc/modprobe.d/omarchy-mbp-suspend-thunderbolt.conf >/dev/null\n+# Omarchy: blacklist thunderbolt to fix suspend/resume on MacBookPro14,1\n+blacklist thunderbolt\n+EOF\n+\n+  # 2. Default to s2idle instead of the broken S3 (\"deep\") sleep state.\n+  DROP_IN=\"/etc/limine-entry-tool.d/apple-mbp-suspend-s2idle.conf\"\n+\n+  if [[ ! -f $DROP_IN ]] || ! grep -q 'mem_sleep_default=s2idle' \"$DROP_IN\"; then\n+    sudo mkdir -p /etc/limine-entry-tool.d\n+    cat <<EOF | sudo tee \"$DROP_IN\" >/dev/null\n+# Omarchy: default to s2idle suspend on MacBookPro14,1 (S3 is broken)\n+KERNEL_CMDLINE[default]+=\" mem_sleep_default=s2idle\"\n+EOF\n+  fi\n+fi"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4530466277",
+      "html_url": "https://github.com/omacom/omarchy/pull/5970#issuecomment-4530466277",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/5970",
+      "id": 4530466277,
+      "node_id": "IC_kwDOO0Cobs8AAAABDglt5Q",
+      "user": {
+        "login": "erikwb",
+        "id": 169195,
+        "node_id": "MDQ6VXNlcjE2OTE5NQ==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/169195?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/erikwb",
+        "html_url": "https://github.com/erikwb",
+        "followers_url": "https://api.github.com/users/erikwb/followers",
+        "following_url": "https://api.github.com/users/erikwb/following{/other_user}",
+        "gists_url": "https://api.github.com/users/erikwb/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/erikwb/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/erikwb/subscriptions",
+        "organizations_url": "https://api.github.com/users/erikwb/orgs",
+        "repos_url": "https://api.github.com/users/erikwb/repos",
+        "events_url": "https://api.github.com/users/erikwb/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/erikwb/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-05-24T23:13:37Z",
+      "updated_at": "2026-05-24T23:13:37Z",
+      "body": "Most of copilot's suggestions look counter to convention in the other hardware scripts, but it does look prudent to just use the drop-in directory.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/4530466277/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4353551065,
+      "node_id": "PRR_kwDOO0Cobs8AAAABA33q2Q",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds a MacBookPro14,1-specific workaround to improve suspend/resume reliability by switching the sleep mode to `s2idle` and blacklisting `thunderbolt`, and wires it into the overall install flow.\n\n**Changes:**\n- Introduce `fix-suspend-s2idle.sh` to apply `mem_sleep_default=s2idle` and blacklist `thunderbolt` on MacBookPro14,1.\n- Invoke the new Apple suspend fix script from the main `install/config/all.sh` runner.\n\n### Reviewed changes\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated 4 comments.\n\n| File | Description |\n| ---- | ----------- |\n| install/config/hardware/apple/fix-suspend-s2idle.sh | New hardware-specific script to apply s2idle + module blacklist on MacBookPro14,1. |\n| install/config/all.sh | Runs the new s2idle suspend fix during the full install configuration sequence. |\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/dev?filename=.github/instructions/*.instructions.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add Copilot custom instructions</a> for smarter, more guided reviews. <a href=\"https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn how to get started</a>.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/5970#pullrequestreview-4353551065",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5970",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5970#pullrequestreview-4353551065"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5970"
+        }
+      },
+      "submitted_at": "2026-05-24T23:05:23Z",
+      "commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480412",
+      "pull_request_review_id": 4353551065,
+      "id": 3295480412,
+      "node_id": "PRRC_kwDOO0Cobs7EbQpc",
+      "diff_hunk": "@@ -0,0 +1,42 @@\n+# Fix suspend/resume on MacBookPro14,1 (2017 13\" Intel, no Touch Bar).\n+#\n+# This machine hangs or fails to resume from the firmware's default S3 (\"deep\")\n+# sleep. Two changes make s2idle suspend reliable:\n+#   1. Default to s2idle instead of deep (S3 is broken on this platform).",
+      "path": "install/config/hardware/apple/fix-suspend-s2idle.sh",
+      "commit_id": "84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da",
+      "original_commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This script uses bash-specific features (`[[ ... ]]`, `+=`, and `KERNEL_CMDLINE[default]` array-like syntax), but it has no shebang. If it\u2019s executed via `/bin/sh` (common when running scripts without an explicit interpreter), it will fail. Add a bash shebang (e.g., `#!/usr/bin/env bash`) at the top (and ensure the runner executes it as bash).",
+      "created_at": "2026-05-24T23:05:22Z",
+      "updated_at": "2026-05-24T23:05:23Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480412",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5970",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480412"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480412"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5970"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480412/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 5,
+      "original_line": 5,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 5,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480418",
+      "pull_request_review_id": 4353551065,
+      "id": 3295480418,
+      "node_id": "PRRC_kwDOO0Cobs7EbQpi",
+      "diff_hunk": "@@ -0,0 +1,42 @@\n+# Fix suspend/resume on MacBookPro14,1 (2017 13\" Intel, no Touch Bar).\n+#\n+# This machine hangs or fails to resume from the firmware's default S3 (\"deep\")\n+# sleep. Two changes make s2idle suspend reliable:\n+#   1. Default to s2idle instead of deep (S3 is broken on this platform).\n+#   2. Blacklist the thunderbolt module, which otherwise prevents a clean resume.\n+#\n+# Trade-off: blacklisting thunderbolt disables Thunderbolt device tunneling\n+# (TB3 docks, eGPUs). USB-C charging, USB, and DisplayPort alt-mode are\n+# unaffected, as those run through the xHCI / DP controllers, not the TB driver.\n+#\n+# Scope is limited to MacBookPro14,1 \u2014 the only model this was verified on. The\n+# sibling 14,2/14,3 share the platform and likely benefit, but were untested\n+# (and 14,3's discrete GPU may need more), so they are deliberately excluded.\n+MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+\n+if [[ $MACBOOK_MODEL == \"MacBookPro14,1\" ]]; then\n+  echo \"Detected MacBook model: $MACBOOK_MODEL\"\n+  echo \"Applying s2idle suspend fix...\"\n+\n+  # 1. Blacklist the thunderbolt driver (the resume blocker).\n+  cat <<EOF | sudo tee /etc/modprobe.d/omarchy-mbp-suspend-thunderbolt.conf >/dev/null\n+# Omarchy: blacklist thunderbolt to fix suspend/resume on MacBookPro14,1\n+blacklist thunderbolt\n+EOF\n+\n+  # 2. Default to s2idle instead of the broken S3 (\"deep\") sleep state.\n+  DROP_IN=\"/etc/limine-entry-tool.d/apple-mbp-suspend-s2idle.conf\"\n+  DEFAULT_LIMINE=\"/etc/default/limine\"\n+\n+  if [[ ! -f $DROP_IN ]] || ! grep -q 'mem_sleep_default=s2idle' \"$DROP_IN\"; then",
+      "path": "install/config/hardware/apple/fix-suspend-s2idle.sh",
+      "commit_id": "84ab18d88fcd8a72394b5e33ec457dd7c5cdd7da",
+      "original_commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Path variables in `[[ -f ... ]]` are unquoted. While these particular paths are unlikely to contain spaces, quoting is the safer and consistent pattern in shell scripts (and avoids edge cases if these are ever changed). Prefer `[[ -f \\\"$DROP_IN\\\" ]]` and `[[ -f \\\"$DEFAULT_LIMINE\\\" ]]`.",
+      "created_at": "2026-05-24T23:05:22Z",
+      "updated_at": "2026-05-24T23:05:23Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480418",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5970",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480418"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480418"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5970"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480418/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 30,
+      "original_line": 31,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 31,
+      "position": 30,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480424",
+      "pull_request_review_id": 4353551065,
+      "id": 3295480424,
+      "node_id": "PRRC_kwDOO0Cobs7EbQpo",
+      "diff_hunk": "@@ -0,0 +1,42 @@\n+# Fix suspend/resume on MacBookPro14,1 (2017 13\" Intel, no Touch Bar).\n+#\n+# This machine hangs or fails to resume from the firmware's default S3 (\"deep\")\n+# sleep. Two changes make s2idle suspend reliable:\n+#   1. Default to s2idle instead of deep (S3 is broken on this platform).\n+#   2. Blacklist the thunderbolt module, which otherwise prevents a clean resume.\n+#\n+# Trade-off: blacklisting thunderbolt disables Thunderbolt device tunneling\n+# (TB3 docks, eGPUs). USB-C charging, USB, and DisplayPort alt-mode are\n+# unaffected, as those run through the xHCI / DP controllers, not the TB driver.\n+#\n+# Scope is limited to MacBookPro14,1 \u2014 the only model this was verified on. The\n+# sibling 14,2/14,3 share the platform and likely benefit, but were untested\n+# (and 14,3's discrete GPU may need more), so they are deliberately excluded.\n+MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+\n+if [[ $MACBOOK_MODEL == \"MacBookPro14,1\" ]]; then\n+  echo \"Detected MacBook model: $MACBOOK_MODEL\"\n+  echo \"Applying s2idle suspend fix...\"\n+\n+  # 1. Blacklist the thunderbolt driver (the resume blocker).\n+  cat <<EOF | sudo tee /etc/modprobe.d/omarchy-mbp-suspend-thunderbolt.conf >/dev/null\n+# Omarchy: blacklist thunderbolt to fix suspend/resume on MacBookPro14,1\n+blacklist thunderbolt\n+EOF\n+\n+  # 2. Default to s2idle instead of the broken S3 (\"deep\") sleep state.\n+  DROP_IN=\"/etc/limine-entry-tool.d/apple-mbp-suspend-s2idle.conf\"\n+  DEFAULT_LIMINE=\"/etc/default/limine\"\n+\n+  if [[ ! -f $DROP_IN ]] || ! grep -q 'mem_sleep_default=s2idle' \"$DROP_IN\"; then\n+    sudo mkdir -p /etc/limine-entry-tool.d\n+    cat <<EOF | sudo tee \"$DROP_IN\" >/dev/null\n+# Omarchy: default to s2idle suspend on MacBookPro14,1 (S3 is broken)\n+KERNEL_CMDLINE[default]+=\" mem_sleep_default=s2idle\"\n+EOF\n+  fi\n+\n+  if [[ -f $DEFAULT_LIMINE ]] && ! grep -q 'mem_sleep_default=s2idle' \"$DEFAULT_LIMINE\"; then",
+      "path": "install/config/hardware/apple/fix-suspend-s2idle.sh",
+      "commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa",
+      "original_commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Path variables in `[[ -f ... ]]` are unquoted. While these particular paths are unlikely to contain spaces, quoting is the safer and consistent pattern in shell scripts (and avoids edge cases if these are ever changed). Prefer `[[ -f \\\"$DROP_IN\\\" ]]` and `[[ -f \\\"$DEFAULT_LIMINE\\\" ]]`.",
+      "created_at": "2026-05-24T23:05:23Z",
+      "updated_at": "2026-05-24T23:05:23Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480424",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5970",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480424"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480424"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5970"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480424/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 39,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 39,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480431",
+      "pull_request_review_id": 4353551065,
+      "id": 3295480431,
+      "node_id": "PRRC_kwDOO0Cobs7EbQpv",
+      "diff_hunk": "@@ -0,0 +1,42 @@\n+# Fix suspend/resume on MacBookPro14,1 (2017 13\" Intel, no Touch Bar).\n+#\n+# This machine hangs or fails to resume from the firmware's default S3 (\"deep\")\n+# sleep. Two changes make s2idle suspend reliable:\n+#   1. Default to s2idle instead of deep (S3 is broken on this platform).\n+#   2. Blacklist the thunderbolt module, which otherwise prevents a clean resume.\n+#\n+# Trade-off: blacklisting thunderbolt disables Thunderbolt device tunneling\n+# (TB3 docks, eGPUs). USB-C charging, USB, and DisplayPort alt-mode are\n+# unaffected, as those run through the xHCI / DP controllers, not the TB driver.\n+#\n+# Scope is limited to MacBookPro14,1 \u2014 the only model this was verified on. The\n+# sibling 14,2/14,3 share the platform and likely benefit, but were untested\n+# (and 14,3's discrete GPU may need more), so they are deliberately excluded.\n+MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+\n+if [[ $MACBOOK_MODEL == \"MacBookPro14,1\" ]]; then\n+  echo \"Detected MacBook model: $MACBOOK_MODEL\"\n+  echo \"Applying s2idle suspend fix...\"\n+\n+  # 1. Blacklist the thunderbolt driver (the resume blocker).\n+  cat <<EOF | sudo tee /etc/modprobe.d/omarchy-mbp-suspend-thunderbolt.conf >/dev/null\n+# Omarchy: blacklist thunderbolt to fix suspend/resume on MacBookPro14,1\n+blacklist thunderbolt\n+EOF\n+\n+  # 2. Default to s2idle instead of the broken S3 (\"deep\") sleep state.\n+  DROP_IN=\"/etc/limine-entry-tool.d/apple-mbp-suspend-s2idle.conf\"\n+  DEFAULT_LIMINE=\"/etc/default/limine\"\n+\n+  if [[ ! -f $DROP_IN ]] || ! grep -q 'mem_sleep_default=s2idle' \"$DROP_IN\"; then\n+    sudo mkdir -p /etc/limine-entry-tool.d\n+    cat <<EOF | sudo tee \"$DROP_IN\" >/dev/null\n+# Omarchy: default to s2idle suspend on MacBookPro14,1 (S3 is broken)\n+KERNEL_CMDLINE[default]+=\" mem_sleep_default=s2idle\"\n+EOF\n+  fi\n+\n+  if [[ -f $DEFAULT_LIMINE ]] && ! grep -q 'mem_sleep_default=s2idle' \"$DEFAULT_LIMINE\"; then\n+    sudo tee -a \"$DEFAULT_LIMINE\" < \"$DROP_IN\" >/dev/null\n+  fi",
+      "path": "install/config/hardware/apple/fix-suspend-s2idle.sh",
+      "commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa",
+      "original_commit_id": "9ca44536696c8da80dbbeb4dd00b1b5a2dac03aa",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Appending the drop-in file content directly into `/etc/default/limine` is risky: `/etc/default/*` files are commonly parsed/sourced by POSIX `sh`, and `KERNEL_CMDLINE[default]+=...` is not POSIX syntax (it will error if sourced by `sh`). Also, copying a limine-entry-tool drop-in verbatim into a different config file format can break the consumer. Prefer keeping the setting solely in the drop-in directory (if that\u2019s what `limine-entry-tool` consumes), or write a `/etc/default/limine`-native key/value line instead of importing the drop-in.",
+      "created_at": "2026-05-24T23:05:23Z",
+      "updated_at": "2026-05-24T23:05:23Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480431",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5970",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480431"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5970#discussion_r3295480431"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5970"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3295480431/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 33,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 41,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 41,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

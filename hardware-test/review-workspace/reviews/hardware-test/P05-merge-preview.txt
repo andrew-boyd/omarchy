@@ -1,0 +1,8 @@
+66413e7ea9006931709793fab4b93d192efc5b77
+test/shell.d/locate-test.sh
+test/shell.d/omarchy-kernel-migration-test.sh
+
+Auto-merging test/shell.d/locate-test.sh
+CONFLICT (content): Merge conflict in test/shell.d/locate-test.sh
+Auto-merging test/shell.d/omarchy-kernel-migration-test.sh
+CONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh

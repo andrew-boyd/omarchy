@@ -1,0 +1,86 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8783",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "model-docs"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "de3ec68f301603a5f382e3cc4ec0fdf8d60046bb",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8783,
+  "checked_at": "2026-09-21T11:56:53.217423+00:00",
+  "title": "Update 44-mac-support.md to add t2linux wiki link",
+  "author": "mdetweil",
+  "head_sha": "de3ec68f301603a5f382e3cc4ec0fdf8d60046bb",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:28Z",
+  "state": "open",
+  "body": "adding additional link to external resources for more advanced tuning of t2 macbooks.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f3cc930f2430f93fd2e4f6157950b46e960eb8f5",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/de3ec68f301603a5f382e3cc4ec0fdf8d60046bb/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/de3ec68f301603a5f382e3cc4ec0fdf8d60046bb/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=de3ec68f301603a5f382e3cc4ec0fdf8d60046bb",
+      "patch": "@@ -69,3 +69,5 @@ The Apple T2 Security Chip was introduced in 2017. The T2 chip was discontinued\n - MacBook Pro 15-inch (2020) \u2013 Model: A1990\n \n On these models, the installer automatically sets up the patched `linux-t2` kernel, the T2 audio configuration, Apple's Broadcom Wi-Fi/Bluetooth firmware, and fan control via `t2fanrd`. The Touch Bar runs on the kernel's built-in Boot Camp-style support.\n+\n+Additional tuning and support for the T2 chip can be located at the [t2linux website](https://wiki.t2linux.org/)."
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 5052939544,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLS29GA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds an external t2linux wiki resource for advanced T2 MacBook tuning and support.\n\n**Changes:**\n- Linked the t2linux wiki from the T2 Mac support section.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8783#pullrequestreview-5052939544",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8783",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8783#pullrequestreview-5052939544"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8783"
+        }
+      },
+      "submitted_at": "2026-08-28T16:18:35Z",
+      "commit_id": "de3ec68f301603a5f382e3cc4ec0fdf8d60046bb"
+    }
+  ],
+  "inline": []
+}

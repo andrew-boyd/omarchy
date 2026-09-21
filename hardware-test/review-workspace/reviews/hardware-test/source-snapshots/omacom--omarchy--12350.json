@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12350",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "keyboard-device"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+      "state": "open"
+    },
+    {
+      "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+      "state": "open",
+      "updated_at": "2026-09-18T01:45:04Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12350,
+  "checked_at": "2026-09-21T11:56:44.144953+00:00",
+  "title": "Ignore the Apple SMC power/lid device in the keyboard layout widget",
+  "author": "notabene00",
+  "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+  "base_sha": "9c5482c58dbe4974de337450754885083c91eada",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-18T01:45:04Z",
+  "state": "open",
+  "body": "On an Apple laptop Hyprland lists a third \"keyboard\" alongside the real one:\n\n```\napple-spi-keyboard            layout: us,ru  active_layout_index: 1  (Russian)\napple-smc-power/lid-events    layout: us,ru  active_layout_index: 0  (English)\nhl-virtual-keyboard-fcitx5    layout: us,ru  active_layout_index: 0\n```\n\n`apple-smc-power/lid-events` is the SMC power button / lid switch, the same kind of device `power-button` and `lid-switch` already are, but its name doesn't match `UNTYPED_KEYBOARDS`, so the widget counts it as a keyboard. It also announces `activelayout` *after* the real keyboard does:\n\n```\nactivelayout>>apple-spi-keyboard,English (Macintosh, Russian-ISO)\nactivelayout>>apple-smc-power/lid-events,Russian      <- last, so typedKeyboardName lands here\nactivelayout>>hl-virtual-keyboard-fcitx5,Russian\n```\n\nso `selectKeyboard` pins the label to the lid switch, and a click on the widget switches the lid switch.\n\nWhile every device sits on the same index that is invisible. It stops being invisible as soon as anything switches one device on its own \u2014 a layout-rewriting daemon, a per-device bind \u2014 because `switchxkblayout all next` then keeps the seat permanently one step out of phase. On my machine the bar showed exactly the opposite layout of the one I was typing in, and clicking it flipped the label without changing the keyboard.\n\nFix: list the SMC device with the ACPI buttons, and let `eventKeyboardName` reuse `isTypedKeyboard` instead of only skipping `hl-virtual-keyboard`, so a device nobody types on cannot become the one the widget follows.\n\nTested with `test/shell.d/keyboard-layout-test.sh` (two cases added) and on a MacBook Pro M1 running Hyprland.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "cf72082c8f6ceb159fa1d1cca94e87aa48a4af55",
+      "filename": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 3,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c23ff7f397dc2ba6684246046d92f99664c11c7e/shell%2Fplugins%2Fbar%2Fwidgets%2FKeyboardLayoutModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c23ff7f397dc2ba6684246046d92f99664c11c7e/shell%2Fplugins%2Fbar%2Fwidgets%2FKeyboardLayoutModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fbar%2Fwidgets%2FKeyboardLayoutModel.js?ref=c23ff7f397dc2ba6684246046d92f99664c11c7e",
+      "patch": "@@ -70,20 +70,21 @@ function eventKeyboardName(event) {\n   if (!parts) parts = String(event && event.data ? event.data : \"\").split(\",\")\n \n   var name = String(parts[0] || \"\")\n-  return name.indexOf(\"hl-virtual-keyboard\") === 0 ? \"\" : name\n+  return isTypedKeyboard(name) ? name : \"\"\n }\n \n // Hyprland reports more than keyboards as keyboards. fcitx5 binds a virtual one\n // to inject through, which keeps the us layout the input method gave it, and the\n // ACPI power button, lid switch and sleep key each arrive carrying the seat's\n-// layout list without anyone ever typing on them. Both answer to switchxkblayout\n+// layout list without anyone ever typing on them, and on an Apple laptop the\n+// SMC power/lid device (apple-smc-power/lid-events) arrives the same way. Both answer to switchxkblayout\n // and both can hold the main flag, so a widget that reads or switches whatever\n // the seat hands it ends up describing a button. Leave them out and what remains\n // is keyboards, which is what the rest of this file can then assume.\n //\n // Missing a name here costs the accuracy the seat had before, never a keyboard:\n // anything unrecognised stays in the list.\n-var UNTYPED_KEYBOARDS = /^(hl-virtual-keyboard|power-button|sleep-button|lid-switch|video-bus)/\n+var UNTYPED_KEYBOARDS = /^(hl-virtual-keyboard|power-button|sleep-button|lid-switch|video-bus|apple-smc-power)/\n \n function isTypedKeyboard(name) {\n   return !UNTYPED_KEYBOARDS.test(String(name || \"\"))"
+    },
+    {
+      "sha": "cd9cb1b5b0b1098fed1b7c2ca5e2e2950d01c8a1",
+      "filename": "test/shell.d/keyboard-layout-test.sh",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c23ff7f397dc2ba6684246046d92f99664c11c7e/test%2Fshell.d%2Fkeyboard-layout-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c23ff7f397dc2ba6684246046d92f99664c11c7e/test%2Fshell.d%2Fkeyboard-layout-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fkeyboard-layout-test.sh?ref=c23ff7f397dc2ba6684246046d92f99664c11c7e",
+      "patch": "@@ -121,6 +121,7 @@ assertEqual(model.isTypedKeyboard('power-button'), false, 'a power button is not\n assertEqual(model.isTypedKeyboard('lid-switch'), false, 'a lid switch is not')\n assertEqual(model.isTypedKeyboard('sleep-button'), false, 'a sleep button is not')\n assertEqual(model.isTypedKeyboard('hl-virtual-keyboard-1'), false, 'the keyboard an input method injects through is not')\n+assertEqual(model.isTypedKeyboard('apple-smc-power/lid-events'), false, 'the SMC power/lid device an Apple laptop reports is not')\n assertEqual(model.isTypedKeyboard(''), true, 'a keyboard reporting no name is left where it was found')\n \n // The activelayout event names the keyboard ahead of the layout it moved to,\n@@ -131,6 +132,7 @@ const parsedEvent = data => ({ data, parse: count => data.split(',', count - 1).\n assertEqual(model.eventKeyboardName(rawEvent('at-translated-set-2-keyboard,French')), 'at-translated-set-2-keyboard', 'the event names its keyboard')\n assertEqual(model.eventKeyboardName(parsedEvent('at-translated-set-2-keyboard,English (US, intl.)')), 'at-translated-set-2-keyboard', 'a description carrying a comma leaves the name alone')\n assertEqual(model.eventKeyboardName(rawEvent('hl-virtual-keyboard,English (US)')), '', 'the keyboard an input method injects through is not typed on')\n+assertEqual(model.eventKeyboardName(rawEvent('apple-smc-power/lid-events,French')), '', 'a device nobody types on names no keyboard either')\n assertEqual(model.eventKeyboardName({ parse: () => { throw new Error('unsupported') }, data: 'kb,French' }), 'kb', 'a binding without parse falls back to the raw data')\n assertEqual(model.eventKeyboardName({}), '', 'an event with nothing in it names no keyboard')\n JS"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

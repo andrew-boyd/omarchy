@@ -1,0 +1,13 @@
+omarchy-dev 4.0.0.r6578.g6096d64-1
+omarchy-settings-dev 4.0.0.r6578.g6096d64-1
+omarchy-nvim 2026.8.13-1.1
+linux-omarchy 7.2.5-4
+NAME   FSTYPE FSVER LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sr0                                                                           
+zram0  swap   1     zram0 6d7811e1-ef69-47d3-96ea-5a900a91b46f                [SWAP]
+vda                                                                           
+|-vda1 vfat   FAT32       6A7A-1E57                                 2G     2% /boot
+`-vda2 btrfs              17fa7a4c-e410-4034-afc1-a4a450e5d35c   28.2G    25% /var/log
+                                                                              /home
+                                                                              /var/cache/pacman/pkg
+                                                                              /

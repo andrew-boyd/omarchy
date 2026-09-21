@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-09-21T13:08:18.304235+00:00",
+  "heads": {
+    "omacom/omarchy:quattro": "8f324c90b82790d31ab33565441e07cbdb8d2308",
+    "omacom/omarchy-pkgs:master": "e40f5a5da918e8b923115ebb4c335b6c4828fefe",
+    "omacom/omarchy-iso:quattro": "7cfb7111a06873d61c45d37034577d4ba08d3f4f"
+  },
+  "delta_since_first_check": "Only three package commits: Hype 0.4.0/0.4.1 and their merge. Reviewed the complete recipe diff and merged into the combined package source plus all three package companions. No Mac feature or Neovim source overlap.",
+  "new_package_base_reconciled": true
+}

@@ -1,0 +1,171 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12076",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "pci-detection"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "state": "open"
+    },
+    {
+      "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "state": "open",
+      "updated_at": "2026-09-16T08:24:25Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12076,
+  "checked_at": "2026-09-21T11:57:01.399295+00:00",
+  "title": "Detect BCM43xx, T2, Vulkan, and NVIDIA via sysfs helpers",
+  "author": "Chessing234",
+  "head_sha": "c2df703cf2a584b659af0471070f027c6e1b0e54",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T08:24:25Z",
+  "state": "open",
+  "body": "## Summary\n- Fold the four sysfs hardware-detect PRs into one review: BCM43xx (`omarchy-hw-bcm43xx`), T2 (`omarchy-hw-t2`), Vulkan ICD picks from display-class vendors, and NVIDIA install via `omarchy-hw-nvidia` instead of `lspci`.\n- Same goal across the board: avoid full `lspci` dumps that wake suspended GPUs or SIGPIPE under pipefail.\n\n## Test plan\n- [ ] `test/shell.d/` coverage for bcm43xx, t2, vulkan, and nvidia-hw-detect\n- [ ] BCM4360/BCM4331 still gets broadcom-wl-dkms; brcmfmac paths unchanged\n- [ ] T2 Mac still gets linux-t2 / arch-mact2\n- [ ] Vulkan ICD selection still covers Intel, hybrid AMD+NVIDIA, and non-display PCI functions\n- [ ] NVIDIA install no longer greps lspci for the GPU",
+  "draft": false,
+  "files": [
+    {
+      "sha": "8711d3cb086c8bca58065a5ffe961edd1bd98cef",
+      "filename": "bin/omarchy-hw-bcm43xx",
+      "status": "added",
+      "additions": 18,
+      "deletions": 0,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/bin%2Fomarchy-hw-bcm43xx",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/bin%2Fomarchy-hw-bcm43xx",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-bcm43xx?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -0,0 +1,18 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect Broadcom BCM4360/BCM4331 Wi-Fi that needs the wl driver.\n+# omarchy:hidden=true\n+\n+pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n+\n+shopt -s nullglob\n+\n+for device in \"$pci_devices_path\"/*; do\n+  [[ -r $device/vendor && -r $device/device ]] || continue\n+  [[ $(<\"$device/vendor\") == \"0x14e4\" ]] || continue\n+  case $(<\"$device/device\") in\n+    0x43a0 | 0x4331) exit 0 ;;\n+  esac\n+done\n+\n+exit 1"
+    },
+    {
+      "sha": "50034968204db3a0e1570677c68c7743c078e383",
+      "filename": "bin/omarchy-hw-t2",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/bin%2Fomarchy-hw-t2",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/bin%2Fomarchy-hw-t2",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-t2?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -0,0 +1,22 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the computer has an Apple T2 security chip.\n+# omarchy:hidden=true\n+\n+# Vendor 106b (Apple), devices 1801/1802. Read cached sysfs IDs rather than\n+# lspci, which reads PCI config space. The chatty lspci | grep -q form also\n+# SIGPIPE'd on a long device list and looked like \"no T2\" under pipefail.\n+\n+pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n+\n+shopt -s nullglob\n+\n+for device in \"$pci_devices_path\"/*; do\n+  [[ -r $device/vendor && -r $device/device ]] || continue\n+  [[ $(<\"$device/vendor\") == \"0x106b\" ]] || continue\n+  case $(<\"$device/device\") in\n+    0x1801 | 0x1802) exit 0 ;;\n+  esac\n+done\n+\n+exit 1"
+    },
+    {
+      "sha": "fb7be59b0df98c719b0f2b0a08611897447e3ada",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 3,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -1,6 +1,5 @@\n-# Detect T2 MacBook models using PCI IDs\n-# Vendor: 106b (Apple), Device IDs: 1801 or 1802 (T2 Security Chip)\n-if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+# Detect T2 MacBook models using the T2 PCI IDs (Apple 106b:1801/1802).\n+if omarchy-hw-t2; then\n   echo \"Detected MacBook with T2 chip. Installing support items...\"\n \n   omarchy-pkg-add \\"
+    },
+    {
+      "sha": "8f31e8ad73683ce654f6cb439ceb2f2e749df5b5",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 3,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -2,9 +2,7 @@\n # - BCM4360 (2013\u20132015 MacBooks)\n # - BCM4331 (2012, early 2013 MacBooks)\n \n-pci_info=$(lspci -nn)\n-\n-if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n+if omarchy-hw-bcm43xx; then\n   echo \"BCM4360 / BCM4331 detected\"\n   omarchy-pkg-add broadcom-wl-dkms\n fi"
+    },
+    {
+      "sha": "4c39bd8cf8c3a95c62ed901f8fdd120915b254fd",
+      "filename": "install/hardware/nvidia.sh",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 5,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fnvidia.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fnvidia.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fnvidia.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -1,4 +1,6 @@\n-if lspci | grep -qi 'nvidia'; then\n+# omarchy-hw-nvidia reads sysfs IDs. lspci would walk PCI config space and\n+# wake a runtime-suspended GPU, and Hyprland already uses the same helper.\n+if omarchy-hw-nvidia; then\n   if omarchy-hw-nvidia-gsp; then\n     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)\n   elif omarchy-hw-nvidia-without-gsp; then\n@@ -17,13 +19,13 @@ if lspci | grep -qi 'nvidia'; then\n \n   # Configure modprobe for early KMS\n   mkdir -p /etc/modprobe.d\n-  cat > /etc/modprobe.d/nvidia.conf <<'EOF'\n+  cat > /etc/modprobe.d/nvidia.conf <<'NVEOF'\n options nvidia_drm modeset=1\n-EOF\n+NVEOF\n \n   # Configure mkinitcpio for early loading\n   mkdir -p /etc/mkinitcpio.conf.d\n-  cat > /etc/mkinitcpio.conf.d/nvidia.conf <<'EOF'\n+  cat > /etc/mkinitcpio.conf.d/nvidia.conf <<'NVEOF'\n MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)\n-EOF\n+NVEOF\n fi"
+    },
+    {
+      "sha": "0812dea758a23aa52f327c1f5ac4675d323b28ad",
+      "filename": "install/hardware/pacman.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fpacman.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fpacman.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fpacman.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -1,6 +1,6 @@\n # Hardware-specific pacman repository extensions that must survive the final\n # pacman.conf restore.\n-if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+if omarchy-hw-t2; then\n   if ! grep -q '^\\[arch-mact2\\]' /etc/pacman.conf; then\n     cat >> /etc/pacman.conf <<'EOF'\n "
+    },
+    {
+      "sha": "245cd56cf578203380d3df73375bc65db67ea734",
+      "filename": "install/hardware/vulkan.sh",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 9,
+      "changes": 31,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fvulkan.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/install%2Fhardware%2Fvulkan.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fvulkan.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -1,18 +1,31 @@\n # Install Vulkan drivers matching detected GPU hardware\n # (NVIDIA Vulkan is handled by nvidia.sh via nvidia-utils)\n+#\n+# Walk sysfs the way omarchy-hw-nvidia does. lspci reads PCI config space and\n+# resumes runtime-suspended GPUs; three greps used to do that once per vendor.\n \n-declare -A VULKAN_DRIVERS=(\n-  [Intel]=vulkan-intel\n-  [AMD]=vulkan-radeon\n-  [Apple]=vulkan-asahi\n-)\n+pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n \n PACKAGES=()\n \n-for vendor in \"${!VULKAN_DRIVERS[@]}\"; do\n-  if lspci | grep -iE \"(VGA|Display).*$vendor\" > /dev/null; then\n-    PACKAGES+=(\"${VULKAN_DRIVERS[$vendor]}\")\n-  fi\n+add_vulkan_pkg() {\n+  local pkg=$1\n+  local existing\n+  for existing in \"${PACKAGES[@]+\"${PACKAGES[@]}\"}\"; do\n+    [[ $existing == \"$pkg\" ]] && return\n+  done\n+  PACKAGES+=(\"$pkg\")\n+}\n+\n+shopt -s nullglob\n+for device in \"$pci_devices_path\"/*; do\n+  [[ -r $device/vendor && -r $device/class ]] || continue\n+  [[ $(<\"$device/class\") == 0x03* ]] || continue\n+  case $(<\"$device/vendor\") in\n+    0x8086) add_vulkan_pkg vulkan-intel ;;\n+    0x1002) add_vulkan_pkg vulkan-radeon ;;\n+    0x106b) add_vulkan_pkg vulkan-asahi ;;\n+  esac\n done\n \n if (( ${#PACKAGES[@]} > 0 )); then"
+    },
+    {
+      "sha": "096e1c0263a57b5163aa267855a48d7f13097cc5",
+      "filename": "test/shell.d/hw-bcm43xx-test.sh",
+      "status": "added",
+      "additions": 47,
+      "deletions": 0,
+      "changes": 47,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fhw-bcm43xx-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fhw-bcm43xx-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhw-bcm43xx-test.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -0,0 +1,47 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp=$(mktemp -d)\n+trap 'rm -rf \"$tmp\"' EXIT\n+\n+write_pci() {\n+  rm -rf \"$tmp/devices\"\n+  mkdir -p \"$tmp/devices\"\n+  local index=0 spec slot\n+  for spec in \"$@\"; do\n+    slot=$(printf '0000:%02x:00.0' \"$index\")\n+    mkdir -p \"$tmp/devices/$slot\"\n+    printf '%s\\n' \"${spec%%:*}\" >\"$tmp/devices/$slot/vendor\"\n+    printf '%s\\n' \"$(cut -d: -f2 <<<\"$spec\")\" >\"$tmp/devices/$slot/device\"\n+    index=$((index + 1))\n+  done\n+}\n+\n+hw() {\n+  OMARCHY_PCI_DEVICES_PATH=\"$tmp/devices\" \"$ROOT/bin/omarchy-hw-bcm43xx\"\n+}\n+\n+write_pci 0x14e4:0x43a0\n+hw || fail \"BCM4360 is detected\"\n+pass \"BCM4360 is detected from sysfs\"\n+\n+write_pci 0x14e4:0x4331\n+hw || fail \"BCM4331 is detected\"\n+pass \"BCM4331 is detected from sysfs\"\n+\n+write_pci 0x14e4:0x43ba\n+hw && fail \"a brcmfmac part is not the wl driver\"\n+pass \"newer Broadcom Wi-Fi is left to brcmfmac\"\n+\n+write_pci\n+hw && fail \"empty PCI space is not bcm43xx\"\n+pass \"a machine with no PCI devices is not bcm43xx\"\n+\n+grep -Fq 'omarchy-hw-bcm43xx' \"$ROOT/install/hardware/fix-bcm43xx.sh\" ||\n+  fail \"Broadcom wl install uses omarchy-hw-bcm43xx\"\n+! grep -q lspci \"$ROOT/install/hardware/fix-bcm43xx.sh\" ||\n+  fail \"Broadcom wl install no longer greps lspci twice\"\n+pass \"Broadcom wl install does not parse a full lspci dump\""
+    },
+    {
+      "sha": "232ae9143cece42d73aaacb869bcb17f26e56e23",
+      "filename": "test/shell.d/hw-t2-test.sh",
+      "status": "added",
+      "additions": 52,
+      "deletions": 0,
+      "changes": 52,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fhw-t2-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fhw-t2-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhw-t2-test.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -0,0 +1,52 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp=$(mktemp -d)\n+trap 'rm -rf \"$tmp\"' EXIT\n+\n+write_pci() {\n+  rm -rf \"$tmp/devices\"\n+  mkdir -p \"$tmp/devices\"\n+  local index=0 spec slot\n+  for spec in \"$@\"; do\n+    slot=$(printf '0000:%02x:00.0' \"$index\")\n+    mkdir -p \"$tmp/devices/$slot\"\n+    printf '%s\\n' \"${spec%%:*}\" >\"$tmp/devices/$slot/vendor\"\n+    printf '%s\\n' \"$(cut -d: -f2 <<<\"$spec\")\" >\"$tmp/devices/$slot/device\"\n+    printf '%s\\n' \"${spec##*:}\" >\"$tmp/devices/$slot/class\"\n+    index=$((index + 1))\n+  done\n+}\n+\n+hw_t2() {\n+  OMARCHY_PCI_DEVICES_PATH=\"$tmp/devices\" \"$ROOT/bin/omarchy-hw-t2\"\n+}\n+\n+write_pci 0x106b:0x1801:0x068000\n+hw_t2 || fail \"T2 chip 1801 is detected\"\n+pass \"Apple T2 device 1801 is detected from sysfs\"\n+\n+write_pci 0x106b:0x1802:0x068000\n+hw_t2 || fail \"T2 chip 1802 is detected\"\n+pass \"Apple T2 device 1802 is detected from sysfs\"\n+\n+write_pci 0x106b:0x1803:0x068000\n+hw_t2 && fail \"a different Apple PCI id is not a T2 chip\"\n+pass \"other Apple PCI functions are not treated as T2\"\n+\n+write_pci\n+hw_t2 && fail \"empty PCI space is not T2\"\n+pass \"a machine with no PCI devices is not T2\"\n+\n+grep -Fq 'omarchy-hw-t2' \"$ROOT/install/hardware/apple/fix-t2.sh\" ||\n+  fail \"T2 package install uses omarchy-hw-t2\"\n+grep -Fq 'omarchy-hw-t2' \"$ROOT/install/hardware/pacman.sh\" ||\n+  fail \"the arch-mact2 repo drop-in uses omarchy-hw-t2\"\n+! grep -q 'lspci' \"$ROOT/install/hardware/apple/fix-t2.sh\" ||\n+  fail \"T2 package install no longer greps lspci\"\n+! grep -q 'lspci' \"$ROOT/install/hardware/pacman.sh\" ||\n+  fail \"the arch-mact2 repo drop-in no longer greps lspci\"\n+pass \"T2 install paths share one sysfs helper\""
+    },
+    {
+      "sha": "ca000097f28196407630c181618e24ee611acb84",
+      "filename": "test/shell.d/nvidia-hw-detect-test.sh",
+      "status": "added",
+      "additions": 19,
+      "deletions": 0,
+      "changes": 19,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fnvidia-hw-detect-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fnvidia-hw-detect-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fnvidia-hw-detect-test.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -0,0 +1,19 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+nvidia_sh=\"$ROOT/install/hardware/nvidia.sh\"\n+\n+grep -Fq 'omarchy-hw-nvidia' \"$nvidia_sh\" ||\n+  fail \"NVIDIA install uses the sysfs helper already used at session start\"\n+! grep -Eq \"lspci.*nvidia\" \"$nvidia_sh\" ||\n+  fail \"NVIDIA install does not grep lspci for the GPU\"\n+\n+# The GSP / 580xx split already goes through the helpers; keep that pairing.\n+grep -Fq 'omarchy-hw-nvidia-gsp' \"$nvidia_sh\" ||\n+  fail \"NVIDIA install still chooses the GSP driver via sysfs\"\n+grep -Fq 'omarchy-hw-nvidia-without-gsp' \"$nvidia_sh\" ||\n+  fail \"NVIDIA install still chooses the 580xx driver via sysfs\"\n+pass \"NVIDIA driver install detects the GPU the same way Hyprland does\""
+    },
+    {
+      "sha": "2152e66a78f3c4712bad2e2b44ffcbe9b653f47a",
+      "filename": "test/shell.d/vulkan-sysfs-test.sh",
+      "status": "added",
+      "additions": 59,
+      "deletions": 0,
+      "changes": 59,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fvulkan-sysfs-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c2df703cf2a584b659af0471070f027c6e1b0e54/test%2Fshell.d%2Fvulkan-sysfs-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fvulkan-sysfs-test.sh?ref=c2df703cf2a584b659af0471070f027c6e1b0e54",
+      "patch": "@@ -0,0 +1,59 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp=$(mktemp -d)\n+trap 'rm -rf \"$tmp\"' EXIT\n+\n+write_pci() {\n+  rm -rf \"$tmp/devices\"\n+  mkdir -p \"$tmp/devices\"\n+  local index=0 spec slot\n+  for spec in \"$@\"; do\n+    slot=$(printf '0000:%02x:00.0' \"$index\")\n+    mkdir -p \"$tmp/devices/$slot\"\n+    printf '%s\\n' \"${spec%%:*}\" >\"$tmp/devices/$slot/vendor\"\n+    printf '%s\\n' \"${spec##*:}\" >\"$tmp/devices/$slot/class\"\n+    index=$((index + 1))\n+  done\n+}\n+\n+stub_bin=\"$tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$@\" >>\"$OMARCHY_TEST_VULKAN_PKGS\"\n+SH\n+chmod +x \"$stub_bin/omarchy-pkg-add\"\n+\n+run_vulkan() {\n+  : >\"$tmp/pkgs\"\n+  OMARCHY_PCI_DEVICES_PATH=\"$tmp/devices\" \\\n+    OMARCHY_TEST_VULKAN_PKGS=\"$tmp/pkgs\" \\\n+    PATH=\"$stub_bin:$PATH\" \\\n+    bash \"$ROOT/install/hardware/vulkan.sh\"\n+}\n+\n+write_pci 0x8086:0x030000\n+run_vulkan\n+grep -Fxq 'vulkan-intel' \"$tmp/pkgs\" || fail \"Intel display gets vulkan-intel\" \"$(cat \"$tmp/pkgs\")\"\n+pass \"Intel display installs vulkan-intel from sysfs\"\n+\n+write_pci 0x1002:0x030000 0x10de:0x030200\n+run_vulkan\n+grep -Fxq 'vulkan-radeon' \"$tmp/pkgs\" || fail \"AMD iGPU gets vulkan-radeon on a hybrid machine\"\n+! grep -q nvidia \"$tmp/pkgs\" || fail \"NVIDIA Vulkan stays with nvidia.sh\"\n+pass \"hybrid AMD+NVIDIA only adds vulkan-radeon here\"\n+\n+write_pci 0x8086:0x040300\n+run_vulkan\n+[[ ! -s $tmp/pkgs ]] || fail \"an Intel audio function is not a GPU\" \"$(cat \"$tmp/pkgs\")\"\n+pass \"non-display PCI functions do not pull Vulkan drivers\"\n+\n+grep -Fq 'OMARCHY_PCI_DEVICES_PATH' \"$ROOT/install/hardware/vulkan.sh\" ||\n+  fail \"Vulkan install reads the same sysfs override as omarchy-hw-nvidia\"\n+! grep -E '^[^#]*lspci' \"$ROOT/install/hardware/vulkan.sh\" ||\n+  fail \"Vulkan install no longer shells out to lspci\"\n+pass \"Vulkan install does not wake GPUs via lspci\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

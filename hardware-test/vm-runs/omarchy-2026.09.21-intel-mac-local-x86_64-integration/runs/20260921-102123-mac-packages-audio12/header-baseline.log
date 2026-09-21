@@ -1,0 +1,10 @@
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+error: package 'linux-headers' was not found
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+warning: database file for 'multilib' does not exist (use '-Sy' to download)
+warning: database file for 'omarchy' does not exist (use '-Sy' to download)
+error: package 'linux' was not found

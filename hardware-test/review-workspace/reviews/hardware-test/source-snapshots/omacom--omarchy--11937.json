@@ -1,0 +1,81 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11937",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "bluetooth-discovery"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "46b62ae365307d098a502a5520656604f2fde9d4",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11937,
+  "checked_at": "2026-09-21T11:56:06.926978+00:00",
+  "title": "Restart Bluetooth agent when BlueZ is replaced",
+  "author": "n0mahd",
+  "head_sha": "46b62ae365307d098a502a5520656604f2fde9d4",
+  "base_sha": "f2b419d9a9d7e7821de2ddf9c42991e32cf06cdf",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T13:17:16Z",
+  "state": "open",
+  "body": "## Summary\n\n- supervise `bt-agent` against the current `org.bluez` owner\n- restart the agent whenever `bluetoothd` is replaced\n- wait for BlueZ at login instead of permanently skipping after a startup race\n- bound service shutdown even though `bt-agent` ignores SIGTERM\n\n## Problem\n\nAgent registrations belong to one `bluetoothd` process. When BlueZ restarts, the existing `bt-agent` process remains alive and systemd considers the user service healthy, but the replacement daemon has no registered agent. Pairing then stalls at **Connecting** while BlueZ logs:\n\n```\nsrc/device.c:new_auth() No agent available for request type 2\ndevice_confirm_passkey: Operation not permitted\n```\n\nThe previous `ExecCondition` also made a login-time race permanent: if the user service started before the system BlueZ service, the agent was skipped until manually restarted.\n\n## Verification\n\n- `./test/shell.d/bluetooth-agent-test.sh`\n- `./test/shell.d/systemd-test.sh`\n- `./test/cli`\n- `bash -n bin/omarchy-bluetooth-agent-supervisor test/shell.d/bluetooth-agent-test.sh`\n- `git diff --check`\n- live Apple MacBook Air M1 / BlueZ 5.87 test: after replacing `bluetoothd`, the supervisor replaced the agent within one polling interval and both a Logitech K850 and MX Master 3S reconnected within 14 seconds\n\n`./test/all` reaches the new tests successfully. Its six failing files are pre-existing host/fixture failures; five reproduce exactly from an untouched `f2b419d9` worktree, and the sixth (`locate-test.sh`) passes alone and is test-order contamination.\n\nFixes #11936\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "21c1d28541cfd09b910acbd15182165e9299c285",
+      "filename": "bin/omarchy-bluetooth-agent-supervisor",
+      "status": "added",
+      "additions": 48,
+      "deletions": 0,
+      "changes": 48,
+      "blob_url": "https://github.com/omacom/omarchy/blob/46b62ae365307d098a502a5520656604f2fde9d4/bin%2Fomarchy-bluetooth-agent-supervisor",
+      "raw_url": "https://github.com/omacom/omarchy/raw/46b62ae365307d098a502a5520656604f2fde9d4/bin%2Fomarchy-bluetooth-agent-supervisor",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-bluetooth-agent-supervisor?ref=46b62ae365307d098a502a5520656604f2fde9d4",
+      "patch": "@@ -0,0 +1,48 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Keep the Bluetooth pairing agent registered with BlueZ\n+# omarchy:hidden=true\n+\n+set -uo pipefail\n+\n+poll_interval=${OMARCHY_BLUETOOTH_AGENT_POLL_INTERVAL:-2}\n+\n+bluez_pid() {\n+  busctl --system list --no-pager --no-legend 2>/dev/null |\n+    awk '$1 == \"org.bluez\" { print $2; exit }'\n+}\n+\n+# The user manager cannot order a user unit against bluetooth.service in the\n+# system manager. Wait here so a session that wins that startup race still\n+# registers its pairing agent as soon as BlueZ appears.\n+while :; do\n+  initial_bluez_pid=$(bluez_pid)\n+  if [[ $initial_bluez_pid =~ ^[0-9]+$ ]]; then\n+    break\n+  fi\n+  sleep \"$poll_interval\"\n+done\n+\n+bt-agent -c NoInputNoOutput &\n+agent_pid=$!\n+\n+stop_agent() {\n+  kill -KILL \"$agent_pid\" 2>/dev/null || true\n+  wait \"$agent_pid\" 2>/dev/null || true\n+}\n+\n+trap 'stop_agent; exit 0' TERM INT HUP\n+\n+# bt-agent remains alive when bluetoothd disappears, but AgentManager\n+# registrations belong to that daemon instance. Exit on an owner change so\n+# systemd replaces the stale agent with one registered to the live daemon.\n+while kill -0 \"$agent_pid\" 2>/dev/null; do\n+  sleep \"$poll_interval\"\n+  current_bluez_pid=$(bluez_pid)\n+  if [[ $current_bluez_pid != \"$initial_bluez_pid\" ]]; then\n+    stop_agent\n+    exit 1\n+  fi\n+done\n+\n+wait \"$agent_pid\""
+    },
+    {
+      "sha": "9c4e10935c3986aad6bfb2dcf73dab147b9accbd",
+      "filename": "default/systemd/user/bt-agent.service",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 7,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/46b62ae365307d098a502a5520656604f2fde9d4/default%2Fsystemd%2Fuser%2Fbt-agent.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/46b62ae365307d098a502a5520656604f2fde9d4/default%2Fsystemd%2Fuser%2Fbt-agent.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fuser%2Fbt-agent.service?ref=46b62ae365307d098a502a5520656604f2fde9d4",
+      "patch": "@@ -2,22 +2,24 @@\n Description=Bluetooth pairing agent (auto-accept)\n Documentation=man:bt-agent(1)\n ConditionPathIsDirectory=/sys/class/bluetooth\n-# bluez must be reachable on the system bus before we can register.\n After=dbus.socket\n Requires=dbus.socket\n \n [Service]\n Type=simple\n-# If bluetoothd is unavailable (for example in VMs or machines without a\n-# usable adapter), skip cleanly instead of entering a restart loop.\n-ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service\n # NoInputNoOutput auto-accepts pair requests. Safe because the adapter\n # is only `pairable: true` when the user explicitly opens the omarchy\n # bluetoothPanel and starts scanning; outside that window bluez refuses\n # inbound pair attempts at a lower layer.\n-ExecStart=/usr/bin/bt-agent -c NoInputNoOutput\n-Restart=on-failure\n-RestartSec=2\n+ExecStart=/usr/bin/omarchy-bluetooth-agent-supervisor\n+# The supervisor exits whenever the org.bluez owner changes, including a\n+# clean daemon replacement, so the agent always registers with the live one.\n+Restart=always\n+RestartSec=1\n+# bluez-tools' bt-agent ignores SIGTERM. Bound service stops and let the\n+# supervisor reap it instead of leaving updates waiting for the default 90s.\n+KillMode=mixed\n+TimeoutStopSec=3\n \n [Install]\n WantedBy=graphical-session.target"
+    },
+    {
+      "sha": "981ddfba9336fca824f7039bf55210d88185785e",
+      "filename": "test/shell.d/bluetooth-agent-test.sh",
+      "status": "added",
+      "additions": 110,
+      "deletions": 0,
+      "changes": 110,
+      "blob_url": "https://github.com/omacom/omarchy/blob/46b62ae365307d098a502a5520656604f2fde9d4/test%2Fshell.d%2Fbluetooth-agent-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/46b62ae365307d098a502a5520656604f2fde9d4/test%2Fshell.d%2Fbluetooth-agent-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbluetooth-agent-test.sh?ref=46b62ae365307d098a502a5520656604f2fde9d4",
+      "patch": "@@ -0,0 +1,110 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+supervisor_pid=\n+\n+cleanup() {\n+  if [[ $supervisor_pid =~ ^[0-9]+$ ]]; then\n+    kill \"$supervisor_pid\" 2>/dev/null || true\n+    wait \"$supervisor_pid\" 2>/dev/null || true\n+  fi\n+  rm -rf \"$test_tmp\"\n+}\n+\n+trap cleanup EXIT\n+\n+mock_bin=\"$test_tmp/bin\"\n+mkdir -p \"$mock_bin\"\n+\n+cat >\"$mock_bin/busctl\" <<'SH'\n+#!/bin/bash\n+\n+count=0\n+[[ ! -f $BUSCTL_COUNT_FILE ]] || read -r count <\"$BUSCTL_COUNT_FILE\"\n+count=$((count + 1))\n+printf '%s\\n' \"$count\" >\"$BUSCTL_COUNT_FILE\"\n+\n+case $BUSCTL_SEQUENCE in\n+  replaced)\n+    if (( count <= 2 )); then\n+      printf 'org.bluez 101 bluetoothd root system.slice 1 bluetooth.service - -\\n'\n+    else\n+      printf 'org.bluez 202 bluetoothd root system.slice 1 bluetooth.service - -\\n'\n+    fi\n+    ;;\n+  absent-then-stable)\n+    if (( count >= 3 )); then\n+      printf 'org.bluez 303 bluetoothd root system.slice 1 bluetooth.service - -\\n'\n+    fi\n+    ;;\n+esac\n+SH\n+\n+cat >\"$mock_bin/bt-agent\" <<'SH'\n+#!/bin/bash\n+\n+printf '%s\\n' \"$*\" >>\"$AGENT_LOG\"\n+printf '%s\\n' \"$$\" >\"$AGENT_PID_FILE\"\n+while :; do sleep 1; done\n+SH\n+\n+chmod +x \"$mock_bin/busctl\" \"$mock_bin/bt-agent\"\n+\n+supervisor=\"$ROOT/bin/omarchy-bluetooth-agent-supervisor\"\n+\n+replacement_dir=\"$test_tmp/replacement\"\n+mkdir -p \"$replacement_dir\"\n+\n+set +e\n+PATH=\"$mock_bin:$PATH\" \\\n+  BUSCTL_SEQUENCE=replaced \\\n+  BUSCTL_COUNT_FILE=\"$replacement_dir/busctl-count\" \\\n+  AGENT_LOG=\"$replacement_dir/agent-log\" \\\n+  AGENT_PID_FILE=\"$replacement_dir/agent-pid\" \\\n+  OMARCHY_BLUETOOTH_AGENT_POLL_INTERVAL=0.02 \\\n+  timeout 5 \"$supervisor\"\n+replacement_status=$?\n+set -e\n+\n+(( replacement_status == 1 )) ||\n+  fail \"Bluetooth agent supervisor did not exit for replacement after BlueZ changed owner\"\n+grep -Fx -- '-c NoInputNoOutput' \"$replacement_dir/agent-log\" >/dev/null\n+replacement_agent_pid=$(<\"$replacement_dir/agent-pid\")\n+kill -0 \"$replacement_agent_pid\" 2>/dev/null &&\n+  fail \"Bluetooth agent supervisor left the stale agent running after BlueZ changed owner\"\n+pass \"Bluetooth agent supervisor replaces an agent registered to an old BlueZ owner\"\n+\n+startup_dir=\"$test_tmp/startup\"\n+mkdir -p \"$startup_dir\"\n+\n+PATH=\"$mock_bin:$PATH\" \\\n+  BUSCTL_SEQUENCE=absent-then-stable \\\n+  BUSCTL_COUNT_FILE=\"$startup_dir/busctl-count\" \\\n+  AGENT_LOG=\"$startup_dir/agent-log\" \\\n+  AGENT_PID_FILE=\"$startup_dir/agent-pid\" \\\n+  OMARCHY_BLUETOOTH_AGENT_POLL_INTERVAL=0.02 \\\n+  \"$supervisor\" &\n+supervisor_pid=$!\n+\n+for _ in {1..100}; do\n+  [[ -s $startup_dir/agent-pid ]] && break\n+  sleep 0.02\n+done\n+\n+[[ -s $startup_dir/agent-pid ]] ||\n+  fail \"Bluetooth agent supervisor did not start the agent after BlueZ appeared\"\n+startup_checks=$(<\"$startup_dir/busctl-count\")\n+(( startup_checks >= 3 )) ||\n+  fail \"Bluetooth agent supervisor started the agent before BlueZ appeared\"\n+\n+startup_agent_pid=$(<\"$startup_dir/agent-pid\")\n+kill \"$supervisor_pid\"\n+wait \"$supervisor_pid\"\n+supervisor_pid=\n+kill -0 \"$startup_agent_pid\" 2>/dev/null &&\n+  fail \"Bluetooth agent supervisor left the agent running when its service stopped\"\n+pass \"Bluetooth agent supervisor waits for BlueZ and cleans up with its service\""
+    },
+    {
+      "sha": "a671177ce342356fbde08a4b5fffe399ff3f4f37",
+      "filename": "test/shell.d/systemd-test.sh",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 6,
+      "changes": 21,
+      "blob_url": "https://github.com/omacom/omarchy/blob/46b62ae365307d098a502a5520656604f2fde9d4/test%2Fshell.d%2Fsystemd-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/46b62ae365307d098a502a5520656604f2fde9d4/test%2Fshell.d%2Fsystemd-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fsystemd-test.sh?ref=46b62ae365307d098a502a5520656604f2fde9d4",
+      "patch": "@@ -5,12 +5,21 @@ set -euo pipefail\n source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n \n service=\"$ROOT/default/systemd/user/bt-agent.service\"\n-\n-grep -Fx 'ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service' \"$service\" >/dev/null\n-pass \"bt-agent skips when bluetooth.service is inactive\"\n-\n-grep -Fx 'Restart=on-failure' \"$service\" >/dev/null\n-pass \"bt-agent still restarts after runtime failures\"\n+agent_supervisor=\"$ROOT/bin/omarchy-bluetooth-agent-supervisor\"\n+\n+grep -Fx 'ExecStart=/usr/bin/omarchy-bluetooth-agent-supervisor' \"$service\" >/dev/null\n+grep -Fx 'Restart=always' \"$service\" >/dev/null\n+grep -Fx 'KillMode=mixed' \"$service\" >/dev/null\n+grep -Fx 'TimeoutStopSec=3' \"$service\" >/dev/null\n+grep -F 'current_bluez_pid != \"$initial_bluez_pid\"' \"$agent_supervisor\" >/dev/null\n+pass \"bt-agent follows BlueZ daemon replacements\"\n+\n+grep -F 'while :' \"$agent_supervisor\" >/dev/null\n+grep -F 'initial_bluez_pid=$(bluez_pid)' \"$agent_supervisor\" >/dev/null\n+grep -F 'sleep \"$poll_interval\"' \"$agent_supervisor\" >/dev/null\n+grep -F 'ExecCondition=' \"$service\" >/dev/null &&\n+  fail \"bt-agent still permanently skips when the user manager wins the BlueZ startup race\"\n+pass \"bt-agent waits for BlueZ instead of permanently skipping\"\n \n sleep_service=\"$ROOT/default/systemd/user/omarchy-sleep-lock.service\"\n grep -Fx 'ExecStart=/usr/bin/omarchy-system-sleep-monitor' \"$sleep_service\" >/dev/null"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

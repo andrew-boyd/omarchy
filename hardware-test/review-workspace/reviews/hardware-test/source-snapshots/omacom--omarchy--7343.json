@@ -1,0 +1,919 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7343",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "apple-fnmode"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7343,
+  "checked_at": "2026-09-21T11:56:00.873060+00:00",
+  "title": "Stop forcing hid_apple fnmode=2 on Apple keyboards",
+  "author": "twfyke",
+  "head_sha": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-11T19:10:02Z",
+  "state": "open",
+  "body": "Fixes https://github.com/basecamp/omarchy/issues/7110\n\n`install/hardware/fix-fkeys.sh` wrote `options hid_apple fnmode=2` on every install. That flips genuine Apple/T2 keyboards from the kernel default (`fnmode=3` / auto \u2192 fkeyslast: media, brightness, and volume on the top row) to fkeysfirst, so those keys need Fn. That contradicts the Mac docs.\n\nThe issue hypothesized that the drop-in is a no-op for the keyboards it names (Lofree Flow84) because auto already maps `APPLE_IS_NON_APPLE` to mode 2. The kernel source says otherwise: `drivers/hid/hid-apple.c`'s `non_apple_keyboards[]` includes Keychron, SONiX, GANSS, Hailuck, and similar clones, but not Lofree. In Mac mode, Flow84 binds `hid_apple` and otherwise keeps media keys on the top row, which is why community Lofree fixes still set `fnmode=2`. Removing the drop-in globally would regress those boards.\n\nThis keeps the drop-in on non-Apple machines and skips (and, for the stock one-line file, removes) it when DMI vendor is Apple, including T2 Macs.\n\n## Changes\n- Gate `install/hardware/fix-fkeys.sh` on `sys_vendor == Apple*`\n- Migration `1787019665.sh` removes the stock drop-in on existing Apple/T2 installs, rebuilds the T2 initramfs (it bakes in `hid_apple`), and sets reboot-required\n- Custom `hid_apple.conf` files are left alone\n- Shell tests cover the leaf and the migration\n\n## Done when\n- Genuine Apple/T2 keyboards keep media keys without holding Fn\n- Third-party Apple-like boards that still need fkeysfirst (Lofree Flow84) still get `fnmode=2` on non-Apple machines",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a54a35f846ed45be3e5bc97c4a2160adcdccc151",
+      "filename": "install/hardware/fix-fkeys.sh",
+      "status": "modified",
+      "additions": 20,
+      "deletions": 4,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1af10830ad18af11250ddd41f5d54fdf2ec1806a/install%2Fhardware%2Ffix-fkeys.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1af10830ad18af11250ddd41f5d54fdf2ec1806a/install%2Fhardware%2Ffix-fkeys.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-fkeys.sh?ref=1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "patch": "@@ -1,5 +1,21 @@\n-# Ensure that F-keys on Apple-like keyboards (such as Lofree Flow84) are always F-keys\n-if [[ ! -f /etc/modprobe.d/hid_apple.conf ]]; then\n-  sudo mkdir -p /etc/modprobe.d\n-  echo \"options hid_apple fnmode=2\" | sudo tee /etc/modprobe.d/hid_apple.conf >/dev/null\n+# hid_apple fnmode=3 (auto) already uses fkeysfirst for boards the kernel flags\n+# APPLE_IS_NON_APPLE (Keychron, SONiX, and similar). Lofree Flow84 is not on\n+# that list: in Mac mode it binds hid_apple and otherwise keeps media keys on\n+# the top row, so non-Apple machines still need fnmode=2.\n+#\n+# Do not write that globally. On genuine Apple/T2 hardware it switches MacBook\n+# internals and Magic Keyboard from fkeyslast (media/brightness without Fn) to\n+# fkeysfirst, which contradicts the Mac docs.\n+\n+dmi_vendor=\"${OMARCHY_HID_APPLE_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+conf=\"${OMARCHY_HID_APPLE_CONF:-/etc/modprobe.d/hid_apple.conf}\"\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]]; then\n+  if [[ -f $conf && $(<\"$conf\") == \"options hid_apple fnmode=2\" ]]; then\n+    sudo rm -f \"$conf\"\n+  fi\n+elif [[ ! -f $conf ]]; then\n+  sudo mkdir -p \"$(dirname \"$conf\")\"\n+  echo \"options hid_apple fnmode=2\" | sudo tee \"$conf\" >/dev/null\n fi"
+    },
+    {
+      "sha": "b8885d1e6321e26414f347cda0a91622201443e7",
+      "filename": "migrations/1787019665.sh",
+      "status": "added",
+      "additions": 27,
+      "deletions": 0,
+      "changes": 27,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1af10830ad18af11250ddd41f5d54fdf2ec1806a/migrations%2F1787019665.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1af10830ad18af11250ddd41f5d54fdf2ec1806a/migrations%2F1787019665.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787019665.sh?ref=1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "patch": "@@ -0,0 +1,27 @@\n+echo \"Stop forcing hid_apple fnmode=2 on genuine Apple keyboards\"\n+\n+# install/hardware/fix-fkeys.sh used to write this on every machine. Auto\n+# (fnmode=3) already gives APPLE_IS_NON_APPLE boards fkeysfirst, but Lofree\n+# Flow84 is not on that list, so non-Apple installs keep the drop-in. Apple/T2\n+# hardware must go back to the kernel default so media keys work without Fn.\n+\n+dmi_vendor=\"${OMARCHY_HID_APPLE_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+conf=\"${OMARCHY_HID_APPLE_CONF:-/etc/modprobe.d/hid_apple.conf}\"\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+[[ $sys_vendor == Apple* ]] || exit 0\n+[[ -f $conf ]] || exit 0\n+[[ $(<\"$conf\") == \"options hid_apple fnmode=2\" ]] || exit 0\n+\n+sudo rm -f \"$conf\"\n+\n+# T2 bakes hid_apple into the initramfs, so deleting the live drop-in is not\n+# enough until that image is rebuilt. Other Apple machines load hid_apple later\n+# and only need a reboot.\n+if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  if omarchy-cmd-present limine-mkinitcpio; then\n+    sudo limine-mkinitcpio\n+  fi\n+fi\n+\n+omarchy-state set reboot-required"
+    },
+    {
+      "sha": "0e52927909711f04e3ada98d97361cd0f121b7e5",
+      "filename": "test/shell.d/fix-fkeys-test.sh",
+      "status": "added",
+      "additions": 182,
+      "deletions": 0,
+      "changes": 182,
+      "blob_url": "https://github.com/omacom/omarchy/blob/1af10830ad18af11250ddd41f5d54fdf2ec1806a/test%2Fshell.d%2Ffix-fkeys-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/1af10830ad18af11250ddd41f5d54fdf2ec1806a/test%2Fshell.d%2Ffix-fkeys-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ffix-fkeys-test.sh?ref=1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "patch": "@@ -0,0 +1,182 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/fix-fkeys.sh\"\n+fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1787019665.sh\"\n+\n+grep -q 'hardware/fix-fkeys.sh' \"$all\" ||\n+  fail \"F-key hid_apple setup still runs during hardware setup\"\n+[[ -f $fix_t2 ]] || fail \"T2 setup script is present\"\n+if grep -q 'fnmode=2' \"$fix_t2\"; then\n+  fail \"T2 setup does not own hid_apple fnmode\"\n+fi\n+pass \"F-key hid_apple setup has a single owner and runs during setup\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+conf=\"$test_tmp/etc/modprobe.d/hid_apple.conf\"\n+dmi_vendor=\"$test_tmp/dmi/sys_vendor\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\" \"$(dirname \"$conf\")\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no such hardware\" (#6608).\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-cmd-present\" <<'SH'\n+#!/bin/bash\n+\n+[[ $1 == limine-mkinitcpio ]] && (( ${LIMINE_MKINITCPIO:-1} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local vendor=\"$1\"\n+  local existing=\"${2-}\"\n+  rm -rf \"$test_tmp/etc\"\n+  mkdir -p \"$(dirname \"$conf\")\"\n+  printf '%s' \"$vendor\" >\"$dmi_vendor\"\n+  if [[ -n $existing ]]; then\n+    printf '%s' \"$existing\" >\"$conf\"\n+  fi\n+\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_HID_APPLE_DMI_VENDOR=\"$dmi_vendor\" \\\n+    OMARCHY_HID_APPLE_CONF=\"$conf\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\" </dev/null\n+}\n+\n+run_migration() {\n+  local vendor=\"$1\"\n+  printf '%s' \"$vendor\" >\"$dmi_vendor\"\n+  : >\"$calls\"\n+\n+  T2_HARDWARE=\"${T2_HARDWARE:-0}\" LIMINE_MKINITCPIO=\"${LIMINE_MKINITCPIO:-1}\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_HID_APPLE_DMI_VENDOR=\"$dmi_vendor\" \\\n+    OMARCHY_HID_APPLE_CONF=\"$conf\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_leaf \"LENOVO\"\n+[[ -f $conf ]] || fail \"a non-Apple machine still gets the Lofree drop-in\"\n+grep -qx 'options hid_apple fnmode=2' \"$conf\" ||\n+  fail \"the non-Apple drop-in is the hid_apple fnmode=2 line\" \"$(cat \"$conf\")\"\n+pass \"a non-Apple machine still gets the Lofree drop-in\"\n+\n+run_leaf \"QEMU\"\n+[[ -f $conf ]] || fail \"a VM without Apple DMI still gets the drop-in\"\n+pass \"a VM without Apple DMI still gets the drop-in\"\n+\n+run_leaf \"Apple Inc.\"\n+[[ ! -f $conf ]] || fail \"an Apple machine is left on kernel default\" \"$(cat \"$conf\")\"\n+pass \"an Apple machine is left on kernel default\"\n+\n+run_leaf \"Apple Computer, Inc.\"\n+[[ ! -f $conf ]] || fail \"the older Apple vendor string is recognized\"\n+pass \"the older Apple vendor string is recognized\"\n+\n+run_leaf \"Apple Inc.\" $'options hid_apple fnmode=2\\n'\n+[[ ! -e $conf ]] || fail \"apply-hardware removes the stock Apple drop-in\" \"$(cat \"$conf\")\"\n+pass \"apply-hardware removes the stock Apple drop-in\"\n+\n+run_leaf \"Apple Inc.\" $'options hid_apple fnmode=2\\noptions hid_apple iso_layout=1\\n'\n+grep -qx 'options hid_apple fnmode=2' \"$conf\" ||\n+  fail \"a customized hid_apple.conf is left alone\" \"$(cat \"$conf\")\"\n+pass \"a customized hid_apple.conf is left alone\"\n+\n+run_leaf \"LENOVO\" $'options hid_apple swap_opt_cmd=1\\n'\n+grep -qx 'options hid_apple swap_opt_cmd=1' \"$conf\" ||\n+  fail \"an existing non-Apple hid_apple.conf is not overwritten\" \"$(cat \"$conf\")\"\n+! grep -q 'fnmode=2' \"$conf\" ||\n+  fail \"an existing non-Apple hid_apple.conf is not appended to\" \"$(cat \"$conf\")\"\n+pass \"an existing non-Apple hid_apple.conf is left untouched\"\n+\n+# Installs that predate the gate already have the drop-in.\n+printf 'options hid_apple fnmode=2\\n' >\"$conf\"\n+T2_HARDWARE=0 run_migration \"Apple Inc.\"\n+[[ ! -e $conf ]] || fail \"the migration removes the stock Apple drop-in\" \"$(cat \"$conf\")\"\n+grep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"the migration asks for the reboot that applies it\" \"$(cat \"$calls\")\"\n+! grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"a non-T2 Apple machine does not rebuild the boot image\" \"$(cat \"$calls\")\"\n+pass \"the migration removes the stock drop-in on Apple hardware\"\n+\n+printf 'options hid_apple fnmode=2\\n' >\"$conf\"\n+T2_HARDWARE=1 run_migration \"Apple Inc.\"\n+[[ ! -e $conf ]] || fail \"the migration removes the stock T2 drop-in\" \"$(cat \"$conf\")\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"a T2 Mac rebuilds the initramfs that bakes in hid_apple\" \"$(cat \"$calls\")\"\n+grep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"a T2 Mac still asks for a reboot\" \"$(cat \"$calls\")\"\n+pass \"the migration rebuilds the T2 initramfs after removing the drop-in\"\n+\n+printf 'options hid_apple fnmode=2\\n' >\"$conf\"\n+T2_HARDWARE=1 LIMINE_MKINITCPIO=0 run_migration \"Apple Inc.\"\n+[[ ! -e $conf ]] || fail \"the migration still removes the drop-in without limine-mkinitcpio\"\n+! grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"a missing limine-mkinitcpio is not invoked\" \"$(cat \"$calls\")\"\n+pass \"the T2 rebuild is skipped when limine-mkinitcpio is absent\"\n+\n+printf 'options hid_apple fnmode=2\\n' >\"$conf\"\n+: >\"$calls\"\n+T2_HARDWARE=0 run_migration \"Apple Inc.\"\n+T2_HARDWARE=0 run_migration \"Apple Inc.\"\n+[[ ! -e $conf ]] || fail \"a second migration run keeps the file gone\"\n+[[ ! -s $calls ]] || fail \"an already repaired Apple install is left untouched\" \"$(cat \"$calls\")\"\n+pass \"the migration is idempotent\"\n+\n+printf 'options hid_apple fnmode=2\\noptions hid_apple iso_layout=1\\n' >\"$conf\"\n+T2_HARDWARE=0 run_migration \"Apple Inc.\"\n+grep -qx 'options hid_apple fnmode=2' \"$conf\" ||\n+  fail \"the migration keeps a customized Apple hid_apple.conf\" \"$(cat \"$conf\")\"\n+[[ ! -s $calls ]] || fail \"a customized Apple config escalates nothing\" \"$(cat \"$calls\")\"\n+pass \"the migration leaves a customized Apple hid_apple.conf alone\"\n+\n+printf 'options hid_apple fnmode=2\\n' >\"$conf\"\n+T2_HARDWARE=0 run_migration \"LENOVO\"\n+grep -qx 'options hid_apple fnmode=2' \"$conf\" ||\n+  fail \"the migration keeps the Lofree drop-in on non-Apple hardware\" \"$(cat \"$conf\")\"\n+[[ ! -s $calls ]] || fail \"non-Apple hardware escalates nothing\" \"$(cat \"$calls\")\"\n+pass \"the migration leaves non-Apple hardware on fnmode=2\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5323176105",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#issuecomment-5323176105",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7343",
+      "id": 5323176105,
+      "node_id": "IC_kwDOO0Cobs8AAAABPUk4qQ",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-18T03:22:31Z",
+      "updated_at": "2026-08-18T03:22:31Z",
+      "body": "Field report for the rest of this T2 overlay (Limine ESP path, enroll hook, PipeWire ALSA) is https://github.com/basecamp/omarchy/issues/7347. Separate from the fnmode gate.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5323176105/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5323532821",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#issuecomment-5323532821",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7343",
+      "id": 5323532821,
+      "node_id": "IC_kwDOO0Cobs8AAAABPU6qFQ",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-18T04:16:53Z",
+      "updated_at": "2026-08-18T04:16:53Z",
+      "body": "On Copilot\u2019s second pass (the suppressed notes):\n\n- Fail strings stay as expectation names (`fail \"T2 setup installs\u2026\"`). That is existing `test/shell.d/t2-hardware-test.sh` style. Rewriting them to \u201cdid not\u2026\u201d would fight the house.\n- Still no shebang on the migration. Same quattro convention as before.\n- Not extracting a shared helper for the Apple/vendor + exact-file check. Migrations here duplicate leaf policy on purpose; a helper would widen this PR past the cited fnmode gate.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5323532821/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5382894088",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#issuecomment-5382894088",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7343",
+      "id": 5382894088,
+      "node_id": "IC_kwDOO0Cobs8AAAABQNhyCA",
+      "user": {
+        "login": "mmdmcy",
+        "id": 112551618,
+        "node_id": "U_kgDOBrVmwg",
+        "avatar_url": "https://avatars.githubusercontent.com/u/112551618?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/mmdmcy",
+        "html_url": "https://github.com/mmdmcy",
+        "followers_url": "https://api.github.com/users/mmdmcy/followers",
+        "following_url": "https://api.github.com/users/mmdmcy/following{/other_user}",
+        "gists_url": "https://api.github.com/users/mmdmcy/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/mmdmcy/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/mmdmcy/subscriptions",
+        "organizations_url": "https://api.github.com/users/mmdmcy/orgs",
+        "repos_url": "https://api.github.com/users/mmdmcy/repos",
+        "events_url": "https://api.github.com/users/mmdmcy/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/mmdmcy/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-22T22:18:49Z",
+      "updated_at": "2026-08-22T22:18:49Z",
+      "body": "I can reproduce #7110 on a real Apple MacBookPro11,3 (MacBook Pro Retina\n15-inch Late 2013, A1398/EMC2745).\n\nHardware and current state:\n\n```text\nDMI vendor:          Apple Inc.\nDMI product:         MacBookPro11,3\nDMI board:           Mac-2BD1B31983FE1663 / MacBookPro11,3\nhid_apple.conf:      options hid_apple fnmode=2\nmodule fnmode:       2\ndisplay backlight:   gmux_backlight\nkeyboard backlight:  smc::kbd_backlight\ninternal keyboard:   Apple USB HID 05ac:0263\n```\n\nWith the active `fnmode=2` setting, the printed brightness,\nkeyboard-backlight, and media keys arrive as ordinary F1-F12 symbols, while\nOmarchy's generic `XF86*` bindings are already present. This matches the\nbehavior described in #7110.\n\nI fetched this PR into an isolated worktree and ran the focused regression\ntest. All 14 cases passed, including Apple and older Apple vendor strings,\ncustomized configs, non-Apple behavior, migration idempotency, and the T2\ninitramfs path. Bash syntax and whitespace checks also passed.\n\nThis is a real-hardware reproduction and validation report rather than a\ncompeting implementation. I can test the migration and confirm the keys after\nreboot on this MacBook if useful.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5382894088/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5639382374",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#issuecomment-5639382374",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7343",
+      "id": 5639382374,
+      "node_id": "IC_kwDOO0Cobs8AAAABUCIlZg",
+      "user": {
+        "login": "rand0mdud3",
+        "id": 87219286,
+        "node_id": "MDQ6VXNlcjg3MjE5Mjg2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/87219286?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rand0mdud3",
+        "html_url": "https://github.com/rand0mdud3",
+        "followers_url": "https://api.github.com/users/rand0mdud3/followers",
+        "following_url": "https://api.github.com/users/rand0mdud3/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rand0mdud3/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rand0mdud3/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rand0mdud3/subscriptions",
+        "organizations_url": "https://api.github.com/users/rand0mdud3/orgs",
+        "repos_url": "https://api.github.com/users/rand0mdud3/repos",
+        "events_url": "https://api.github.com/users/rand0mdud3/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rand0mdud3/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-11T19:06:55Z",
+      "updated_at": "2026-09-11T19:06:55Z",
+      "body": "Review finding from pre-T2 hardware (MacBookPro11,5): the migration is not sufficient there -- the T2-only rebuild condition misses that the drop-in is baked into every UKI via the modconf hook.\n\nRepro: ran migrations/1787019665.sh (stock one-line conf removed, no rebuild per the lspci gate), rebooted. fnmode still reads 2, with no other modprobe source (grep over /etc and /usr/lib modprobe dirs empty), no cmdline option, and the kernel default confirmed as [3] auto via modinfo. The only remaining source is the initramfs copy: I extracted the UKI and etc/modprobe.d/hid_apple.conf is in it alongside hid-apple.ko, and this machine needs the internal keyboard for its LUKS prompt, so the module loads early with the baked option before the real root (where the file is now gone) is even mounted.\n\nRemedy check: rebuilt with limine-mkinitcpio after the deletion and the new image no longer contains hid_apple.conf, so widening the rebuild to all Apple hardware (or dropping the lspci condition) should close it. Boot-level confirmation (fnmode + media keys) to follow after my next reboot.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5639382374/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5639414722",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#issuecomment-5639414722",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7343",
+      "id": 5639414722,
+      "node_id": "IC_kwDOO0Cobs8AAAABUCKjwg",
+      "user": {
+        "login": "rand0mdud3",
+        "id": 87219286,
+        "node_id": "MDQ6VXNlcjg3MjE5Mjg2",
+        "avatar_url": "https://avatars.githubusercontent.com/u/87219286?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/rand0mdud3",
+        "html_url": "https://github.com/rand0mdud3",
+        "followers_url": "https://api.github.com/users/rand0mdud3/followers",
+        "following_url": "https://api.github.com/users/rand0mdud3/following{/other_user}",
+        "gists_url": "https://api.github.com/users/rand0mdud3/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/rand0mdud3/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/rand0mdud3/subscriptions",
+        "organizations_url": "https://api.github.com/users/rand0mdud3/orgs",
+        "repos_url": "https://api.github.com/users/rand0mdud3/repos",
+        "events_url": "https://api.github.com/users/rand0mdud3/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/rand0mdud3/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-11T19:10:02Z",
+      "updated_at": "2026-09-11T19:10:02Z",
+      "body": "Boot-level confirmation on MacBookPro11,5 after the rebuild + reboot: fnmode now reads 3 (auto), no hid_apple.conf anywhere, and the top row works without Fn (F12 raises volume with OSD). So the complete pre-T2 story is: migration alone leaves fnmode=2 via the baked initramfs copy; migration plus a boot-image rebuild lands fnmode=3 with working media keys. The rebuild gate is the only thing standing between this PR and working pre-T2 keys.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5639414722/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4956668922,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3DD-g",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nStops globally forcing `hid_apple fnmode=2` and instead applies it only on non-Apple hardware, with a migration to remove the legacy drop-in on Apple machines and a shell test validating behavior across Apple/T2 and non-Apple cases.\n\n**Changes:**\n- Update `install/hardware/fix-fkeys.sh` to gate the drop-in on DMI vendor (skip/remove on Apple, install on non-Apple).\n- Add migration `1787019665.sh` to remove legacy `hid_apple.conf` on Apple hardware and rebuild initramfs for T2 when applicable.\n- Add a shell test covering leaf behavior and migration idempotency, including the T2 initramfs rebuild path.\n\n### Reviewed changes\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated 3 comments.\n\n| File | Description |\n| ---- | ----------- |\n| test/shell.d/fix-fkeys-test.sh | Adds regression tests for leaf + migration behavior, including T2 handling and idempotency. |\n| migrations/1787019665.sh | Introduces migration to remove legacy `fnmode=2` drop-in on Apple hardware and trigger required follow-up actions. |\n| install/hardware/fix-fkeys.sh | Changes drop-in application/removal logic to avoid impacting genuine Apple keyboards while keeping non-Apple behavior. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956668922",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956668922"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "submitted_at": "2026-08-18T02:45:38Z",
+      "commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9"
+    },
+    {
+      "id": 4956706918,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3FYZg",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956706918",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956706918"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "submitted_at": "2026-08-18T02:51:14Z",
+      "commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9"
+    },
+    {
+      "id": 4956707084,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3FZDA",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956707084",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956707084"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "submitted_at": "2026-08-18T02:51:15Z",
+      "commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9"
+    },
+    {
+      "id": 4956707277,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3FZzQ",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956707277",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956707277"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "submitted_at": "2026-08-18T02:51:16Z",
+      "commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9"
+    },
+    {
+      "id": 4956727254,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ3Gn1g",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (16)</summary>\n\n**test/shell.d/fix-fkeys-test.sh:16**\n* Several `fail` messages here describe the opposite of the failure condition, which will make debugging CI failures confusing. For example: line 13 fails when `fix-fkeys.sh` is *missing* from `all.sh` (so the message should say it **does not run**), line 14 fails when `$fix_t2` is *absent* (message should say it **is missing**), and line 16 fails when `fnmode=2` is *present* in `fix-t2.sh` (message should say T2 setup **still owns** it). Update these messages to describe the actual failing state.\n```\ngrep -q 'hardware/fix-fkeys.sh' \"$all\" ||\n  fail \"F-key hid_apple setup still runs during hardware setup\"\n[[ -f $fix_t2 ]] || fail \"T2 setup script is present\"\nif grep -q 'fnmode=2' \"$fix_t2\"; then\n  fail \"T2 setup does not own hid_apple fnmode\"\n```\n**test/shell.d/fix-fkeys-test.sh:105**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n[[ -f $conf ]] || fail \"a non-Apple machine still gets the Lofree drop-in\"\ngrep -qx 'options hid_apple fnmode=2' \"$conf\" ||\n  fail \"the non-Apple drop-in is the hid_apple fnmode=2 line\" \"$(cat \"$conf\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:109**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n[[ -f $conf ]] || fail \"a VM without Apple DMI still gets the drop-in\"\n```\n**test/shell.d/fix-fkeys-test.sh:113**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n[[ ! -f $conf ]] || fail \"an Apple machine is left on kernel default\" \"$(cat \"$conf\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:131**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n[[ ! -f $conf ]] || fail \"the older Apple vendor string is recognized\"\n```\n**test/shell.d/fix-fkeys-test.sh:133**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n[[ ! -e $conf ]] || fail \"apply-hardware removes the stock Apple drop-in\" \"$(cat \"$conf\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:126**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n  fail \"a customized hid_apple.conf is left alone\" \"$(cat \"$conf\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:133**\n* Multiple assertions have `fail` messages that read like the *expected* behavior, but they execute only when the expectation is violated (e.g., line 103 fails when the file is missing; the message should say the drop-in **was not created**). This pattern appears throughout the test and will mislead anyone reading logs. Please rewrite these `fail` strings consistently to describe the unexpected condition (e.g., \u201cdid not create\u2026\u201d, \u201cwas not removed\u2026\u201d, \u201cwas modified/overwritten\u2026\u201d, etc.).\n```\n  fail \"an existing non-Apple hid_apple.conf is not overwritten\" \"$(cat \"$conf\")\"\n! grep -q 'fnmode=2' \"$conf\" ||\n  fail \"an existing non-Apple hid_apple.conf is not appended to\" \"$(cat \"$conf\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:159**\n* The same inverted-message issue continues in the migration section: many `fail` strings state what should happen, rather than what went wrong. For instance, line 139 fails when the file still exists (so it should say the migration **did not remove** it), line 150 fails when the rebuild didn\u2019t occur (so it should say it **did not rebuild**), and line 159 triggers when `limine-mkinitcpio` *was* invoked (message should say it **was invoked unexpectedly**). Adjust these messages so failures accurately reflect the observed bad state.\n```\n[[ ! -e $conf ]] || fail \"the migration removes the stock Apple drop-in\" \"$(cat \"$conf\")\"\ngrep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n  fail \"the migration asks for the reboot that applies it\" \"$(cat \"$calls\")\"\n! grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n  fail \"a non-T2 Apple machine does not rebuild the boot image\" \"$(cat \"$calls\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:159**\n* The same inverted-message issue continues in the migration section: many `fail` strings state what should happen, rather than what went wrong. For instance, line 139 fails when the file still exists (so it should say the migration **did not remove** it), line 150 fails when the rebuild didn\u2019t occur (so it should say it **did not rebuild**), and line 159 triggers when `limine-mkinitcpio` *was* invoked (message should say it **was invoked unexpectedly**). Adjust these messages so failures accurately reflect the observed bad state.\n```\n[[ ! -e $conf ]] || fail \"the migration removes the stock T2 drop-in\" \"$(cat \"$conf\")\"\ngrep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n  fail \"a T2 Mac rebuilds the initramfs that bakes in hid_apple\" \"$(cat \"$calls\")\"\ngrep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n  fail \"a T2 Mac still asks for a reboot\" \"$(cat \"$calls\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:159**\n* The same inverted-message issue continues in the migration section: many `fail` strings state what should happen, rather than what went wrong. For instance, line 139 fails when the file still exists (so it should say the migration **did not remove** it), line 150 fails when the rebuild didn\u2019t occur (so it should say it **did not rebuild**), and line 159 triggers when `limine-mkinitcpio` *was* invoked (message should say it **was invoked unexpectedly**). Adjust these messages so failures accurately reflect the observed bad state.\n```\n[[ ! -e $conf ]] || fail \"the migration still removes the drop-in without limine-mkinitcpio\"\n! grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n  fail \"a missing limine-mkinitcpio is not invoked\" \"$(cat \"$calls\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:181**\n* The same inverted-message issue continues in the migration section: many `fail` strings state what should happen, rather than what went wrong. For instance, line 139 fails when the file still exists (so it should say the migration **did not remove** it), line 150 fails when the rebuild didn\u2019t occur (so it should say it **did not rebuild**), and line 159 triggers when `limine-mkinitcpio` *was* invoked (message should say it **was invoked unexpectedly**). Adjust these messages so failures accurately reflect the observed bad state.\n```\n[[ ! -s $calls ]] || fail \"an already repaired Apple install is left untouched\" \"$(cat \"$calls\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:181**\n* The same inverted-message issue continues in the migration section: many `fail` strings state what should happen, rather than what went wrong. For instance, line 139 fails when the file still exists (so it should say the migration **did not remove** it), line 150 fails when the rebuild didn\u2019t occur (so it should say it **did not rebuild**), and line 159 triggers when `limine-mkinitcpio` *was* invoked (message should say it **was invoked unexpectedly**). Adjust these messages so failures accurately reflect the observed bad state.\n```\n[[ ! -s $calls ]] || fail \"a customized Apple config escalates nothing\" \"$(cat \"$calls\")\"\n```\n**test/shell.d/fix-fkeys-test.sh:181**\n* The same inverted-message issue continues in the migration section: many `fail` strings state what should happen, rather than what went wrong. For instance, line 139 fails when the file still exists (so it should say the migration **did not remove** it), line 150 fails when the rebuild didn\u2019t occur (so it should say it **did not rebuild**), and line 159 triggers when `limine-mkinitcpio` *was* invoked (message should say it **was invoked unexpectedly**). Adjust these messages so failures accurately reflect the observed bad state.\n```\n[[ ! -s $calls ]] || fail \"non-Apple hardware escalates nothing\" \"$(cat \"$calls\")\"\n```\n**migrations/1787019665.sh:6**\n* This script uses bash-specific features later (`[[ ... ]]`, `$(<file)`), but it has no shebang and no strict-mode settings. Adding a bash shebang (and, if consistent with other migrations, `set -euo pipefail`) prevents accidental execution under `/bin/sh` and makes failures more predictable.\n```\necho \"Stop forcing hid_apple fnmode=2 on genuine Apple keyboards\"\n\n# install/hardware/fix-fkeys.sh used to write this on every machine. Auto\n# (fnmode=3) already gives APPLE_IS_NON_APPLE boards fkeysfirst, but Lofree\n# Flow84 is not on that list, so non-Apple installs keep the drop-in. Apple/T2\n# hardware must go back to the kernel default so media keys work without Fn.\n```\n**migrations/1787019665.sh:17**\n* The Apple detection + \u201cexactly `options hid_apple fnmode=2`\u201d check duplicates the same policy now implemented in `install/hardware/fix-fkeys.sh`. To reduce drift risk, consider extracting this into a shared helper (or sourcing a shared library used by both migration + leaf scripts) so future changes to vendor matching or config normalization don\u2019t require touching two separate implementations.\n```\ndmi_vendor=\"${OMARCHY_HID_APPLE_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\nconf=\"${OMARCHY_HID_APPLE_CONF:-/etc/modprobe.d/hid_apple.conf}\"\nsys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n\n[[ $sys_vendor == Apple* ]] || exit 0\n[[ -f $conf ]] || exit 0\n[[ $(<\"$conf\") == \"options hid_apple fnmode=2\" ]] || exit 0\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956727254",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#pullrequestreview-4956727254"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "submitted_at": "2026-08-18T02:54:08Z",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573747",
+      "pull_request_review_id": 4956668922,
+      "id": 3800573747,
+      "node_id": "PRRC_kwDOO0Cobs7iiCcz",
+      "diff_hunk": "@@ -0,0 +1,27 @@\n+echo \"Stop forcing hid_apple fnmode=2 on genuine Apple keyboards\"\n+\n+# install/hardware/fix-fkeys.sh used to write this on every machine. Auto",
+      "path": "migrations/1787019665.sh",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "original_commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This migration script has no shebang, so it will fail with an exec format error if the migration runner executes it directly (instead of invoking `bash <file>`). Add `#!/bin/bash` at the top (and consider `set -euo pipefail` if that\u2019s the project convention for migrations) to make execution and error handling consistent.",
+      "created_at": "2026-08-18T02:45:37Z",
+      "updated_at": "2026-08-18T02:45:38Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800573747",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573747"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800573747"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573747/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 3,
+      "original_line": 3,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 3,
+      "position": 3,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573772",
+      "pull_request_review_id": 4956668922,
+      "id": 3800573772,
+      "node_id": "PRRC_kwDOO0Cobs7iiCdM",
+      "diff_hunk": "@@ -0,0 +1,179 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/fix-fkeys.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1787019665.sh\"\n+\n+grep -q 'hardware/fix-fkeys.sh' \"$all\" ||\n+  fail \"F-key hid_apple setup still runs during hardware setup\"\n+! grep -q 'fnmode=2' \"$ROOT/install/hardware/apple/fix-t2.sh\" ||\n+  fail \"T2 setup does not own hid_apple fnmode\"",
+      "path": "test/shell.d/fix-fkeys-test.sh",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "original_commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The negated `grep` on line 13 will also succeed when `grep` errors (e.g., missing `fix-t2.sh`), because `!` turns any non-zero into success. That can make this test pass when it should fail. Prefer an explicit file existence check and/or a conditional like `if grep -q ...; then fail ...; fi` so missing files or grep errors don\u2019t get masked.",
+      "created_at": "2026-08-18T02:45:38Z",
+      "updated_at": "2026-08-18T02:45:38Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800573772",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573772"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800573772"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573772/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 11,
+      "original_start_line": 10,
+      "start_side": "RIGHT",
+      "line": 16,
+      "original_line": 14,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573784",
+      "pull_request_review_id": 4956668922,
+      "id": 3800573784,
+      "node_id": "PRRC_kwDOO0Cobs7iiCdY",
+      "diff_hunk": "@@ -1,5 +1,21 @@\n-# Ensure that F-keys on Apple-like keyboards (such as Lofree Flow84) are always F-keys\n-if [[ ! -f /etc/modprobe.d/hid_apple.conf ]]; then\n-  sudo mkdir -p /etc/modprobe.d\n-  echo \"options hid_apple fnmode=2\" | sudo tee /etc/modprobe.d/hid_apple.conf >/dev/null\n+# hid_apple fnmode=3 (auto) already uses fkeysfirst for boards the kernel flags\n+# APPLE_IS_NON_APPLE (Keychron, SONiX, and similar). Lofree Flow84 is not on\n+# that list: in Mac mode it binds hid_apple and otherwise keeps media keys on\n+# the top row, so non-Apple machines still need fnmode=2.\n+#\n+# Do not write that globally. On genuine Apple/T2 hardware it switches MacBook\n+# internals and Magic Keyboard from fkeyslast (media/brightness without Fn) to\n+# fkeysfirst, which contradicts the Mac docs.\n+\n+dmi_vendor=\"${OMARCHY_HID_APPLE_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+conf=\"${OMARCHY_HID_APPLE_CONF:-/etc/modprobe.d/hid_apple.conf}\"\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]]; then\n+  if [[ -f $conf && $(<\"$conf\") == \"options hid_apple fnmode=2\" ]]; then",
+      "path": "install/hardware/fix-fkeys.sh",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "original_commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Comparing the entire file contents via command substitution is a bit brittle and harder to read/extend (and will silently treat additional whitespace/newlines as \u2018customized\u2019). Using a fixed-string, whole-line check (e.g., `grep -Fxq`) expresses intent more clearly and avoids loading the whole file into a variable-like expansion.",
+      "created_at": "2026-08-18T02:45:38Z",
+      "updated_at": "2026-08-18T02:45:38Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800573784",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573784"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800573784"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800573784/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 15,
+      "original_line": 15,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 19,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604076",
+      "pull_request_review_id": 4956706918,
+      "id": 3800604076,
+      "node_id": "PRRC_kwDOO0Cobs7iiJ2s",
+      "diff_hunk": "@@ -0,0 +1,27 @@\n+echo \"Stop forcing hid_apple fnmode=2 on genuine Apple keyboards\"\n+\n+# install/hardware/fix-fkeys.sh used to write this on every machine. Auto",
+      "path": "migrations/1787019665.sh",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "original_commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Leaving this without a shebang on purpose. Omarchy migrations on `quattro` are invoked with bash and start with `echo \"...\"`. Adding `#!/bin/bash` would fight that house style.",
+      "created_at": "2026-08-18T02:51:14Z",
+      "updated_at": "2026-08-18T02:51:14Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800604076",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604076"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800604076"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604076/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 3,
+      "original_line": 3,
+      "side": "RIGHT",
+      "in_reply_to_id": 3800573747,
+      "author_association": "NONE",
+      "original_position": 3,
+      "position": 3,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604208",
+      "pull_request_review_id": 4956707084,
+      "id": 3800604208,
+      "node_id": "PRRC_kwDOO0Cobs7iiJ4w",
+      "diff_hunk": "@@ -0,0 +1,179 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/fix-fkeys.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1787019665.sh\"\n+\n+grep -q 'hardware/fix-fkeys.sh' \"$all\" ||\n+  fail \"F-key hid_apple setup still runs during hardware setup\"\n+! grep -q 'fnmode=2' \"$ROOT/install/hardware/apple/fix-t2.sh\" ||\n+  fail \"T2 setup does not own hid_apple fnmode\"",
+      "path": "test/shell.d/fix-fkeys-test.sh",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "original_commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Good catch. `! grep` also passes if `fix-t2.sh` is missing. Fixing that so a missing file fails the test, then the grep only asserts that T2 setup does not own `fnmode`.",
+      "created_at": "2026-08-18T02:51:15Z",
+      "updated_at": "2026-08-18T02:51:15Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800604208",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604208"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800604208"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604208/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 11,
+      "original_start_line": 10,
+      "start_side": "RIGHT",
+      "line": 16,
+      "original_line": 14,
+      "side": "RIGHT",
+      "in_reply_to_id": 3800573772,
+      "author_association": "NONE",
+      "original_position": 14,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604401",
+      "pull_request_review_id": 4956707277,
+      "id": 3800604401,
+      "node_id": "PRRC_kwDOO0Cobs7iiJ7x",
+      "diff_hunk": "@@ -1,5 +1,21 @@\n-# Ensure that F-keys on Apple-like keyboards (such as Lofree Flow84) are always F-keys\n-if [[ ! -f /etc/modprobe.d/hid_apple.conf ]]; then\n-  sudo mkdir -p /etc/modprobe.d\n-  echo \"options hid_apple fnmode=2\" | sudo tee /etc/modprobe.d/hid_apple.conf >/dev/null\n+# hid_apple fnmode=3 (auto) already uses fkeysfirst for boards the kernel flags\n+# APPLE_IS_NON_APPLE (Keychron, SONiX, and similar). Lofree Flow84 is not on\n+# that list: in Mac mode it binds hid_apple and otherwise keeps media keys on\n+# the top row, so non-Apple machines still need fnmode=2.\n+#\n+# Do not write that globally. On genuine Apple/T2 hardware it switches MacBook\n+# internals and Magic Keyboard from fkeyslast (media/brightness without Fn) to\n+# fkeysfirst, which contradicts the Mac docs.\n+\n+dmi_vendor=\"${OMARCHY_HID_APPLE_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+conf=\"${OMARCHY_HID_APPLE_CONF:-/etc/modprobe.d/hid_apple.conf}\"\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]]; then\n+  if [[ -f $conf && $(<\"$conf\") == \"options hid_apple fnmode=2\" ]]; then",
+      "path": "install/hardware/fix-fkeys.sh",
+      "commit_id": "1af10830ad18af11250ddd41f5d54fdf2ec1806a",
+      "original_commit_id": "2db481c3c3029fae1dd81130a603efb85dd77cd9",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Keeping the whole-file compare. This drop-in is only safe to delete when the file is exactly the one stock line we wrote. `grep -Fxq` would also match a customized `hid_apple.conf` that still contains that line, and we would delete someone's extra options. The tests cover that case.",
+      "created_at": "2026-08-18T02:51:16Z",
+      "updated_at": "2026-08-18T02:51:16Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800604401",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7343",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604401"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7343#discussion_r3800604401"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7343"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800604401/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 15,
+      "original_line": 15,
+      "side": "RIGHT",
+      "in_reply_to_id": 3800573784,
+      "author_association": "NONE",
+      "original_position": 19,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

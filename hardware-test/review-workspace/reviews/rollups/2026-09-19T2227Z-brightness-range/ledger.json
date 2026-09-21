@@ -1,0 +1,1600 @@
+{
+  "objective": "proceed until all roll-up PRs are done locally.",
+  "source_inventory": "reviews/grouped-prs/plan.json plus subsequent followup/next-families evidence",
+  "completion_requirements": [
+    "Every active family and every member source has an inspected disposition; document any source overlap or deliberate split.",
+    "Each selected rollup exists as an applicable local patch/branch with a finished PR title/body, attribution, source-head and base pins, dependencies, and exact excluded alternatives.",
+    "Resolve locally testable implementation defects; run meaningful tests/builds appropriate to the actual change and include negative controls when testing a fixed failure.",
+    "Record hardware/runtime limits separately from local implementation completion; no hardware, upstream or deployment actions are authorized.",
+    "Reconcile all selected patches separately and in the intended repository/dependency batches against fresh target branches; never confuse conflict-free application with correctness.",
+    "Publish reviewable artifacts, accurate before/after counts, a complete source-to-proposal map, and verify the private tailnet previews/downloads.",
+    "Do not close the goal while any active family is merely queued, loosely planned, has unexplained omitted members, or has unresolved work that can be completed locally."
+  ],
+  "boundary": "Local implementation and review artifacts only. T2-only implementation remains deferred by the existing scope; context/outside entries remain recorded. No GitHub/Basecamp writes, messaging, hardware changes or package installations.",
+  "families": [
+    {
+      "family": "alpine-ridge",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/349",
+        "https://github.com/omacom/omarchy/pull/10140",
+        "https://github.com/omacom/omarchy/pull/10758",
+        "https://github.com/omacom/omarchy/pull/11570",
+        "https://github.com/omacom/omarchy/pull/12211",
+        "https://github.com/omacom/omarchy/pull/5970",
+        "https://github.com/omacom/omarchy/pull/7044",
+        "https://github.com/omacom/omarchy/pull/9899"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Separate kernel/DKMS workarounds, USB autosuspend policy and model-specific sleep hooks. Compare which PCI functions each owns and which older hook it replaces; coordinate with P04/P09/P10 before selecting a lead. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "apple-fnmode",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/7343"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Check existing fnmode ownership, persisted user overrides, and built-in versus external Apple keyboards. Decide whether the change preserves user preference on both fresh install and upgrade. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "applesmc-fans",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/476"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Audit the package and upstream failure handling before considering installation policy: restore firmware fan control on signal/crash, keep installation disabled/observe-only, and distinguish single-fan model support from other Macs. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "baffin-capture",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10125"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Verify the exact Baffin GPU and capture path behind the report; compare a narrowly gated workaround with ordinary GPU behavior and collect capture/recovery evidence. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "battery-limits",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10196",
+        "https://github.com/omacom/omarchy/pull/10502",
+        "https://github.com/omacom/omarchy-pkgs/pull/516"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Compare the two threshold-based implementations with readable, absent, unsupported and malformed charge-threshold fixtures. Select one behavior and preserve existing settings. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "bcm5974-trackpad",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9218",
+        "https://github.com/omacom/omarchy/pull/9409"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Separate recognition of bcm5974 hardware from reset-command failure handling; check whether they are complementary steps and test unsupported-device behavior without claiming palm-rejection support. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "bluetooth-audio",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10485",
+        "https://github.com/omacom/omarchy/pull/7644"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Compare ACL-priority commands with the broader dropout workaround by controller/firmware and transport. Do not combine two global Bluetooth policies from similar symptoms alone. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "bluetooth-discovery",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10111",
+        "https://github.com/omacom/omarchy/pull/11937",
+        "https://github.com/omacom/omarchy/pull/8572"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Establish the Intel Mac host connection for each added candidate. Separate pairing-agent lifecycle from USB autosuspend cmdline changes, then test BlueZ restarts, timeouts and cancellation. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "brightness-range",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/8524",
+        "https://github.com/omacom/omarchy/pull/8882"
+      ],
+      "prior_plan_ids": [],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/brightness-range.md",
+          "patch": "/drafts/brightness-range.patch",
+          "bundle": "/drafts/brightness-range.zip"
+        }
+      ],
+      "remaining": "Affected hardware must verify luminance, keyboard behavior, driver write semantics and physical DPMS restoration. Local fixtures use real brightnessctl with synthetic sysfs; no hardware support claim.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T2227Z-brightness-range",
+        "patch_sha256": "ab42d97446f11349b5a5237fed7f4417c249d3ba1016e2a5c16e8b32c67b267d",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/8524",
+            "head_sha": "6dc082c751b3eb749e699073fd8dd84ce21fc3a1",
+            "author": "gorem",
+            "disposition": "Retain raw-progress guarantee; replace displayed-percentage fallback with native minimum clamping. Exclude unintended +1/+0% changes and deliberately retain the existing global downward floor."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/8882",
+            "head_sha": "586e9151217bd39923de25ba113bd8288c81a3a5",
+            "author": "yashranaway",
+            "disposition": "Retain direct recovery intent; replace unconditional raw fine stepping so normal percentage behavior remains and above-zero small-range stalls also recover."
+          }
+        ],
+        "checks": "52 real-binary state/OSD-or-DPMS cases plus denied write; 55 shell regression assertions; routing, Apple-cache and CLI on combined tree. Independent style passes; combined style retains a reproduced held-diagnostics violation.",
+        "source_gate": "2026-09-19T22:44:56+00:00",
+        "integration": "20 standalone patches apply; 16 Omarchy patches combine with the pre-existing T1 manual overlay, four package patches directly. Reviewed package target drift is preserved exactly.",
+        "negative_controls": "Baseline zero/above-zero stalls and both source alternatives tested by the same real-binary harness; #8524 downward-floor difference explicitly classified as intentional policy.",
+        "hardware_verified": false
+      }
+    },
+    {
+      "family": "brightness-routing",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10234",
+        "https://github.com/omacom/omarchy/pull/11312",
+        "https://github.com/omacom/omarchy/pull/12267",
+        "https://github.com/omacom/omarchy/pull/8053"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Split AIO kernel-backlight routing from Apple Silicon panel preference and software fallbacks. Evaluate only concretely relevant Intel Mac behavior and preserve user override/DDC fallback ordering. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "cpu-instructions",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/7890",
+        "https://github.com/omacom/omarchy/pull/8149"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Jev marked this outside scope; verify the original older Intel Mac CPU connection. Keep AVX2 application gating separate from SSE4.2/POPCNT application support and check feature-detection fallbacks. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "cpu-power",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10313",
+        "https://github.com/omacom/omarchy/pull/11432",
+        "https://github.com/omacom/omarchy/pull/5136",
+        "https://github.com/omacom/omarchy/pull/9202"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Split T2-specific power/PROCHOT work from MacBook10,1 RAPL and shared profile mapping. Review ownership, units and restore behavior; do not adopt universal limits from one model. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "cs8409",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/155",
+        "https://github.com/omacom/omarchy-pkgs/pull/249",
+        "https://github.com/omacom/omarchy/pull/11064",
+        "https://github.com/omacom/omarchy/pull/11625",
+        "https://github.com/omacom/omarchy/pull/7140",
+        "https://github.com/omacom/omarchy/pull/8285",
+        "https://github.com/omacom/omarchy/pull/9516"
+      ],
+      "prior_plan_ids": [
+        "P11"
+      ],
+      "status": "local_drafts_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/cs8409-package.md",
+          "patch": "/drafts/cs8409-package.patch",
+          "bundle": "/drafts/cs8409-package.zip"
+        },
+        {
+          "description": "/drafts/cs8409-installer.md",
+          "patch": "/drafts/cs8409-installer.patch",
+          "bundle": "/drafts/cs8409-installer.zip"
+        }
+      ],
+      "remaining": "Activation gates: exact Omarchy 7.2.5 headers ABI build, real package hooks/signing in a disposable system, then affected-hardware validation. Package publication must precede installer activation.",
+      "completion_evidence": {
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/9516",
+            "head_sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+            "disposition": "Representative installer and ISO package availability. Replace unanchored DMI-only selection with shared exact model/codec checks and verified DKMS setup."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/7140",
+            "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+            "disposition": "Installer foundation retained through #9516; forced stock headers and its duplicate migration are not stacked."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/8285",
+            "head_sha": "4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+            "disposition": "Retain same-codec/subsystem evidence and matching-header rationale. Credit ari-ahm\u2019s separately pinned offline preparation contribution; do not promise universal kernel ABI compatibility."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/11625",
+            "head_sha": "707ed1c084fbfd0a7d32ee98ed26846c4052ba3e",
+            "disposition": "Retain the codec-observation rationale. Exclude runtime git clone/pull/install and duplicated mismatched fresh-install/migration detection."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/11064",
+            "head_sha": "1ed9d451df4c551857cc0ea648c0b3d5471beb96",
+            "disposition": "Retain exact DMI gating rationale and attributed MacBookPro13,2 speaker report. Exclude AUR delivery, duplicate migration and disputed blanket 13,1/14,1 codec exclusion."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy-pkgs/pull/155",
+            "head_sha": "bdf0fcfbae573a16631ce1cfc10e12df7ef9b01b",
+            "disposition": "Package foundation and upstream driver selection retained, via its broader #249 successor; runtime PRE_BUILD downloading replaced."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy-pkgs/pull/249",
+            "head_sha": "a346e20667fd163eed792f74d3523b34c5ff6df4",
+            "disposition": "Representative package; wider iMac coverage and underscore DKMS identity retained. Local checksummed offline preparation and 7.2.5 functional rebase replace runtime fetching."
+          }
+        ],
+        "snapshot": ".state/rollups/2026-09-19T1730Z",
+        "local_checks": "Offline makepkg + DKMS 7.2.3 build; 54 installer assertions; both repository integration batches; final CLI tests.",
+        "source_gate": "2026-09-19T17:59:22+00:00"
+      }
+    },
+    {
+      "family": "display-enumeration",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12072",
+        "https://github.com/omacom/omarchy/pull/10198"
+      ],
+      "prior_plan_ids": [
+        "P05"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/display.md",
+          "bundle": "/drafts/display.zip",
+          "patch": "/drafts/display.patch"
+        }
+      ],
+      "remaining": "Live compositor, hotplug and rendered panel behavior remain unverified.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12072",
+            "head_sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+            "state": "open",
+            "updated_at": "2026-09-16T10:32:45Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12072.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain backend identity/mode filtering; correct panel parsing to preserve recoverable monitors."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/10198",
+            "head_sha": "35f3354ed122decab94b0507d6c633b45cd9d0a0",
+            "state": "open",
+            "updated_at": "2026-09-08T16:50:14Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_10198.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain conservative empty duplicate-internal cleanup."
+          }
+        ],
+        "checks": "88 assertions including actual backend-to-panel parser contract; uncorrected combination loses a recoverable output.",
+        "patch_sha256": "59a62b88ae45e9374a0470423014beaaed240c1b411c7a4150ba7034382a325d",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      }
+    },
+    {
+      "family": "efi-preservation",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-iso/pull/174"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Audit EFI copy/restore boundaries in disposable filesystem fixtures, including failed installs and unrelated files. Preserve Apple firmware without widening deletion or overwriting a different ESP. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "external-modes",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9796"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "facetime-pcie",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11381",
+        "https://github.com/omacom/omarchy/pull/12067"
+      ],
+      "prior_plan_ids": [
+        "P08"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P08; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "fingerprint-ui",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11952"
+      ],
+      "prior_plan_ids": [
+        "P12"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/fingerprint.md",
+          "bundle": "/drafts/fingerprint.zip",
+          "patch": "/drafts/fingerprint.patch"
+        }
+      ],
+      "remaining": "Live QML/PAM and cross-reader lifecycle remain unverified. A reported silent driver stall is not disproved by ordinary callback tests.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/11952",
+            "head_sha": "6d88ae46fe0ac3d27ea2d66a0dfaea7fb066400b",
+            "state": "open",
+            "updated_at": "2026-09-15T15:04:38Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_11952.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Combine prompt UI with blanking/retry lifecycle; reject late prompts while blanked/unlocked."
+          }
+        ],
+        "checks": "55 lifecycle/prompt assertions; pinned Quickshell normal callback contract; reproduced double failure counting corrected.",
+        "patch_sha256": "c1d5794366cf02d1103821c10bc994b3786a9d7eb9fa44d08fce6a987b4e9537",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      }
+    },
+    {
+      "family": "gmux-brightness",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/8205",
+        "https://github.com/omacom/omarchy/pull/8371",
+        "https://github.com/omacom/omarchy/pull/9910"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Separate reading actual gmux brightness from saving/restoring it; compare the two persistence implementations and their service ownership, permissions and suspend interaction. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "haswell-voxtype",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11481"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Validate the GPU-generation predicate and CPU fallback with fixtures; distinguish GPU backend incompatibility from the CPU instruction requirements in cpu-instructions. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "imac-5k",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11464"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Extract each behavior from the model-support proposal and check its package dependencies and specific iMac generation. Avoid a support claim based only on adding a model name. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "imac-cs4208",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10458"
+      ],
+      "prior_plan_ids": [
+        "P11"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P11; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "imac-gpu-boot",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10169"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "image-picker",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9730"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Jev marked this outside scope; verify the T1 input/control use case in the original evidence. Keep shared IPC behavior separate from device-specific enablement and test focus/selection boundaries. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "intel-video",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11592"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Check supported Intel GPU IDs/generations and current package contents; test legacy versus modern VA-API driver selection before selecting the existing PR as a representative. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "kernel-headers",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-iso/pull/183",
+        "https://github.com/omacom/omarchy-iso/pull/184",
+        "https://github.com/omacom/omarchy-pkgs/pull/454",
+        "https://github.com/omacom/omarchy/pull/10797",
+        "https://github.com/omacom/omarchy/pull/11897",
+        "https://github.com/omacom/omarchy/pull/11898",
+        "https://github.com/omacom/omarchy/pull/11900",
+        "https://github.com/omacom/omarchy/pull/11901",
+        "https://github.com/omacom/omarchy/pull/12074",
+        "https://github.com/omacom/omarchy/pull/12090",
+        "https://github.com/omacom/omarchy/pull/12249",
+        "https://github.com/omacom/omarchy/pull/9692"
+      ],
+      "prior_plan_ids": [
+        "P02"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P02; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "kernel-policy",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-iso/pull/182",
+        "https://github.com/omacom/omarchy/pull/12328"
+      ],
+      "prior_plan_ids": [
+        "P13"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P13; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "keyboard-backlight-state",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10366",
+        "https://github.com/omacom/omarchy/pull/11404"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Compare saved-state validation and screensaver restoration; test missing, corrupt and zero values and ensure display brightness and keyboard brightness remain separate. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "keyboard-backlight-steps",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/2331",
+        "https://github.com/omacom/omarchy/pull/5424",
+        "https://github.com/omacom/omarchy/pull/6533"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Separate keybinding exposure from brightness-step policy; compare rounding in both directions and low-range devices, retaining the closed predecessor as history. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "keyboard-device",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12350",
+        "https://github.com/omacom/omarchy/pull/6834"
+      ],
+      "prior_plan_ids": [
+        "P01"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/keyboard.md",
+          "bundle": "/drafts/keyboard.zip",
+          "patch": "/drafts/keyboard.patch"
+        }
+      ],
+      "remaining": "Live compositor/device events and rendered labels remain unverified.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12350",
+            "head_sha": "c23ff7f397dc2ba6684246046d92f99664c11c7e",
+            "state": "open",
+            "updated_at": "2026-09-18T01:45:04Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12350.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Combine SMC exclusions and event filtering with headset exclusions; retain layout synchronization."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/6834",
+            "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+            "state": "open",
+            "updated_at": "2026-09-12T14:05:31Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_6834.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Combine headset exclusions with SMC and event filtering."
+          }
+        ],
+        "checks": "55 model assertions; baseline and each single source fail the necessary combination.",
+        "patch_sha256": "01e95cb7a37f4a4cf0d2c4a12d057aa9eb4cb239042a32a18fda859b37096796",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      }
+    },
+    {
+      "family": "legacy-gpu",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11548"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Verify the exact MacBookPro11,5 GPU/driver applicability and existing kernel parameters. Prepare a reversible model-specific validation plan instead of generalizing radeon selection. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "lid-debounce",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12210"
+      ],
+      "prior_plan_ids": [
+        "P04"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P04; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "lid-wake",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9211",
+        "https://github.com/omacom/omarchy/pull/9637"
+      ],
+      "prior_plan_ids": [
+        "P04"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P04; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "macbook-cs4208",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/153",
+        "https://github.com/omacom/omarchy/pull/12286",
+        "https://github.com/omacom/omarchy/pull/6921"
+      ],
+      "prior_plan_ids": [
+        "P11"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P11; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "mbp131-bundle",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/182",
+        "https://github.com/omacom/omarchy/pull/7732"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Split camera and audio package dependencies from the broad model installer. Cross-reference P08/P11 and choose one owner for every installed file and migration. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "mbp133-bundle",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10141"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Decompose the model bundle into Wi-Fi, audio, graphics and sleep behaviors, cross-reference the focused plans, and retain only behavior that is not covered by their selected references. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "model-docs",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10783",
+        "https://github.com/omacom/omarchy/pull/8585",
+        "https://github.com/omacom/omarchy/pull/8783",
+        "https://github.com/omacom/omarchy/pull/9062"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Separate T1 identifier corrections from T2 model listings and generic wiki links. Document only the support actually backed by current code and evidence. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "nvme-target",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10877",
+        "https://github.com/omacom/omarchy/pull/11624"
+      ],
+      "prior_plan_ids": [
+        "P09"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/nvme.md",
+          "patch": "/drafts/nvme.patch",
+          "bundle": "/drafts/nvme.zip"
+        }
+      ],
+      "remaining": "Activation gates: current-kernel boot enumeration and affected-hardware suspend/resume validation; unknown/custom legacy configurations remain preserved for separate review. No host changes.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1805Z",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/10877",
+            "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+            "disposition": "Retain NVMe discovery/BDF validation; reject arbitrary first-device scope, persisted BDF and live GPU reset."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/11624",
+            "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+            "disposition": "Retain Apple-controller scope and no live GPU reset; replace fixed BDF and unsafe deletion."
+          }
+        ],
+        "checks": "44 fixtures, 3 source counterexamples/controls, combined CS8409 + CLI, unit syntax and separate/combined patch application.",
+        "source_gate": "2026-09-19T18:23:25+00:00"
+      }
+    },
+    {
+      "family": "older-macs",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10936",
+        "https://github.com/omacom/omarchy/pull/10942"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Split pre-GCN graphics, BCM4321 wireless and support documentation; verify 64-bit model scope and package availability before choosing hardware leaves. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "outside-scope",
+      "scope": "outside_context",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12337"
+      ],
+      "prior_plan_ids": [],
+      "status": "outside_context",
+      "artifacts": [],
+      "remaining": "Generic night-light preferences have no concrete Intel Mac connection in the captured proposal.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "pci-detection",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10807",
+        "https://github.com/omacom/omarchy/pull/10808",
+        "https://github.com/omacom/omarchy/pull/10810",
+        "https://github.com/omacom/omarchy/pull/11259",
+        "https://github.com/omacom/omarchy/pull/12076"
+      ],
+      "prior_plan_ids": [
+        "P03"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P03; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "pre-t2-hibernation",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10065"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Jev marked this outside scope; review the original Mac/GPU context and separate suspend from hibernation. Audit initramfs ownership and restore behavior before any physical hibernation test. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "sandy-idle",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/7594"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Verify the exact 2011 MacBook Air gate and the idle-state parameter, compare against existing kernel behavior, and request repeated idle/battery measurements before a support claim. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "sd-reader",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10139"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Identify the exact Apple USB reader IDs and reset/autosuspend mechanism; validate a narrowly scoped rule and unplug/replug behavior without changing unrelated USB devices. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "session-start",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9590"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Review the concrete Intel Mac failure and shared session lifecycle; exercise stale versus active graphical-session states to avoid terminating a healthy session. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "spi-pio",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9735"
+      ],
+      "prior_plan_ids": [
+        "P07"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/spi-pio.md",
+          "patch": "/drafts/spi-pio.patch",
+          "bundle": "/drafts/spi-pio.zip"
+        }
+      ],
+      "remaining": "Actual MacBook8,1 boot/LUKS, shipped-kernel and suspend/resume validation. Custom drop-ins, alternate PIO package and explicit kernel profiles remain preserved for transition review. Fresh setup pairs with SPI retirement.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1900Z",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/9735",
+            "repo": "omacom/omarchy",
+            "number": 9735,
+            "title": "Force SPI PIO on MacBook8,1 so the built-in keyboard works",
+            "author": "jeissonneira",
+            "state": "open",
+            "head_sha": "abba2c44f500717fe1e28f9efd7e3873c94c9b73",
+            "updated_at": "2026-09-12T06:13:21Z",
+            "unchanged": true,
+            "disposition": "Retain exact-model PIO/s2idle policy; correct file ownership, stale markers and failure/retry handling."
+          }
+        ],
+        "checks": "39 candidate checks + 3 source counterexamples; 5 real isolated Limine parser checks; separate/combined application and integrated suites.",
+        "source_gate": "2026-09-19T19:16:56+00:00"
+      }
+    },
+    {
+      "family": "spi-retirement",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/445",
+        "https://github.com/omacom/omarchy/pull/12007",
+        "https://github.com/omacom/omarchy/pull/9880"
+      ],
+      "prior_plan_ids": [
+        "P06"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/spi-retirement.md",
+          "patch": "/drafts/spi-retirement.patch",
+          "bundle": "/drafts/spi-retirement.zip"
+        }
+      ],
+      "remaining": "Actual package hooks and boot/LUKS validation remain gates. T1 provider replacement stays active in t1-touchbar/t1-als and bundle families; this draft deliberately preserves it.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:53:52+00:00",
+        "checks": "56 candidate assertions + 2 original-source counterexamples; independent and combined application; NVMe/CS8409/CLI pass.",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/9880",
+            "repo": "omacom/omarchy",
+            "number": 9880,
+            "title": "Stop installing the obsolete SPI keyboard DKMS package",
+            "state": "open",
+            "head_sha": "2d49be5e65c514f029ba3a99b8ebaf9ec5da0147",
+            "updated_at": "2026-09-08T16:50:17Z",
+            "author": "hudsonwa",
+            "unchanged": true,
+            "disposition": "Combine non-Touch-Bar retirement; exclude global removal and ISO dependency deletion."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12007",
+            "repo": "omacom/omarchy",
+            "number": 12007,
+            "title": "Drop macbook12-spi-driver-dkms, which no longer builds on 7.x kernels",
+            "state": "open",
+            "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+            "updated_at": "2026-09-15T23:27:10Z",
+            "author": "karlentwistle",
+            "unchanged": true,
+            "disposition": "Combine non-Touch-Bar retirement; exclude global removal and ISO dependency deletion."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy-pkgs/pull/445",
+            "repo": "omacom/omarchy-pkgs",
+            "number": 445,
+            "title": "Replace AUR sync with direct upstream release watches",
+            "state": "merged",
+            "head_sha": "b34de5c29ed8181ff362c866f47b79b405fedb9e",
+            "updated_at": "2026-09-15T01:19:49Z",
+            "author": "ryanrhughes",
+            "unchanged": true,
+            "disposition": "Already-merged packaging metadata context; no separate patch."
+          }
+        ]
+      }
+    },
+    {
+      "family": "suspend-diagnostics",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11904"
+      ],
+      "prior_plan_ids": [
+        "P14"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P14; model recommendation remains separate. Also replace or justify the command -v rtcwake preflight: combined bin-style-test.sh rejects it. Failure reproduces with the baseline brightness command.",
+      "completion_evidence": {
+        "style_followup": {
+          "snapshot": ".state/rollups/2026-09-19T2227Z-brightness-range",
+          "log": "logs/integration-style.log",
+          "status": "unresolved; held draft remains pending"
+        }
+      }
+    },
+    {
+      "family": "t1-als",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/315",
+        "https://github.com/omacom/omarchy/pull/10331",
+        "https://github.com/omacom/omarchy/pull/10582"
+      ],
+      "prior_plan_ids": [
+        "P12"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/user-units.md",
+          "patch": "/drafts/user-units.patch",
+          "bundle": "/drafts/user-units.zip"
+        },
+        {
+          "description": "/drafts/t1-als-package.md",
+          "patch": "/drafts/t1-als-package.patch",
+          "bundle": "/drafts/t1-als-package.zip"
+        }
+      ],
+      "remaining": "T1Bridge core/DKMS repository delivery and installer are separate active T1 work. Before activation: clean dependency resolution, real login/upgrade, lid/DPMS and hardware coverage. Automatic keyboard policy, old default-on/menu behavior and mirror-only layouts are explicitly excluded.",
+      "completion_evidence": {
+        "in_progress_source_audit": "reviews/rollups/t1-provider-audit.md; pinned sources/builds in .state/rollups/2026-09-19T1830Z. Not completed by SPI retirement.",
+        "completed_shared_part": {
+          "source": {
+            "url": "https://github.com/omacom/omarchy/pull/10582",
+            "repo": "omacom/omarchy",
+            "number": 10582,
+            "title": "Enable first-run user units one at a time",
+            "author": "fresh3nough",
+            "state": "open",
+            "head_sha": "e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+            "updated_at": "2026-09-08T16:50:09Z",
+            "unchanged": true
+          },
+          "disposition": "Extract #10582 shared first-run failure policy as an independent corrected draft.",
+          "checks": "20 candidate checks including actual first-run runner and 2 real offline systemctl checks; 1 source counterexample.",
+          "snapshot": ".state/rollups/2026-09-19T1900Z"
+        },
+        "snapshot": ".state/rollups/2026-09-19T1930Z",
+        "source_gate": "2026-09-19T19:57:54+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/10331",
+            "repo": "omacom/omarchy",
+            "number": 10331,
+            "author": "shawnyeager",
+            "head_sha": "6872374822badc716a150e39385569f7b782618c",
+            "state": "open",
+            "updated_at": "2026-09-08T16:50:12Z",
+            "title": "Follow the T1 ambient light sensor for panel and keyboard backlight",
+            "current_head_sha": "6872374822badc716a150e39385569f7b782618c",
+            "current_state": "open",
+            "current_updated_at": "2026-09-08T16:50:12Z",
+            "unchanged": true,
+            "disposition": "Carry lid/DPMS intent into standard T1Bridge transport and manual-reference policy; explicitly exclude default-on/menu/fixed keyboard curve."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy-pkgs/pull/315",
+            "repo": "omacom/omarchy-pkgs",
+            "number": 315,
+            "author": "shawnyeager",
+            "head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+            "state": "open",
+            "updated_at": "2026-09-05T15:32:02Z",
+            "title": "Install the T1 ALS auto-brightness user unit",
+            "current_head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+            "current_state": "open",
+            "current_updated_at": "2026-09-05T15:32:02Z",
+            "unchanged": true,
+            "disposition": "Deliver the helper/unit through their own package rather than duplicate omarchy-settings recipe edits."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/10582",
+            "repo": "omacom/omarchy",
+            "number": 10582,
+            "title": "Enable first-run user units one at a time",
+            "author": "fresh3nough",
+            "state": "open",
+            "head_sha": "e46ddfbdc90d1bcc5f47d33d8f302f9a2e251cee",
+            "updated_at": "2026-09-08T16:50:09Z",
+            "unchanged": true,
+            "disposition": "Shared first-run correction remains independently complete as /drafts/user-units.md; no new consolidation credit."
+          }
+        ],
+        "checks": "30 visibility assertions, 17 consumer scenarios, original/upstream negative controls, isolated makepkg and package lifecycle/versioned upgrade; all 17 drafts reconciled.",
+        "selection": "Evidence-backed T1Bridge alternative; deliberate feature exclusions are documented in the PR text and packaged README."
+      }
+    },
+    {
+      "family": "t1-lid-gpu",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/7196"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Separate lock policy from Radeon runtime-power behavior. Reconcile with P04 and this machine\u2019s gmux topology before considering any graphics action. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t1-pcie",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10886"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Audit the exact PCIe hotplug defaults being repaired, preserve local customizations, and compare with Alpine Ridge/NVMe ownership rather than stacking sleep workarounds. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t1-touchbar",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/152",
+        "https://github.com/omacom/omarchy-pkgs/pull/298",
+        "https://github.com/omacom/omarchy/pull/7064",
+        "https://github.com/omacom/omarchy/pull/7950"
+      ],
+      "prior_plan_ids": [
+        "P12"
+      ],
+      "status": "local_drafts_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/t1-core-package.md",
+          "patch": "/drafts/t1-core-package.patch",
+          "bundle": "/drafts/t1-core-package.zip"
+        },
+        {
+          "description": "/drafts/t1-installer.md",
+          "patch": "/drafts/t1-installer.patch",
+          "bundle": "/drafts/t1-installer.zip"
+        }
+      ],
+      "remaining": "Real Wayland/UWSM lifecycle, fresh ISO provisioning, package availability/dependency solving, exact Omarchy ABI and live hooks/signing/initramfs, provider transition/rollback, and affected-model hardware tests remain. Selected release does not support system sleep/wake on its tested machine. Local installer/core pair is complete; raw patch combination needs the recorded manual resolution.",
+      "completion_evidence": {
+        "in_progress_source_audit": "reviews/rollups/t1-provider-audit.md; pinned sources/builds in .state/rollups/2026-09-19T1830Z. Not completed by SPI retirement.",
+        "completed_package_part": {
+          "snapshot": ".state/rollups/2026-09-19T2010Z-t1-core",
+          "source_gate": "2026-09-19T20:46:35+00:00",
+          "sources": [
+            {
+              "url": "https://github.com/omacom/omarchy-pkgs/pull/152",
+              "repo": "omacom/omarchy-pkgs",
+              "number": 152,
+              "title": "Build apple-ib-tb on kernel 6.12+ from Heratiki's fork",
+              "author": "shawnyeager",
+              "head_sha": "67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+              "state": "open",
+              "updated_at": "2026-09-18T19:18:36Z"
+            },
+            {
+              "url": "https://github.com/omacom/omarchy-pkgs/pull/298",
+              "repo": "omacom/omarchy-pkgs",
+              "number": 298,
+              "title": "Package freeze-safe Apple T1 Touch Bar driver",
+              "author": "monomyth",
+              "head_sha": "9df28e3726df4ca80d89a71a781e8a82995b6677",
+              "state": "open",
+              "updated_at": "2026-09-19T12:27:54Z"
+            }
+          ],
+          "artifact": {
+            "description": "/drafts/t1-core-package.md",
+            "patch": "/drafts/t1-core-package.patch",
+            "bundle": "/drafts/t1-core-package.zip"
+          },
+          "checks": "Exact-recipe offline package builds; 1,020 Rust tests with one hardware test ignored; canonical quality set in documented stages; real private DKMS install/uninstall with original-module restoration; real private pacman conflicts and preservation checks.",
+          "selection": "Preferred T1Bridge architecture alternative. Legacy resume patches are not ported; system sleep remains unsupported. Jev implementation evidence is inconclusive, and the recorded source/build/lifecycle audit drives the decision."
+        },
+        "installer_checkpoint": {
+          "snapshot": ".state/rollups/2026-09-19T2057Z-t1-installer",
+          "mutable": false,
+          "patch_sha256": "2297c72c26b28c12f1903b502e595adf60d7d66d74aacf506c273a42e2ad0ad7",
+          "validation": "validation.json",
+          "source_gate": "2026-09-19T22:19:00+00:00",
+          "checks": "47 installer + six real offline systemd + 11 menu + 112 CLI; prior-installer retry negative control; inspected reference/candidate X11 layout with three explicit Wayland metadata omissions.",
+          "integration": "19 independent patches; explicit one-file manual resolution retains CS8409/SPI changes; derived overlay reapplies exactly.",
+          "visual_passed": true,
+          "visual_scope": "Rendered layout only, with three Wayland attachment properties removed from an isolated copy. Production Menu.qml and candidate patch unchanged. Real Wayland focus/session/setup/hardware behavior is unverified."
+        }
+      }
+    },
+    {
+      "family": "t1bridge",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11273",
+        "https://github.com/omacom/omarchy/pull/12420",
+        "https://github.com/omacom/omarchy/pull/12426",
+        "https://github.com/omacom/omarchy/pull/12201"
+      ],
+      "prior_plan_ids": [
+        "P12"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/fingerprint.md",
+          "bundle": "/drafts/fingerprint.zip",
+          "patch": "/drafts/fingerprint.patch"
+        }
+      ],
+      "remaining": "Live QML/PAM and cross-reader lifecycle remain unverified. A reported silent driver stall is not disproved by ordinary callback tests.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/11273",
+            "head_sha": "277ea6f6b4ad5555ddca88c8fec92098c684991a",
+            "state": "open",
+            "updated_at": "2026-09-12T20:28:01Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_11273.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain backoff with single-count completion handling; use smaller blanking policy from #12420."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12420",
+            "head_sha": "939ab0b65da61edeeb01bea9baf9f2f86acc837f",
+            "state": "open",
+            "updated_at": "2026-09-18T16:01:07Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12420.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain no-new-attempts-while-blank policy and allow an active scan to finish."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12426",
+            "head_sha": "c4291018f3cf19b29dc553f8aeb560fa6b4508e2",
+            "state": "open",
+            "updated_at": "2026-09-18T16:02:04Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12426.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Do not select dynamic PAM-context ownership: ordinary callbacks do not establish the reported silent stall or its fix. Neither proposal adds a timeout for a silent active context; runtime report remains undisproved."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12201",
+            "head_sha": "d4a213883c62234dee9317983bcb9951980b48df",
+            "state": "closed",
+            "updated_at": "2026-09-18T16:02:11Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12201.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Closed historical alternative, superseded by the smaller #12420 proposal; retain source history without another draft."
+          }
+        ],
+        "checks": "55 lifecycle/prompt assertions; pinned Quickshell normal callback contract; reproduced double failure counting corrected.",
+        "patch_sha256": "c1d5794366cf02d1103821c10bc994b3786a9d7eb9fa44d08fce6a987b4e9537",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      },
+      "scope_note": "Legacy family label: these sources implement shared fingerprint lifecycle, not a T1 hardware provider. Hardware/provider work remains in the separate T1 families."
+    },
+    {
+      "family": "t2-alsa",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/7348"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-ethernet",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10224",
+        "https://github.com/omacom/omarchy/pull/8204"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-gmux",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/6929"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-hibernation",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9238"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-imac-framebuffer",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12203"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-installation",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/7410"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-power-docs",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12200"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-repository",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/8709",
+        "https://github.com/omacom/omarchy/pull/9461",
+        "https://github.com/omacom/omarchy/pull/9878"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-suspend",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/6149",
+        "https://github.com/omacom/omarchy/pull/9105",
+        "https://github.com/omacom/omarchy/pull/9195",
+        "https://github.com/omacom/omarchy/pull/9210",
+        "https://github.com/omacom/omarchy/pull/9830"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "t2-trackpad",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10890",
+        "https://github.com/omacom/omarchy/pull/6928",
+        "https://github.com/omacom/omarchy/pull/7177"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "thunderbolt-kernel",
+      "scope": "outside_context",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/509"
+      ],
+      "prior_plan_ids": [],
+      "status": "outside_context",
+      "artifacts": [],
+      "remaining": "The supplied reproduction uses an AMD mini PC with an Apple display. Hold as adjacent context until an Intel Mac connection is established.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "touchbar-lid-lock",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10713",
+        "https://github.com/omacom/omarchy/pull/11516"
+      ],
+      "prior_plan_ids": [
+        "P04"
+      ],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/lid.md",
+          "bundle": "/drafts/lid.zip",
+          "patch": "/drafts/lid.patch"
+        }
+      ],
+      "remaining": "Real lid/hotplug timing remains unverified. Debounce and wake changes remain separate active families.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/10713",
+            "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+            "state": "open",
+            "updated_at": "2026-09-12T14:04:51Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_10713.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain existing active-compositor-display behavior with fixture coverage."
+          },
+          {
+            "url": "https://github.com/omacom/omarchy/pull/11516",
+            "head_sha": "07e254fae7c1f5119b3965fdaa577b2a405adee5",
+            "state": "open",
+            "updated_at": "2026-09-12T16:52:46Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_11516.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Exclude blanket USB filtering because it also discards genuine USB displays."
+          }
+        ],
+        "checks": "18 assertions; old handler fails Touch Bar case. Genuine active USB displays remain valid.",
+        "patch_sha256": "8462a866b03db57b9ddafe9ff63e4bb83b6fd40db2d82018d6c8d238255441e8",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      }
+    },
+    {
+      "family": "trackpad-defaults",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11296"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Jev marked this outside scope; verify that the documentation describes an applicable Intel Mac input path and current configuration syntax. Keep preference guidance separate from a compatibility fix. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-country",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11748"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Identify exact controller/model scope and regulatory-domain source; distinguish legal channel selection from foreign-board calibration in P10 and preserve deliberate user configuration. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-firmware",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10306"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Verify Apple firmware package availability, controller coverage and offline installation order. Avoid assuming one Apple firmware package repairs every Broadcom generation. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-legacy",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/10910",
+        "https://github.com/omacom/omarchy/pull/11311",
+        "https://github.com/omacom/omarchy/pull/8812"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Split BCM4322/b43 firmware from BCM43224 detection and BCM4350 driver conflicts. Make the driver choice explicit by PCI ID and test blacklist interactions. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-nvram",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11017",
+        "https://github.com/omacom/omarchy/pull/11616",
+        "https://github.com/omacom/omarchy/pull/11623",
+        "https://github.com/omacom/omarchy/pull/7487",
+        "https://github.com/omacom/omarchy/pull/7671"
+      ],
+      "prior_plan_ids": [
+        "P10"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P10; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-pre-t2-resume",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy-pkgs/pull/422",
+        "https://github.com/omacom/omarchy/pull/10314",
+        "https://github.com/omacom/omarchy/pull/10332",
+        "https://github.com/omacom/omarchy/pull/11434",
+        "https://github.com/omacom/omarchy/pull/12314",
+        "https://github.com/omacom/omarchy/pull/7180",
+        "https://github.com/omacom/omarchy/pull/7333",
+        "https://github.com/omacom/omarchy/pull/7589"
+      ],
+      "prior_plan_ids": [
+        "P10"
+      ],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Follow P10; model recommendation remains separate.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-scanning",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/8221"
+      ],
+      "prior_plan_ids": [],
+      "status": "pending_completion_audit",
+      "artifacts": [],
+      "remaining": "Check the concrete Mac connection and scanner ownership across multiple UI consumers; test open/close/crash sequences and release scanning only when the final consumer exits. Jev\u2019s suggested lead is not adopted.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-t2-combo",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/11536",
+        "https://github.com/omacom/omarchy/pull/5140"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "wifi-t2-connectivity",
+      "scope": "deferred_t2",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/9803"
+      ],
+      "prior_plan_ids": [],
+      "status": "deferred_t2",
+      "artifacts": [],
+      "remaining": "Retain sources and hardware evidence; audit exact scope before any eventual implementation. Shared extraction needs a separate concrete rationale.",
+      "completion_evidence": {}
+    },
+    {
+      "family": "picture-in-picture",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12517"
+      ],
+      "prior_plan_ids": [],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/pip.md",
+          "patch": "/drafts/pip.patch",
+          "bundle": "/drafts/pip.zip"
+        }
+      ],
+      "remaining": "Live compositor/browser scaling and aspect ratio remain unverified; fixed 600px overlay does not address a 500px logical monitor.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12517",
+            "head_sha": "e22ef91c044cb67c539eea5cc36e23fe4af0f4e7",
+            "state": "open",
+            "updated_at": "2026-09-19T12:58:22Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12517.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain the original focused patch unchanged; no separate consolidation warranted."
+          }
+        ],
+        "checks": "Original patch byte-identical; 25 Lua geometry checks plus upstream assertion; baseline fails right-margin regression.",
+        "patch_sha256": "292007fb46c715bd3681ca78e9ec8ba63016e85c19b5d283154ed2342695a28d",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      }
+    },
+    {
+      "family": "audio-realtime",
+      "scope": "active",
+      "source_urls": [
+        "https://github.com/omacom/omarchy/pull/12428"
+      ],
+      "prior_plan_ids": [],
+      "status": "local_draft_complete_with_external_gates",
+      "artifacts": [
+        {
+          "description": "/drafts/rtkit.md",
+          "patch": "/drafts/rtkit.patch",
+          "bundle": "/drafts/rtkit.zip"
+        }
+      ],
+      "remaining": "Actual user-bus/service activation, scheduling priority and audio load remain unverified.",
+      "completion_evidence": {
+        "snapshot": ".state/rollups/2026-09-19T1830Z",
+        "checked_at": "2026-09-19T18:50:31+00:00",
+        "source_dispositions": [
+          {
+            "url": "https://github.com/omacom/omarchy/pull/12428",
+            "head_sha": "c906004781964cf0575b404e88d5d15872363aa4",
+            "state": "open",
+            "updated_at": "2026-09-18T18:18:45Z",
+            "source_file": ".state/rollups/2026-09-19T1830Z/prior-family-sources/omacom_omarchy_pull_12428.json",
+            "unchanged_head_and_state": true,
+            "disposition": "Retain rtkit dependency and activation; remove swallowed restart failure so migration retries."
+          }
+        ],
+        "checks": "7 assertions using the actual migration runner; original swallows restart failure; retry and second-user behavior verified.",
+        "patch_sha256": "126abc8df704c834146e4b2fe417a67c48f8a16e409118ac41aeedc03793cb6a",
+        "integration": "All 14 patches independently apply; 12 Omarchy patches apply together at the unchanged current base. Prior tests are retained evidence; unchanged suites were not claimed as newly run."
+      }
+    }
+  ],
+  "inventory_notes": [
+    "The original CS8409 group includes seven PRs, including #11064, which the first six-source detailed plan omitted. It must be dispositioned in the completed rollup.",
+    "All 164 earlier inventory references are mapped; subsequent three implementation candidates and three fingerprint alternatives bring the completion ledger to 170 distinct PR references. This repairs accounting rather than claiming six newly discovered PRs."
+  ]
+}

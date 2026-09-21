@@ -1,0 +1,73 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10234",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "brightness-routing"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "bfa99f4c38c9fd746922afda77739a3b8a4fb95a",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10234,
+  "checked_at": "2026-09-21T11:56:09.499885+00:00",
+  "title": "fix(brightness): fall back to ACPI when DDC fails",
+  "author": "kvnloo",
+  "head_sha": "ef81d37a87dfe40feccb32666afcddaddd2737fd",
+  "base_sha": "457474f41e15b85f4f6b32b6272d5d2013ab2fca",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:36:29Z",
+  "state": "closed",
+  "body": "## Summary\n- external monitors still prefer DDC\n- on DDC failure, fall through to `omarchy-hw-display` + brightnessctl when a backlight exists\n- Apple path unchanged\n\nFixes #10120.\n\n## Verification\n- `bash test/shell.d/brightness-display-test.sh` (12 ok)",
+  "draft": false,
+  "files": [],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 5119079457,
+      "node_id": "PRR_kwDOO0Cobs8AAAABMR70IQ",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?u=494ceae433b97f20de206463a10840158da96dea&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "when ddc fails on an external, this falls through to omarchy-hw-display / brightnessctl \u2014 that is usually the laptop panel. pressing brightness while focused on HDMI/DP can dim the internal display instead of no-opping. keep the external-with-no-ddc path as a no-op (or only fall back when the focused output is actually the internal one).",
+      "state": "CHANGES_REQUESTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/10234#pullrequestreview-5119079457",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/10234",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/10234#pullrequestreview-5119079457"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/10234"
+        }
+      },
+      "submitted_at": "2026-09-05T00:55:58Z",
+      "commit_id": "d812422cec1dfd9402ec8c5958a07fc2ca52ad8e"
+    }
+  ],
+  "inline": []
+}

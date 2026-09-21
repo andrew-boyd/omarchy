@@ -1,0 +1,145 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8882",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "brightness-range"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "586e9151217bd39923de25ba113bd8288c81a3a5",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8882,
+  "checked_at": "2026-09-21T11:56:09.572764+00:00",
+  "title": "Recover low-range displays from zero brightness",
+  "author": "yashranaway",
+  "head_sha": "586e9151217bd39923de25ba113bd8288c81a3a5",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:42:07Z",
+  "state": "closed",
+  "body": "Lets low-range internal displays recover from zero brightness. Fixes #8523.\n\n<<<< AI wording below >>>>\n\n## Problem\n\nA one-percent target can round back to raw zero on backlights with a small `max_brightness`, so pressing brightness up leaves the panel black.\n\n## Fix\n\nBelow five percent, request one raw hardware step with `brightnessctl set +1`. Keep the existing percentage targets and OSD behavior at five percent and above.\n\n## Verification\n\n- `bash test/shell.d/brightness-display-test.sh`\n- `bash test/shell.d/bin-style-test.sh`\n- `bash -n bin/omarchy-brightness-display test/shell.d/brightness-display-test.sh`\n- `git diff --check`\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "08138f6a031c825f5a35fd773748dae7bbbfa88a",
+      "filename": "bin/omarchy-brightness-display",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 4,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/586e9151217bd39923de25ba113bd8288c81a3a5/bin%2Fomarchy-brightness-display",
+      "raw_url": "https://github.com/omacom/omarchy/raw/586e9151217bd39923de25ba113bd8288c81a3a5/bin%2Fomarchy-brightness-display",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display?ref=586e9151217bd39923de25ba113bd8288c81a3a5",
+      "patch": "@@ -96,13 +96,14 @@ else\n   # absolute target percentage to avoid raw backlight rounding causing uneven OSD steps.\n   if [[ $step == \"+5%\" ]]; then\n     if (( current < 5 )); then\n-      (( target = current + 1 ))\n+      # A one-percent target can still round to raw zero on low-range devices.\n+      # Move one hardware step instead so a black display can always recover.\n+      step=\"+1\"\n     else\n       (( target = current + 5 ))\n+      (( target > 100 )) && target=100\n+      step=\"$target%\"\n     fi\n-\n-    (( target > 100 )) && target=100\n-    step=\"$target%\"\n   elif [[ $step == \"5%-\" ]]; then\n     if (( current <= 5 )); then\n       (( target = current - 1 ))"
+    },
+    {
+      "sha": "49df853534d63f9e5ec4df2ecb7d95d571564324",
+      "filename": "test/shell.d/brightness-display-test.sh",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 1,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/586e9151217bd39923de25ba113bd8288c81a3a5/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/586e9151217bd39923de25ba113bd8288c81a3a5/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrightness-display-test.sh?ref=586e9151217bd39923de25ba113bd8288c81a3a5",
+      "patch": "@@ -31,7 +31,7 @@ cat >\"$mock_bin/brightnessctl\" <<'SH'\n #!/bin/bash\n printf 'brightnessctl %s\\n' \"$*\" >>\"$CALL_LOG\"\n if [[ $* == *\" -m\"* ]]; then\n-  printf 'mock_backlight,backlight,40,40%%\\n'\n+  printf 'mock_backlight,backlight,40,%s%%\\n' \"${BACKLIGHT_PERCENT:-40}\"\n fi\n SH\n \n@@ -86,6 +86,11 @@ grep -F 'brightnessctl -d mock_backlight -m' \"$call_log\" >/dev/null || \\\n   fail \"internal monitor queries brightnessctl\"\n pass \"internal monitor uses the kernel backlight\"\n \n+BACKLIGHT_PERCENT=0 run_brightness --no-osd --monitor eDP-1 +5%\n+grep -F 'brightnessctl -d mock_backlight set +1' \"$call_log\" >/dev/null ||\n+  fail \"zero brightness increases by one raw hardware step\"\n+pass \"zero brightness increases by one raw hardware step\"\n+\n brightness=$(FOCUSED_MONITOR=DP-1 run_brightness)\n [[ $brightness == \"50\" ]] || fail \"brightness follows the focused external monitor\" \"actual: $brightness\"\n pass \"brightness follows the focused external monitor\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758459908",
+      "html_url": "https://github.com/omacom/omarchy/pull/8882#issuecomment-5758459908",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8882",
+      "id": 5758459908,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzsgBA",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:42:07Z",
+      "updated_at": "2026-09-21T09:42:07Z",
+      "body": "Automated duplication check: this pull request looks similar to #8524, which covers the same brightness low-range recovery. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758459908/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5057128652,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLW2ozA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nUpdates internal-display brightness recovery for low-range backlights.\n\n**Changes:**\n- Uses a raw hardware step below 5% brightness.\n- Adds regression coverage for recovery from 0%.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated no comments.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-brightness-display` | Changes low-brightness increment behavior. |\n| `test/shell.d/brightness-display-test.sh` | Tests recovery from zero brightness. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8882#pullrequestreview-5057128652",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8882",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8882#pullrequestreview-5057128652"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8882"
+        }
+      },
+      "submitted_at": "2026-08-29T06:06:09Z",
+      "commit_id": "382939c8fa8ff614e264f2b78dd37fe812e80da5"
+    }
+  ],
+  "inline": []
+}

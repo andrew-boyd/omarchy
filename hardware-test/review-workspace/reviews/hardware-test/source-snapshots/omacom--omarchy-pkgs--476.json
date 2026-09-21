@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/476",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "applesmc-fans"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "43b55fa4584e5e55fa52da7b4b9f035be38c102f",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 476,
+  "checked_at": "2026-09-21T11:56:00.810345+00:00",
+  "title": "Add afanctl: applesmc fan supervisor for pre-T2 Intel Macs (A1708)",
+  "author": "yadav-prakhar",
+  "head_sha": "dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d",
+  "base_sha": "cb8aae545e585ae705b597ed26666baab1c6b6de",
+  "base_ref": "master",
+  "updated_at": "2026-09-21T06:37:05Z",
+  "state": "open",
+  "body": "## What\n\n`afanctl` supervises the single fan of pre-T2 Intel Macs \u2014 machines whose fan is driven by the Apple SMC through `applesmc` and which expose **no `pwm*` attributes**, so `fancontrol`/`pwmconfig` cannot drive it and the firmware curve is the only stock option.\n\nIt reads `coretemp`, drives `fan1_manual`/`fan1_output`, and returns the fan to the firmware on every failure path. Upstream: https://github.com/yadav-prakhar/afanctl (tag `v0.1.0`), which is also where it is distributed \u2014 a tagged GitHub release with a one-command install (`releases/latest/download/install.sh` resolves the package through the release's `SHA256SUMS`, verifies its SHA-256 and runs `pacman -U`). Verified on `MacBookPro14,1` (MacBook Pro A1708) \u2014 the same machine class the repository already ships `omarchy-brightness-display-apple` and the other Apple hardware leaves for.\n\n## Packaging notes\n\n- `source: local`, built from the tagged GitHub tarball (`${url}/archive/refs/tags/v${pkgver}.tar.gz`); `.omarchy/package.json` declares a `github` upstream watch with a version pattern, so `sync-upstream` follows upstream releases on its own.\n- There is no AUR package to import from \u2014 registration there is closed to new maintainers at the moment \u2014 which is precisely why this sources the tagged tarball directly instead of starting from an AUR `PKGBUILD`. The watch resolves `v0.1.0` today.\n- `arch=('x86_64')` \u2014 `applesmc` and `coretemp` are Intel-only; there is no aarch64 build to invent.\n- `depends=('glibc' 'gcc-libs')`: `readelf -d` on the built binary lists `libc.so.6` and `libgcc_s.so.1` and nothing else. `makedepends=('cargo')` (`extra/rust` provides it).\n- Installs: the binary, the systemd unit, `/etc/afanctl/afanctl.toml` (`backup=`, so user edits survive upgrades), a pristine default copy under `/usr/share/afanctl/`, an optional polkit rule allowing passwordless `pkexec afanctl status|observe|curve|hold <rpm>` for `wheel` users in local active sessions, and the license.\n- The unit installs **disabled**, and its `ExecStart` is `daemon --mode observe`: installing changes nothing until the user enables it, and even then the daemon writes nothing until they ask for `curve` or `hold`. `/run` is tmpfs, so every reboot lands back on the firmware curve.\n\n## Safety\n\nIt writes to `/sys` on machines that get hot, so the failure policy is the design: a per-poll verify/re-assert with a 3-strike ladder that hands the fan back to AUTO and latches monitor-only; a pre-opened fd plus panic/signal handlers that restore AUTO in a single `write(2)` (proven by a hidden `selftest-panic` probe); and systemd `Type=notify` + `WatchdogSec=15` + `Restart=always` + sandboxing (`ProtectSystem=strict`, `ReadWritePaths` pinned to the applesmc platform directory). `afanctl doctor` is read-only except a confirm-flagged 2-second roundtrip; a broken config refuses to start rather than silently running on defaults.\n\n## Validation\n\n- `python helpers/upstream-watch.py check pkgbuilds/afanctl` \u2192 `{\"status\": \"skipped\", \"current\": \"0.1.0\", \"reason\": \"already current\"}`; `python tests/upstream-watch.py` \u2192 22 tests OK on this checkout.\n- `makepkg` in `pkgbuilds/afanctl` builds `afanctl 0.1.0-1` from the tagged tarball; the package carries the binary, unit, config, default copy, polkit rule and license.\n- Upstream verification: the full hardware acceptance gate passed on the A1708 \u2014 `doctor`, a write roundtrip, the deliberate-panic death path, a 1 h+ observe soak (0.05 % CPU, 2.4 MB peak RSS), `SIGKILL` rescue in curve mode, a 600-sample `doctor --compare` table, polkit `hold`, and the reboot test \u2014 after four adversarial review rounds. 170 tests and four quality gates; a `v*` tag builds and publishes the release artifacts in CI.\n- This recipe and the published release artifact build the same tagged sources; `.gitattributes` `export-ignore`s the upstream AUR recipe directory so the tarball contains nothing self-referential.\n\n## Known limits\n\n- One fan, one machine class, by design. No GUI \u2014 a shell plugin is expected to consume `status --json` and the `/run/afanctl/cmd.json` control channel instead.\n- `hold` can keep the fan quiet under load. The overshoot guard, the clamp to `fan1_min..fan1_max` and both fallback layers stay active, and `doctor` warns while a hold is active.\n- Its curve is **more responsive to `coretemp`, not quieter**: `doctor --compare 600` measured a mean \u0394 of 191 rpm against the SMC curve, with ours louder on 392 of 600 samples (the SMC's own die sensors read 10\u201315 \u00b0C hotter and miss short `coretemp` spikes). This is a verifiability and responsiveness argument, not a noise one.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "3902dc40235792e29389f382733f60ceda90860f",
+      "filename": "pkgbuilds/afanctl/.omarchy/package.json",
+      "status": "added",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d/pkgbuilds%2Fafanctl%2F.omarchy%2Fpackage.json",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d/pkgbuilds%2Fafanctl%2F.omarchy%2Fpackage.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fafanctl%2F.omarchy%2Fpackage.json?ref=dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d",
+      "patch": "@@ -0,0 +1,9 @@\n+{\n+  \"source\": \"local\",\n+  \"upstream\": {\n+    \"watch\": {\n+      \"github\": \"yadav-prakhar/afanctl\",\n+      \"pattern\": \"v(?P<version>[0-9]+(?:\\\\.[0-9]+)*)\"\n+    }\n+  }\n+}"
+    },
+    {
+      "sha": "57702671c6adfe6996c4106472be319abd9f8aaa",
+      "filename": "pkgbuilds/afanctl/PKGBUILD",
+      "status": "added",
+      "additions": 42,
+      "deletions": 0,
+      "changes": 42,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d/pkgbuilds%2Fafanctl%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d/pkgbuilds%2Fafanctl%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fafanctl%2FPKGBUILD?ref=dd04cc1fa0e09b32d6a6d01309f59ba6d8f29a7d",
+      "patch": "@@ -0,0 +1,42 @@\n+# Maintainer: Prakhar Yadav <pkrc267 at gmail dot com>\n+# Upstream: https://github.com/yadav-prakhar/afanctl (also packaged as\n+# `afanctl` on the AUR, from the same sources).\n+#\n+# The unit installs DISABLED and the daemon starts in observe mode regardless,\n+# so installing this package changes nothing until the user runs\n+# `systemctl enable --now afanctl`.\n+pkgname=afanctl\n+pkgver=0.1.0\n+pkgrel=1\n+pkgdesc='applesmc fan supervisor for pre-T2 Intel Macs (A1708)'\n+arch=('x86_64')\n+url='https://github.com/yadav-prakhar/afanctl'\n+license=('GPL-3.0-only')\n+depends=('glibc' 'gcc-libs')\n+makedepends=('cargo')\n+backup=('etc/afanctl/afanctl.toml')\n+source=(\"${url}/archive/refs/tags/v${pkgver}.tar.gz\")\n+sha256sums=('3b1b55b62d968f443b397b20a37bbb49178e4eb1fc64ff8669479dc3e8e9572a')\n+\n+build() {\n+    cd \"${pkgname}-${pkgver}\"\n+    export CARGO_TARGET_DIR=\"$srcdir/target\"\n+    cargo build --release --locked\n+}\n+\n+package() {\n+    cd \"${pkgname}-${pkgver}\"\n+\n+    install -Dm755 \"$srcdir/target/release/afanctl\" \\\n+        \"$pkgdir/usr/bin/afanctl\"\n+    install -Dm644 packaging/afanctl.service \\\n+        \"$pkgdir/usr/lib/systemd/system/afanctl.service\"\n+    install -Dm644 packaging/afanctl.toml.default \\\n+        \"$pkgdir/etc/afanctl/afanctl.toml\"\n+    install -Dm644 packaging/afanctl.toml.default \\\n+        \"$pkgdir/usr/share/afanctl/afanctl.toml.default\"\n+    install -Dm644 packaging/49-afanctl.rules \\\n+        \"$pkgdir/usr/share/polkit-1/rules.d/49-afanctl.rules\"\n+    install -Dm644 LICENSE \\\n+        \"$pkgdir/usr/share/licenses/${pkgname}/LICENSE\"\n+}"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

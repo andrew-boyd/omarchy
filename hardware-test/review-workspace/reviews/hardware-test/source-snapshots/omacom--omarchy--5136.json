@@ -1,0 +1,318 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/5136",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cpu-power"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 5136,
+  "checked_at": "2026-09-21T11:56:14.876274+00:00",
+  "title": "Add auto power profile switching for T2 MacBooks",
+  "author": "fedesapuppo",
+  "head_sha": "26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76",
+  "base_sha": "64ef804433940659852ab4164a1c3f926e59ac3b",
+  "base_ref": "dev",
+  "updated_at": "2026-04-22T13:09:07Z",
+  "state": "open",
+  "body": "## Summary\n\n- Adds `omarchy-power-profile` to switch between performance (AC) and power-saver (battery) profiles with audio feedback\n- Adds `omarchy-wifi-powersave` to toggle WiFi power save on/off\n- Installs udev rules to trigger both scripts on AC plug/unplug\n- Adds a boot service to set the correct profile at startup\n\nLaptops should automatically prioritize battery life when unplugged and performance when on AC. The audio feedback (plug/unplug sounds from the freedesktop sound theme) confirms the switch happened. WiFi power save reduces battery drain but adds latency, so it's only enabled on battery.\n\nThe AC adapter is detected dynamically (different T2 models use different names), and the logged-in user UID is resolved at runtime rather than hardcoded.\n\n## Test plan\n\n- [ ] Run `fix-t2.sh` on a T2 MacBook\n- [ ] Unplug AC \u2014 verify profile switches to power-saver and unplug sound plays\n- [ ] Plug AC \u2014 verify profile switches to performance and plug sound plays\n- [ ] Reboot on battery \u2014 verify power-saver profile is set at boot\n- [ ] Verify WiFi power save is on when on battery, off when on AC",
+  "draft": false,
+  "files": [
+    {
+      "sha": "76c4ffc69311f6f2d42aa589881394fa431e7100",
+      "filename": "bin/omarchy-power-profile",
+      "status": "added",
+      "additions": 42,
+      "deletions": 0,
+      "changes": 42,
+      "blob_url": "https://github.com/omacom/omarchy/blob/26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76/bin%2Fomarchy-power-profile",
+      "raw_url": "https://github.com/omacom/omarchy/raw/26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76/bin%2Fomarchy-power-profile",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-power-profile?ref=26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76",
+      "patch": "@@ -0,0 +1,42 @@\n+#!/bin/bash\n+\n+# Switch power profile based on AC adapter status and play feedback sound.\n+# Called by udev on power supply changes and at boot.\n+\n+sound_dir=\"/usr/share/sounds/freedesktop/stereo\"\n+\n+# Find AC adapter dynamically (different T2 models use different names)\n+for supply in /sys/class/power_supply/*/type; do\n+  if [[ \"$(cat \"$supply\")\" == \"Mains\" ]]; then\n+    adapter_dir=\"$(dirname \"$supply\")\"\n+    break\n+  fi\n+done\n+\n+if [[ -z $adapter_dir ]]; then\n+  exit 0\n+fi\n+\n+status=\"$(cat \"$adapter_dir/online\" 2>/dev/null)\"\n+\n+if [[ $status == \"1\" ]]; then\n+  powerprofilesctl set performance\n+  sound=\"$sound_dir/power-plug.oga\"\n+else\n+  powerprofilesctl set power-saver\n+  sound=\"$sound_dir/power-unplug.oga\"\n+fi\n+\n+# Play feedback sound as the logged-in user\n+if [[ -n $SUDO_USER ]]; then\n+  uid=$(id -u \"$SUDO_USER\")\n+else\n+  uid=$(loginctl list-users --no-legend | awk 'NR==1{print $1}')\n+fi\n+\n+if [[ -n $uid ]]; then\n+  sudo -u \"#$uid\" \\\n+    XDG_RUNTIME_DIR=\"/run/user/$uid\" \\\n+    DBUS_SESSION_BUS_ADDRESS=\"unix:path=/run/user/$uid/bus\" \\\n+    paplay \"$sound\" &\n+fi"
+    },
+    {
+      "sha": "e64be80d4bc46780ec9868a561be312038979e67",
+      "filename": "bin/omarchy-wifi-powersave",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 4,
+      "changes": 17,
+      "blob_url": "https://github.com/omacom/omarchy/blob/26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76/bin%2Fomarchy-wifi-powersave",
+      "raw_url": "https://github.com/omacom/omarchy/raw/26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76/bin%2Fomarchy-wifi-powersave",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-wifi-powersave?ref=26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76",
+      "patch": "@@ -1,5 +1,14 @@\n #!/bin/bash\n-for iface in /sys/class/net/*/wireless; do\n-  iface=\"$(basename \"$(dirname \"$iface\")\")\"\n-  iw dev \"$iface\" set power_save \"$1\" 2>/dev/null\n-done\n+\n+# Toggle WiFi power save on or off.\n+# Usage: omarchy-wifi-powersave <on|off>\n+\n+action=\"${1:-on}\"\n+\n+device=\"$(iw dev | awk '/Interface/{print $2; exit}')\"\n+\n+if [[ -z $device ]]; then\n+  exit 0\n+fi\n+\n+iw dev \"$device\" set power_save \"$action\""
+    },
+    {
+      "sha": "2ee9b5c4cf94e71efcf3ebf6eca335e2caa7b423",
+      "filename": "install/config/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 34,
+      "deletions": 0,
+      "changes": 34,
+      "blob_url": "https://github.com/omacom/omarchy/blob/26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76/install%2Fconfig%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76/install%2Fconfig%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fhardware%2Fapple%2Ffix-t2.sh?ref=26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76",
+      "patch": "@@ -32,4 +32,38 @@ EOF\n # Generated by Omarchy installer for T2 Mac support\n KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pcie_ports=compat\"\n EOF\n+\n+  omarchy-pkg-add power-profiles-daemon\n+  sudo systemctl enable power-profiles-daemon.service\n+\n+  # Auto-switch power profile on AC plug/unplug (overrides generic 99-power-profile.rules for T2)\n+  cat <<EOF | sudo tee /etc/udev/rules.d/99-power-profile.rules >/dev/null\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", RUN+=\"$OMARCHY_PATH/bin/omarchy-power-profile\"\n+EOF\n+\n+  # Set correct power profile at boot\n+  cat <<EOF | sudo tee /etc/systemd/system/power-profile-boot.service >/dev/null\n+[Unit]\n+Description=Set power profile based on AC status at boot\n+After=power-profiles-daemon.service\n+Requires=power-profiles-daemon.service\n+\n+[Service]\n+Type=oneshot\n+ExecStart=$OMARCHY_PATH/bin/omarchy-power-profile\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+  sudo systemctl daemon-reload\n+  sudo systemctl enable power-profile-boot.service\n+\n+  # Toggle WiFi power save based on AC status\n+  cat <<EOF | sudo tee /etc/udev/rules.d/99-wifi-powersave.rules >/dev/null\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", ATTR{online}==\"1\", RUN+=\"$OMARCHY_PATH/bin/omarchy-wifi-powersave off\"\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", ATTR{online}==\"0\", RUN+=\"$OMARCHY_PATH/bin/omarchy-wifi-powersave on\"\n+EOF\n+\n+  sudo udevadm control --reload\n+  sudo udevadm trigger --subsystem-match=power_supply\n fi"
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4023811714,
+      "node_id": "PRR_kwDOO0Cobs7v1n6C",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\nAdds T2 MacBook-specific automation to switch system power profiles and WiFi power-saving behavior based on AC/battery state, with audible feedback to confirm transitions.\n\n**Changes:**\n- Extend the T2 hardware installer to install/enable power profile management and add udev + boot-time hooks.\n- Update `omarchy-wifi-powersave` to accept `on|off` and pick a WiFi device via `iw`.\n- Add `omarchy-power-profile` to set the appropriate power profile and play plug/unplug sounds.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 3 changed files in this pull request and generated 3 comments.\n\n| File | Description |\n| ---- | ----------- |\n| install/config/hardware/apple/fix-t2.sh | Adds udev rules + a boot service intended to drive power-profile and WiFi powersave switching on T2 MacBooks. |\n| bin/omarchy-wifi-powersave | Refactors WiFi power-save toggling logic and CLI. |\n| bin/omarchy-power-profile | New script to apply power profiles based on AC state and play feedback audio. |\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/dev?filename=.github/instructions/*.instructions.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add Copilot custom instructions</a> for smarter, more guided reviews. <a href=\"https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn how to get started</a>.",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/5136#pullrequestreview-4023811714",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5136",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5136#pullrequestreview-4023811714"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5136"
+        }
+      },
+      "submitted_at": "2026-03-27T21:33:18Z",
+      "commit_id": "cd5b81737b1b110742b134fde0dc7d20dbe31403"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339127",
+      "pull_request_review_id": 4023811714,
+      "id": 3003339127,
+      "node_id": "PRRC_kwDOO0Cobs6zA1F3",
+      "diff_hunk": "@@ -31,5 +31,35 @@ EOF\n   cat <<EOF | sudo tee /etc/limine-entry-tool.d/t2-mac.conf >/dev/null\n # Generated by Omarchy installer for T2 Mac support\n KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pcie_ports=compat\"\n+EOF\n+\n+  omarchy-pkg-add power-profiles-daemon\n+  sudo systemctl enable power-profiles-daemon.service\n+\n+  # Auto-switch power profile on AC plug/unplug\n+  cat <<EOF | sudo tee /etc/udev/rules.d/95-power-profile.rules >/dev/null\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", RUN+=\"/usr/local/bin/omarchy-power-profile\"\n+EOF\n+\n+  # Set correct power profile at boot\n+  cat <<EOF | sudo tee /etc/systemd/system/power-profile-boot.service >/dev/null\n+[Unit]\n+Description=Set power profile based on AC status at boot\n+After=power-profiles-daemon.service\n+Requires=power-profiles-daemon.service\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/usr/local/bin/omarchy-power-profile\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+  sudo systemctl enable power-profile-boot.service\n+\n+  # Toggle WiFi power save based on AC status\n+  cat <<EOF | sudo tee /etc/udev/rules.d/99-wifi-powersave.rules >/dev/null\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", ATTR{online}==\"1\", RUN+=\"/usr/local/bin/omarchy-wifi-powersave off\"\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", ATTR{online}==\"0\", RUN+=\"/usr/local/bin/omarchy-wifi-powersave on\"",
+      "path": "install/config/hardware/apple/fix-t2.sh",
+      "commit_id": "cd5b81737b1b110742b134fde0dc7d20dbe31403",
+      "original_commit_id": "cd5b81737b1b110742b134fde0dc7d20dbe31403",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The udev rules and systemd unit reference `/usr/local/bin/omarchy-power-profile` and `/usr/local/bin/omarchy-wifi-powersave`, but Omarchy scripts are installed under `$OMARCHY_PATH/bin` (e.g., install.sh exports `PATH=\"$OMARCHY_PATH/bin:$PATH\"`). As-is, these udev/systemd hooks will fail because the referenced binaries won\u2019t exist. Use an absolute path that matches the actual install location (e.g., expand `$OMARCHY_PATH/bin/...` into the generated files at install time) or install/symlink the scripts into `/usr/local/bin`.",
+      "created_at": "2026-03-27T21:33:17Z",
+      "updated_at": "2026-03-27T21:33:18Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5136#discussion_r3003339127",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5136",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339127"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5136#discussion_r3003339127"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5136"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339127/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 40,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 63,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 33,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339146",
+      "pull_request_review_id": 4023811714,
+      "id": 3003339146,
+      "node_id": "PRRC_kwDOO0Cobs6zA1GK",
+      "diff_hunk": "@@ -31,5 +31,35 @@ EOF\n   cat <<EOF | sudo tee /etc/limine-entry-tool.d/t2-mac.conf >/dev/null\n # Generated by Omarchy installer for T2 Mac support\n KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pcie_ports=compat\"\n+EOF\n+\n+  omarchy-pkg-add power-profiles-daemon\n+  sudo systemctl enable power-profiles-daemon.service\n+\n+  # Auto-switch power profile on AC plug/unplug\n+  cat <<EOF | sudo tee /etc/udev/rules.d/95-power-profile.rules >/dev/null",
+      "path": "install/config/hardware/apple/fix-t2.sh",
+      "commit_id": "cd5b81737b1b110742b134fde0dc7d20dbe31403",
+      "original_commit_id": "cd5b81737b1b110742b134fde0dc7d20dbe31403",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This adds a new `/etc/udev/rules.d/95-power-profile.rules`, but the installer already creates `/etc/udev/rules.d/99-power-profile.rules` in `install/config/powerprofilesctl-rules.sh` (run earlier from `install/config/all.sh`). Both rules will match and run, and the later `99-...` rule will likely override the profile set by `omarchy-power-profile`, breaking the intended AC/battery behavior. Prefer overwriting/removing the existing `99-power-profile.rules` for T2 machines (or gating the generic rule) so only one power-profile rule is active.\n```suggestion\n  # Auto-switch power profile on AC plug/unplug (override generic 99-power-profile.rules for T2)\n  cat <<EOF | sudo tee /etc/udev/rules.d/99-power-profile.rules >/dev/null\n```",
+      "created_at": "2026-03-27T21:33:17Z",
+      "updated_at": "2026-03-27T21:33:18Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5136#discussion_r3003339146",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5136",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339146"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5136#discussion_r3003339146"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5136"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339146/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 39,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 40,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 10,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339158",
+      "pull_request_review_id": 4023811714,
+      "id": 3003339158,
+      "node_id": "PRRC_kwDOO0Cobs6zA1GW",
+      "diff_hunk": "@@ -31,5 +31,35 @@ EOF\n   cat <<EOF | sudo tee /etc/limine-entry-tool.d/t2-mac.conf >/dev/null\n # Generated by Omarchy installer for T2 Mac support\n KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pcie_ports=compat\"\n+EOF\n+\n+  omarchy-pkg-add power-profiles-daemon\n+  sudo systemctl enable power-profiles-daemon.service\n+\n+  # Auto-switch power profile on AC plug/unplug\n+  cat <<EOF | sudo tee /etc/udev/rules.d/95-power-profile.rules >/dev/null\n+SUBSYSTEM==\"power_supply\", ATTR{type}==\"Mains\", RUN+=\"/usr/local/bin/omarchy-power-profile\"\n+EOF\n+\n+  # Set correct power profile at boot\n+  cat <<EOF | sudo tee /etc/systemd/system/power-profile-boot.service >/dev/null\n+[Unit]\n+Description=Set power profile based on AC status at boot\n+After=power-profiles-daemon.service\n+Requires=power-profiles-daemon.service\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/usr/local/bin/omarchy-power-profile\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+  sudo systemctl enable power-profile-boot.service\n+",
+      "path": "install/config/hardware/apple/fix-t2.sh",
+      "commit_id": "26f21aeb72570bc6aa511a93ce4e1eb34eaf2e76",
+      "original_commit_id": "cd5b81737b1b110742b134fde0dc7d20dbe31403",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "After writing udev rules and a new systemd unit, the script doesn\u2019t reload udev rules / trigger them, and it doesn\u2019t run `systemctl daemon-reload` before enabling the new `power-profile-boot.service`. In other installer scripts (e.g., dell fix-xps-haptic-touchpad), daemon-reload is done explicitly. Add `sudo udevadm control --reload-rules` (or `--reload`) + a trigger for `power_supply`, and `sudo systemctl daemon-reload` before enabling the new unit so the changes take effect immediately and reliably.",
+      "created_at": "2026-03-27T21:33:17Z",
+      "updated_at": "2026-03-27T21:33:18Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/5136#discussion_r3003339158",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/5136",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339158"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/5136#discussion_r3003339158"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/5136"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3003339158/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 44,
+      "original_start_line": 44,
+      "start_side": "RIGHT",
+      "line": 60,
+      "original_line": 59,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 29,
+      "position": 29,
+      "subject_type": "line"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "updated_at": "2026-09-21T14:40:30.182455+00:00",
+  "goal_complete": false,
+  "scope": "All 64-bit Intel Macs; first physical test MacBookPro13,3 only",
+  "prepared_build_sources": ".state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m",
+  "source_heads": {
+    "omarchy": "6096d649643d0d0e0bae65c7949e5043bf2cc338",
+    "omarchy-pkgs": "25712c910f80fdf5989c6434e3e2fa8830ec2581",
+    "omarchy-iso": "d692d24f95c6611f86beef7e4d7c6e23a7d2f42a"
+  },
+  "inventory_coverage_passed": true,
+  "original_group_source_count": 69,
+  "rollup_source_table_count": 101,
+  "inventory_total": 188,
+  "drafts_prepared_locally": 17,
+  "fresh_iso_built": true,
+  "fresh_vm_installs_passed": true,
+  "published_this_cycle": false,
+  "physical_install_authorized": false,
+  "pending_user_action": null,
+  "resume_build": "bash reviews/vm-install/start-build.sh",
+  "resume_validation": "python reviews/hardware-test/run-validation.py .state/vm-install/2026-09-20/latest-build",
+  "docker_access_recheck": {
+    "result": "Docker version returned server 29.7.2 without authentication prompt; detached container confirmed running.",
+    "renewed": true
+  },
+  "production_source_comparison": {
+    "feature_branches": 17,
+    "files": 87,
+    "identical": 78,
+    "documented_differences": 9,
+    "unexplained": 0
+  },
+  "execution_state": "validation complete; existing PR publication and final handoff in progress",
+  "build_container": "04889ba581844429063cb38734b0df3a318ce03ca9cdcab04eee0cf1459a2ec8",
+  "prior_blocker_audit": {
+    "verified_at": "2026-09-21T12:48:51.432149+00:00",
+    "consecutive_goal_turns": 3,
+    "evidence": "Docker version through interactive sudo still prompts for authentication; the bounded check was cancelled. The prepared source snapshot has no ISO/build result and no candidate VM/validation process is running.",
+    "remaining_work": "Fresh ISO build and artifact verification; fresh VM installs and tests; existing PR/evidence publication; pinned physical-install handoff.",
+    "resume_requires": "User runs the existing Docker authorization helper through interactive sudo, then resumes this goal.",
+    "authorization_helper": "sudo bash /home/boyd/Work/vintage-pr-review/reviews/vm-install/enable-build-sudo.sh"
+  },
+  "validation_service": {
+    "unit": "vintage-hardware-validation-20260921-b9.service",
+    "state": "finished with original runtime aggregate failure retained; all other stages passed and all three affected installed checks passed in clean-overlay rerun",
+    "raw_exit": 1
+  },
+  "failed_attempt": ".state/vm-install/2026-09-20/builds/build-20260921T130819Z-vApvwZ",
+  "libfprint_recheck": "build-reuse.json",
+  "build_exit": 0,
+  "completed_this_candidate": {
+    "artifact_packages": 13,
+    "runtime_payloads": 74,
+    "synthetic_efi_preservation": "passed, three hashes plus wiped marker and unchanged seed",
+    "source_suite": "273 files, no failures, two explicit skips",
+    "iso_unit_tests": 78,
+    "strict_neovim_startup": "passed",
+    "explicit_monokai_load": "passed",
+    "runtime_aggregate": 1,
+    "runtime_failed_checks": "confirmed suite-time PAM lockout; all three passed in a clean overlay; see runtime-rechecks.json",
+    "unencrypted_install_and_acceptance": "passed",
+    "encrypted_install_and_acceptance": "passed",
+    "camera_package_dkms_reboot": "passed",
+    "all_four_package_tracks": "passed",
+    "both_migration_tracks": "passed",
+    "non_apple_nvme_exclusion": "passed"
+  },
+  "required_software_checks_satisfied": true,
+  "physical_install_ready": true,
+  "source_commit_drift": false,
+  "runtime_rechecks": "runtime-rechecks.json",
+  "build_container_state": "finished and removed"
+}

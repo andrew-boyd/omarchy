@@ -1,0 +1,75 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11624",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "nvme-target"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+      "state": "open"
+    },
+    {
+      "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+      "state": "open",
+      "updated_at": "2026-09-13T04:45:01Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11624,
+  "checked_at": "2026-09-21T11:56:55.469721+00:00",
+  "title": "Scope the MacBook NVMe suspend fix to Apple's NVMe controller",
+  "author": "niconistal",
+  "head_sha": "e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-13T04:45:01Z",
+  "state": "open",
+  "body": "`install/hardware/apple/fix-suspend-nvme.sh` disables D3cold on `0000:01:00.0` for every model in its regex, including the 15-inch MacBookPro13,3 and 14,3. On those two models `01:00.0` is the AMD GPU and the NVMe drive is at `02:00.0`. The file exists, so the check passes and the fix lands on the GPU. The drive is never touched.\n\nFrom a MacBookPro14,3 on Omarchy 4.0.3:\n\n```\n01:00.0  [0300] AMD Radeon Pro 560 [1002:67ef]   d3cold_allowed = 0\n02:00.0  [0108] Samsung SM961 NVMe [144d:a804]   d3cold_allowed = 1\n```\n\nThe quirk comes from [Dunedan/mbp-2016-linux](https://github.com/Dunedan/mbp-2016-linux#suspend--hibernation), which scopes it to \"models with Apple's NVMe controller (MacBookPro13,1, MacBookPro13,2, MacBookPro14,1 and MacBookPro14,2)\". The lspci dumps in that repo show those models with Apple's controller `[106b:2003]` at `01:00.0`, and the 13,3 and 14,3 with the GPU there instead.\n\n## Changes\n\n- **Leaf:** drop 13,3 and 14,3 from the model match. Apply the fix only when the device at `01:00.0` reports Apple's vendor ID `0x106b`, instead of just checking that a device exists there. The 12-inch MacBooks and 13-inch models keep the fix.\n- **Unit:** the `ExecStart` path loses its `\\:` escapes, which systemd logs as \"Ignoring unknown escape sequences\" on every boot. The written value is unchanged.\n- **Migration:** existing installs where `01:00.0` is not Apple's controller have the service disabled and removed. The GPU goes back to its default at the next boot.\n- **Test:** `test/shell.d/apple-suspend-nvme-test.sh` covers both the leaf and the migration, for every affected model and both 15-inch ones.\n\n## Testing\n\n- `test/shell.d/apple-suspend-nvme-test.sh` passes.\n- `./test/shell`: the only failures are four suites that also fail on a clean `quattro` checkout here, because there is no `omarchy-pkgs` checkout.\n- Not run on a 13-inch machine. The leaf's behaviour there is unchanged except for the added vendor check.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "194f68146e57ffc07b63fb0c79a13b38e633ba28",
+      "filename": "install/hardware/apple/fix-suspend-nvme.sh",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 7,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9ee03c9ab10c3c64c44518a030a09abe2c2a73d/install%2Fhardware%2Fapple%2Ffix-suspend-nvme.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9ee03c9ab10c3c64c44518a030a09abe2c2a73d/install%2Fhardware%2Fapple%2Ffix-suspend-nvme.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-suspend-nvme.sh?ref=e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+      "patch": "@@ -1,13 +1,15 @@\n # Fix NVMe suspend issues on MacBook models\n-# This prevents NVMe drives from failing to wake from sleep properly\n+# Apple's own NVMe controller fails to wake from D3cold, so keep it out of that state.\n+# Only the 12-inch MacBooks and the 13-inch MacBook Pros carry that controller, always at 01:00.0.\n+# The 15-inch MacBookPro13,3 and 14,3 ship a standard NVMe drive at 02:00.0 and put the AMD GPU\n+# at 01:00.0, so they must not match: the fix would land on the GPU instead.\n MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+NVME_PCI=\"/sys/bus/pci/devices/0000:01:00.0\"\n \n-if [[ $MACBOOK_MODEL =~ MacBook(8,1|9,1|10,1)|MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n+if [[ $MACBOOK_MODEL =~ MacBook(8,1|9,1|10,1)|MacBookPro13,[12]|MacBookPro14,[12] ]]; then\n   echo \"Detected MacBook model: $MACBOOK_MODEL\"\n \n-  NVME_DEVICE=\"/sys/bus/pci/devices/0000:01:00.0/d3cold_allowed\"\n-\n-  if [[ -f $NVME_DEVICE ]]; then\n+  if [[ $(cat \"$NVME_PCI/vendor\" 2>/dev/null || true) == \"0x106b\" ]]; then\n     echo \"Applying NVMe suspend fix...\"\n \n     sudo mkdir -p /etc/systemd/system\n@@ -16,15 +18,15 @@ if [[ $MACBOOK_MODEL =~ MacBook(8,1|9,1|10,1)|MacBookPro13,[123]|MacBookPro14,[1\n Description=Omarchy NVMe Suspend Fix for MacBook\n \n [Service]\n-ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000\\:01\\:00.0/d3cold_allowed'\n+ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000:01:00.0/d3cold_allowed'\n \n [Install]\n WantedBy=multi-user.target\n EOF\n \n     sudo systemctl enable omarchy-nvme-suspend-fix.service\n   else\n-    echo \"Warning: NVMe device not found at expected PCI address (0000:01:00.0)\"\n+    echo \"Warning: Apple NVMe controller not found at expected PCI address (0000:01:00.0)\"\n     echo \"This fix may not be needed for this MacBook model\"\n   fi\n fi"
+    },
+    {
+      "sha": "a14871a8d3fc26cc8249ecb0ace62acd8a386e75",
+      "filename": "migrations/1789274148.sh",
+      "status": "added",
+      "additions": 14,
+      "deletions": 0,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9ee03c9ab10c3c64c44518a030a09abe2c2a73d/migrations%2F1789274148.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9ee03c9ab10c3c64c44518a030a09abe2c2a73d/migrations%2F1789274148.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789274148.sh?ref=e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+      "patch": "@@ -0,0 +1,14 @@\n+echo \"Remove the MacBook NVMe suspend fix from 15-inch MacBook Pros, where it disabled D3cold on the GPU\"\n+\n+# install/hardware/apple/fix-suspend-nvme.sh used to match MacBookPro13,3 and 14,3 too. Those\n+# models put the AMD GPU at 0000:01:00.0 and the NVMe drive at 02:00.0, so the service turned\n+# off D3cold for the GPU and never touched the drive. The leaf now only applies the fix where\n+# Apple's NVMe controller sits at 01:00.0; this removes the service everywhere it does not.\n+unit=\"${OMARCHY_NVME_SUSPEND_UNIT:-/etc/systemd/system/omarchy-nvme-suspend-fix.service}\"\n+pci_vendor=\"${OMARCHY_NVME_SUSPEND_PCI_VENDOR:-/sys/bus/pci/devices/0000:01:00.0/vendor}\"\n+\n+if [[ -f $unit && $(cat \"$pci_vendor\" 2>/dev/null || true) != \"0x106b\" ]]; then\n+  sudo systemctl disable omarchy-nvme-suspend-fix.service\n+  sudo rm -f \"$unit\"\n+  sudo systemctl daemon-reload\n+fi"
+    },
+    {
+      "sha": "937996cdfac56cfccf4b5ae30f56accbd0de22ee",
+      "filename": "test/shell.d/apple-suspend-nvme-test.sh",
+      "status": "added",
+      "additions": 114,
+      "deletions": 0,
+      "changes": 114,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9ee03c9ab10c3c64c44518a030a09abe2c2a73d/test%2Fshell.d%2Fapple-suspend-nvme-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9ee03c9ab10c3c64c44518a030a09abe2c2a73d/test%2Fshell.d%2Fapple-suspend-nvme-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-suspend-nvme-test.sh?ref=e9ee03c9ab10c3c64c44518a030a09abe2c2a73d",
+      "patch": "@@ -0,0 +1,114 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-suspend-nvme.sh\"\n+migration=\"$ROOT/migrations/1789274148.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+unit=\"$test_tmp/etc/systemd/system/omarchy-nvme-suspend-fix.service\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\" \"$test_tmp/pci\"\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+if [[ $1 != \"systemctl\" ]]; then\n+  \"$@\"\n+fi\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+# The leaf reads the model and the PCI vendor from absolute paths and writes the\n+# unit to /etc, so run a copy with all three redirected into the sandbox.\n+run_leaf() {\n+  local model=\"$1\" vendor=\"$2\"\n+  rm -rf \"${test_tmp:?}/etc\"\n+  : >\"$calls\"\n+  printf '%s\\n' \"$model\" >\"$test_tmp/dmi/product_name\"\n+  printf '%s\\n' \"$vendor\" >\"$test_tmp/pci/vendor\"\n+\n+  local script=\"$test_tmp/leaf.sh\"\n+  sed -e \"s|/sys/class/dmi/id/product_name|$test_tmp/dmi/product_name|g\" \\\n+      -e \"s|\\\"/sys/bus/pci/devices/0000:01:00.0\\\"|\\\"$test_tmp/pci\\\"|g\" \\\n+      -e \"s|/etc/systemd/system|$test_tmp/etc/systemd/system|g\" \\\n+      \"$leaf\" >\"$script\"\n+\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+# The models Dunedan/mbp-2016-linux lists with Apple's NVMe controller at 01:00.0.\n+for model in MacBook8,1 MacBook9,1 MacBook10,1 MacBookPro13,1 MacBookPro13,2 MacBookPro14,1 MacBookPro14,2; do\n+  run_leaf \"$model\" 0x106b >/dev/null\n+  grep -q 'd3cold_allowed' \"$unit\" 2>/dev/null || fail \"a Mac with Apple's NVMe controller gets the fix\" \"$model\"\n+  grep -Fq $'sudo\\tsystemctl\\tenable\\tomarchy-nvme-suspend-fix.service' \"$calls\" ||\n+    fail \"the fix is enabled\" \"$model: $(cat \"$calls\")\"\n+done\n+pass \"every Mac with Apple's NVMe controller gets the fix\"\n+\n+# The unit used to escape the colons, which systemd warns about on every boot.\n+! grep -q '\\\\:' \"$unit\" || fail \"the unit has no escape sequences systemd ignores\" \"$(cat \"$unit\")\"\n+pass \"the unit has no escape sequences systemd ignores\"\n+\n+# 15-inch models: 01:00.0 exists, but it is the AMD GPU.\n+for model in MacBookPro13,3 MacBookPro14,3; do\n+  run_leaf \"$model\" 0x1002 >/dev/null\n+  [[ ! -e $unit ]] || fail \"a 15-inch MacBook Pro is left alone\" \"$model\"\n+  [[ ! -s $calls ]] || fail \"a 15-inch MacBook Pro escalates nothing\" \"$model: $(cat \"$calls\")\"\n+done\n+pass \"15-inch MacBook Pros, whose 01:00.0 is the GPU, are left alone\"\n+\n+# A 13-inch board whose 01:00.0 is not Apple's controller does not get the fix blind.\n+run_leaf MacBookPro14,2 0x144d >/dev/null\n+[[ ! -e $unit ]] || fail \"a replaced or unexpected controller is left alone\"\n+pass \"a device at 01:00.0 that is not Apple's controller is left alone\"\n+\n+run_migration() {\n+  local vendor=\"$1\"\n+  : >\"$calls\"\n+  printf '%s\\n' \"$vendor\" >\"$test_tmp/pci/vendor\"\n+\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_NVME_SUSPEND_UNIT=\"$unit\" \\\n+    OMARCHY_NVME_SUSPEND_PCI_VENDOR=\"$test_tmp/pci/vendor\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+write_old_unit() {\n+  mkdir -p \"$(dirname \"$unit\")\"\n+  printf '%s\\n' '[Service]' \"ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000\\:01\\:00.0/d3cold_allowed'\" >\"$unit\"\n+}\n+\n+# A 15-inch install from before the fix carries the service aimed at its GPU.\n+write_old_unit\n+run_migration 0x1002\n+[[ ! -e $unit ]] || fail \"the migration removes the service from a 15-inch MacBook Pro\"\n+grep -Fq $'sudo\\tsystemctl\\tdisable\\tomarchy-nvme-suspend-fix.service' \"$calls\" ||\n+  fail \"the migration disables the service\" \"$(cat \"$calls\")\"\n+pass \"the migration removes the service where 01:00.0 is not Apple's controller\"\n+\n+run_migration 0x1002\n+[[ ! -s $calls ]] || fail \"the migration is idempotent\" \"$(cat \"$calls\")\"\n+pass \"the migration is idempotent\"\n+\n+# The machines the fix was written for keep it.\n+write_old_unit\n+run_migration 0x106b\n+[[ -f $unit ]] || fail \"the migration keeps the service on a Mac with Apple's NVMe controller\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on those Macs\" \"$(cat \"$calls\")\"\n+pass \"the migration keeps the service on Macs with Apple's NVMe controller\"\n+\n+rm -rf \"${test_tmp:?}/etc\"\n+run_migration 0x8086\n+[[ ! -s $calls ]] || fail \"the migration skips machines that never had the service\" \"$(cat \"$calls\")\"\n+pass \"the migration skips machines that never had the service\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

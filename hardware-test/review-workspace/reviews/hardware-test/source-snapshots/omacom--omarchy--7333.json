@@ -1,0 +1,470 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7333",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-pre-t2-resume"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7333,
+  "checked_at": "2026-09-21T11:57:46.159103+00:00",
+  "title": "Reset Apple BCM4350/BCM43602 Wi-Fi around sleep",
+  "author": "Rouxgrr",
+  "head_sha": "64bde7ed0163301df0a98537caf7735100bad2c7",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:41Z",
+  "state": "open",
+  "body": "## Summary\n\n- Install a sleep service only on Apple systems with BCM4350 (`14e4:43a3`) or BCM43602 (`14e4:43ba` / `43bb` / `43bc`).\n- Unbind that device from `brcmfmac` before sleep and bind it again after wake, forcing a clean firmware initialization.\n- Add an idempotent migration for existing installs and tests for hardware gating, helper recovery, and installation.\n\nThis generalizes the approach in #7180, which already proved the unbind/bind cycle on BCM4350, so one service can cover both confirmed S3-dead chips. T2-era parts stay out of the allowlist: BCM4364 must remain bound, and BCM4377/4378/4387 have their own recovery path.\n\n## Failure\n\nReproduced on a MacBookPro12,1 (Early 2015 13\") running Omarchy 4.0.0-1, kernel 7.1.8, in-tree `brcmfmac` for BCM43602 (`14e4:43ba`, firmware `7.35.177.61`).\n\nClosing the lid suspends (`deep` S3). After resume, the Wi-Fi toggle stays on and the network panel only shows DNS. The radio is enabled, but the firmware is dead:\n\n```\nplatform-linux: do-change-link[2]: failure 5 (Input/output error)\ndevice (wlp3s0): set-hw-addr: failed to set MAC address ... (scanning) (NME_UNSPEC)\ndevice (wlp3s0): Couldn't initialize supplicant interface: Timeout was reached\nieee80211 phy0: brcmf_msgbuf_tx_ioctl: Failed to reserve space in commonring\nieee80211 phy0: brcmf_cfg80211_scan: scan error (-12)\n```\n\nToggling the slider only flips rfkill/NetworkManager state. A reboot reinitializes the firmware and Wi-Fi works again. Same machine, same failure, on Omarchy 3 \u2014 this is not leftover Quattro UI.\n\n#7180 recorded the same class of failure on MacBook10,1 / BCM4350, including a later suspend that then timed out in `brcmf_pcie_pm_enter_D3`.\n\n## Approach\n\nA `sleep.target` oneshot keeps the matching PCI device unbound for the sleep transaction, then binds it after wake so NetworkManager sees a freshly initialized radio. The helper also records an already-unbound matching device so a leftover cycle cannot block the next suspend.\n\nModule unload was discarded in #7180 because udev immediately reloaded `brcmfmac` and an exploratory cycle coincided with a hard lock. This PR uses that same unbind/bind path.\n\nThe installer and migration no-op unless the machine is Apple and `lspci` shows one of the confirmed IDs.\n\n## Testing\n\n- `bash -n` on the helper, installer, migration, and test\n- `test/shell.d/brcmfmac-suspend-test.sh`\n- `test/shell.d/brcmfmac-supplicant-test.sh`\n- `test/cli` (including command metadata for the new helper)\n\nLive lid-close/resume of this service still needs a run on the MacBookPro12,1 that produced the logs. #7180 already completed that cycle on BCM4350 with the same unit ordering.\n\nIf this should land after #7180 instead of beside it, the BCM43602 IDs can be added there and this closed.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "9697306d21207df94cfdbfc561bcf036557184b2",
+      "filename": "bin/omarchy-hw-brcmfmac-suspend",
+      "status": "added",
+      "additions": 90,
+      "deletions": 0,
+      "changes": 90,
+      "blob_url": "https://github.com/omacom/omarchy/blob/64bde7ed0163301df0a98537caf7735100bad2c7/bin%2Fomarchy-hw-brcmfmac-suspend",
+      "raw_url": "https://github.com/omacom/omarchy/raw/64bde7ed0163301df0a98537caf7735100bad2c7/bin%2Fomarchy-hw-brcmfmac-suspend",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-brcmfmac-suspend?ref=64bde7ed0163301df0a98537caf7735100bad2c7",
+      "patch": "@@ -0,0 +1,90 @@\n+#!/bin/bash\n+\n+# omarchy:hidden=true\n+# omarchy:summary=Unbind affected Broadcom Wi-Fi around system sleep\n+# omarchy:args=<pre|post>\n+# omarchy:requires-sudo=true\n+\n+set -euo pipefail\n+\n+# Apple BCM4350 (43a3) and BCM43602 (43ba/43bb/43bc) firmware often stops\n+# answering after S3. NetworkManager still shows the radio as on, but scans\n+# fail and the supplicant times out until the device is rebound. Do not add\n+# T2-era parts: BCM4364 (4464) must stay bound for PCI PM, and\n+# BCM4377/4378/4387 have their own T2 recovery path.\n+affected_ids=\"${OMARCHY_BRCMFMAC_SUSPEND_IDS:-0x43a3 0x43ba 0x43bb 0x43bc}\"\n+driver_path=\"${OMARCHY_BRCMFMAC_DRIVER_PATH:-/sys/bus/pci/drivers/brcmfmac}\"\n+device_root=\"${OMARCHY_BRCMFMAC_DEVICE_ROOT:-/sys/bus/pci/devices}\"\n+state_file=\"${OMARCHY_BRCMFMAC_SUSPEND_STATE:-/run/omarchy-brcmfmac-suspend.devices}\"\n+\n+is_affected_id() {\n+  local device_id=\"$1\" candidate\n+  for candidate in $affected_ids; do\n+    [[ $device_id == \"$candidate\" ]] && return 0\n+  done\n+  return 1\n+}\n+\n+driver_name() {\n+  local pci_address=\"$1\"\n+  local link=\"$device_root/$pci_address/driver\"\n+\n+  [[ -L $link ]] || return 0\n+  basename \"$(readlink -f \"$link\")\"\n+}\n+\n+case \"${1:-}\" in\n+  pre)\n+    install -d -m755 \"$(dirname \"$state_file\")\"\n+    : >\"$state_file\"\n+\n+    for device in \"$device_root\"/????:??:??.?; do\n+      [[ -e $device/vendor && -e $device/device ]] || continue\n+      [[ $(<\"$device/vendor\") == \"0x14e4\" ]] || continue\n+      is_affected_id \"$(<\"$device/device\")\" || continue\n+\n+      pci_address=\"${device##*/}\"\n+      if [[ $(driver_name \"$pci_address\") == \"brcmfmac\" ]]; then\n+        if ! printf '%s' \"$pci_address\" >\"$driver_path/unbind\"; then\n+          rm -f \"$state_file\"\n+          exit 1\n+        fi\n+      fi\n+      printf '%s\\n' \"$pci_address\" >>\"$state_file\"\n+    done\n+\n+    if [[ ! -s $state_file ]]; then\n+      rm -f \"$state_file\"\n+      echo \"No Apple BCM4350/BCM43602 Wi-Fi device found\" >&2\n+      exit 1\n+    fi\n+    ;;\n+  post)\n+    [[ -f $state_file ]] || exit 0\n+    bind_failed=false\n+\n+    while IFS= read -r pci_address; do\n+      [[ -n $pci_address ]] || continue\n+      if [[ ! -e $device_root/$pci_address ]]; then\n+        echo \"Broadcom Wi-Fi device $pci_address disappeared\" >&2\n+        bind_failed=true\n+        continue\n+      fi\n+      if [[ $(driver_name \"$pci_address\") != \"brcmfmac\" ]] &&\n+        ! printf '%s' \"$pci_address\" >\"$driver_path/bind\"; then\n+        echo \"Failed to rebind Broadcom Wi-Fi device $pci_address\" >&2\n+        bind_failed=true\n+      fi\n+    done <\"$state_file\"\n+\n+    if [[ $bind_failed == true ]]; then\n+      exit 1\n+    fi\n+\n+    rm -f \"$state_file\"\n+    ;;\n+  *)\n+    echo \"Usage: omarchy-hw-brcmfmac-suspend <pre|post>\" >&2\n+    exit 2\n+    ;;\n+esac"
+    },
+    {
+      "sha": "11f83f528950a004082b77936a56331a99b3f38c",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/64bde7ed0163301df0a98537caf7735100bad2c7/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/64bde7ed0163301df0a98537caf7735100bad2c7/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=64bde7ed0163301df0a98537caf7735100bad2c7",
+      "patch": "@@ -36,6 +36,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-suspend.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "d791093cbe6859c7d465ed0630e89988c8b6e882",
+      "filename": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "status": "added",
+      "additions": 20,
+      "deletions": 0,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy/blob/64bde7ed0163301df0a98537caf7735100bad2c7/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/64bde7ed0163301df0a98537caf7735100bad2c7/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-brcmfmac-suspend.sh?ref=64bde7ed0163301df0a98537caf7735100bad2c7",
+      "patch": "@@ -0,0 +1,20 @@\n+# BCM4350 and BCM43602 firmware can stop answering after S3 resume on Apple\n+# hardware. Once that happens, brcmfmac times out on ioctls, NetworkManager\n+# cannot initialize its supplicant interface, and every scan fails until the\n+# firmware is reinitialized.\n+#\n+# Unbind the device before sleep so its unreliable firmware power transition is\n+# bypassed, then bind it after wake so NetworkManager gets a freshly initialized\n+# radio. Keep this on the confirmed Apple BCM4350/BCM43602 PCI IDs instead of\n+# resetting T2-era brcmfmac devices, which need the opposite treatment.\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]] &&\n+  lspci -nn | grep -E \"14e4:(43a3|43ba|43bb|43bc)\" >/dev/null; then\n+  echo \"Detected Apple BCM4350/BCM43602 Wi-Fi; resetting its driver around sleep\"\n+\n+  sudo install -Dm644 \\\n+    \"$OMARCHY_PATH/install/hardware/apple/omarchy-brcmfmac-suspend.service\" \\\n+    /etc/systemd/system/omarchy-brcmfmac-suspend.service\n+  sudo systemctl enable omarchy-brcmfmac-suspend.service\n+fi"
+    },
+    {
+      "sha": "25a4c0d127d5bf547b8098ab18a08caf94541800",
+      "filename": "install/hardware/apple/omarchy-brcmfmac-suspend.service",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/64bde7ed0163301df0a98537caf7735100bad2c7/install%2Fhardware%2Fapple%2Fomarchy-brcmfmac-suspend.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/64bde7ed0163301df0a98537caf7735100bad2c7/install%2Fhardware%2Fapple%2Fomarchy-brcmfmac-suspend.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Fomarchy-brcmfmac-suspend.service?ref=64bde7ed0163301df0a98537caf7735100bad2c7",
+      "patch": "@@ -0,0 +1,16 @@\n+[Unit]\n+Description=Reset Broadcom Wi-Fi around sleep on affected Apple hardware\n+Before=sleep.target\n+StopWhenUnneeded=yes\n+ConditionPathExists=/sys/bus/pci/drivers/brcmfmac\n+\n+[Service]\n+Type=oneshot\n+RemainAfterExit=yes\n+ExecStart=/usr/bin/omarchy-hw-brcmfmac-suspend pre\n+ExecStop=/usr/bin/omarchy-hw-brcmfmac-suspend post\n+TimeoutStartSec=10s\n+TimeoutStopSec=10s\n+\n+[Install]\n+WantedBy=sleep.target"
+    },
+    {
+      "sha": "875417db6813420ab7ea4d2f224792513c3e3739",
+      "filename": "migrations/1787013338.sh",
+      "status": "added",
+      "additions": 23,
+      "deletions": 0,
+      "changes": 23,
+      "blob_url": "https://github.com/omacom/omarchy/blob/64bde7ed0163301df0a98537caf7735100bad2c7/migrations%2F1787013338.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/64bde7ed0163301df0a98537caf7735100bad2c7/migrations%2F1787013338.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787013338.sh?ref=64bde7ed0163301df0a98537caf7735100bad2c7",
+      "patch": "@@ -0,0 +1,23 @@\n+echo \"Reset Apple BCM4350/BCM43602 Wi-Fi around sleep\"\n+\n+# The installer only reaches new systems. Existing Apple BCM4350 and BCM43602\n+# installs can leave the radio firmware unresponsive after resume, which also\n+# makes later suspend attempts fail in brcmf_pcie_pm_enter_D3 until reboot.\n+dmi_vendor=\"${OMARCHY_BRCMFMAC_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+service_source=\"${OMARCHY_BRCMFMAC_SUSPEND_SERVICE_SOURCE:-$OMARCHY_PATH/install/hardware/apple/omarchy-brcmfmac-suspend.service}\"\n+service_target=\"${OMARCHY_BRCMFMAC_SUSPEND_SERVICE_TARGET:-/etc/systemd/system/omarchy-brcmfmac-suspend.service}\"\n+\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor != Apple* ]] ||\n+  ! lspci -nn | grep -E \"14e4:(43a3|43ba|43bb|43bc)\" >/dev/null; then\n+  exit 0\n+fi\n+\n+if ! cmp -s \"$service_source\" \"$service_target\"; then\n+  sudo install -Dm644 \"$service_source\" \"$service_target\"\n+fi\n+\n+if ! systemctl is-enabled --quiet omarchy-brcmfmac-suspend.service 2>/dev/null; then\n+  sudo systemctl enable omarchy-brcmfmac-suspend.service\n+fi"
+    },
+    {
+      "sha": "62a0697a912838f6176ecdadced65fe9308c9694",
+      "filename": "test/shell.d/brcmfmac-suspend-test.sh",
+      "status": "added",
+      "additions": 218,
+      "deletions": 0,
+      "changes": 218,
+      "blob_url": "https://github.com/omacom/omarchy/blob/64bde7ed0163301df0a98537caf7735100bad2c7/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/64bde7ed0163301df0a98537caf7735100bad2c7/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrcmfmac-suspend-test.sh?ref=64bde7ed0163301df0a98537caf7735100bad2c7",
+      "patch": "@@ -0,0 +1,218 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-brcmfmac-suspend.sh\"\n+helper=\"$ROOT/bin/omarchy-hw-brcmfmac-suspend\"\n+service=\"$ROOT/install/hardware/apple/omarchy-brcmfmac-suspend.service\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1787013338.sh\"\n+\n+grep -q 'apple/fix-brcmfmac-suspend.sh' \"$all\" ||\n+  fail \"the Broadcom suspend fix runs during hardware setup\"\n+grep -Fx 'Before=sleep.target' \"$service\" >/dev/null ||\n+  fail \"the Broadcom service detaches the device before sleep\"\n+grep -Fx 'StopWhenUnneeded=yes' \"$service\" >/dev/null ||\n+  fail \"the Broadcom service stops after the sleep transaction\"\n+grep -Fx 'ConditionPathExists=/sys/bus/pci/drivers/brcmfmac' \"$service\" >/dev/null ||\n+  fail \"the Broadcom service only runs when the driver is available\"\n+grep -Fx 'ExecStart=/usr/bin/omarchy-hw-brcmfmac-suspend pre' \"$service\" >/dev/null ||\n+  fail \"the Broadcom service runs the pre-sleep recovery helper\"\n+grep -Fx 'ExecStop=/usr/bin/omarchy-hw-brcmfmac-suspend post' \"$service\" >/dev/null ||\n+  fail \"the Broadcom service runs the post-wake recovery helper\"\n+grep -Fx 'WantedBy=sleep.target' \"$service\" >/dev/null ||\n+  fail \"the Broadcom service joins every sleep transaction\"\n+pass \"the Broadcom service resets the driver around sleep\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+target=\"$test_tmp/etc/systemd/system/omarchy-brcmfmac-suspend.service\"\n+enabled=\"$test_tmp/enabled\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no such hardware\" (#6608).\n+if [[ -n ${WIFI_ID:-} ]]; then\n+  echo \"03:00.0 Network controller [0280]: Broadcom Inc. Wireless [14e4:$WIFI_ID]\"\n+fi\n+for _ in {1..4096}; do\n+  echo '00:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+\n+if [[ $1 == \"is-enabled\" ]]; then\n+  [[ -e $ENABLED_MARKER ]]\n+  exit\n+fi\n+\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+[[ $1 != \"enable\" ]] || touch \"$ENABLED_MARKER\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+driver_path=\"$test_tmp/sys/bus/pci/drivers/brcmfmac\"\n+device_root=\"$test_tmp/sys/bus/pci/devices\"\n+state_file=\"$test_tmp/run/omarchy-brcmfmac-suspend.devices\"\n+pci_address=\"0000:03:00.0\"\n+\n+reset_pci() {\n+  rm -rf \"$device_root\" \"$driver_path\" \"$state_file\"\n+  mkdir -p \"$device_root\" \"$driver_path\"\n+  : >\"$driver_path/unbind\"\n+  : >\"$driver_path/bind\"\n+}\n+\n+setup_device() {\n+  local address=\"$1\" device_id=\"$2\"\n+  mkdir -p \"$device_root/$address\" \"$driver_path\"\n+  printf '0x14e4' >\"$device_root/$address/vendor\"\n+  printf '%s' \"$device_id\" >\"$device_root/$address/device\"\n+  ln -sfn \"$device_root/$address\" \"$driver_path/$address\"\n+  ln -sfn \"$driver_path\" \"$device_root/$address/driver\"\n+  : >\"$driver_path/unbind\"\n+  : >\"$driver_path/bind\"\n+}\n+\n+run_helper() {\n+  OMARCHY_BRCMFMAC_DRIVER_PATH=\"$driver_path\" \\\n+    OMARCHY_BRCMFMAC_DEVICE_ROOT=\"$device_root\" \\\n+    OMARCHY_BRCMFMAC_SUSPEND_STATE=\"$state_file\" \\\n+    \"$helper\" \"$@\"\n+}\n+\n+reset_pci\n+setup_device \"$pci_address\" \"0x43ba\"\n+run_helper pre\n+[[ $(<\"$driver_path/unbind\") == \"$pci_address\" ]] ||\n+  fail \"the pre-sleep helper unbinds the BCM43602 PCI device\"\n+[[ $(<\"$state_file\") == \"$pci_address\" ]] ||\n+  fail \"the pre-sleep helper records the device for wake\"\n+pass \"the pre-sleep helper detaches the affected PCI device\"\n+\n+rm -f \"$driver_path/$pci_address\" \"$device_root/$pci_address/driver\"\n+run_helper post\n+[[ $(<\"$driver_path/bind\") == \"$pci_address\" ]] ||\n+  fail \"the post-wake helper rebinds the BCM43602 PCI device\"\n+[[ ! -e $state_file ]] || fail \"the post-wake helper clears its device state\"\n+pass \"the post-wake helper reattaches the affected PCI device\"\n+\n+missing_address=\"0000:04:00.0\"\n+printf '%s\\n' \"$missing_address\" >\"$state_file\"\n+if run_helper post 2>/dev/null; then\n+  fail \"the post-wake helper reports a missing PCI device\"\n+fi\n+[[ -e $state_file ]] || fail \"failed recovery keeps its device state for retry\"\n+rm -f \"$state_file\"\n+pass \"failed recovery remains visible and retryable\"\n+\n+other_address=\"0000:02:00.0\"\n+reset_pci\n+setup_device \"$other_address\" \"0x4464\"\n+: >\"$driver_path/unbind\"\n+if run_helper pre 2>/dev/null; then\n+  fail \"the pre-sleep helper rejects a T2-era Broadcom PCI device\"\n+fi\n+[[ ! -s $driver_path/unbind ]] || fail \"the pre-sleep helper leaves other devices bound\"\n+pass \"the pre-sleep helper only detaches confirmed S3-dead chips\"\n+\n+reset_pci\n+setup_device \"$pci_address\" \"0x43a3\"\n+run_helper pre\n+[[ $(<\"$driver_path/unbind\") == \"$pci_address\" ]] ||\n+  fail \"the pre-sleep helper also detaches BCM4350\"\n+pass \"the pre-sleep helper also detaches BCM4350\"\n+\n+run_leaf() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\"\n+  local script=\"$test_tmp/leaf.sh\"\n+\n+  rm -rf \"$test_tmp/etc\"\n+  mkdir -p \"$test_tmp/etc\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  sed \\\n+    -e \"s|/sys/class/dmi/id/sys_vendor|$test_tmp/dmi/sys_vendor|g\" \\\n+    -e \"s|/etc/systemd/system/omarchy-brcmfmac-suspend.service|$target|g\" \\\n+    \"$leaf\" >\"$script\"\n+\n+  WIFI_ID=\"$wifi_id\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" ENABLED_MARKER=\"$enabled\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+for wifi_id in 43ba 43bb 43bc 43a3; do\n+  run_leaf \"Apple Inc.\" \"$wifi_id\" >/dev/null\n+  cmp -s \"$service\" \"$target\" ||\n+    fail \"Apple setup installs the sleep service\" \"14e4:$wifi_id\"\n+  grep -Fq $'systemctl\\tenable\\tomarchy-brcmfmac-suspend.service' \"$calls\" ||\n+    fail \"Apple setup enables the sleep service\" \"$(cat \"$calls\")\"\n+done\n+pass \"Apple BCM4350/BCM43602 setup installs and enables the sleep service\"\n+\n+run_leaf \"Apple Inc.\" 4464 >/dev/null\n+[[ ! -e $target ]] || fail \"T2-era Apple Broadcom radios are left alone\"\n+[[ ! -s $calls ]] || fail \"T2-era Apple Broadcom radios change no system state\" \"$(cat \"$calls\")\"\n+pass \"T2-era Apple Broadcom radios are left alone\"\n+\n+run_leaf \"LENOVO\" 43ba >/dev/null\n+[[ ! -e $target ]] || fail \"non-Apple BCM43602 hardware is left alone\"\n+[[ ! -s $calls ]] || fail \"non-Apple BCM43602 hardware changes no system state\" \"$(cat \"$calls\")\"\n+pass \"non-Apple BCM43602 hardware is left alone\"\n+\n+run_migration() {\n+  local vendor=\"$1\" wifi_id=\"${2:-}\"\n+\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  WIFI_ID=\"$wifi_id\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    ENABLED_MARKER=\"$enabled\" OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_BRCMFMAC_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    OMARCHY_BRCMFMAC_SUSPEND_SERVICE_SOURCE=\"$service\" \\\n+    OMARCHY_BRCMFMAC_SUSPEND_SERVICE_TARGET=\"$target\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+rm -rf \"$test_tmp/etc\"\n+rm -f \"$enabled\"\n+run_migration \"Apple Inc.\" 43ba\n+cmp -s \"$service\" \"$target\" ||\n+  fail \"the migration installs the service on an existing Apple BCM43602 system\"\n+[[ -e $enabled ]] || fail \"the migration enables the Broadcom sleep service\"\n+pass \"the migration repairs an existing Apple BCM43602 system\"\n+\n+run_migration \"Apple Inc.\" 43ba\n+[[ ! -s $calls ]] || fail \"the migration is idempotent\" \"$(cat \"$calls\")\"\n+pass \"the migration leaves a repaired system untouched\"\n+\n+rm -rf \"$test_tmp/etc\"\n+rm -f \"$enabled\"\n+run_migration \"Apple Inc.\" 4464\n+[[ ! -e $target ]] || fail \"the migration skips T2-era Apple Broadcom radios\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on unaffected hardware\" \"$(cat \"$calls\")\"\n+pass \"the migration skips unaffected hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5322305937",
+      "html_url": "https://github.com/omacom/omarchy/pull/7333#issuecomment-5322305937",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7333",
+      "id": 5322305937,
+      "node_id": "IC_kwDOO0Cobs8AAAABPTvxkQ",
+      "user": {
+        "login": "Rouxgrr",
+        "id": 7097149,
+        "node_id": "MDQ6VXNlcjcwOTcxNDk=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/7097149?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Rouxgrr",
+        "html_url": "https://github.com/Rouxgrr",
+        "followers_url": "https://api.github.com/users/Rouxgrr/followers",
+        "following_url": "https://api.github.com/users/Rouxgrr/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Rouxgrr/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Rouxgrr/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Rouxgrr/subscriptions",
+        "organizations_url": "https://api.github.com/users/Rouxgrr/orgs",
+        "repos_url": "https://api.github.com/users/Rouxgrr/repos",
+        "events_url": "https://api.github.com/users/Rouxgrr/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Rouxgrr/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-18T01:30:13Z",
+      "updated_at": "2026-08-18T01:30:13Z",
+      "body": "Live lid-close/resume on the MacBookPro12,1 that produced the original failure (BCM43602 `14e4:43ba`, Omarchy 4.0.0-1, kernel 7.1.8). The service is installed locally from this branch (`ExecStart`/`ExecStop` pointed at `/usr/local/bin` until the package ships the helper).\n\nOrdering:\n\n```\n18:28:32 Starting Reset Broadcom Wi-Fi around sleep...\n18:28:33 Finished Reset Broadcom Wi-Fi around sleep\n18:28:33 Starting System Suspend...\n18:28:40 System returned from sleep operation 'suspend'\n18:28:40 Stopping Reset Broadcom Wi-Fi around sleep...\n18:28:40 rfkill2: found Wi-Fi radio killswitch ... (driver brcmfmac)\n18:28:40 device (wlan0): interface index 4 renamed iface from 'wlan0' to 'wlp3s0'\n18:28:44 Connected to wireless network \"Blazin\"\n18:28:46 device (wlp3s0): Activation: successful, device activated\n```\n\nAbout six seconds from wake to an activated link. Zero `Input/output error`, zero supplicant timeouts, zero `brcmf_msgbuf_tx_ioctl` / scan `-12` after resume. The panel is empty for that window because the phy is being rebound, then the network comes back on its own.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5322305937/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4955974362,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ2Yq2g",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds an Apple-specific Broadcom (BCM4350/BCM43602) suspend/resume recovery mechanism by unbinding/rebinding `brcmfmac` around sleep, including a systemd unit, a migration for existing installs, and a shell-based regression test.\n\n**Changes:**\n- Introduces `omarchy-hw-brcmfmac-suspend` helper to unbind/rebind affected Broadcom PCI devices on suspend/resume.\n- Adds an Apple hardware setup script and a `sleep.target`-bound systemd unit to run the helper.\n- Adds migration `1787013338` plus a dedicated shell test covering install/migration behavior and helper logic.\n\n### Reviewed changes\n\nCopilot reviewed 5 out of 6 changed files in this pull request and generated 4 comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| test/shell.d/brcmfmac-suspend-test.sh | Adds regression tests validating unit content, helper behavior, installer path, and migration idempotency. |\r\n| migrations/1787013338.sh | Introduces a migration to install/enable the sleep service on existing affected Apple systems. |\r\n| install/hardware/apple/omarchy-brcmfmac-suspend.service | Adds a systemd oneshot service bound to `sleep.target` to run pre/post helper actions. |\r\n| install/hardware/apple/fix-brcmfmac-suspend.sh | Adds hardware-setup script to install and enable the sleep service on matching Apple devices. |\r\n| install/hardware/all.sh | Hooks the new Apple Broadcom suspend fix into the global hardware setup flow. |\r\n| bin/omarchy-hw-brcmfmac-suspend | Adds the unbind/rebind helper with state tracking across suspend/resume. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7333#pullrequestreview-4955974362",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7333",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7333#pullrequestreview-4955974362"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7333"
+        }
+      },
+      "submitted_at": "2026-08-18T00:42:24Z",
+      "commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005166",
+      "pull_request_review_id": 4955974362,
+      "id": 3800005166,
+      "node_id": "PRRC_kwDOO0Cobs7if3ou",
+      "diff_hunk": "@@ -0,0 +1,23 @@\n+echo \"Reset Apple BCM4350/BCM43602 Wi-Fi around sleep\"\n+\n+# The installer only reaches new systems. Existing Apple BCM4350 and BCM43602",
+      "path": "migrations/1787013338.sh",
+      "commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "original_commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This migration script uses bash-specific features (e.g., `[[ ... ]]`) but doesn\u2019t declare an interpreter or strict mode. Add a `#!/bin/bash` shebang and `set -euo pipefail` near the top so running it as an executable (or via a different shell) doesn\u2019t break or silently misbehave.",
+      "created_at": "2026-08-18T00:42:23Z",
+      "updated_at": "2026-08-18T00:42:24Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005166",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7333",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005166"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005166"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7333"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005166/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 3,
+      "original_line": 3,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 3,
+      "position": 3,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005192",
+      "pull_request_review_id": 4955974362,
+      "id": 3800005192,
+      "node_id": "PRRC_kwDOO0Cobs7if3pI",
+      "diff_hunk": "@@ -0,0 +1,23 @@\n+echo \"Reset Apple BCM4350/BCM43602 Wi-Fi around sleep\"\n+\n+# The installer only reaches new systems. Existing Apple BCM4350 and BCM43602",
+      "path": "migrations/1787013338.sh",
+      "commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "original_commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The script prints its banner unconditionally, even when it exits early (non-Apple hardware / no matching PCI IDs). Consider emitting this message only when the migration is actually going to perform changes (e.g., after the vendor/device checks, or only when installing/enabling). This keeps migration runs quieter and makes logs more meaningful.",
+      "created_at": "2026-08-18T00:42:23Z",
+      "updated_at": "2026-08-18T00:42:24Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005192",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7333",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005192"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005192"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7333"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005192/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 3,
+      "original_line": 3,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 3,
+      "position": 3,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005215",
+      "pull_request_review_id": 4955974362,
+      "id": 3800005215,
+      "node_id": "PRRC_kwDOO0Cobs7if3pf",
+      "diff_hunk": "@@ -0,0 +1,20 @@\n+# BCM4350 and BCM43602 firmware can stop answering after S3 resume on Apple\n+# hardware. Once that happens, brcmfmac times out on ioctls, NetworkManager\n+# cannot initialize its supplicant interface, and every scan fails until the\n+# firmware is reinitialized.\n+#\n+# Unbind the device before sleep so its unreliable firmware power transition is\n+# bypassed, then bind it after wake so NetworkManager gets a freshly initialized\n+# radio. Keep this on the confirmed Apple BCM4350/BCM43602 PCI IDs instead of\n+# resetting T2-era brcmfmac devices, which need the opposite treatment.\n+sys_vendor=\"$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]] &&\n+  lspci -nn | grep -E \"14e4:(43a3|43ba|43bb|43bc)\" >/dev/null; then",
+      "path": "install/hardware/apple/fix-brcmfmac-suspend.sh",
+      "commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "original_commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This installer script relies on bash conditionals (`[[ ... ]]`) but doesn\u2019t include a `#!/bin/bash` shebang or strict mode. Adding `#!/bin/bash` and `set -euo pipefail` improves reliability and prevents accidental execution under `sh`.",
+      "created_at": "2026-08-18T00:42:23Z",
+      "updated_at": "2026-08-18T00:42:24Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005215",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7333",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005215"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005215"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7333"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005215/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 10,
+      "original_start_line": 10,
+      "start_side": "RIGHT",
+      "line": 13,
+      "original_line": 13,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 13,
+      "position": 13,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005248",
+      "pull_request_review_id": 4955974362,
+      "id": 3800005248,
+      "node_id": "PRRC_kwDOO0Cobs7if3qA",
+      "diff_hunk": "@@ -0,0 +1,16 @@\n+[Unit]\n+Description=Reset Broadcom Wi-Fi around sleep on affected Apple hardware\n+Before=sleep.target\n+StopWhenUnneeded=yes\n+ConditionPathExists=/sys/bus/pci/drivers/brcmfmac\n+\n+[Service]\n+Type=oneshot\n+RemainAfterExit=yes\n+ExecStart=/usr/bin/omarchy-hw-brcmfmac-suspend pre\n+ExecStop=/usr/bin/omarchy-hw-brcmfmac-suspend post",
+      "path": "install/hardware/apple/omarchy-brcmfmac-suspend.service",
+      "commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "original_commit_id": "64bde7ed0163301df0a98537caf7735100bad2c7",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Given this unit participates in `sleep.target`, failures from the helper can fail the sleep transaction. If the helper is meant to be best-effort (especially for \u201cno device found\u201d or transient sysfs issues), consider configuring the unit to tolerate specific helper exit codes (via `SuccessExitStatus=`) or otherwise preventing helper failure from blocking suspend.",
+      "created_at": "2026-08-18T00:42:24Z",
+      "updated_at": "2026-08-18T00:42:24Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005248",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7333",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005248"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7333#discussion_r3800005248"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7333"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3800005248/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 10,
+      "original_start_line": 10,
+      "start_side": "RIGHT",
+      "line": 11,
+      "original_line": 11,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 11,
+      "position": 11,
+      "subject_type": "line"
+    }
+  ]
+}

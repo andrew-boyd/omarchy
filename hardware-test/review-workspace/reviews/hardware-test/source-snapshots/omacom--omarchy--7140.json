@@ -1,0 +1,1088 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7140",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "state": "open"
+    },
+    {
+      "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:44Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7140,
+  "checked_at": "2026-09-21T11:56:20.845629+00:00",
+  "title": "Install CS8409 speaker driver on 2016-2017 MacBook Pros",
+  "author": "shawnyeager",
+  "head_sha": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:30:28Z",
+  "state": "closed",
+  "body": "## Why\n\n2016\u20132017 MacBook Pros (`MacBookPro13,1`\u2013`14,3`, including the two-port 13\\\" models with no Touch Bar) use Cirrus CS8409 HDA plus external speaker amps. In-tree `snd_hda_codec_cs8409` leaves those amps unprogrammed. The sink shows up unmuted; speakers stay silent.\n\nThe manual currently lists sound as not functioning. This replaces that with an installer hook. Verified end-to-end on a MacBookPro14,3: patched module loads after reboot, dmesg takes the Apple path, speakers play.\n\n**Depends on the package:** https://github.com/omacom-io/omarchy-pkgs/pull/155. That adds `snd-hda-macbookpro-dkms` to omarchy-pkgs. The hook cannot succeed until that package is in the repo.\n\n## What\n\n- `omarchy-hw-apple-cs8409` matches `MacBookPro13,[123]|MacBookPro14,[123]`. T2 and later are excluded.\n- `install/hardware/apple/fix-cs8409-audio.sh` installs `linux-headers` and `snd-hda-macbookpro-dkms`.\n- Migration `1786889011` does the same for existing installs.\n- Manual: speakers/headphones work; internal mic is still quiet/incomplete (upstream).\n\nNo udev, no modules-load. The HDA stack autoloads; DKMS puts the patched `snd-hda-codec-cs8409` in `updates/` so it wins after reboot.\n\n## Test plan\n\n- [x] `./test/cli`\n- [x] `test/shell.d/cs8409-audio-test.sh`\n- [x] MacBookPro14,3: reboot after the driver is installed \u2192 speakers play",
+  "draft": false,
+  "files": [
+    {
+      "sha": "4f5e447736f10e373f2b70e53d98db9865df3ff4",
+      "filename": "bin/omarchy-hw-apple-cs8409",
+      "status": "added",
+      "additions": 11,
+      "deletions": 0,
+      "changes": 11,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fd3e4a652eacfc51ad130c97868fef036d7b6e92/bin%2Fomarchy-hw-apple-cs8409",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fd3e4a652eacfc51ad130c97868fef036d7b6e92/bin%2Fomarchy-hw-apple-cs8409",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-cs8409?ref=fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "patch": "@@ -0,0 +1,11 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the computer is a 2016\u20132017 MacBook Pro with CS8409 audio\n+# omarchy:hidden=true\n+\n+# Cirrus CS8409 + MAX98706/SSM3515/TAS5764L. In-tree snd_hda_codec_cs8409\n+# does not program those amps. Covers the 2016\u20132017 13\" and 15\" MacBook Pros\n+# (including the two-port 13\" models that have no Touch Bar). T2 and later\n+# use a different codec and must not get this driver.\n+product_name=$(cat \"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\" 2>/dev/null)\n+[[ $product_name =~ MacBookPro13,[123]|MacBookPro14,[123] ]]"
+    },
+    {
+      "sha": "9da5dab153156f9dd86ce6358a45054f3be5e38a",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fd3e4a652eacfc51ad130c97868fef036d7b6e92/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fd3e4a652eacfc51ad130c97868fef036d7b6e92/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "patch": "@@ -33,6 +33,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs8409-audio.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\""
+    },
+    {
+      "sha": "f5d7466f35cf627393647396a436d0d7ed9d508f",
+      "filename": "install/hardware/apple/fix-cs8409-audio.sh",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fd3e4a652eacfc51ad130c97868fef036d7b6e92/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fd3e4a652eacfc51ad130c97868fef036d7b6e92/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh?ref=fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "patch": "@@ -0,0 +1,8 @@\n+# 2016\u20132017 MacBook Pros use CS8409 HDA. The in-tree codec driver leaves\n+# the speaker amps unprogrammed; snd-hda-macbookpro-dkms is the Apple path.\n+\n+if omarchy-hw-apple-cs8409; then\n+  echo \"Detected MacBook with Cirrus CS8409 audio\"\n+\n+  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms\n+fi"
+    },
+    {
+      "sha": "aefcda6ca2a70b453bfc7f5a218a01c1ad3b90cc",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fd3e4a652eacfc51ad130c97868fef036d7b6e92/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fd3e4a652eacfc51ad130c97868fef036d7b6e92/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "patch": "@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, the CS8409 speaker driver on 2016\u20132017 MacBook Pros, and an NVMe suspend fix for those same models.\n \n ### Known Limitations\n \n@@ -51,7 +51,7 @@ The Apple T1 chip was introduced in late 2016 and used exclusively in the first-\n #### Known Issues\n \n - Touch Bar is non-functional\n-- Sound is not functioning\n+- Internal microphone capture is quiet and not fully wired up yet. Speakers and headphones work; the installer installs the CS8409 driver (`snd-hda-macbookpro-dkms`) automatically. Reboot once after install so the patched module replaces the silent in-tree codec.\n \n #### Devices with T2 Chip\n "
+    },
+    {
+      "sha": "b4d562b3659b2aafbf4e50c33b5fbbe4774a9b16",
+      "filename": "migrations/1786889011.sh",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fd3e4a652eacfc51ad130c97868fef036d7b6e92/migrations%2F1786889011.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fd3e4a652eacfc51ad130c97868fef036d7b6e92/migrations%2F1786889011.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786889011.sh?ref=fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "patch": "@@ -0,0 +1,8 @@\n+echo \"Install the CS8409 MacBook speaker driver\"\n+\n+# 2016\u20132017 MacBook Pros only. T2 and other Apple hardware is unchanged.\n+if ! omarchy-hw-apple-cs8409; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms"
+    },
+    {
+      "sha": "36a160c2e0d24612d45a2cbed81239f9d4e2af0a",
+      "filename": "test/shell.d/cs8409-audio-test.sh",
+      "status": "added",
+      "additions": 117,
+      "deletions": 0,
+      "changes": 117,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fd3e4a652eacfc51ad130c97868fef036d7b6e92/test%2Fshell.d%2Fcs8409-audio-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fd3e4a652eacfc51ad130c97868fef036d7b6e92/test%2Fshell.d%2Fcs8409-audio-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fcs8409-audio-test.sh?ref=fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "patch": "@@ -0,0 +1,117 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw=\"$ROOT/bin/omarchy-hw-apple-cs8409\"\n+fix=\"$ROOT/install/hardware/apple/fix-cs8409-audio.sh\"\n+migration=\"$ROOT/migrations/1786889011.sh\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+\n+assert_hw() {\n+  local model=$1 expect=$2 description=$3\n+  local tmp got\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$model\" >\"$tmp\"\n+  if OMARCHY_DMI_PRODUCT_NAME=\"$tmp\" \"$hw\"; then\n+    got=yes\n+  else\n+    got=no\n+  fi\n+  rm -f \"$tmp\"\n+  [[ $got == \"$expect\" ]] || fail \"$description\"\n+  pass \"$description\"\n+}\n+\n+assert_hw MacBookPro14,3 yes \"MacBookPro14,3 has CS8409 audio\"\n+assert_hw MacBookPro14,2 yes \"MacBookPro14,2 has CS8409 audio\"\n+assert_hw MacBookPro14,1 yes \"MacBookPro14,1 has CS8409 audio\"\n+assert_hw MacBookPro13,3 yes \"MacBookPro13,3 has CS8409 audio\"\n+assert_hw MacBookPro13,2 yes \"MacBookPro13,2 has CS8409 audio\"\n+assert_hw MacBookPro13,1 yes \"MacBookPro13,1 has CS8409 audio\"\n+assert_hw MacBookPro15,1 no \"MacBookPro15,1 is T2, not CS8409\"\n+assert_hw MacBook8,1 no \"MacBook8,1 is SPI-only\"\n+\n+grep -Fq 'fix-cs8409-audio.sh' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"hardware install runs the CS8409 hook\"\n+pass \"CS8409 install hook is wired\"\n+\n+grep -Fq 'snd-hda-macbookpro-dkms' \"$fix\" ||\n+  fail \"install hook names the omarchy-pkgs package\"\n+grep -Fq 'omarchy-hw-apple-cs8409' \"$fix\" ||\n+  fail \"install hook is gated on CS8409 detection\"\n+pass \"install hook installs snd-hda-macbookpro-dkms\"\n+\n+grep -Fq 'snd-hda-macbookpro-dkms' \"$manual\" ||\n+  fail \"Mac support chapter names the CS8409 package\"\n+! grep -q 'Sound is not functioning' \"$manual\" ||\n+  fail \"Mac support chapter no longer lists speakers as unsupported\"\n+pass \"Mac support chapter documents CS8409 speakers\"\n+\n+[[ -f $migration ]] || fail \"CS8409 migration exists\"\n+grep -Fq 'omarchy-hw-apple-cs8409' \"$migration\" ||\n+  fail \"migration is gated on CS8409 detection\"\n+grep -Fq 'snd-hda-macbookpro-dkms' \"$migration\" ||\n+  fail \"migration installs the CS8409 package\"\n+! head -1 \"$migration\" | grep -q '^#!' ||\n+  fail \"migration has no shebang\"\n+pass \"migration installs the driver on CS8409 hardware only\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+chmod +x \"$stub_bin/omarchy-pkg-add\"\n+\n+dmi=\"$test_tmp/dmi\"\n+printf 'MacBookPro14,1\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"install hook adds headers and the CS8409 package on a two-port 13-inch\"\n+pass \"install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)\"\n+\n+: >\"$calls\"\n+printf 'MacBookPro15,1\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+[[ ! -s $calls ]] || fail \"T2 hardware skips the CS8409 package\" \"$(cat \"$calls\")\"\n+pass \"install hook skips T2 hardware\"\n+\n+: >\"$calls\"\n+printf 'MacBookPro14,3\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  bash -euo pipefail \"$migration\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"migration installs the CS8409 package on a 15-inch T1\"\n+pass \"migration installs the driver on MacBookPro14,3\"\n+\n+: >\"$calls\"\n+printf 'MacBookPro16,1\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  bash -euo pipefail \"$migration\" >/dev/null\n+[[ ! -s $calls ]] || fail \"migration skips non-CS8409 hardware\" \"$(cat \"$calls\")\"\n+pass \"migration skips non-CS8409 hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5369217581",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#issuecomment-5369217581",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7140",
+      "id": 5369217581,
+      "node_id": "IC_kwDOO0Cobs8AAAABQAfCLQ",
+      "user": {
+        "login": "csk-grit42",
+        "id": 197058565,
+        "node_id": "U_kgDOC77gBQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/197058565?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/csk-grit42",
+        "html_url": "https://github.com/csk-grit42",
+        "followers_url": "https://api.github.com/users/csk-grit42/followers",
+        "following_url": "https://api.github.com/users/csk-grit42/following{/other_user}",
+        "gists_url": "https://api.github.com/users/csk-grit42/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/csk-grit42/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/csk-grit42/subscriptions",
+        "organizations_url": "https://api.github.com/users/csk-grit42/orgs",
+        "repos_url": "https://api.github.com/users/csk-grit42/repos",
+        "events_url": "https://api.github.com/users/csk-grit42/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/csk-grit42/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-21T11:25:13Z",
+      "updated_at": "2026-08-21T11:25:13Z",
+      "body": "I have fixed sound on a MBP T1 2017 14.2 maybe that can be relevant here for a general OMarchy sound on T1 fix:\r\n\r\nThe HOWTO-sound.md from here: https://github.com/csk-grit42/OmarchyOnMacBookPro14.2-2017---A1706-",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5369217581/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 1,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5486733579",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#issuecomment-5486733579",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7140",
+      "id": 5486733579,
+      "node_id": "IC_kwDOO0Cobs8AAAABRwjpCw",
+      "user": {
+        "login": "j7j7",
+        "id": 31825378,
+        "node_id": "MDQ6VXNlcjMxODI1Mzc4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/31825378?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/j7j7",
+        "html_url": "https://github.com/j7j7",
+        "followers_url": "https://api.github.com/users/j7j7/followers",
+        "following_url": "https://api.github.com/users/j7j7/following{/other_user}",
+        "gists_url": "https://api.github.com/users/j7j7/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/j7j7/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/j7j7/subscriptions",
+        "organizations_url": "https://api.github.com/users/j7j7/orgs",
+        "repos_url": "https://api.github.com/users/j7j7/repos",
+        "events_url": "https://api.github.com/users/j7j7/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/j7j7/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-01T00:32:00Z",
+      "updated_at": "2026-09-01T00:32:00Z",
+      "body": "Thanks for this \u2014 I've rebased your CS8409 work onto current `quattro` and extended detection/docs/tests for **iMac18,x / iMac19,x** (verified on iMac18,3, CS8409/CS42L83 subsystem `0x106b1000`).\n\nFollow-up PR: https://github.com/omacom/omarchy/pull/9516  \nMatching pkgs description update: https://github.com/omacom/omarchy-pkgs/pull/249  \n\nHappy for maintainers to take either this branch or merge yours first and land the iMac bit as a follow-up \u2014 whatever is easier.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5486733579/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 1,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758319152",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#issuecomment-5758319152",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7140",
+      "id": 5758319152,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzj6MA",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:30:27Z",
+      "updated_at": "2026-09-21T09:30:27Z",
+      "body": "Automated duplication check: this pull request looks similar to #8285, which covers the same CS8409 MacBook speaker driver. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758319152/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4946359478,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtN0tg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds CS8409 MacBook Pro audio detection and installation hooks, plus migration and documentation updates, with shell tests to validate behavior across supported/unsupported Apple models.\n\n**Changes:**\n- Add `omarchy-hw-apple-cs8409` detector and wire a CS8409 audio install hook into the hardware installer.\n- Add a migration to install `snd-hda-macbookpro-dkms` on matching hardware.\n- Update Mac support documentation and add a shell test covering detection, hook wiring, and migration behavior.\n\n### Reviewed changes\n\nCopilot reviewed 5 out of 6 changed files in this pull request and generated 2 comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| test/shell.d/cs8409-audio-test.sh | Adds end-to-end shell tests for CS8409 detection, install hook wiring, and migration behavior |\r\n| migrations/1786889011.sh | Adds a migration that installs the CS8409 DKMS driver on supported MacBook Pros |\r\n| manual/44-mac-support.md | Documents CS8409 speaker support and updates known limitations/issues |\r\n| install/hardware/apple/fix-cs8409-audio.sh | Adds a hardware install hook to install the CS8409 driver when detected |\r\n| install/hardware/all.sh | Wires the new CS8409 hook into the hardware install sequence |\r\n| bin/omarchy-hw-apple-cs8409 | Adds model-based hardware detection for CS8409 MacBook Pros |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946359478",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946359478"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:06:34Z",
+      "commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40"
+    },
+    {
+      "id": 4946407449,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtQwGQ",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946407449",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946407449"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:32:58Z",
+      "commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40"
+    },
+    {
+      "id": 4946407500,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtQwTA",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946407500",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946407500"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:32:59Z",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92"
+    },
+    {
+      "id": 4946409923,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtQ5ww",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 5 out of 6 changed files in this pull request and generated 1 comment.\n\n\n\n\n<details>\n<summary>Suppressed comments (3)</summary>\n\n**test/shell.d/cs8409-audio-test.sh:58**\n* The assertion fails when the migration *does* have a shebang, but the failure message says \\\"migration has no shebang\\\". Update the message to match the condition (e.g., \\\"migration should not have a shebang\\\"), or invert the check if the intent is to require a shebang.\n```\n! head -1 \"$migration\" | grep -q '^#!' ||\n  fail \"migration has no shebang\"\n```\n**test/shell.d/cs8409-audio-test.sh:97**\n* Quote `$calls` in `[[ ... ]]` tests to avoid word-splitting/globbing issues (even if current temp paths are unlikely to contain spaces). This makes the test more robust and consistent with the surrounding quoted usages.\n```\n[[ ! -s $calls ]] || fail \"T2 hardware skips the CS8409 package\" \"$(cat \"$calls\")\"\n```\n**test/shell.d/cs8409-audio-test.sh:116**\n* Quote `$calls` in `[[ ... ]]` tests to avoid word-splitting/globbing issues (even if current temp paths are unlikely to contain spaces). This makes the test more robust and consistent with the surrounding quoted usages.\n```\n[[ ! -s $calls ]] || fail \"migration skips non-CS8409 hardware\" \"$(cat \"$calls\")\"\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946409923",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946409923"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:34:09Z",
+      "commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40"
+    },
+    {
+      "id": 4946412247,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtRC1w",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 5 out of 6 changed files in this pull request and generated 1 comment.\n\n\n\n\n<details>\n<summary>Suppressed comments (1)</summary>\n\n**migrations/1786889011.sh:7**\n* The migration prints \\\"Install the CS8409...\\\" unconditionally, even on non-CS8409 hardware where it immediately exits. This produces misleading migration logs. Move the echo to after the hardware gate so it only appears when the migration will actually install something.\n```\necho \"Install the CS8409 MacBook speaker driver\"\n\n# 2016\u20132017 MacBook Pros only. T2 and other Apple hardware is unchanged.\nif ! omarchy-hw-apple-cs8409; then\n  exit 0\nfi\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946412247",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946412247"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:35:27Z",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92"
+    },
+    {
+      "id": 4946412260,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtRC5A",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946412260",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946412260"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:35:27Z",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92"
+    },
+    {
+      "id": 4946440892,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJtSyvA",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946440892",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#pullrequestreview-4946440892"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "submitted_at": "2026-08-16T14:48:42Z",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791929303",
+      "pull_request_review_id": 4946359478,
+      "id": 3791929303,
+      "node_id": "PRRC_kwDOO0Cobs7iBD_X",
+      "diff_hunk": "@@ -0,0 +1,8 @@\n+# 2016\u20132017 MacBook Pros use CS8409 HDA. The in-tree codec driver leaves\n+# the speaker amps unprogrammed; snd-hda-macbookpro-dkms is the Apple path.\n+\n+if omarchy-hw-apple-cs8409; then\n+  echo \"Detected MacBook with Cirrus CS8409 audio\"\n+\n+  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms\n+fi",
+      "path": "install/hardware/apple/fix-cs8409-audio.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This hook script has no shebang. Since it\u2019s executed via `run_logged \\\"$OMARCHY_INSTALL/.../fix-cs8409-audio.sh\\\"`, it is likely run as a standalone program; without a shebang it can fail at runtime (e.g., `Exec format error`) depending on how `run_logged` invokes it. Add an explicit `#!/bin/bash` (and ensure it\u2019s executable), or adjust `run_logged`/this file to be sourced consistently with the other hardware hooks.",
+      "created_at": "2026-08-16T14:06:34Z",
+      "updated_at": "2026-08-16T14:06:34Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791929303",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791929303"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791929303"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791929303/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 4,
+      "original_start_line": 4,
+      "start_side": "RIGHT",
+      "line": 8,
+      "original_line": 8,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 8,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791929313",
+      "pull_request_review_id": 4946359478,
+      "id": 3791929313,
+      "node_id": "PRRC_kwDOO0Cobs7iBD_h",
+      "diff_hunk": "@@ -0,0 +1,116 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw=\"$ROOT/bin/omarchy-hw-apple-cs8409\"\n+fix=\"$ROOT/install/hardware/apple/fix-cs8409-audio.sh\"\n+migration=\"$ROOT/migrations/1786889011.sh\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+\n+assert_hw() {\n+  local model=$1 expect=$2 description=$3\n+  local tmp\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$model\" >\"$tmp\"\n+  if OMARCHY_DMI_PRODUCT_NAME=\"$tmp\" \"$hw\"; then\n+    [[ $expect == yes ]] || fail \"$description\"\n+  else\n+    [[ $expect == no ]] || fail \"$description\"\n+  fi\n+  rm -f \"$tmp\"",
+      "path": "test/shell.d/cs8409-audio-test.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "`tmp` is only removed on the success path. If `fail` exits early (likely), the temp file leaks. Consider adding a `trap` for cleanup within `assert_hw` (e.g., on `RETURN`) so the temp file is always removed even when assertions fail.",
+      "created_at": "2026-08-16T14:06:34Z",
+      "updated_at": "2026-08-16T14:06:34Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791929313",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791929313"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791929313"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791929313/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 16,
+      "original_start_line": 16,
+      "start_side": "RIGHT",
+      "line": 22,
+      "original_line": 22,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 22,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791980578",
+      "pull_request_review_id": 4946407449,
+      "id": 3791980578,
+      "node_id": "PRRC_kwDOO0Cobs7iBQgi",
+      "diff_hunk": "@@ -0,0 +1,8 @@\n+# 2016\u20132017 MacBook Pros use CS8409 HDA. The in-tree codec driver leaves\n+# the speaker amps unprogrammed; snd-hda-macbookpro-dkms is the Apple path.\n+\n+if omarchy-hw-apple-cs8409; then\n+  echo \"Detected MacBook with Cirrus CS8409 audio\"\n+\n+  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms\n+fi",
+      "path": "install/hardware/apple/fix-cs8409-audio.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Leaving this without a shebang on purpose \u2014 adding `#!/bin/bash` would break the install-script convention.\n\n`run_logged` does not exec these files. It runs them as `bash -c 'source \"$1\"'` (`install/helpers/logging.sh`). Leaf scripts under `install/` are 0644-style sourced fragments and intentionally omit shebangs. See `agents/skills/install-scripts.md` and the sibling `fix-spi-keyboard.sh` / `fix-t2.sh` hooks.",
+      "created_at": "2026-08-16T14:32:57Z",
+      "updated_at": "2026-08-16T14:32:58Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791980578",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791980578"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791980578"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791980578/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 4,
+      "original_start_line": 4,
+      "start_side": "RIGHT",
+      "line": 8,
+      "original_line": 8,
+      "side": "RIGHT",
+      "in_reply_to_id": 3791929303,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 8,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791980633",
+      "pull_request_review_id": 4946407500,
+      "id": 3791980633,
+      "node_id": "PRRC_kwDOO0Cobs7iBQhZ",
+      "diff_hunk": "@@ -0,0 +1,116 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw=\"$ROOT/bin/omarchy-hw-apple-cs8409\"\n+fix=\"$ROOT/install/hardware/apple/fix-cs8409-audio.sh\"\n+migration=\"$ROOT/migrations/1786889011.sh\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+\n+assert_hw() {\n+  local model=$1 expect=$2 description=$3\n+  local tmp\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$model\" >\"$tmp\"\n+  if OMARCHY_DMI_PRODUCT_NAME=\"$tmp\" \"$hw\"; then\n+    [[ $expect == yes ]] || fail \"$description\"\n+  else\n+    [[ $expect == no ]] || fail \"$description\"\n+  fi\n+  rm -f \"$tmp\"",
+      "path": "test/shell.d/cs8409-audio-test.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Addressed in the follow-up commit: `assert_hw` now records the detector result, removes the temp file, then asserts. `fail()` exits the process, so a RETURN trap would not have run.",
+      "created_at": "2026-08-16T14:32:59Z",
+      "updated_at": "2026-08-16T14:32:59Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791980633",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791980633"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791980633"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791980633/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 16,
+      "original_start_line": 16,
+      "start_side": "RIGHT",
+      "line": 22,
+      "original_line": 22,
+      "side": "RIGHT",
+      "in_reply_to_id": 3791929313,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 22,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791982790",
+      "pull_request_review_id": 4946409923,
+      "id": 3791982790,
+      "node_id": "PRRC_kwDOO0Cobs7iBRDG",
+      "diff_hunk": "@@ -0,0 +1,8 @@\n+echo \"Install the CS8409 MacBook speaker driver\"\n+\n+# 2016\u20132017 MacBook Pros only. T2 and other Apple hardware is unchanged.\n+if ! omarchy-hw-apple-cs8409; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms",
+      "path": "migrations/1786889011.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "If migrations are sourced by a runner (which the shell test appears to expect by enforcing no shebang), `exit 0` will terminate the parent process instead of just skipping this migration. Use `return 0` (or restructure to avoid terminating the caller) when the file is meant to be sourced. Also, the `echo` runs even on non-CS8409 hardware; move logging inside the guarded block so logs reflect actual work performed.",
+      "created_at": "2026-08-16T14:34:09Z",
+      "updated_at": "2026-08-16T14:34:09Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791982790",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791982790"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791982790"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791982790/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 8,
+      "original_line": 8,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 8,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791985319",
+      "pull_request_review_id": 4946412247,
+      "id": 3791985319,
+      "node_id": "PRRC_kwDOO0Cobs7iBRqn",
+      "diff_hunk": "@@ -0,0 +1,8 @@\n+echo \"Install the CS8409 MacBook speaker driver\"\n+\n+# 2016\u20132017 MacBook Pros only. T2 and other Apple hardware is unchanged.\n+if ! omarchy-hw-apple-cs8409; then\n+  exit 0",
+      "path": "migrations/1786889011.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Using `exit 0` here can be unsafe if migrations are executed via `source`/`.` by a migration runner (the test suite enforces \\\"no shebang\\\", which commonly correlates with sourcing). In that scenario, `exit` would terminate the whole runner, potentially skipping subsequent migrations. Prefer a pattern that returns when sourced but exits when executed (e.g., `return 0 2>/dev/null || exit 0`).",
+      "created_at": "2026-08-16T14:35:27Z",
+      "updated_at": "2026-08-16T14:35:27Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791985319",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791985319"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791985319"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791985319/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 5,
+      "original_line": 5,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 5,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791985328",
+      "pull_request_review_id": 4946412260,
+      "id": 3791985328,
+      "node_id": "PRRC_kwDOO0Cobs7iBRqw",
+      "diff_hunk": "@@ -0,0 +1,8 @@\n+echo \"Install the CS8409 MacBook speaker driver\"\n+\n+# 2016\u20132017 MacBook Pros only. T2 and other Apple hardware is unchanged.\n+if ! omarchy-hw-apple-cs8409; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms",
+      "path": "migrations/1786889011.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "6bf12eeee05db7f3a659d5fb1278122c7ff7bb40",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Migrations are not sourced. `omarchy-migrate` runs each file as its own process:\n\n```\nOMARCHY_PATH=\"$OMARCHY_PATH\" bash -euo pipefail \"$file\"\n```\n\nSee `bin/omarchy-migrate` and `agents/skills/migrations.md`. `exit 0` only skips this migration; it cannot terminate the parent. The leading `echo` is required by the template even when the hardware check then no-ops \u2014 same shape as the T1 migration.",
+      "created_at": "2026-08-16T14:35:27Z",
+      "updated_at": "2026-08-16T14:35:27Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791985328",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791985328"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3791985328"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3791985328/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 8,
+      "original_line": 8,
+      "side": "RIGHT",
+      "in_reply_to_id": 3791982790,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 8,
+      "position": 8,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3792014556",
+      "pull_request_review_id": 4946440892,
+      "id": 3792014556,
+      "node_id": "PRRC_kwDOO0Cobs7iBYzc",
+      "diff_hunk": "@@ -0,0 +1,8 @@\n+echo \"Install the CS8409 MacBook speaker driver\"\n+\n+# 2016\u20132017 MacBook Pros only. T2 and other Apple hardware is unchanged.\n+if ! omarchy-hw-apple-cs8409; then\n+  exit 0",
+      "path": "migrations/1786889011.sh",
+      "commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "original_commit_id": "fd3e4a652eacfc51ad130c97868fef036d7b6e92",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Same as the sibling comment: migrations are not sourced.\n\n`omarchy-migrate` runs each file in its own process:\n\n```\nOMARCHY_PATH=\"$OMARCHY_PATH\" bash -euo pipefail \"$file\"\n```\n\nSee `bin/omarchy-migrate` and `agents/skills/migrations.md`. The no-shebang rule is because the runner invokes `bash` on the file, not because the file is sourced. `exit 0` only skips this migration.\n\n`return 0 2>/dev/null || exit 0` would hide a real `return` failure and does not match the rest of `migrations/` (or the documented early-exit example in `agents/skills/migrations.md`). Leaving `exit 0`.",
+      "created_at": "2026-08-16T14:48:42Z",
+      "updated_at": "2026-08-16T14:48:42Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7140#discussion_r3792014556",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7140",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3792014556"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7140#discussion_r3792014556"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7140"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3792014556/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 5,
+      "original_line": 5,
+      "side": "RIGHT",
+      "in_reply_to_id": 3791985319,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 5,
+      "position": 5,
+      "subject_type": "line"
+    }
+  ]
+}

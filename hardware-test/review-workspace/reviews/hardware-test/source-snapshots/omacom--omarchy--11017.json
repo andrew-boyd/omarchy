@@ -1,0 +1,75 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11017",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "wifi-nvram"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "a49800201b8d99aa55062338d29cceada694acc2",
+      "state": "open"
+    },
+    {
+      "head_sha": "a49800201b8d99aa55062338d29cceada694acc2",
+      "state": "open",
+      "updated_at": "2026-09-09T17:58:59Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11017,
+  "checked_at": "2026-09-21T11:57:37.592197+00:00",
+  "title": "Install missing BCM43602 board NVRAM on MacBookPro13,3",
+  "author": "justin-schroeder",
+  "head_sha": "a49800201b8d99aa55062338d29cceada694acc2",
+  "base_sha": "5ead870507dfb68db696b3ddb948cc3d178e8d62",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-09T17:58:59Z",
+  "state": "open",
+  "body": "# Install missing BCM43602 board NVRAM on MacBookPro13,3\n\nOn a MacBookPro13,3 with BCM43602 [14e4:43ba], the stock binary firmware initialized without board NVRAM but only discovered 2.4 GHz networks and reported failed WPA2 handshakes as incorrect passwords. Installing the board configuration and reloading brcmfmac restored 5 GHz discovery and a successful connection at 5240 MHz, with signal \u221239 dBm.\n\nAdd a hardware setup leaf after the existing brcmfmac supplicant workaround. Match Apple DMI, MacBookPro13,3, and PCI/subsystem IDs 14e4:43ba / 106b:015a; the same chip in other models is not sufficient evidence of compatible board calibration. Fetch the tested community NVRAM from an immutable URL and verify SHA-256 before writing a model-specific firmware file. Preserve existing generic/model-specific overrides, including compressed files and symlinks. Substitute the interface MAC; if absent or the shared Broadcom placeholder, generate a persistent locally administered unicast address. Do not reload the adapter during installation.\n\nSource: [Mike Ratcliffe\u2019s BCM43602 board configuration](https://gist.github.com/MikeRatcliffe/9614c16a8ea09731a9d5e91685bd8c80), pinned file blob `bd7af7c6f01df3ccee1471d36cb8df15d618a6aa`, SHA-256 `b109f3e6663b0e888c2559e36f7e0109f2a3a6b9765786d11f849f16d4b32d06`. The data is downloaded rather than vendored; matching installations require network access to the pinned source. Download/checksum failures stop the leaf without installing an unverified file.\n\nValidation:\n- Real hardware: MacBookPro13,3, BCM43602 rev 02; Linux 7.1.9-arch1-2; firmware 7.35.177.61; NetworkManager 1.58.1-1. Verified multiple 5 GHz scan results and successful 5 GHz connection after adding the same NVRAM data and reloading brcmfmac_wcc/brcmfmac. The pre-existing feature_disable=0x82000 setting was retained and applied on reload.\n- Focused sandbox tests cover hardware exclusions, existing overrides, MAC handling, repeat runs, failed downloads and checksum mismatches.\n- Bash syntax and git whitespace checks pass.\n- Full `./test/all`: CLI suite passed; 5 of 237 shell test files failed. `config-test.sh`, `snapper-test.sh`, and `unowned-system-paths-test.sh` require the absent companion omarchy-pkgs checkout; `launch-about-test.sh` fails its roomy-window animation assertion. These four failures reproduce on untouched upstream `5ead8705`. `locate-test.sh` tried to decode ignored Python bytecode generated in bin/__pycache__ by earlier tests; it passes after removing that generated cache. The new Wi-Fi suite passes. No unrelated test changes are included.\n\nClean ISO installation, reboot persistence, successful 2.4 GHz authentication after the change, other Mac models and long-term stability have not been validated. This PR adds fresh-install hardware setup; it does not add a migration or change WPA settings, regulatory settings, binary firmware, or suspend behavior.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "36f24aa5f2de30513fca4ebdc35ee60f61075c21",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a49800201b8d99aa55062338d29cceada694acc2/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a49800201b8d99aa55062338d29cceada694acc2/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=a49800201b8d99aa55062338d29cceada694acc2",
+      "patch": "@@ -42,6 +42,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-bcm43602-nvram.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "8887719e2591ae03d792ea71a6714d943c568aa6",
+      "filename": "install/hardware/apple/fix-bcm43602-nvram.sh",
+      "status": "added",
+      "additions": 51,
+      "deletions": 0,
+      "changes": 51,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a49800201b8d99aa55062338d29cceada694acc2/install%2Fhardware%2Fapple%2Ffix-bcm43602-nvram.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a49800201b8d99aa55062338d29cceada694acc2/install%2Fhardware%2Fapple%2Ffix-bcm43602-nvram.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-bcm43602-nvram.sh?ref=a49800201b8d99aa55062338d29cceada694acc2",
+      "patch": "@@ -0,0 +1,51 @@\n+# The MacBookPro13,3 BCM43602 can load the stock binary firmware without its\n+# board NVRAM, but then miss 5 GHz networks and fail WPA handshakes on 2.4 GHz.\n+# Installing this board configuration restored 5 GHz on that model with\n+# 7.35.177.61 firmware. Keep the match narrow: a shared chip ID does not imply\n+# the same RF wiring/calibration on other Macs or non-Apple boards.\n+# Source: https://gist.github.com/MikeRatcliffe/9614c16a8ea09731a9d5e91685bd8c80\n+# Fetch a pinned, verified revision rather than redistributing the board data.\n+(\n+  sys_vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\n+  product_name=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+  if [[ $sys_vendor != Apple* || $product_name != \"MacBookPro13,3\" ]]; then\n+    return 0\n+  fi\n+\n+  for device in /sys/bus/pci/devices/*; do\n+    [[ -d $device ]] || continue\n+    if [[ $(cat \"$device/vendor\") == \"0x14e4\" && $(cat \"$device/device\") == \"0x43ba\" &&\n+      $(cat \"$device/subsystem_vendor\") == \"0x106b\" && $(cat \"$device/subsystem_device\") == \"0x015a\" ]]; then\n+      firmware_dir=/usr/lib/firmware/brcm\n+      target=\"$firmware_dir/brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3.txt\"\n+      # Respect administrator and package-provided NVRAM, including compressed\n+      # files and symlinks. Reapplying hardware setup must preserve the MAC.\n+      for existing in \"$target\" \"$target.zst\" \"$target.xz\" \\\n+        \"$firmware_dir/brcmfmac43602-pcie.txt\"{,.zst,.xz}; do\n+        if [[ -e $existing || -L $existing ]]; then\n+          return 0\n+        fi\n+      done\n+\n+      scratch=$(mktemp -d)\n+      trap 'rm -rf \"$scratch\"' EXIT\n+      curl --fail --silent --show-error --location --retry 2 --connect-timeout 10 --max-time 60 \\\n+        https://gist.githubusercontent.com/MikeRatcliffe/9614c16a8ea09731a9d5e91685bd8c80/raw/bd7af7c6f01df3ccee1471d36cb8df15d618a6aa/brcmfmac43602-pcie.txt \\\n+        -o \"$scratch/nvram\"\n+      echo \"b109f3e6663b0e888c2559e36f7e0109f2a3a6b9765786d11f849f16d4b32d06  $scratch/nvram\" | sha256sum --check --status\n+\n+      # The stock firmware can report a shared Broadcom placeholder address.\n+      # Use a per-install locally administered unicast MAC in that case, or\n+      # when setup runs without a bound network interface.\n+      macaddr=$(cat \"$device\"/net/*/address 2>/dev/null || true)\n+      if [[ ! $macaddr =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ || $macaddr == \"00:90:4c:0d:f4:3e\" ]]; then\n+        macaddr=\"02$(od -An -N5 -tx1 /dev/urandom | tr -d '\\n' | tr ' ' ':')\"\n+      fi\n+      sed \"s/^macaddr=.*/macaddr=$macaddr/\" \"$scratch/nvram\" > \"$scratch/board.txt\"\n+      install -Dm644 \"$scratch/board.txt\" \"$target\"\n+      echo \"Installed MacBookPro13,3 BCM43602 board NVRAM; applies on the next boot\"\n+      # Do not reload the driver: installation may be using this Wi-Fi link.\n+      break\n+    fi\n+  done\n+)"
+    },
+    {
+      "sha": "30882b0d0340cc1b2bcefbb360f9d71bab33dbaa",
+      "filename": "test/shell.d/apple-bcm43602-nvram-test.sh",
+      "status": "added",
+      "additions": 99,
+      "deletions": 0,
+      "changes": 99,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a49800201b8d99aa55062338d29cceada694acc2/test%2Fshell.d%2Fapple-bcm43602-nvram-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a49800201b8d99aa55062338d29cceada694acc2/test%2Fshell.d%2Fapple-bcm43602-nvram-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-bcm43602-nvram-test.sh?ref=a49800201b8d99aa55062338d29cceada694acc2",
+      "patch": "@@ -0,0 +1,99 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+require_command python3\n+\n+python3 - \"$ROOT\" <<'PYTEST'\n+import hashlib\n+import os\n+from pathlib import Path\n+import re\n+import subprocess\n+import sys\n+import tempfile\n+\n+root = Path(sys.argv[1])\n+source = (root / \"install/hardware/apple/fix-bcm43602-nvram.sh\").read_text()\n+fixture = b\"sromrev=11\\nmacaddr=xx:xx:xx:xx:xx:xx\\naa2g=7\\naa5g=7\\n\"\n+\n+with tempfile.TemporaryDirectory() as tmp:\n+    base = Path(tmp)\n+    def run_case(name, *, vendor=\"Apple Inc.\", model=\"MacBookPro13,3\", chip=\"0x43ba\",\n+                 subsystem=\"0x015a\", mac=\"00:90:4c:0d:f4:3e\", existing=None,\n+                 corrupt=False, download_fail=False):\n+        case = base / name\n+        dmi = case / \"sys/class/dmi/id\"\n+        pci = case / \"sys/bus/pci/devices/0000:03:00.0\"\n+        firmware = case / \"firmware\"\n+        stub = case / \"bin\"\n+        for path in (dmi, pci, firmware, stub):\n+            path.mkdir(parents=True)\n+        (dmi / \"sys_vendor\").write_text(vendor)\n+        (dmi / \"product_name\").write_text(model)\n+        for key, value in dict(vendor=\"0x14e4\", device=chip,\n+                               subsystem_vendor=\"0x106b\", subsystem_device=subsystem).items():\n+            (pci / key).write_text(value)\n+        if mac is not None:\n+            (pci / \"net/wlan0\").mkdir(parents=True)\n+            (pci / \"net/wlan0/address\").write_text(mac)\n+        target = firmware / \"brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3.txt\"\n+        if existing:\n+            (firmware / existing).write_text(\"keep custom configuration\")\n+        payload = case / \"payload\"\n+        payload.write_bytes(b\"corrupt\" if corrupt else fixture)\n+        curl = stub / \"curl\"\n+        curl.write_text(\"#!/bin/bash\\necho download >> '\" + str(case / \"calls\") + \"'\\n\" +\n+                        (\"exit 22\\n\" if download_fail else\n+                         \"while [[ $1 != -o ]]; do shift; done\\ncp '\" + str(payload) + \"' \\\"$2\\\"\\n\"))\n+        curl.chmod(0o755)\n+        script = case / \"leaf.sh\"\n+        script.write_text(source.replace(\"/sys/\", str(case / \"sys\") + \"/\")\n+                          .replace(\"/usr/lib/firmware/brcm\", str(firmware))\n+                          .replace(\"b109f3e6663b0e888c2559e36f7e0109f2a3a6b9765786d11f849f16d4b32d06\",\n+                                   hashlib.sha256(fixture).hexdigest()))\n+        env = dict(os.environ, PATH=str(stub) + os.pathsep + os.environ[\"PATH\"])\n+        def invoke():\n+            return subprocess.run([\"bash\", \"-e\", \"-c\", 'source \"$1\"', \"bash\", str(script)],\n+                                  env=env, capture_output=True, text=True)\n+        result = invoke()\n+        return case, target, result, invoke\n+\n+    for name, kwargs in [(\"non-apple\", dict(vendor=\"Dell Inc.\")),\n+                         (\"other-model\", dict(model=\"MacBookPro14,3\")),\n+                         (\"other-chip\", dict(chip=\"0x43a0\")),\n+                         (\"other-board\", dict(subsystem=\"0x9999\"))]:\n+        case, target, result, _ = run_case(name, **kwargs)\n+        assert result.returncode == 0 and not target.exists() and not (case / \"calls\").exists(), name\n+        print(\"ok - skips \" + name)\n+\n+    for suffix in (\".txt\", \".txt.zst\", \".txt.xz\"):\n+        for prefix in (\"brcmfmac43602-pcie\", \"brcmfmac43602-pcie.Apple Inc.-MacBookPro13,3\"):\n+            filename = prefix + suffix\n+            case, target, result, _ = run_case(\"existing-\" + filename, existing=filename)\n+            assert result.returncode == 0 and not (case / \"calls\").exists()\n+            assert (target.parent / filename).read_text() == \"keep custom configuration\"\n+    print(\"ok - preserves generic and model-specific NVRAM, including compressed files\")\n+\n+    case, target, result, invoke = run_case(\"install\")\n+    assert result.returncode == 0, result.stderr\n+    installed = target.read_text()\n+    mac = re.search(r\"^macaddr=(.*)$\", installed, re.M)[1]\n+    assert re.fullmatch(r\"02(:[0-9a-f]{2}){5}\", mac), mac\n+    assert installed == fixture.decode().replace(\"xx:xx:xx:xx:xx:xx\", mac)\n+    assert target.stat().st_mode & 0o777 == 0o644\n+    assert invoke().returncode == 0 and target.read_text() == installed\n+    assert (case / \"calls\").read_text().count(\"download\") == 1\n+    print(\"ok - installs verified NVRAM with a unique local MAC and preserves it on rerun\")\n+\n+    _, target, result, _ = run_case(\"real-mac\", mac=\"78:12:34:56:78:90\")\n+    assert result.returncode == 0 and \"macaddr=78:12:34:56:78:90\" in target.read_text()\n+    print(\"ok - preserves the interface address when it is not the Broadcom placeholder\")\n+    _, target, result, _ = run_case(\"no-interface\", mac=None)\n+    assert result.returncode == 0 and \"macaddr=02:\" in target.read_text()\n+    print(\"ok - handles installation without a bound network interface\")\n+    for name, kwargs in [(\"bad-digest\", dict(corrupt=True)), (\"download-failure\", dict(download_fail=True))]:\n+        _, target, result, _ = run_case(name, **kwargs)\n+        assert result.returncode != 0 and not target.exists(), name\n+        print(\"ok - refuses installation on \" + name)\n+PYTEST"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

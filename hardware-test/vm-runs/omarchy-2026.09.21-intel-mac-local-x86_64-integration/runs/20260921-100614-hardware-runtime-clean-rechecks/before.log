@@ -1,0 +1,102 @@
+omarchy:
+When                Type  Source                                           Valid
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wl_shm (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_viewporter (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_tearing_control_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_fractional_scale_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zxdg_output_manager_v1 (ver 3)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_cursor_shape_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_idle_inhibit_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_relative_pointer_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zxdg_decoration_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_alpha_modifier_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_gamma_control_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_foreign_toplevel_list_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_pointer_gestures_v1 (ver 3)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_foreign_toplevel_manager_v1 (ver 3)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [toplevel] (activate) locks: 1
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_keyboard_shortcuts_inhibit_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_text_input_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_text_input_manager_v3 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_pointer_constraints_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_output_power_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: xdg_activation_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_idle_notifier_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_lock_notifier_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_session_lock_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_input_method_manager_v2 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_virtual_keyboard_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_virtual_pointer_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_output_manager_v1 (ver 4)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: org_kde_kwin_server_decoration_manager (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_focus_grab_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_tablet_manager_v2 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_layer_shell_v1 (ver 5)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_presentation (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: xdg_wm_base (ver 7)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_data_control_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwp_primary_selection_device_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: xwayland_shell_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_toplevel_mapping_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [toplevel mapping] registered manager
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_global_shortcuts_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [globalshortcuts] registered
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: xdg_wm_dialog_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_single_pixel_buffer_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_security_context_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_ctm_control_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_input_capture_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [input-capture] initializing input capture portal
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [input-capture] init successful
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_surface_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_content_type_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: xdg_toplevel_tag_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: xdg_system_bell_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: vicinae_hotkey_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_workspace_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_data_control_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_pointer_warp_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_fifo_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zxdg_exporter_v2 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zxdg_importer_v2 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_background_effect_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: wp_commit_timing_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: zwlr_screencopy_manager_v1 (ver 3)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [pipewire] connected
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG] [screencopy] init successful
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: hyprland_toplevel_export_manager_v1 (ver 2)
+Sep 21 14:06:44 omarchy-test xdg-desktop-portal-hyprland[1272]: [LOG]  | Got interface: ext_output_image_capture_source_manager_v1 (ver 1)
+Sep 21 14:06:44 omarchy-test systemd[706]: Finished Notify about pending Omarchy migrations.
+Sep 21 14:06:44 omarchy-test systemd[706]: Started Portal service.
+Sep 21 14:06:44 omarchy-test fcitx5[1107]: I2026-09-21 14:06:44.557048 portalsettingmonitor.cpp:97] A new portal show up, start a new query.
+Sep 21 14:06:44 omarchy-test fcitx5[1107]: I2026-09-21 14:06:44.557122 portalsettingmonitor.cpp:97] A new portal show up, start a new query.
+Sep 21 14:06:44 omarchy-test owed[1164]: 14:06:44.784 owe-render[1164] INFO ../owe-0.2.3/src/render/wayland.c:114: output Virtual-1 preferred scale 120/120
+Sep 21 14:06:44 omarchy-test owed[1164]: 14:06:44.785 owe-render[1164] INFO ../owe-0.2.3/src/render/wayland.c:363: wayland ready, outputs=1
+Sep 21 14:06:44 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy-shell paths omarchyPath=/usr/share/omarchy shellDir=/usr/share/omarchy/shell firstPartyPluginsDir=/usr/share/omarchy/shell/plugins defaultsPath=/usr/share/omarchy/config/omarchy/shell.json userConfigPath=/home/omarchy/.config/omarchy/shell.json
+Sep 21 14:06:44 omarchy-test omarchy-shell[968]:   INFO: Configuration Loaded
+Sep 21 14:06:44 omarchy-test owed[1164]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 21 14:06:44 omarchy-test owed[1164]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 21 14:06:44 omarchy-test uwsm_app-daemon[1070]: received: app -- udiskie --automount --no-notify --no-tray
+Sep 21 14:06:44 omarchy-test uwsm_app-daemon[1070]: sent: exec systemd-run --user --scope --slice=app-graphical.slice --unit=app-Hyprland-udiskie-5f96748b.scope --description=udiskie --quiet --collect --same-dir -- udiskie --automount --no-notify --no-tray
+Sep 21 14:06:44 omarchy-test uwsm_app-daemon[1070]: received: app -- omarchy-hyprland-monitor-watch
+Sep 21 14:06:44 omarchy-test uwsm_app-daemon[1070]: sent: exec systemd-run --user --scope --slice=app-graphical.slice '--unit=app-Hyprland-omarchy\x2dhyprland\x2dmonitor\x2dwatch-de30f796.scope' --description=omarchy-hyprland-monitor-watch --quiet --collect --same-dir -- omarchy-hyprland-monitor-watch
+Sep 21 14:06:44 omarchy-test systemd[706]: Started udiskie.
+Sep 21 14:06:44 omarchy-test owed[1164]: 14:06:44.997 owe-render[1164] INFO ../owe-0.2.3/src/render/egl.c:193: egl ready version 1.5
+Sep 21 14:06:44 omarchy-test owed[1164]: 14:06:44.997 owe-render[1164] INFO ../owe-0.2.3/src/render/wayland.c:418: egl surface attached for output Virtual-1 (1280x800@1)
+Sep 21 14:06:45 omarchy-test systemd[706]: Started omarchy-hyprland-monitor-watch.
+Sep 21 14:06:45 omarchy-test owed[1164]: Cannot load libcuda.so.1
+Sep 21 14:06:45 omarchy-test owed[1164]: 14:06:45.062 owe-render[1164] INFO ../owe-0.2.3/src/render/mpv.c:194: libmpv ready
+Sep 21 14:06:45 omarchy-test owed[1164]: 14:06:45.062 owe-render[1164] INFO ../owe-0.2.3/src/render/main.c:179: ready, socket=/run/user/1000/owe/render.sock
+Sep 21 14:06:45 omarchy-test omarchy-shell[968]:   WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: Connection already associated with an application ID")
+Sep 21 14:06:47 omarchy-test owed[1088]: 14:06:47.103 owed[1088] WARN ../owe-0.2.3/src/daemon/shell.c:50: shell background disable failed: omarchy-shell is not responding
+Sep 21 14:06:47 omarchy-test owed[1088]: 14:06:47.104 owed[1088] INFO ../owe-0.2.3/src/daemon/main.c:531: engine: renderer
+Sep 21 14:06:47 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy idle 2026-09-21T14:06:47.257Z service-ready
+Sep 21 14:06:47 omarchy-test omarchy-shell[968]:   WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: Connection already associated with an application ID")
+Sep 21 14:06:47 omarchy-test owed[1164]: 14:06:47.509 owe-render[1164] INFO ../owe-0.2.3/src/render/still.c:403: still loaded /home/omarchy/.local/state/omarchy/current/theme/backgrounds/0-winding-road.webp (1422x800)
+Sep 21 14:06:47 omarchy-test owed[1088]: 14:06:47.624 owed[1088] INFO ../owe-0.2.3/src/daemon/main.c:866: ready, socket=/run/user/1000/owe/owed.sock
+Sep 21 14:06:47 omarchy-test omarchy-shell[968]:   WARN quickshell.dbus.objectmanager: Failed to create DBusObjectManagerInterface for "org.bluez" "/" : QDBusError("", "")
+Sep 21 14:06:48 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy polkit agent registered
+Sep 21 14:06:48 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy idle 2026-09-21T14:06:48.504Z stay-awake: disabled state-file
+Sep 21 14:06:48 omarchy-test omarchy-shell[968]:  DEBUG qml: omarchy idle 2026-09-21T14:06:48.647Z idle-monitor: active
+Sep 21 14:06:51 omarchy-test sshd-session[2283]: Received disconnect from 10.0.2.2 port 45292:11: disconnected by user
+Sep 21 14:06:51 omarchy-test sshd-session[2283]: Disconnected from user omarchy 10.0.2.2 port 45292

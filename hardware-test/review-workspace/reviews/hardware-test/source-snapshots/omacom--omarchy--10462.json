@@ -1,0 +1,172 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10462",
+  "origins": [
+    "published-source-table"
+  ],
+  "groups": [],
+  "prior_snapshots": [
+    {
+      "head_sha": "c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+      "state": "open",
+      "updated_at": "2026-09-20T01:48:15Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10462,
+  "checked_at": "2026-09-21T11:57:54.789145+00:00",
+  "title": "Wake the panel when a laptop-only lid opens",
+  "author": "codemonkey76",
+  "head_sha": "c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:48:49Z",
+  "state": "closed",
+  "body": "Fixes the gap reported in #10170, whose analysis this follows.\n\nThe lid-open binding runs `omarchy-hyprland-monitor-clamshell`. That reconciler dispatches a DPMS enable only from `enable_internal()`, behind `if (( changed ))` \u2014 true only when a clamshell flag file was just removed. **The flag is never written when there is no external monitor**, so on a laptop-only machine the reconciler runs and dispatches nothing.\n\nMeanwhile `lock/Service.qml`'s `idleBlankTimer` blanks the panel five seconds after a lid-close lock. So a laptop-only lid resume returns to a dark screen with no path back. Only `Keys.onPressed` on the lock screen's password field reaches `omarchy-system-wake`, and logind swallows the power button (`10-ignore-power-button.conf`) \u2014 so the machine looks hung to anyone who reaches for the power button rather than typing.\n\n## The fix\n\nBind lid open to `omarchy-system-lid-open`, mirroring the existing `omarchy-system-lid-close`: reconcile first, exactly as before, then wake.\n\nThe wake had to stay a no-op when nothing is dark \u2014 `omarchy-hyprland-monitor-internal`'s `recover()` warns that an unconditional wake \"undoes lock-screen blanking and races the resume modeset into a visible flash\", and the clamshell watcher polls the reconciler every few seconds. Two things keep that true here: the wake sits on a lid-switch **event** rather than in the polled reconciler, and `omarchy-brightness-display on` already exits early while every enabled monitor reports `dpmsStatus` true.\n\n## Test plan\n\n- [x] New `test/shell.d/lid-open-test.sh` asserts the handler reconciles first, then wakes, and does nothing else. Verified non-vacuous \u2014 dropping the wake line fails it with \"second call was none\".\n- [x] `test/shell.d/monitor-recovery-test.sh` updated for the new binding.\n- [x] `./test/all` \u2014 the only failure is `bin-style-test.sh`, which fails identically on the base commit (raw `command -v` in the AI app removers, fixed separately in #10460).\n- [x] Hardware A/B on a laptop-only machine (Intel CometLake-H + NVIDIA hybrid, `eDP-1` only, deep S3), blanking the panel exactly as the lock screen does:\n\n```\nblanked (as after lid-close lock): [{\"name\":\"eDP-1\",\"dpmsStatus\":false}]\nafter omarchy-system-lid-open   : [{\"name\":\"eDP-1\",\"dpmsStatus\":true}]\n\nblanked again                   : [{\"name\":\"eDP-1\",\"dpmsStatus\":false}]\nafter monitor-clamshell alone   : [{\"name\":\"eDP-1\",\"dpmsStatus\":false}]   <- current binding\n```\n\nScope note: this machine hit a dark panel on an 11-hour lid-closed resume (lid closed 19:07:14, opened 06:32:06, no external monitor), which is what led here. The structural gap above is confirmed and fixed. I can't prove it was the *only* cause of that particular incident \u2014 one observation from it recorded `dpmsStatus: 1` while the panel was dark, and I can't now reconstruct whether that reading was taken before or after a manual `dpms enable`. If a compositor-vs-hardware desync also exists on this hardware, it is a separate bug and this does not address it.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_013p9Qh6dX4FuwBJAWhNPVbn\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a6a1c87318e5a430b644248ede57fb1c26e0797a",
+      "filename": "bin/omarchy-system-lid-open",
+      "status": "added",
+      "additions": 20,
+      "deletions": 0,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c792cc7f8277b9b524f9d59f1890faf0f5785cca/bin%2Fomarchy-system-lid-open",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c792cc7f8277b9b524f9d59f1890faf0f5785cca/bin%2Fomarchy-system-lid-open",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-system-lid-open?ref=c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+      "patch": "@@ -0,0 +1,20 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Reconcile displays and wake the panel when the laptop lid opens\n+# omarchy:group=system\n+# omarchy:hidden=true\n+\n+# Reconcile first, exactly as the lid-open binding has always done.\n+omarchy-hyprland-monitor-clamshell\n+\n+# The reconciler only dispatches a DPMS enable when it has just cleared a\n+# clamshell flag, and that flag is never written on a laptop with no external\n+# monitor. A laptop-only lid open therefore had no path back from the lock\n+# screen's idle blank: the panel stayed dark until a keypress reached the\n+# password field, and logind swallows the power button, so reaching for that\n+# instead makes a working machine look hung.\n+#\n+# omarchy-brightness-display on already skips its dispatch while every enabled\n+# monitor reports dpmsStatus true, so a lid open that never blanked stays a\n+# no-op and no display is forced through a second modeset.\n+omarchy-brightness-display on"
+    },
+    {
+      "sha": "85667469f527266c56e6607a41da06393f8618de",
+      "filename": "default/hypr/bindings/utilities.lua",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c792cc7f8277b9b524f9d59f1890faf0f5785cca/default%2Fhypr%2Fbindings%2Futilities.lua",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c792cc7f8277b9b524f9d59f1890faf0f5785cca/default%2Fhypr%2Fbindings%2Futilities.lua",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fhypr%2Fbindings%2Futilities.lua?ref=c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+      "patch": "@@ -32,7 +32,7 @@ o.bind_toggle(\"SUPER + CTRL + N\", \"Toggle nightlight\", \"nightlight\")\n o.bind(\"SUPER + CTRL + Delete\", \"Toggle laptop display\", \"omarchy-hyprland-monitor-internal toggle\")\n o.bind(\"SUPER + CTRL + ALT + Delete\", \"Toggle laptop display mirroring\", \"omarchy-hyprland-monitor-internal-mirror toggle\")\n o.bind(\"switch:on:Lid Switch\", nil, \"omarchy-system-lid-close\", { locked = true })\n-o.bind(\"switch:off:Lid Switch\", nil, \"omarchy-hyprland-monitor-clamshell\", { locked = true })\n+o.bind(\"switch:off:Lid Switch\", nil, \"omarchy-system-lid-open\", { locked = true })\n \n o.bind(\"PRINT\", \"Screenshot\", \"omarchy-capture-screenshot\")\n o.bind(\"ALT + PRINT\", \"Screenrecording\", \"omarchy-capture-screenrecording --stop-recording || omarchy-menu toggle trigger.capture.screenrecord\")"
+    },
+    {
+      "sha": "1aa43e86188e5ecce0216edd5229e735bebab497",
+      "filename": "test/shell.d/lid-open-test.sh",
+      "status": "added",
+      "additions": 43,
+      "deletions": 0,
+      "changes": 43,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c792cc7f8277b9b524f9d59f1890faf0f5785cca/test%2Fshell.d%2Flid-open-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c792cc7f8277b9b524f9d59f1890faf0f5785cca/test%2Fshell.d%2Flid-open-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Flid-open-test.sh?ref=c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+      "patch": "@@ -0,0 +1,43 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+lid_open=\"$ROOT/bin/omarchy-system-lid-open\"\n+tmpdir=$(mktemp -d)\n+trap 'rm -rf \"$tmpdir\"' EXIT\n+\n+mock_bin=\"$tmpdir/bin\"\n+call_log=\"$tmpdir/calls\"\n+mkdir -p \"$mock_bin\"\n+: >\"$call_log\"\n+\n+for command in omarchy-hyprland-monitor-clamshell omarchy-brightness-display; do\n+  cat >\"$mock_bin/$command\" <<SH\n+#!/bin/bash\n+echo \"$command \\$*\" >>\"\\$CALL_LOG\"\n+SH\n+done\n+chmod +x \"$mock_bin\"/*\n+\n+CALL_LOG=\"$call_log\" PATH=\"$mock_bin:$PATH\" \"$lid_open\"\n+mapfile -t calls <\"$call_log\"\n+\n+# The reconciler settles which outputs exist before anything asks the\n+# compositor to light them, which is the order the binding has always used.\n+[[ ${calls[0]:-} == \"omarchy-hyprland-monitor-clamshell \" ]] ||\n+  fail \"lid open reconciles displays first\" \"first call was ${calls[0]:-none}\"\n+pass \"lid open reconciles displays first\"\n+\n+# Without this the laptop-only case has no path from the lock screen's idle\n+# blank back to a lit panel: the reconciler dispatches a DPMS enable only when\n+# it has just cleared a clamshell flag, and no such flag is ever written when\n+# there is no external monitor to go clamshell with.\n+[[ ${calls[1]:-} == \"omarchy-brightness-display on\" ]] ||\n+  fail \"lid open wakes the panel\" \"second call was ${calls[1]:-none}\"\n+pass \"lid open wakes the panel\"\n+\n+(( ${#calls[@]} == 2 )) ||\n+  fail \"lid open does no more than reconcile and wake\" \"${#calls[@]} calls\"\n+pass \"lid open does no more than reconcile and wake\""
+    },
+    {
+      "sha": "623bd4c59e0ea845d21bf8cf27db52c5f10209de",
+      "filename": "test/shell.d/monitor-recovery-test.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c792cc7f8277b9b524f9d59f1890faf0f5785cca/test%2Fshell.d%2Fmonitor-recovery-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c792cc7f8277b9b524f9d59f1890faf0f5785cca/test%2Fshell.d%2Fmonitor-recovery-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmonitor-recovery-test.sh?ref=c792cc7f8277b9b524f9d59f1890faf0f5785cca",
+      "patch": "@@ -98,7 +98,7 @@ grep -F 'omarchy-hyprland-monitor-external-active' \"$monitor_mirror\" >/dev/null\n pass \"internal mirror helper recovers when no active external display remains\"\n \n grep -F 'switch:on:Lid Switch\", nil, \"omarchy-system-lid-close\"' \"$utilities\" >/dev/null\n-grep -F 'switch:off:Lid Switch\", nil, \"omarchy-hyprland-monitor-clamshell\"' \"$utilities\" >/dev/null\n+grep -F 'switch:off:Lid Switch\", nil, \"omarchy-system-lid-open\"' \"$utilities\" >/dev/null\n pass \"lid switch bindings lock on close and reconcile clamshell display state\"\n \n grep -F 'omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true' \"$system_wake\" >/dev/null"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5746829425",
+      "html_url": "https://github.com/omacom/omarchy/pull/10462#issuecomment-5746829425",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10462",
+      "id": 5746829425,
+      "node_id": "IC_kwDOO0Cobs8AAAABVomocQ",
+      "user": {
+        "login": "Clowdyffs",
+        "id": 48922292,
+        "node_id": "MDQ6VXNlcjQ4OTIyMjky",
+        "avatar_url": "https://avatars.githubusercontent.com/u/48922292?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Clowdyffs",
+        "html_url": "https://github.com/Clowdyffs",
+        "followers_url": "https://api.github.com/users/Clowdyffs/followers",
+        "following_url": "https://api.github.com/users/Clowdyffs/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Clowdyffs/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Clowdyffs/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Clowdyffs/subscriptions",
+        "organizations_url": "https://api.github.com/users/Clowdyffs/orgs",
+        "repos_url": "https://api.github.com/users/Clowdyffs/repos",
+        "events_url": "https://api.github.com/users/Clowdyffs/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Clowdyffs/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-20T01:48:15Z",
+      "updated_at": "2026-09-20T01:48:15Z",
+      "body": "Could the lid-open handler invoke the lock screen's normal wake action after clamshell reconciliation, instead of calling `omarchy-brightness-display on` directly?\n\nAt the current PR revision, [`runWake()`](https://github.com/omacom/omarchy/blob/c792cc7f8277b9b524f9d59f1890faf0f5785cca/shell/plugins/lock/Service.qml#L167-L170) already starts `omarchy-system-wake` and rearms `idleBlankTimer` while locked. That restores both display power and keyboard backlight, and gives the lock screen its normal fresh five-second blanking interval. The direct display call restores DPMS but leaves the QML timer's previous state untouched, whether it has already expired or is partway through its countdown. Calling `omarchy-system-wake` directly would still miss that timer rearm.\n\nA small `wake()` method on the existing `lock` IPC handler could delegate to `root.runWake()`, allowing the new lid-open handler to call `omarchy-shell lock wake`. Keep the existing reconcile-first order and the wake on the lid event. The display helper's already-on guard remains in the normal wake command, so this need not reintroduce redundant DPMS modesets.\n\nWe've tested this approach locally on a **MacBookPro14,1**: expose `runWake()` through IPC and invoke it from the locked-capable lid-open binding. It passed awake lid-open controls and a hands-free real-suspend test; normal five-second reblanking was also observed. Separate kernel/controller wake problems remain, so this is evidence for the display/lock path, not a claim to fix every suspend issue or to have tested this PR end to end.\n\nThis seems like a small way to keep wake behavior and timer ownership in the lock service, with lid opening following the same path as normal lock-screen input.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5746829425/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758542179",
+      "html_url": "https://github.com/omacom/omarchy/pull/10462#issuecomment-5758542179",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10462",
+      "id": 5758542179,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzxhYw",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:48:48Z",
+      "updated_at": "2026-09-21T09:48:48Z",
+      "body": "Automated duplication check: this pull request looks similar to #9637, which covers the same lid-open panel wake. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758542179/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

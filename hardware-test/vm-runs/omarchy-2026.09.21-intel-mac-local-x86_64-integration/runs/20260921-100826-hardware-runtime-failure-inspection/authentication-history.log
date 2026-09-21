@@ -1,0 +1,200 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+ -2 05e03ec8828c4df59798538e8b26c09b Mon 2026-09-21 13:55:12 UTC Mon 2026-09-21 13:55:23 UTC
+ -1 37464d7072464e2989fa478bb89b83bb Mon 2026-09-21 13:55:58 UTC Mon 2026-09-21 14:02:38 UTC
+  0 495d9b543cbb45d482adc85fe3c11054 Mon 2026-09-21 14:08:38 UTC Mon 2026-09-21 14:08:48 UTC
+Sep 21 13:56:01 omarchy-test sddm-helper[653]: [PAM] Authenticating...
+Sep 21 13:56:01 omarchy-test sddm-helper[653]: pam_unix(sddm-greeter:session): session opened for user sddm(uid=961) by (uid=0)
+Sep 21 13:56:01 omarchy-test (systemd)[657]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[sddm] ruser=[<unknown>] rhost=[<unknown>]
+Sep 21 13:56:01 omarchy-test (systemd)[657]: pam_unix(systemd-user:session): session opened for user sddm(uid=961) by sddm(uid=0)
+Sep 21 13:56:08 omarchy-test sshd-session[775]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:08 omarchy-test (systemd)[780]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[omarchy] ruser=[<unknown>] rhost=[<unknown>]
+Sep 21 13:56:08 omarchy-test (systemd)[780]: pam_unix(systemd-user:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:08 omarchy-test sshd-session[775]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:13 omarchy-test sshd-session[811]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:13 omarchy-test sshd-session[811]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:15 omarchy-test sddm-helper[821]: [PAM] Authenticating...
+Sep 21 13:56:15 omarchy-test sddm[643]: Authentication for user  "omarchy"  successful
+Sep 21 13:56:15 omarchy-test sddm-helper[821]: pam_unix(sddm:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:15 omarchy-test sddm-helper[653]: pam_unix(sddm-greeter:session): session closed for user sddm
+Sep 21 13:56:25 omarchy-test sshd-session[2262]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:25 omarchy-test sshd-session[2262]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:25 omarchy-test (sd-pam)[672]: pam_unix(systemd-user:session): session closed for user sddm
+Sep 21 13:56:26 omarchy-test sshd-session[2281]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:27 omarchy-test sshd-session[2281]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:27 omarchy-test sshd-session[2289]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:27 omarchy-test sshd-session[2289]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:27 omarchy-test sshd-session[2296]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:27 omarchy-test sshd-session[2296]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:27 omarchy-test sshd-session[2303]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:28 omarchy-test sshd-session[2303]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:28 omarchy-test sshd-session[2405]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:28 omarchy-test sshd-session[2405]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:29 omarchy-test sshd-session[2497]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:29 omarchy-test sshd-session[2497]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:29 omarchy-test sshd-session[2507]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:29 omarchy-test sshd-session[2507]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:29 omarchy-test sshd-session[2515]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:29 omarchy-test sshd-session[2515]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:29 omarchy-test sshd-session[2567]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:31 omarchy-test sshd-session[2567]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:31 omarchy-test sshd-session[2640]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 13:56:31 omarchy-test sshd-session[2640]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 13:56:31 omarchy-test sshd-session[2700]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68972]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69101]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68972]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69101]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68750]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68750]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69506]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69506]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:67294:27319 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[67761]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[67761]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68465]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68465]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[67988]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[67988]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68755]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68755]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68009]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68009]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68486]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68486]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68486]: pam_faillock(polkit-1:auth): Error sending audit message: Address family not supported by protocol
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68486]: pam_faillock(polkit-1:auth): Error sending audit message: Address family not supported by protocol
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[68486]: pam_faillock(polkit-1:auth): Consecutive login failures for user omarchy account temporarily locked
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69097]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69097]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69522]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:42 omarchy-test polkit-agent-helper-1[69522]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[68972]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[68755]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[67988]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[68486]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[68009]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[68465]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[67761]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:44 omarchy-test polkit-agent-helper-1[69506]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:45 omarchy-test polkit-agent-helper-1[69097]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:45 omarchy-test polkit-agent-helper-1[68750]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:45 omarchy-test polkit-agent-helper-1[69522]: polkit-agent-helper-1: pam_authenticate failed: Authentication failure
+Sep 21 14:00:45 omarchy-test polkit-agent-helper-1[69101]: polkit-agent-helper-1: pam_authenticate failed: Authentication token manipulation error
+Sep 21 14:00:49 omarchy-test polkitd[652]: Operator of unix-session:17 FAILED to authenticate to gain authorization for action org.freedesktop.NetworkManager.network-control for unix-process:69841:28675 [<unknown>] (owned by unix-user:omarchy)
+Sep 21 14:00:49 omarchy-test polkit-agent-helper-1[70336]: pam_unix(polkit-1:auth): conversation failed
+Sep 21 14:00:49 omarchy-test polkit-agent-helper-1[70336]: pam_unix(polkit-1:auth): auth could not identify password for [omarchy]
+Sep 21 14:00:50 omarchy-test polkit-agent-helper-1[70336]: polkit-agent-helper-1: pam_authenticate failed: Authentication failure
+Sep 21 14:02:00 omarchy-test sshd-session[2700]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:01 omarchy-test sshd-session[90966]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:01 omarchy-test sshd-session[90966]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:01 omarchy-test sshd-session[90974]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:01 omarchy-test sshd-session[90974]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:02 omarchy-test sshd-session[91243]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:02 omarchy-test sshd-session[91243]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:02 omarchy-test omarchy-shell[91332]: quickshell.service.pam.subprocess: Starting pam session for user "omarchy" with config "omarchy-lock-password" in dir "/etc/pam.d"
+Sep 21 14:02:03 omarchy-test sshd-session[91370]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:04 omarchy-test sshd-session[91370]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:05 omarchy-test sshd-session[91392]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:05 omarchy-test sshd-session[91392]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:05 omarchy-test omarchy-shell[91332]: quickshell.service.pam.subprocess: Got response for request.quickshell.service.pam.subprocess: Failed to authenticate.
+Sep 21 14:02:06 omarchy-test sshd-session[91444]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:06 omarchy-test sshd-session[91444]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:07 omarchy-test sshd-session[91460]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:07 omarchy-test sshd-session[91460]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:08 omarchy-test sshd-session[91475]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:08 omarchy-test sshd-session[91475]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:10 omarchy-test sshd-session[91491]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:10 omarchy-test sshd-session[91491]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:11 omarchy-test sshd-session[91513]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:11 omarchy-test sshd-session[91513]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:12 omarchy-test sshd-session[91529]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:12 omarchy-test sshd-session[91529]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:13 omarchy-test sshd-session[91546]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:13 omarchy-test sshd-session[91546]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:14 omarchy-test sshd-session[91561]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:14 omarchy-test sshd-session[91561]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:16 omarchy-test sshd-session[91577]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:16 omarchy-test sshd-session[91577]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:17 omarchy-test sshd-session[91592]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:17 omarchy-test sshd-session[91592]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:18 omarchy-test sshd-session[91608]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:18 omarchy-test sshd-session[91608]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:19 omarchy-test sshd-session[91630]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:19 omarchy-test sshd-session[91630]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:20 omarchy-test sshd-session[91645]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:21 omarchy-test sshd-session[91645]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:22 omarchy-test sshd-session[91661]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:22 omarchy-test sshd-session[91661]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:23 omarchy-test sshd-session[91676]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:23 omarchy-test sshd-session[91676]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:23 omarchy-test sshd-session[91692]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:33 omarchy-test sshd-session[91692]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:33 omarchy-test sshd-session[91901]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:33 omarchy-test sshd-session[91901]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:34 omarchy-test sshd-session[91907]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:34 omarchy-test sshd-session[91907]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:34 omarchy-test sshd-session[91921]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:34 omarchy-test sshd-session[91921]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:34 omarchy-test sshd-session[91928]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:02:36 omarchy-test sudo[91934]: pam_unix(sudo:auth): conversation failed
+Sep 21 14:02:36 omarchy-test sudo[91934]: pam_unix(sudo:auth): auth could not identify password for [omarchy]
+Sep 21 14:02:38 omarchy-test sudo[91934]:  omarchy : 1 incorrect password attempt ; PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c 'bash /home/omarchy/guest-runtime-recovery.sh'
+Sep 21 14:02:38 omarchy-test sshd-session[91928]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:02:38 omarchy-test sshd-session[91941]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Current boot authentication:
+Sep 21 14:08:41 omarchy-test sddm-helper[616]: [PAM] Authenticating...
+Sep 21 14:08:41 omarchy-test sddm-helper[616]: pam_unix(sddm-greeter:session): session opened for user sddm(uid=961) by (uid=0)
+Sep 21 14:08:41 omarchy-test (systemd)[624]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[sddm] ruser=[<unknown>] rhost=[<unknown>]
+Sep 21 14:08:41 omarchy-test (systemd)[624]: pam_unix(systemd-user:session): session opened for user sddm(uid=961) by sddm(uid=0)
+Sep 21 14:08:47 omarchy-test sshd-session[741]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:08:47 omarchy-test (systemd)[746]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[omarchy] ruser=[<unknown>] rhost=[<unknown>]
+Sep 21 14:08:47 omarchy-test (systemd)[746]: pam_unix(systemd-user:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:08:47 omarchy-test sshd-session[741]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:08:47 omarchy-test sshd-session[762]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:08:47 omarchy-test sshd-session[762]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:08:47 omarchy-test sshd-session[784]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:08:47 omarchy-test sshd-session[784]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:08:48 omarchy-test sshd-session[791]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:08:48 omarchy-test sudo[797]:  omarchy : PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c '#012  set -euo pipefail#012  journalctl --list-boots --no-pager#012  journalctl -b -1 --no-pager | grep -Ei "pam_|faillock|authenticat|sudo|lock-password" || true#012  echo "Current boot authentication:"#012  journalctl -b --no-pager | grep -Ei "pam_|faillock|authenticat|sudo" || true#012  echo "PAM file checksums:"#012  find /etc/pam.d -type f -exec sha256sum {} + | sort#012  echo "Known test-password comparison (no hash output):"#012  entry=$(getent shadow omarchy)#012  actual=${entry#*:}; actual=${actual%%:*}#012  IFS=\\$ read -r _ algorithm salt rest <<< "$actual"#012  test "$algorithm" = 6#012  expected=$(openssl passwd -6 -salt "$salt" omarchy)#012  test "$expected" = "$actual"#012  echo "PASS: failed guest retains its original test password"#012'
+Sep 21 14:08:48 omarchy-test sudo[797]: pam_unix(sudo:session): session opened for user root(uid=0) by omarchy(uid=1000)
+PAM file checksums:
+005736b9bd650ff5e5d82a7e288853776d5bb8c90185d5774c07231c1e1c64a9  /etc/pam.d/system-local-login
+005736b9bd650ff5e5d82a7e288853776d5bb8c90185d5774c07231c1e1c64a9  /etc/pam.d/system-remote-login
+1740b095412602a0db96fb810e0782ce9f3f155d489da4cb98db36d5b592baac  /etc/pam.d/omarchy-lock-password
+3406bce46be8450e28ddbccfbcd0e1f8fa585d57da8833ff7294cf3aee84bb46  /etc/pam.d/sddm-greeter
+428367b148033c7fa865e92bdd73b06cb58e6909488649adebf8d2253a022f1f  /etc/pam.d/rlogin
+48d6fba767631e3dd3620cf02a71a74c5d65a525d4c4ce4b5a0b7d9f41ebfea1  /etc/pam.d/runuser
+48d6fba767631e3dd3620cf02a71a74c5d65a525d4c4ce4b5a0b7d9f41ebfea1  /etc/pam.d/runuser-l
+53a935ef3d4dcc107728ff8d7109fac35b41c743cea19200d3dd498ca1748a0c  /etc/pam.d/sddm-autologin
+57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5  /etc/pam.d/cups
+57e057758944f4557762c6def939410c04ca5803cbdd2bfa2153ce47ffe7a4af  /etc/pam.d/chfn
+57e057758944f4557762c6def939410c04ca5803cbdd2bfa2153ce47ffe7a4af  /etc/pam.d/chsh
+5c2d377a87121e7c399534fb91e2ffc0cc1e75d44a8f07ee6f55c9c089bc81e4  /etc/pam.d/vlock
+5f4d36be03cc980930ba0a0e109d6b5625201f88a4ae7f913d632f5ab5866b87  /etc/pam.d/su
+5f4d36be03cc980930ba0a0e109d6b5625201f88a4ae7f913d632f5ab5866b87  /etc/pam.d/su-l
+6317e1e62f0dcf32ac99334bafdc8972b4967048456448ef1e2458219661bf18  /etc/pam.d/rsh
+633e24cbfcb045ba777d3e06d5f85dfaa06d44f4727d38c7fb2187c57498221d  /etc/pam.d/sshd
+6eb1acdd3fa9f71a7f93fbd529be57ea65bcafc6e3a98a06af4d88013fc6a567  /etc/pam.d/system-services
+7272120f0ee937cbe6ba0a6e748ea234ab6799e1e2966c83ee85f97d9f254fd9  /etc/pam.d/system-login
+787275ed1430895610a4360425443884e6ba3c696c2d7087fcc97f73771c806b  /etc/pam.d/system-auth
+7ec1c668c10e0f83d00e25f336872212fe04ce2c2563e1d661d34d28852f4649  /etc/pam.d/sudo
+8bfbee453618ba44d60ba7fb00eced6c62edebfc592f2e75dede08e769ed8931  /etc/pam.d/remote
+a955ecbd82a801102fad756bb98dca778c1eba14a3367c601d6237b75642c36b  /etc/pam.d/chpasswd
+a955ecbd82a801102fad756bb98dca778c1eba14a3367c601d6237b75642c36b  /etc/pam.d/newusers
+b9539d9c6e9449595f4473c2541b60a83e3a836263128061bceecb738a7f4859  /etc/pam.d/sddm
+d5ed59ec2157c19c87964a162f7ca84d53c19fb2bd68d3fbc1671ba8d906346f  /etc/pam.d/other
+ee917d55042f78b8bb03f5467e5233e3e2ddc2fe01e302bc53b218003fe22275  /etc/pam.d/login
+fd4cf683fb7c88bc4fbc4193d9e0b53a981512ed89a05ad3e0854611f3bec018  /etc/pam.d/passwd
+Known test-password comparison (no hash output):
+PASS: failed guest retains its original test password

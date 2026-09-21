@@ -1,0 +1,116 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9105",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-suspend"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "54fecac91543b1feb4af42ecb7120c2ce27530cd",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9105,
+  "checked_at": "2026-09-21T11:57:25.390862+00:00",
+  "title": "Use s2idle on T2 Macs with a discrete GPU",
+  "author": "T1mmsquared",
+  "head_sha": "54fecac91543b1feb4af42ecb7120c2ce27530cd",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:25Z",
+  "state": "open",
+  "body": "`install/hardware/apple/fix-t2.sh` detects T2 Macs by PCI ID (`106b:180[12]`) and gives every one of them the same kernel command line, including `mem_sleep_default=deep`. That works on integrated-only models, but a T2 Mac with a discrete GPU can never complete a deep suspend.\n\nOn a MacBookPro16,1 (Radeon Pro 5500M), every suspend attempt fails and falls back:\n\n```\nPM: suspend entry (deep)\namdgpu 0000:03:00.0: GPU mode1 reset failed\namdgpu 0000:03:00.0: PM: pci_pm_suspend_noirq(): amdgpu_pmops_suspend_noirq [amdgpu] returns -22\namdgpu 0000:03:00.0: PM: dpm_run_callback(): pci_pm_suspend_noirq returns -22\namdgpu 0000:03:00.0: PM: failed to suspend noirq: error -22\nPM: noirq suspend of devices failed\nPM: suspend exit\nPM: suspend entry (s2idle)   <- systemd retries, this one succeeds\n```\n\nCounted over the journal on this machine: **3 deep attempts, 3 `noirq suspend of devices failed`, 3 `GPU mode1 reset failed`** \u2014 a 100% failure rate. The machine still sleeps, because systemd retries with s2idle, so the symptom is easy to miss.\n\nTwo costs beyond the wasted transition:\n\n1. Every lid close spends ~3 seconds suspending and then unwinding the entire device tree before the retry.\n2. The failed pass tears down and recreates four Apple EFI variables each cycle \u2014 `AppleSecureBootFailureReason`, `AppleSecureBootKernelFailureReason`, `AppleSecureBootWindowsFailureReason`, `AppleFailedBootVolumeUUID` \u2014 so every suspend/resume writes NVRAM on hardware where that wear is not free.\n\n## Approach\n\n`mem_sleep_default=deep` was added deliberately in #6562, so this does not remove it. It selects the sleep state from the GPU configuration using the existing `omarchy-hw-hybrid-gpu` helper:\n\n```bash\nif omarchy-hw-hybrid-gpu; then\n  sleep_state=\"s2idle\"\nelse\n  sleep_state=\"deep\"\nfi\n```\n\nIntegrated-only T2 Macs produce a byte-identical config file to today, so #6562's fix is preserved exactly where it works. Only discrete-GPU models change, and they change to the state the kernel was already falling back to on its own.\n\n## Included\n\n- `install/hardware/apple/fix-t2.sh` \u2014 pick the sleep state from the GPU configuration\n- `migrations/1788072498.sh` \u2014 move existing discrete-GPU installs off `deep` and rebuild the boot image, following the repair-marker pattern from `migrations/1785944594.sh` so a pre-reboot rerun stays idempotent\n- `test/shell.d/t2-hardware-test.sh` \u2014 a stubbed `omarchy-hw-hybrid-gpu`, plus coverage for the discrete-GPU repair, its idempotency, the integrated-only path that must keep `deep`, and non-T2 hardware\n\n## Testing\n\n- `test/shell.d/t2-hardware-test.sh` \u2014 10/10 pass (6 pre-existing, 4 new)\n- `./test/all` \u2014 4 failures, all pre-existing and environmental on this machine: three need a sibling `omarchy-pkgs` checkout that isn't present, one is a network-dependent theme URL check. None touch T2, suspend, or migrations.\n- Verified on the affected hardware: MacBookPro16,1, Omarchy 4.0.1, `linux-t2` 7.1.8. After the change `/sys/power/mem_sleep` reads `[s2idle] deep` and the failing deep pass is gone.\n\n## Scope of the evidence\n\nI can only confirm this directly on a MacBookPro16,1. The other T2 models with discrete GPUs \u2014 MacBookPro15,1 / 15,3 / 16,4, iMacPro1,1, MacPro7,1 \u2014 should be affected by the same amdgpu failure, but I have not tested them. Happy to adjust the detection if a T2 owner reports otherwise.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e1b80f760bf4122ae6477eea0715b6fa74363172",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 2,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/54fecac91543b1feb4af42ecb7120c2ce27530cd/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/54fecac91543b1feb4af42ecb7120c2ce27530cd/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=54fecac91543b1feb4af42ecb7120c2ce27530cd",
+      "patch": "@@ -26,10 +26,22 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n   echo \"MODULES+=(t2bce_vhci usbhid hid_apple hid_generic xhci_pci xhci_hcd)\" > \\\n     /etc/mkinitcpio.conf.d/apple-t2.conf\n \n+  # Deep suspend (S3) is the better sleep state on integrated-only T2 Macs, but\n+  # it cannot work where a discrete GPU is present: amdgpu fails its noirq\n+  # suspend (\"GPU mode1 reset failed\", pci_pm_suspend_noirq -22), the whole\n+  # transition unwinds, and systemd retries with s2idle anyway. The doomed pass\n+  # also rewrites four Apple EFI secure-boot variables on every cycle, so ask\n+  # for s2idle directly on those models.\n+  if omarchy-hw-hybrid-gpu; then\n+    sleep_state=\"s2idle\"\n+  else\n+    sleep_state=\"deep\"\n+  fi\n+\n   mkdir -p /etc/limine-entry-tool.d\n-  cat > /etc/limine-entry-tool.d/t2-mac.conf <<'EOF'\n+  cat > /etc/limine-entry-tool.d/t2-mac.conf <<EOF\n # Generated by Omarchy installer for T2 Mac support\n-KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep\"\n+KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=$sleep_state\"\n EOF\n \n   # t2fanrd only reads sections for detected fans, so Fan2 is harmless on"
+    },
+    {
+      "sha": "adbf7e4214f73b13a8d4a03cc94322d63d0265e8",
+      "filename": "migrations/1788072498.sh",
+      "status": "added",
+      "additions": 44,
+      "deletions": 0,
+      "changes": 44,
+      "blob_url": "https://github.com/omacom/omarchy/blob/54fecac91543b1feb4af42ecb7120c2ce27530cd/migrations%2F1788072498.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/54fecac91543b1feb4af42ecb7120c2ce27530cd/migrations%2F1788072498.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788072498.sh?ref=54fecac91543b1feb4af42ecb7120c2ce27530cd",
+      "patch": "@@ -0,0 +1,44 @@\n+echo \"Use s2idle suspend on T2 Macs with a discrete GPU\"\n+\n+# grep -q would stop reading before lspci finishes writing, and pipefail reads\n+# the resulting SIGPIPE as \"no T2 hardware\" (#6608).\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+# Deep suspend (S3) is right on integrated-only T2 Macs, but it cannot complete\n+# where a discrete GPU is present: amdgpu fails its noirq suspend (\"GPU mode1\n+# reset failed\", pci_pm_suspend_noirq -22), the whole transition unwinds, and\n+# systemd retries with s2idle anyway. The doomed pass also rewrites four Apple\n+# EFI secure-boot variables every cycle. Integrated-only models keep deep.\n+if ! omarchy-hw-hybrid-gpu; then\n+  exit 0\n+fi\n+\n+limine_conf=\"${OMARCHY_T2_LIMINE_CONF:-/etc/limine-entry-tool.d/t2-mac.conf}\"\n+running_cmdline=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+repair_marker=\"${OMARCHY_T2_S2IDLE_MARKER:-/var/lib/omarchy/migrations/1788072498}\"\n+needs_limine_rebuild=0\n+\n+if [[ -f $limine_conf ]] && grep -q 'mem_sleep_default=deep' \"$limine_conf\"; then\n+  sudo sed -i \\\n+    's/mem_sleep_default=deep/mem_sleep_default=s2idle/' \\\n+    \"$limine_conf\"\n+  needs_limine_rebuild=1\n+fi\n+\n+# The running kernel keeps its old command line until reboot. Record a\n+# successful machine-wide rebuild so another user's migration does not repeat\n+# it before then, while a missing marker still retries an interrupted rebuild.\n+if [[ -f $limine_conf ]] &&\n+  [[ ! -e $repair_marker ]] &&\n+  grep -q 'mem_sleep_default=s2idle' \"$limine_conf\" &&\n+  { [[ ! -r $running_cmdline ]] ||\n+    ! grep -Eq '(^| )mem_sleep_default=s2idle( |$)' \"$running_cmdline\"; }; then\n+  needs_limine_rebuild=1\n+fi\n+\n+if (( needs_limine_rebuild )); then\n+  sudo limine-mkinitcpio\n+  sudo install -Dm644 /dev/null \"$repair_marker\"\n+fi"
+    },
+    {
+      "sha": "4b17945b66dffe7b57736d794c4af49ba4f56406",
+      "filename": "test/shell.d/t2-hardware-test.sh",
+      "status": "modified",
+      "additions": 83,
+      "deletions": 1,
+      "changes": 84,
+      "blob_url": "https://github.com/omacom/omarchy/blob/54fecac91543b1feb4af42ecb7120c2ce27530cd/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/54fecac91543b1feb4af42ecb7120c2ce27530cd/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-hardware-test.sh?ref=54fecac91543b1feb4af42ecb7120c2ce27530cd",
+      "patch": "@@ -8,8 +8,14 @@ fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n other_packages=\"$ROOT/install/omarchy-other.packages\"\n migration=\"$ROOT/migrations/1785944594.sh\"\n \n-grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep\"' \"$fix_t2\" ||\n+grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=$sleep_state\"' \"$fix_t2\" ||\n   fail \"T2 setup installs the suspend kernel parameters\"\n+grep -Fq 'omarchy-hw-hybrid-gpu' \"$fix_t2\" ||\n+  fail \"T2 setup picks the sleep state from the GPU configuration\"\n+grep -Fq 'sleep_state=\"s2idle\"' \"$fix_t2\" ||\n+  fail \"T2 setup uses s2idle where a discrete GPU blocks deep suspend\"\n+grep -Fq 'sleep_state=\"deep\"' \"$fix_t2\" ||\n+  fail \"T2 setup keeps deep suspend on integrated-only models\"\n ! grep -q 'pcie_ports=compat' \"$fix_t2\" ||\n   fail \"T2 setup drops the obsolete PCIe compatibility parameter\"\n (( $(grep -Ec '^\\[Fan[12]\\]$' \"$fix_t2\") == 2 )) ||\n@@ -75,6 +81,12 @@ printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n printf '\\n' >>\"$TEST_LOG\"\n SH\n \n+cat >\"$stub_bin/omarchy-hw-hybrid-gpu\" <<'SH'\n+#!/bin/bash\n+\n+(( ${HYBRID_GPU:-0} == 1 ))\n+SH\n+\n cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n #!/bin/bash\n \n@@ -212,3 +224,73 @@ grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n   fail \"T2 rerun migration rebuilds the boot image\"\n [[ -f $repair_marker ]] || fail \"T2 rerun migration records the machine-wide repair\"\n pass \"T2 rerun migration repairs installs the broken hardware check skipped\"\n+\n+# Deep suspend cannot complete on T2 Macs with a discrete GPU: amdgpu fails its\n+# noirq suspend and systemd falls back to s2idle after the transition unwinds.\n+s2idle_migration=\"$ROOT/migrations/1788072498.sh\"\n+s2idle_marker=\"$test_tmp/t2-s2idle-complete\"\n+\n+write_deep_conf() {\n+  cat >\"$limine_conf\" <<'EOF'\n+# Generated by Omarchy installer for T2 Mac support\n+KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep\"\n+EOF\n+}\n+\n+run_s2idle_migration() {\n+  PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    T2_HARDWARE=\"$1\" \\\n+    HYBRID_GPU=\"$2\" \\\n+    OMARCHY_T2_LIMINE_CONF=\"$limine_conf\" \\\n+    OMARCHY_T2_RUNNING_CMDLINE=\"$running_cmdline\" \\\n+    OMARCHY_T2_S2IDLE_MARKER=\"$s2idle_marker\" \\\n+    bash -euo pipefail \"$s2idle_migration\" >/dev/null\n+}\n+\n+write_deep_conf\n+echo 'quiet splash intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep' >\"$running_cmdline\"\n+rm -f \"$s2idle_marker\"\n+: >\"$calls\"\n+\n+run_s2idle_migration 1 1\n+\n+grep -Fq 'mem_sleep_default=s2idle' \"$limine_conf\" ||\n+  fail \"discrete-GPU T2 migration switches the sleep state to s2idle\"\n+! grep -q 'mem_sleep_default=deep' \"$limine_conf\" ||\n+  fail \"discrete-GPU T2 migration drops the unreachable deep sleep state\"\n+grep -Fq 'intel_iommu=on iommu=pt pm_async=off' \"$limine_conf\" ||\n+  fail \"discrete-GPU T2 migration leaves the other T2 parameters alone\"\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"discrete-GPU T2 migration rebuilds the boot image\"\n+[[ -f $s2idle_marker ]] || fail \"discrete-GPU T2 migration records the repair\"\n+pass \"T2 Macs with a discrete GPU switch to s2idle\"\n+\n+: >\"$calls\"\n+run_s2idle_migration 1 1\n+\n+[[ ! -s $calls ]] ||\n+  fail \"an already repaired discrete-GPU T2 install is left unchanged\" \"$(cat \"$calls\")\"\n+pass \"discrete-GPU T2 s2idle migration is machine-idempotent before reboot\"\n+\n+write_deep_conf\n+rm -f \"$s2idle_marker\"\n+: >\"$calls\"\n+\n+run_s2idle_migration 1 0\n+\n+grep -Fq 'mem_sleep_default=deep' \"$limine_conf\" ||\n+  fail \"integrated-only T2 Macs keep deep suspend\"\n+[[ ! -s $calls ]] ||\n+  fail \"integrated-only T2 Macs skip the s2idle repair\" \"$(cat \"$calls\")\"\n+pass \"integrated-only T2 Macs keep deep suspend\"\n+\n+: >\"$calls\"\n+run_s2idle_migration 0 1\n+\n+grep -Fq 'mem_sleep_default=deep' \"$limine_conf\" ||\n+  fail \"non-T2 hardware is left untouched by the s2idle repair\"\n+[[ ! -s $calls ]] ||\n+  fail \"non-T2 systems skip the s2idle repair\" \"$(cat \"$calls\")\"\n+pass \"s2idle migration skips unrelated hardware\"\n+"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5535602207",
+      "html_url": "https://github.com/omacom/omarchy/pull/9105#issuecomment-5535602207",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9105",
+      "id": 5535602207,
+      "node_id": "IC_kwDOO0Cobs8AAAABSfKWHw",
+      "user": {
+        "login": "jacobkjones",
+        "id": 10998441,
+        "node_id": "MDQ6VXNlcjEwOTk4NDQx",
+        "avatar_url": "https://avatars.githubusercontent.com/u/10998441?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/jacobkjones",
+        "html_url": "https://github.com/jacobkjones",
+        "followers_url": "https://api.github.com/users/jacobkjones/followers",
+        "following_url": "https://api.github.com/users/jacobkjones/following{/other_user}",
+        "gists_url": "https://api.github.com/users/jacobkjones/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/jacobkjones/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/jacobkjones/subscriptions",
+        "organizations_url": "https://api.github.com/users/jacobkjones/orgs",
+        "repos_url": "https://api.github.com/users/jacobkjones/repos",
+        "events_url": "https://api.github.com/users/jacobkjones/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/jacobkjones/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-04T04:20:44Z",
+      "updated_at": "2026-09-04T04:20:44Z",
+      "body": "Chiming in: \r\nMacBookPro16,1, Omarchy 4.0.2, linux-t2 7.1.8 t2bce, BCM4364, panel on AMD. `pm_async=off` already. Deep hung (forced off). systemd `MemorySleepMode=s2idle` still self-rebooted ~1 min later; no PM: suspend entry flushed, no pstore. Cmdline-only `apple_gmux.force_igd=1` muxed (Switching to IGD) then CATERR ~1 min after SDDM login.\r\n\r\nHappy to retest a branch, would love a durable fix to get merged. ",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5535602207/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,116 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10111",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "bluetooth-discovery"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "236c2ba07e3a8ef8f2ee4612707a591e416f304c",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10111,
+  "checked_at": "2026-09-21T11:56:06.869360+00:00",
+  "title": "bluetooth: register pairing agent and discover before pair/connect; fix usbcore autosuspend cmdline",
+  "author": "hrnbld",
+  "head_sha": "236c2ba07e3a8ef8f2ee4612707a591e416f304c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-18T12:54:24Z",
+  "state": "open",
+  "body": "## Problem\n\nPairing Bluetooth HID peripherals (Apple Magic Mouse, Logitech MX Keys) from Omarchy always fails, and devices that previously worked start dropping.\n\nTwo separate bugs in the default pairing path:\n\n### 1. `omarchy bluetooth device pair` fails with `AuthenticationCanceled`\n\n`bin/omarchy-bluetooth-device` ran a bare `bluetoothctl pair` with **no agent registered** on the D-Bus session. HID peripherals use Just Works pairing: BlueZ publishes a confirmation request, and with no client having registered an agent, nothing answers \u2014 the pair fails with `org.bluez.Error.AuthenticationCanceled`. Reproduced repeatedly on a fresh Omarchy 4.0.2 install:\n\n```\nFailed to pair: org.bluez.Error.AuthenticationCanceled\n```\n\nAdditionally, `pair` and `connect` failed with `Device ... not available` whenever the address was not already in the adapter's cache \u2014 `bluetoothctl` refuses to touch an address it has never seen, and nothing ran a discovery pass first.\n\n### 2. `usbcore autosuspend=-1` in modprobe.d is a no-op on Omarchy kernels\n\n`etc/modprobe.d/omarchy-usb-autosuspend.conf` ships `options usbcore autosuspend=-1`, but on Omarchy's kernels `usbcore` is **built into the kernel image** (`modinfo usbcore` \u2192 `filename: (builtin)`), so no modprobe invocation ever reads that option. The effective value stays the default `2` (seconds), and USB Bluetooth dongles fall asleep during idle and drop live links (observed: BT HID reconnect storm after ~2s idle, link death mid-session).\n\n## Fix\n\n- `bin/omarchy-bluetooth-device` \u2014 register and default an auto-confirming agent in the *same* `bluetoothctl` invocation that issues the pair (self-contained, no dependency on another client holding an agent), and run a short discovery pass before `pair`/`connect` when the address is not yet in the adapter cache.\n- `etc/limine-entry-tool.d/omarchy-defaults.conf` \u2014 carry `usbcore.autosuspend=-1` on the default kernel command line, which is the only channel that works for built-in drivers. The modprobe.d file is kept (with a comment) for custom kernels that build `usbcore` as a module.\n\n## Verification\n\n- `./test/cli`: 116/116 pass, no regressions.\n- Pairing flow reproduced on hardware before the fix (`AuthenticationCanceled`, `Device not available`), and the agent+discovery sequence verified against the live stack.\n\n## Notes\n\nThe CLI metadata contract (`omarchy:group`, `omarchy:args`) and file layout are untouched.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "7f8dc5cf97994d58b5b429ecac6766110015b1e0",
+      "filename": "bin/omarchy-bluetooth-device",
+      "status": "modified",
+      "additions": 26,
+      "deletions": 1,
+      "changes": 27,
+      "blob_url": "https://github.com/omacom/omarchy/blob/236c2ba07e3a8ef8f2ee4612707a591e416f304c/bin%2Fomarchy-bluetooth-device",
+      "raw_url": "https://github.com/omacom/omarchy/raw/236c2ba07e3a8ef8f2ee4612707a591e416f304c/bin%2Fomarchy-bluetooth-device",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-bluetooth-device?ref=236c2ba07e3a8ef8f2ee4612707a591e416f304c",
+      "patch": "@@ -29,15 +29,40 @@ trust_device() {\n   bluetoothctl trust \"$address\" >/dev/null 2>&1 || true\n }\n \n+discover() {\n+  # bluetoothctl refuses to touch an address it has never seen: pair and\n+  # connect both fail with \"Device not available\" while the adapter has no\n+  # cached record of the device. A short discovery pass fills the cache, so\n+  # run one whenever the address is not already known.\n+  if [[ $(timeout 2s bluetoothctl devices 2>/dev/null) != *\"$address\"* ]]; then\n+    timeout 8s bluetoothctl --timeout 8 scan on >/dev/null 2>&1 || true\n+  fi\n+}\n+\n+pair_with_agent() {\n+  # A bare `bluetoothctl pair` dies with AuthenticationCanceled as soon as the\n+  # remote asks BlueZ to confirm the pairing: the request is published and\n+  # nothing on the bus answers it unless some other client registered an agent\n+  # first. Register one in the same invocation that issues the pair so this\n+  # helper stays self-contained. Auto-confirming is correct for HID\n+  # peripherals, whose pairing is Just Works with both sides generating the\n+  # same passkey; no user interaction is needed.\n+  discover\n+  {\n+    printf 'agent on\\ndefault-agent\\npair %s\\nquit\\n' \"$address\"\n+  } | timeout 25s bluetoothctl >/dev/null 2>&1 || true\n+}\n+\n case \"$action\" in\n   pair)\n     power_on\n-    timeout 20s bluetoothctl pair \"$address\" >/dev/null 2>&1 || true\n+    pair_with_agent\n     trust_device\n     timeout 20s bluetoothctl connect \"$address\" >/dev/null 2>&1 || true\n     ;;\n   connect)\n     power_on\n+    discover\n     trust_device\n     timeout 20s bluetoothctl connect \"$address\" >/dev/null 2>&1 || true\n     ;;"
+    },
+    {
+      "sha": "70437ef1dd388c05b18e770074bab06e5e1c6a04",
+      "filename": "etc/limine-entry-tool.d/omarchy-defaults.conf",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/236c2ba07e3a8ef8f2ee4612707a591e416f304c/etc%2Flimine-entry-tool.d%2Fomarchy-defaults.conf",
+      "raw_url": "https://github.com/omacom/omarchy/raw/236c2ba07e3a8ef8f2ee4612707a591e416f304c/etc%2Flimine-entry-tool.d%2Fomarchy-defaults.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/etc%2Flimine-entry-tool.d%2Fomarchy-defaults.conf?ref=236c2ba07e3a8ef8f2ee4612707a591e416f304c",
+      "patch": "@@ -2,6 +2,15 @@ TARGET_OS_NAME=\"Omarchy\"\n \n KERNEL_CMDLINE[default]+=\" quiet splash loglevel=0 systemd.show_status=false rd.udev.log_level=0 vt.global_cursor_default=0\"\n \n+# usbcore is built into the kernel image rather than shipped as a module, so\n+# the `options usbcore autosuspend=-1` in etc/modprobe.d is never read on\n+# these kernels (modprobe.d only feeds modprobe, and modprobe never handles a\n+# built-in driver). Parameters for built-ins only take effect on the command\n+# line, so carry the same autosuspend disable here; without it USB Bluetooth\n+# dongles and other latency-sensitive devices fall asleep after a few seconds\n+# of idle and drop their links mid-session.\n+KERNEL_CMDLINE[default]+=\" usbcore.autosuspend=-1\"\n+\n # Kernel 7.1 unpacks the initramfs asynchronously, which races /init: the\n # early /proc, /sys, /dev, and /run mounts fail while unpacking settles, so\n # plymouthd exits when it can't read /proc/cmdline and encrypted boots fall"
+    },
+    {
+      "sha": "ca8c748ed1cd5548a8f739448b6869e6891993ec",
+      "filename": "etc/modprobe.d/omarchy-usb-autosuspend.conf",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/236c2ba07e3a8ef8f2ee4612707a591e416f304c/etc%2Fmodprobe.d%2Fomarchy-usb-autosuspend.conf",
+      "raw_url": "https://github.com/omacom/omarchy/raw/236c2ba07e3a8ef8f2ee4612707a591e416f304c/etc%2Fmodprobe.d%2Fomarchy-usb-autosuspend.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/etc%2Fmodprobe.d%2Fomarchy-usb-autosuspend.conf?ref=236c2ba07e3a8ef8f2ee4612707a591e416f304c",
+      "patch": "@@ -1 +1,5 @@\n+# Omarchy's own kernels build usbcore into the image, where modprobe.d options\n+# are never read; for those the kernel command line carries\n+# usbcore.autosuspend=-1 via etc/limine-entry-tool.d/omarchy-defaults.conf.\n+# This file covers custom kernels that build usbcore as a module instead.\n options usbcore autosuspend=-1"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5730276289",
+      "html_url": "https://github.com/omacom/omarchy/pull/10111#issuecomment-5730276289",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10111",
+      "id": 5730276289,
+      "node_id": "IC_kwDOO0Cobs8AAAABVY0TwQ",
+      "user": {
+        "login": "sprajs",
+        "id": 5939928,
+        "node_id": "MDQ6VXNlcjU5Mzk5Mjg=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5939928?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/sprajs",
+        "html_url": "https://github.com/sprajs",
+        "followers_url": "https://api.github.com/users/sprajs/followers",
+        "following_url": "https://api.github.com/users/sprajs/following{/other_user}",
+        "gists_url": "https://api.github.com/users/sprajs/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/sprajs/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/sprajs/subscriptions",
+        "organizations_url": "https://api.github.com/users/sprajs/orgs",
+        "repos_url": "https://api.github.com/users/sprajs/repos",
+        "events_url": "https://api.github.com/users/sprajs/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/sprajs/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-18T12:54:24Z",
+      "updated_at": "2026-09-18T12:54:24Z",
+      "body": "The USB autosuspend portion overlaps #10140: both add `KERNEL_CMDLINE[default]+=\" usbcore.autosuspend=-1\"`. #10140 also includes an existing-install migration that rebuilds the boot artifacts and marks a reboot required; this PR instead retains the modprobe file for custom kernels.\n\nCould that policy/migration work be coordinated in one PR, keeping the Bluetooth pairing change separate from the overlap? Landing both kernel-line changes independently would duplicate the setting while leaving the intended module-file and upgrade behavior unclear.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5730276289/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "name": "t1bridge",
+    "version": "0.1.9",
+    "archive_url": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-0.1.9.tar.gz",
+    "archive_sha256": "5938c25b710271b78ddc1fef59d6af078ade835e0b5124bc65bcf0777285f166",
+    "unmodified_release_documents": [
+      {
+        "path": "t1bridge-0.1.9/LICENSE",
+        "sha256": "a59f489b7cb0fb2df6b806e687e17a3f52df1d63c599a96d86eef895324f9bf1"
+      },
+      {
+        "path": "t1bridge-0.1.9/README.md",
+        "sha256": "ac24d4952a113135b418aa6719419dcb2e31d5d7667daebc331b367f7a4d6360"
+      },
+      {
+        "path": "t1bridge-0.1.9/THIRD_PARTY_NOTICES.md",
+        "sha256": "9455b8113cbed43ae12944b0b70666a475405443dcb89bcb4748ec345aaa185b"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/ambient-light.md",
+        "sha256": "3deae8c4795cd32f341516400d50f9b937a087a321ea50655bec2f6b97ffc8d1"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/architecture.md",
+        "sha256": "63e151936a8a6a69bcbb19a1ae1c47483bc843095354047130f70c7bfb44c97c"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/code-quality.md",
+        "sha256": "ada3755092c062ce3a2f8683b15d8e63836829414849731783b874cfd90b569a"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/dependencies.md",
+        "sha256": "5046500aa016d49084d19ffd944df9bb713e5d2d2057deb1d3308fc98236678a"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/diagnostics.md",
+        "sha256": "30726f48a87e2610844a0998e2e74505a43847ad2d4a8470ad9ccbeaed2b22ba"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/hardware-validation.md",
+        "sha256": "0e22795164dfa13abf8387606dfff1a838ba1bd788d1a2d5c85917035862d011"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/interfaces.md",
+        "sha256": "5c650fe7c275511a17066972e47197c5e7e5c864d6793d342ae4c2884665af73"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.2.md",
+        "sha256": "e6e75a704de547b53e370f1a10448eac6f5f495b8dad7701655ff791249abfaf"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.3.md",
+        "sha256": "f7e749f73942ddb62bf5931fbfe1e897d0d41471a89d3025dd04074b9c3fa2f1"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.4.md",
+        "sha256": "adcc389d400c89a53d924f43caf70b5e70820b6c8ebb572ac82083fc98dd0291"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.5.md",
+        "sha256": "b4bdb4f6d5c4a87c7cb905bf59d51d51f73dd9bfe5b92e3a2485c49828773657"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.6.md",
+        "sha256": "41b413001cf73a5b64b41800e5b4800400e785464f82f5159fbb6e001e1ea66d"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.7.md",
+        "sha256": "33eb31c710dd22df8bed570a204a5068c465630d37bdbfb6b9b792a905f2d933"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.8.md",
+        "sha256": "6b6f3bb5990d9f678a4389801834f28d015e0c925a7fdf0673eda959fa9cb291"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-0.1.9.md",
+        "sha256": "01e5131cb9059a2e62e788b471d0e47f654bd30d869a7f1670548bff593bf4d1"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/release-gate/v1.md",
+        "sha256": "cd649b8834eb39ff655e1836406cddd2487cd71e65476d77b17b3ce0864be420"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/releasing.md",
+        "sha256": "ebb2014f7e590cf146ee4152c0265812888dfe66d6b652d9b9957cbafb0af976"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/security-review/v1.md",
+        "sha256": "0d0bb67c32b8486594ccbff1b58d461621c37ea62de46738f4159c1dca2cac30"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/setup.md",
+        "sha256": "e6c8a3646a60331f50bcbf34921becaf32e2573f36d7087104ee5326d76b53c3"
+      },
+      {
+        "path": "t1bridge-0.1.9/docs/touch-id.md",
+        "sha256": "9e5b65b0c9ab4ab4693c80676c8b9235966c23482751bda36f4122b087925537"
+      }
+    ]
+  },
+  {
+    "name": "t1bridge-omarchy",
+    "version": "0.2.1",
+    "archive_url": "https://linux.standardagents.ai/arch/standardagents/x86_64/t1bridge-omarchy-0.2.1.tar.gz",
+    "archive_sha256": "bbd4b4a6f923cc308fbdeb6703c0fb71858d68140fa44e10cec217611c1b0e90",
+    "unmodified_release_documents": [
+      {
+        "path": "t1bridge-omarchy-0.2.1/LICENSE",
+        "sha256": "717ba1949502290f8e47688ae2e323acd06c8ca47aec9f7596b15f678c1af4a2"
+      },
+      {
+        "path": "t1bridge-omarchy-0.2.1/README.md",
+        "sha256": "03f13105c642ee67eaa427d3ceb3197faeed625e4964bb3b5ad4b521413a0e00"
+      },
+      {
+        "path": "t1bridge-omarchy-0.2.1/docs/integration.md",
+        "sha256": "3ce644dae5842255638d92883f5487770282444111ac1e686693d40cb61f1a2f"
+      }
+    ]
+  }
+]

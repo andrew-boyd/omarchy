@@ -1,0 +1,87 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12072",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "display-enumeration"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "state": "open"
+    },
+    {
+      "head_sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "state": "open",
+      "updated_at": "2026-09-16T10:32:45Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12072,
+  "checked_at": "2026-09-21T11:56:20.558897+00:00",
+  "title": "Omit empty duplicate displays from the Display panel",
+  "author": "vincentritter",
+  "head_sha": "5d575ad3470b81c78bd960dad31fb67149c3e959",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T10:32:45Z",
+  "state": "open",
+  "body": "The Display panel lists every connector Hyprland reports. On a dual-GPU laptop that includes outputs that cannot show a picture.\n\nThe GPU that is not wired to the panel still exposes an eDP. Hyprland's catch-all `preferred` rule enables it at 0\u00d70, with no EDID, no modes, and no make or model. The panel then draws a second row, checked as if it were a real screen. It is not the Touch Bar.\n\nOmarchy already treats an enabled 0\u00d70 output as sick: `omarchy-hyprland-monitor-modeless` reloads until a mode appears. That recovery is for a monitor that powered on with a partial EDID. A permanent ghost never gets a mode, so reload cannot help, and the list stays wrong even after the connector is disabled by hand.\n\n#10198 disables those ghosts in Hyprland. This pull request filters the list. `omarchy-monitor-state` omits a connector that has no geometry, no modes, and no identity. A clamshelled laptop panel is also 0\u00d70, but it still has EDID and modes, so it stays in the list and can be turned back on. A real HDMI you turned off is kept for the same reason.\n\nDRM names for these connectors swap across boots, so this does not key off `eDP-1` versus `eDP-2`. Hardcoding a port name would disable the laptop panel on the next numbering.\n\n`parseDisplays` also drops an enabled 0\u00d70, so a live ghost cannot count as a second screen or let you disable the last real output.\n\n### Before\n\nThe stock Display panel on a T2 MacBook Pro (Intel + AMD). In this capture `eDP-2` is the laptop panel and `eDP-1` is the AMD eDP: connected, empty identity, no modes.\n\n<img width=\"760\" height=\"1020\" alt=\"omarchy-display-before\" src=\"https://github.com/user-attachments/assets/8f66c9b9-3878-4200-a1ba-5f5472eedd4d\" />\n\n### After\n\nThe same session, ghost still enabled in Hyprland. The panel no longer offers the empty connector, and the DISPLAYS section goes away because only one real screen remains.\n\n<img width=\"760\" height=\"1020\" alt=\"omarchy-display-after\" src=\"https://github.com/user-attachments/assets/a4900c63-b8c5-479f-a830-608e474eec0c\" />\n\n### Tests\n\n`test/shell.d/monitor-state-test.sh` and `test/shell.d/monitor-test.sh` cover an enabled ghost, a disabled ghost, either eDP numbering, a clamshelled internal that must still list, and a user-disabled HDMI that must still list.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "0be189addc952e8cafdd9c16c4c08d7b2b6ae10f",
+      "filename": "bin/omarchy-monitor-state",
+      "status": "modified",
+      "additions": 10,
+      "deletions": 2,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d575ad3470b81c78bd960dad31fb67149c3e959/bin%2Fomarchy-monitor-state",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d575ad3470b81c78bd960dad31fb67149c3e959/bin%2Fomarchy-monitor-state",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-monitor-state?ref=5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "patch": "@@ -19,5 +19,13 @@ printf '%s\\n' \"$monitors_json\" | jq -r '\n printf '%s\\n' \"$focused_monitor\"\n omarchy-hyprland-monitor-scaling 2>/dev/null || echo\n \n-printf '%s\\n' \"$monitors_json\" | jq -c \\\n-  '[.[] | {name, enabled:(.disabled != true), focused:(.focused == true), width, height}]'\n+printf '%s\\n' \"$monitors_json\" | jq -c '\n+  def present: . != null and . != \"\";\n+  def listable:\n+    ((.width // 0) > 0 and (.height // 0) > 0)\n+    or ((.availableModes // []) | length) > 0\n+    or (.description | present)\n+    or (.make | present)\n+    or (.model | present);\n+  [.[] | select(listable) | {name, enabled:(.disabled != true), focused:(.focused == true), width, height}]\n+'"
+    },
+    {
+      "sha": "b0375863f3914fac4fd1a7252550e82e91cb3011",
+      "filename": "shell/plugins/panels/monitor/Model.js",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 2,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d575ad3470b81c78bd960dad31fb67149c3e959/shell%2Fplugins%2Fpanels%2Fmonitor%2FModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d575ad3470b81c78bd960dad31fb67149c3e959/shell%2Fplugins%2Fpanels%2Fmonitor%2FModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fpanels%2Fmonitor%2FModel.js?ref=5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "patch": "@@ -91,6 +91,15 @@ function brightnessName(percent) {\n   return \"Night owl\"\n }\n \n+function isListableDisplay(display) {\n+  if (!display || !display.name) return false\n+  var width = Number(display.width)\n+  var height = Number(display.height)\n+  var hasMode = isFinite(width) && isFinite(height) && width > 0 && height > 0\n+  if (hasMode) return true\n+  return !display.enabled\n+}\n+\n function parseDisplays(raw) {\n   var displays = []\n   try {\n@@ -100,13 +109,16 @@ function parseDisplays(raw) {\n   }\n   if (!Array.isArray(displays)) displays = []\n \n+  var listable = []\n   var count = 0\n   for (var i = 0; i < displays.length; i++) {\n-    if (displays[i] && displays[i].enabled) count++\n+    if (!isListableDisplay(displays[i])) continue\n+    listable.push(displays[i])\n+    if (displays[i].enabled) count++\n   }\n \n   return {\n-    displays: displays,\n+    displays: listable,\n     enabledDisplayCount: count\n   }\n }"
+    },
+    {
+      "sha": "f16cd2603bd16c3ae338d3f4be1235eb55a00c41",
+      "filename": "test/shell.d/monitor-state-test.sh",
+      "status": "modified",
+      "additions": 35,
+      "deletions": 2,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d575ad3470b81c78bd960dad31fb67149c3e959/test%2Fshell.d%2Fmonitor-state-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d575ad3470b81c78bd960dad31fb67149c3e959/test%2Fshell.d%2Fmonitor-state-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmonitor-state-test.sh?ref=5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "patch": "@@ -75,8 +75,23 @@ reverse_mirrored='[\n ]'\n \n clamshell='[\n-  { \"name\": \"eDP-1\", \"mirrorOf\": \"none\", \"disabled\": true, \"focused\": false, \"width\": 0, \"height\": 0 },\n-  { \"name\": \"DP-1\", \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": true, \"width\": 2560, \"height\": 1440 }\n+  { \"name\": \"eDP-1\", \"description\": \"AU Optronics 0x1234\", \"make\": \"AU Optronics\", \"model\": \"0x1234\", \"availableModes\": [\"1920x1080@60.00Hz\"], \"mirrorOf\": \"none\", \"disabled\": true, \"focused\": false, \"width\": 0, \"height\": 0 },\n+  { \"name\": \"DP-1\", \"description\": \"Dell Inc. DELL U2720Q\", \"make\": \"Dell Inc.\", \"model\": \"DELL U2720Q\", \"availableModes\": [\"2560x1440@60.00Hz\"], \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": true, \"width\": 2560, \"height\": 1440 }\n+]'\n+\n+ghost='[\n+  { \"name\": \"eDP-1\", \"description\": \"\", \"make\": \"\", \"model\": \"\", \"availableModes\": [], \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": false, \"width\": 0, \"height\": 0 },\n+  { \"name\": \"eDP-2\", \"description\": \"Apple Computer Inc Color LCD\", \"make\": \"Apple Computer Inc\", \"model\": \"Color LCD\", \"availableModes\": [\"2880x1800@60.00Hz\"], \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": true, \"width\": 2880, \"height\": 1800 }\n+]'\n+\n+disabled_ghost='[\n+  { \"name\": \"eDP-1\", \"description\": \"\", \"make\": \"\", \"model\": \"\", \"availableModes\": [], \"mirrorOf\": \"none\", \"disabled\": true, \"focused\": false, \"width\": 0, \"height\": 0 },\n+  { \"name\": \"eDP-2\", \"description\": \"Apple Computer Inc Color LCD\", \"make\": \"Apple Computer Inc\", \"model\": \"Color LCD\", \"availableModes\": [\"2880x1800@60.00Hz\"], \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": true, \"width\": 2880, \"height\": 1800 }\n+]'\n+\n+swapped_ghost='[\n+  { \"name\": \"eDP-1\", \"description\": \"Apple Computer Inc Color LCD\", \"make\": \"Apple Computer Inc\", \"model\": \"Color LCD\", \"availableModes\": [\"2880x1800@60.00Hz\"], \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": true, \"width\": 2880, \"height\": 1800 },\n+  { \"name\": \"eDP-2\", \"description\": \"\", \"make\": \"\", \"model\": \"\", \"availableModes\": [], \"mirrorOf\": \"none\", \"disabled\": false, \"focused\": false, \"width\": 0, \"height\": 0 }\n ]'\n \n monitor_state \"$extended\"\n@@ -115,3 +130,21 @@ monitor_state \"$clamshell\"\n [[ ${state_lines[7]-} == '[{\"name\":\"eDP-1\",\"enabled\":false,\"focused\":false,\"width\":0,\"height\":0},{\"name\":\"DP-1\",\"enabled\":true,\"focused\":true,\"width\":2560,\"height\":1440}]' ]] ||\n   fail \"monitor state lists every display for the panel\" \"actual: ${state_lines[7]-<missing>}\"\n pass \"monitor state lists every display with its enabled and focused state\"\n+\n+monitor_state \"$ghost\"\n+assert_line_count \"monitor state answers every line with a ghost internal connector\"\n+[[ ${state_lines[7]-} == '[{\"name\":\"eDP-2\",\"enabled\":true,\"focused\":true,\"width\":2880,\"height\":1800}]' ]] ||\n+  fail \"monitor state omits an empty duplicate internal connector\" \"actual: ${state_lines[7]-<missing>}\"\n+pass \"monitor state omits an empty duplicate internal connector\"\n+\n+monitor_state \"$disabled_ghost\"\n+assert_line_count \"monitor state answers every line with a disabled ghost connector\"\n+[[ ${state_lines[7]-} == '[{\"name\":\"eDP-2\",\"enabled\":true,\"focused\":true,\"width\":2880,\"height\":1800}]' ]] ||\n+  fail \"monitor state omits a disabled empty internal connector\" \"actual: ${state_lines[7]-<missing>}\"\n+pass \"monitor state omits a disabled empty internal connector\"\n+\n+monitor_state \"$swapped_ghost\"\n+assert_line_count \"monitor state answers every line when the ghost is eDP-2\"\n+[[ ${state_lines[7]-} == '[{\"name\":\"eDP-1\",\"enabled\":true,\"focused\":true,\"width\":2880,\"height\":1800}]' ]] ||\n+  fail \"monitor state omits an empty duplicate regardless of eDP numbering\" \"actual: ${state_lines[7]-<missing>}\"\n+pass \"monitor state omits an empty duplicate regardless of eDP numbering\""
+    },
+    {
+      "sha": "689c1e60d5b00e239c038fd064d58e9bbfa172ac",
+      "filename": "test/shell.d/monitor-test.sh",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 0,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5d575ad3470b81c78bd960dad31fb67149c3e959/test%2Fshell.d%2Fmonitor-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5d575ad3470b81c78bd960dad31fb67149c3e959/test%2Fshell.d%2Fmonitor-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmonitor-test.sh?ref=5d575ad3470b81c78bd960dad31fb67149c3e959",
+      "patch": "@@ -74,5 +74,19 @@ assertDeepEqual(\n   'monitor parses display state'\n )\n \n+assertDeepEqual(\n+  monitor.parseDisplays(JSON.stringify([\n+    { name: 'eDP-2', enabled: true, focused: true, width: 2880, height: 1800 },\n+    { name: 'eDP-1', enabled: true, focused: false, width: 0, height: 0 }\n+  ])),\n+  {\n+    displays: [\n+      { name: 'eDP-2', enabled: true, focused: true, width: 2880, height: 1800 }\n+    ],\n+    enabledDisplayCount: 1\n+  },\n+  'monitor omits an enabled output with no mode'\n+)\n+\n assertDeepEqual(monitor.parseDisplays('{'), { displays: [], enabledDisplayCount: 0 }, 'monitor handles invalid display JSON')\n JS"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

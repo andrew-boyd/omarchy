@@ -1,0 +1,729 @@
+:: Synchronizing package databases...
+ core downloading...
+ extra downloading...
+warning: systemd-261.3-1 is up to date -- skipping
+warning: libgcc-16.2.1+r23+gd564253eb6c8-1 is up to date -- skipping
+warning: glib2-2.88.3-1 is up to date -- skipping
+warning: glibc-2.44+r24+g16be1518495f-1 is up to date -- skipping
+warning: openssl-3.6.4-1 is up to date -- skipping
+:: Starting full system upgrade...
+resolving dependencies...
+looking for conflicting packages...
+
+Package (83)                         Old Version  New Version                 Net Change  Download Size
+
+core/autoconf                                     2.73-1                        2.25 MiB               
+core/automake                                     1.18.1-1                      1.64 MiB               
+core/bash                            5.3.15-1     5.3.20-1                      0.00 MiB               
+core/bison                                        3.8.2-8                       2.52 MiB               
+extra/boost-libs                                  1.92.0-1                     51.10 MiB               
+extra/cpio                                        2.15-3                        0.98 MiB               
+core/db5.3                                        5.3.28-7                      6.48 MiB               
+core/debugedit                                    5.3-2                         0.13 MiB               
+core/diffutils                                    3.12-2                        1.50 MiB               
+extra/docbook-xml                                 4.5-11                        1.96 MiB               
+extra/docbook-xsl                                 1.79.2-9                     26.32 MiB               
+core/elfutils                                     0.196-1                       4.30 MiB               
+core/fakeroot                                     1:1.37.2-3                    0.14 MiB               
+core/flex                                         2.6.4-6                       0.84 MiB               
+extra/fontconfig                                  2:2.18.3-2                    1.33 MiB               
+extra/freetype2                                   2.14.3-1                      1.66 MiB               
+core/gc                                           8.2.12-1                      0.76 MiB               
+core/gcc                                          16.2.1+r23+gd564253eb6c8-1  220.89 MiB               
+extra/gdb                                         17.2-1                       31.93 MiB               
+extra/gdb-common                                  17.2-1                        1.13 MiB               
+core/glib2-docs                                   2.88.3-1                     66.78 MiB               
+extra/gobject-introspection-runtime               1.86.0-2                      0.15 MiB               
+core/groff                                        1.24.1-1                      9.01 MiB               
+core/guile                                        3.0.11-1                     54.49 MiB               
+core/gzip                            1.14-2       1.15-1                        0.01 MiB       0.09 MiB
+extra/json-glib                                   1.10.8-1                      1.01 MiB               
+extra/libgirepository                             1.86.0-2                      1.52 MiB               
+core/libisl                                       0.28-1                        5.90 MiB               
+core/libmpc                                       1.4.1-1                       0.19 MiB               
+extra/libpng                                      1.6.58-2                      0.58 MiB               
+core/libtool                                      2.6.2-5                       2.34 MiB               
+extra/libx11                                      1.8.13-1                      9.78 MiB               
+extra/libxau                                      1.0.12-1                      0.02 MiB               
+extra/libxcb                                      1.17.0-1                      3.87 MiB               
+extra/libxdmcp                                    1.1.5-2                       0.13 MiB               
+extra/libxext                                     1.3.7-1                       0.30 MiB               
+extra/libxrender                                  0.9.12-1                      0.09 MiB               
+extra/libxslt                                     1.1.45-2                      0.78 MiB               
+core/lzo                                          2.10-5                        0.38 MiB               
+core/m4                                           1.4.21-2                      0.71 MiB               
+core/make                                         4.4.1-3                       1.66 MiB               
+core/mpdecimal                                    4.0.1-3                       0.32 MiB               
+extra/ninja                                       1.13.2-3                      0.41 MiB               
+core/patch                                        2.8-1                         0.17 MiB               
+core/perl                                         5.42.2-2                     70.28 MiB               
+core/pkgconf                                      3.0.7-1                       0.34 MiB               
+core/python                                       3.14.7-1                     73.62 MiB               
+extra/python-autocommand                          2.2.2-9                       0.08 MiB               
+extra/python-jaraco.collections                   5.1.0-3                       0.11 MiB               
+extra/python-jaraco.context                       6.1.2-1                       0.06 MiB               
+extra/python-jaraco.functools                     4.1.0-3                       0.07 MiB               
+extra/python-jaraco.text                          4.0.0-4                       0.08 MiB               
+extra/python-lxml                                 6.1.3_1-1                     5.94 MiB               
+extra/python-mako                                 1.3.12-1                      0.98 MiB               
+extra/python-markdown                             3.10.3-1                      1.16 MiB               
+extra/python-markupsafe                           3.0.3-1                       0.09 MiB               
+extra/python-more-itertools                       11.1.0-1                      0.77 MiB               
+extra/python-packaging                            26.3-1                        1.58 MiB               
+extra/python-platformdirs                         4.11.11-1                     0.49 MiB               
+extra/python-pygments                             2.21.0-1                     15.59 MiB               
+extra/python-setuptools                           1:84.0.0-1                    4.92 MiB               
+extra/python-tqdm                                 4.70.1-1                      0.64 MiB               
+extra/python-wheel                                0.48.0-1                      0.34 MiB               
+core/readline                        8.3.003-1    8.3.6-1                       0.00 MiB               
+extra/source-highlight                            3.1.9-19                      3.27 MiB               
+core/texinfo                                      7.3-1                        12.67 MiB               
+core/which                                        2.25-1                        0.03 MiB               
+extra/xcb-proto                                   1.17.0-4                      1.03 MiB               
+extra/xorgproto                                   2025.1-1                      1.47 MiB               
+extra/xxhash                                      0.8.4-1                       0.42 MiB               
+core/base-devel                                   1-2                           0.00 MiB               
+extra/cairo                                       1.18.4-1                      1.59 MiB               
+core/glib2-devel                                  2.88.3-1                      1.23 MiB               
+extra/gobject-introspection                       1.86.0-2                      3.11 MiB               
+extra/gtk-doc                                     1.36.1-1                      3.43 MiB               
+extra/libgudev                                    238-3                         0.38 MiB               
+extra/libgusb                                     0.4.9-2                       0.35 MiB               
+extra/meson                                       1.12.0-1                     16.85 MiB               
+extra/pixman                                      0.46.4-1                      0.74 MiB               
+extra/python-cairo                                1.29.1-1                      0.44 MiB               
+extra/python-gobject                              3.56.3-1                      1.51 MiB               
+core/sudo                                         1.9.17.p2-6                   7.85 MiB               
+extra/umockdev                                    0.19.8-1                      0.65 MiB               
+
+Total Download Size:     0.09 MiB
+Total Installed Size:  763.92 MiB
+Net Upgrade Size:      752.68 MiB
+
+:: Proceed with installation? [Y/n] 
+:: Retrieving packages...
+ gzip-1.15-1-x86_64 downloading...
+checking keyring...
+checking package integrity...
+loading package files...
+checking for file conflicts...
+:: Processing package changes...
+installing m4...
+upgrading readline...
+upgrading bash...
+installing diffutils...
+installing db5.3...
+installing perl...
+installing autoconf...
+installing automake...
+installing bison...
+installing xxhash...
+installing cpio...
+installing elfutils...
+installing boost-libs...
+Optional dependencies for boost-libs
+    openmpi: for mpi support
+installing mpdecimal...
+installing python...
+Optional dependencies for python
+    python-setuptools: for building Python packages using tooling that is usually bundled with Python [pending]
+    python-pip: for installing Python packages using tooling that is usually bundled with Python
+    python-pipx: for installing Python software not packaged on Arch Linux
+    sqlite: for a default database integration [installed]
+    xz: for lzma [installed]
+    tk: for tkinter
+installing gc...
+installing guile...
+installing gdb-common...
+installing source-highlight...
+Optional dependencies for source-highlight
+    lesspipe: src-hilite-lesspipe.sh
+installing gdb...
+installing debugedit...
+installing fakeroot...
+installing flex...
+installing libisl...
+installing libmpc...
+installing gcc...
+Optional dependencies for gcc
+    lib32-gcc-libs: for generating code for 32-bit ABI
+installing groff...
+Optional dependencies for groff
+    netpbm: for use together with man -H command interaction in browsers
+    psutils: for use together with man -H command interaction in browsers
+    libxaw: for gxditview
+    perl-file-homedir: for use with glilypond
+upgrading gzip...
+New optional dependencies for gzip
+    grep: zegrep/zfgrep/zforce/zgrep support [installed]
+installing libtool...
+installing make...
+installing patch...
+Optional dependencies for patch
+    ed: for patch -e functionality
+installing pkgconf...
+installing sudo...
+installing texinfo...
+Optional dependencies for texinfo
+    perl-archive-zip: EPUB file output via texi2any
+installing which...
+installing base-devel...
+installing ninja...
+installing python-tqdm...
+Optional dependencies for python-tqdm
+    python-requests: telegram
+installing meson...
+installing python-packaging...
+installing glib2-devel...
+installing libgirepository...
+installing gobject-introspection-runtime...
+installing python-markupsafe...
+installing python-mako...
+Optional dependencies for python-mako
+    python-babel: for i18n features
+    python-beaker: for caching support
+    python-dogpile.cache: for caching support
+    python-pygments: for syntax highlighting [pending]
+    python-pytest: for testing utilities
+installing python-markdown...
+Optional dependencies for python-markdown
+    python-yaml: parse Python in YAML metadata
+    python-pygments: Code highlighting [pending]
+installing python-more-itertools...
+installing python-jaraco.functools...
+installing python-jaraco.context...
+installing python-autocommand...
+installing python-jaraco.text...
+Optional dependencies for python-jaraco.text
+    python-inflect: for show-newlines script
+installing python-jaraco.collections...
+installing python-platformdirs...
+installing python-wheel...
+Optional dependencies for python-wheel
+    python-keyring: for wheel.signatures
+    python-xdg: for wheel.signatures
+    python-setuptools: for legacy bdist_wheel subcommand [pending]
+installing python-setuptools...
+installing gobject-introspection...
+installing docbook-xml...
+installing libxslt...
+Optional dependencies for libxslt
+    python: Python bindings [installed]
+installing docbook-xsl...
+installing glib2-docs...
+installing python-lxml...
+Optional dependencies for python-lxml
+    python-beautifulsoup4: support for beautifulsoup parser to parse not well formed HTML
+    python-cssselect: support for cssselect
+    python-html5lib: support for html5lib parser
+    python-lxml-docs: offline docs
+    python-lxml-html-clean: enable htmlclean feature
+installing python-pygments...
+installing gtk-doc...
+Optional dependencies for gtk-doc
+    dblatex: PDF support
+installing libpng...
+installing freetype2...
+Optional dependencies for freetype2
+    harfbuzz: Improved autohinting
+installing fontconfig...
+Creating fontconfig configuration...
+Rebuilding fontconfig cache...
+installing xcb-proto...
+installing xorgproto...
+installing libxdmcp...
+installing libxau...
+installing libxcb...
+installing libx11...
+installing libxext...
+installing libxrender...
+installing lzo...
+installing pixman...
+installing cairo...
+installing python-cairo...
+installing python-gobject...
+Optional dependencies for python-gobject
+    python-cairo: Cairo bindings [installed]
+installing libgudev...
+installing json-glib...
+installing libgusb...
+installing umockdev...
+:: Running post-transaction hooks...
+(1/7) Configuring dynamic linker run-time bindings...
+(2/7) Creating temporary files...
+/usr/lib/tmpfiles.d/journal-nocow.conf:26: Failed to resolve specifier: uninitialized /etc/ detected, skipping.
+All rules containing unresolvable specifiers will be skipped.
+(3/7) Reloading system manager configuration...
+  Skipped: Current root is not booted.
+(4/7) Arming ConditionNeedsUpdate...
+(5/7) Updating fontconfig configuration...
+(6/7) Checking for old perl modules...
+(7/7) Updating fontconfig cache...
+1/3 drivers+custom - libfprint:egis_etu905 OK              0.32s
+2/3 drivers+custom - libfprint:egis_etu905 OK              0.31s
+3/3 drivers+custom - libfprint:egis_etu905 OK              0.30s
+
+Ok:                3   
+Fail:              0   
+
+Full log written to /var/cache/intel-mac-build/libfprint-t1bridge/src/build/meson-logs/isolated-recheck.txt
+  1/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_capture_prevents_close                                  OK              0.41s
+  2/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_enroll_verify                                           OK              1.05s
+  3/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_features                                                OK              0.37s
+  4/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_identify                                                OK              1.75s
+  5/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_verify_serialized                                       OK              0.65s
+  6/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_capture_unsupported                                  OK              0.18s
+  7/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_change_enroll_stages                                 OK              0.18s
+  8/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_change_scan_type                                     OK              0.17s
+  9/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_close_error                                          OK              0.27s
+ 10/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_close_while_opening                                  OK              0.67s
+ 11/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_delayed_open                                         OK              0.67s
+ 12/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_delayed_open_with_keep_alive                         OK              0.67s
+ 13/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_features                                      OK              0.17s
+ 14/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_properties                                    OK              0.17s
+ 15/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep                                         OK              0.67s
+ 16/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep_before_completing_verify                OK              1.07s
+ 17/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep_on_cancellation                         OK              1.67s
+ 18/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll                                               OK              0.18s
+ 19/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_script                                        OK              0.21s
+ 20/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_script_interactive                            OK              0.27s
+ 21/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_error                                  OK              0.17s
+ 22/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_match                                  OK              0.17s
+ 23/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_no_match                               OK              0.17s
+ 24/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_retry                                  OK              0.18s
+ 25/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_script                                 OK              0.26s
+ 26/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_with_retry                                    OK              0.17s
+ 27/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_finger_status                                        OK              0.17s
+ 28/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_finger_status_after_sleep                            OK              0.18s
+ 29/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_identify_unsupported                                 OK              0.17s
+ 30/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_open_error                                           OK              0.17s
+ 31/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_open_error_with_keep_alive                           OK              0.17s
+ 32/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_quick_enroll                                         OK              0.17s
+ 33/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_capture      OK              0.37s
+ 34/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_close        OK              0.37s
+ 35/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_delete_print OK              0.37s
+ 36/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_enroll       OK              0.37s
+ 37/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_identify     OK              0.37s
+ 38/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_list_prints  OK              0.37s
+ 39/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_open         OK              0.50s
+ 40/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_verify       OK              0.38s
+ 41/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_capture                                  OK              0.17s
+ 42/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_close                                    OK              0.18s
+ 43/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_delete_print                             OK              0.18s
+ 44/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_enroll                                   OK              0.17s
+ 45/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_identify                                 OK              0.17s
+ 46/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_list_prints                              OK              0.17s
+ 47/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_verify                                   OK              0.17s
+ 48/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_capture_unsupported                    OK              0.17s
+ 49/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_change_enroll_stages                   OK              0.17s
+ 50/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_change_scan_type                       OK              0.17s
+ 51/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_clear_storage                          OK              1.17s
+ 52/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_clear_storage_error                    OK              0.68s
+ 53/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_close_error                            OK              0.27s
+ 54/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_close_while_opening                    OK              0.68s
+ 55/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delayed_open                           OK              0.68s
+ 56/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delayed_open_with_keep_alive           OK              0.68s
+ 57/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delete_error                           OK              0.27s
+ 58/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delete_multiple_times                  OK              1.18s
+ 59/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_features                        OK              0.17s
+ 60/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_properties                      OK              0.17s
+ 61/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep                           OK              0.67s
+ 62/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep_before_completing_verify  OK              1.09s
+ 63/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep_on_cancellation           OK              1.68s
+ 64/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_duplicate_enroll                       OK              0.18s
+ 65/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll                                 OK              0.17s
+ 66/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_script                          OK              0.20s
+ 67/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_script_interactive              OK              0.29s
+ 68/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_error                    OK              0.18s
+ 69/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_match                    OK              0.17s
+ 70/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_no_match                 OK              0.17s
+ 71/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_retry                    OK              0.17s
+ 72/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_script                   OK              0.26s
+ 73/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_with_retry                      OK              0.17s
+ 74/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_finger_status                          OK              0.17s
+ 75/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_finger_status_after_sleep              OK              0.18s
+ 76/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_match                         OK              0.17s
+ 77/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_missing_print                 OK              0.17s
+ 78/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_no_match                      OK              0.19s
+ 79/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_retry                         OK              0.17s
+ 80/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_unsupported                   OK              0.17s
+ 81/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_delete                            OK              1.67s
+ 82/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_delete_missing                    OK              0.68s
+ 83/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_empty                             OK              0.68s
+ 84/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_error                             OK              0.27s
+ 85/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_populated                         OK              0.67s
+ 86/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_open_error                             OK              0.17s
+ 87/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_open_error_with_keep_alive             OK              0.17s
+ 88/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_quick_enroll                           OK              0.17s
+ 89/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_verify_missing_print                   OK              0.17s
+ 90/262 virtual-driver+virtual-device+VirtualDeviceUnplugging - libfprint:VirtualDeviceUnplugging.test_device_unplug                    OK              0.17s
+ 91/262 virtual-driver+virtual-device+VirtualDeviceUnplugging - libfprint:VirtualDeviceUnplugging.test_device_unplug_during_verify      OK              0.67s
+ 92/262 drivers+capture - libfprint:aes2501                                                                                             OK              1.21s
+ 93/262 drivers+custom - libfprint:aes2550-custom                                                                                       OK              1.27s
+ 94/262 drivers+capture - libfprint:aes2550-capture                                                                                     OK              1.55s
+ 95/262 drivers+capture - libfprint:aes3500                                                                                             OK              0.42s
+ 96/262 drivers+capture - libfprint:elan                                                                                                OK              0.87s
+ 97/262 drivers+capture - libfprint:elan-cobo                                                                                           OK              0.82s
+ 98/262 drivers+custom - libfprint:elanmoc                                                                                              OK              0.26s
+ 99/262 drivers+capture - libfprint:elanspi                                                                                             OK              2.70s
+100/262 drivers+custom - libfprint:synaptics                                                                                            OK              0.29s
+101/262 drivers+capture - libfprint:upektc_img                                                                                          OK              0.38s
+102/262 drivers+capture - libfprint:upektc_img-tcs1s                                                                                    OK              0.38s
+103/262 drivers+capture - libfprint:uru4000-msv2                                                                                        OK              0.49s
+104/262 drivers+capture - libfprint:uru4000-4500                                                                                        OK              0.44s
+105/262 drivers+capture - libfprint:vfs0050                                                                                             OK              0.59s
+106/262 drivers+capture - libfprint:vfs301                                                                                              OK              0.99s
+107/262 drivers+capture - libfprint:vfs5011                                                                                             OK              0.39s
+108/262 drivers+capture - libfprint:vfs7552                                                                                             OK              1.64s
+109/262 drivers+custom - libfprint:goodixmoc                                                                                            OK              0.36s
+110/262 drivers+capture - libfprint:nb1010                                                                                              OK              0.42s
+111/262 drivers+capture - libfprint:egis0570                                                                                            OK              0.86s
+112/262 drivers+custom - libfprint:egismoc                                                                                              OK              0.34s
+113/262 drivers+custom - libfprint:egis_etu905                                                                                          OK              0.31s
+114/262 drivers+custom - libfprint:egismoc-05a1                                                                                         OK              0.33s
+115/262 drivers+custom - libfprint:egismoc-0586                                                                                         OK              0.37s
+116/262 drivers+custom - libfprint:egismoc-0587                                                                                         OK              0.36s
+117/262 drivers+custom - libfprint:fpcmoc                                                                                               OK              0.28s
+118/262 drivers+custom - libfprint:realtek                                                                                              OK              0.28s
+119/262 drivers+custom - libfprint:realtek-5816                                                                                         OK              0.30s
+120/262 drivers+custom - libfprint:realtek-storage-errors                                                                               OK              0.28s
+121/262 drivers+custom - libfprint:focaltech_moc                                                                                        OK             14.44s
+122/262 drivers+custom - libfprint:focaltech_moc-6553                                                                                   OK              4.96s
+123/262 drivers+custom - libfprint:mafpmoc                                                                                              OK              5.35s
+124/262 drivers+capture - libfprint:secugen                                                                                             OK              1.02s
+125/262 unit-tests - libfprint:fpi-device                                                                                               OK              7.55s
+126/262 unit-tests - libfprint:fpi-ssm                                                                                                  OK              1.05s
+127/262 unit-tests - libfprint:fpi-assembling                                                                                           OK              0.16s
+128/262 unit-tests - libfprint:fp-context                                                                                               OK              0.91s
+129/262 unit-tests - libfprint:fp-device                                                                                                OK              3.60s
+130/262 unit-tests - libfprint:t1bridge-protocol                                                                                        OK              0.01s
+131/262 data+no-valgrind - libfprint:udev-hwdb                                                                                          OK              0.04s
+132/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_capture_prevents_close                                  OK              0.38s
+133/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_enroll_verify                                           OK              1.04s
+134/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_features                                                OK              0.39s
+135/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_identify                                                OK              1.73s
+136/262 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_verify_serialized                                       OK              0.64s
+137/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_capture_unsupported                                  OK              0.18s
+138/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_change_enroll_stages                                 OK              0.17s
+139/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_change_scan_type                                     OK              0.17s
+140/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_close_error                                          OK              0.27s
+141/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_close_while_opening                                  OK              0.67s
+142/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_delayed_open                                         OK              0.67s
+143/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_delayed_open_with_keep_alive                         OK              0.67s
+144/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_features                                      OK              0.18s
+145/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_properties                                    OK              0.17s
+146/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep                                         OK              0.67s
+147/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep_before_completing_verify                OK              1.07s
+148/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep_on_cancellation                         OK              1.67s
+149/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll                                               OK              0.19s
+150/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_script                                        OK              0.20s
+151/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_script_interactive                            OK              0.27s
+152/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_error                                  OK              0.17s
+153/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_match                                  OK              0.17s
+154/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_no_match                               OK              0.17s
+155/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_retry                                  OK              0.19s
+156/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_script                                 OK              0.26s
+157/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_with_retry                                    OK              0.17s
+158/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_finger_status                                        OK              0.17s
+159/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_finger_status_after_sleep                            OK              0.18s
+160/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_identify_unsupported                                 OK              0.18s
+161/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_open_error                                           OK              0.17s
+162/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_open_error_with_keep_alive                           OK              0.17s
+163/262 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_quick_enroll                                         OK              0.17s
+164/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_capture      OK              0.37s
+165/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_close        OK              0.37s
+166/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_delete_print OK              0.37s
+167/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_enroll       OK              0.37s
+168/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_identify     OK              0.37s
+169/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_list_prints  OK              0.37s
+170/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_open         OK              0.47s
+171/262 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_verify       OK              0.38s
+172/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_capture                                  OK              0.16s
+173/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_close                                    OK              0.17s
+174/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_delete_print                             OK              0.16s
+175/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_enroll                                   OK              0.17s
+176/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_identify                                 OK              0.17s
+177/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_list_prints                              OK              0.17s
+178/262 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_verify                                   OK              0.17s
+179/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_capture_unsupported                    OK              0.17s
+180/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_change_enroll_stages                   OK              0.17s
+181/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_change_scan_type                       OK              0.17s
+182/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_clear_storage                          OK              1.17s
+183/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_clear_storage_error                    OK              0.68s
+184/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_close_error                            OK              0.27s
+185/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_close_while_opening                    OK              0.67s
+186/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delayed_open                           OK              0.68s
+187/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delayed_open_with_keep_alive           OK              0.67s
+188/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delete_error                           OK              0.27s
+189/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delete_multiple_times                  OK              1.19s
+190/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_features                        OK              0.17s
+191/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_properties                      OK              0.17s
+192/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep                           OK              0.68s
+193/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep_before_completing_verify  OK              1.09s
+194/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep_on_cancellation           OK              1.68s
+195/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_duplicate_enroll                       OK              0.17s
+196/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll                                 OK              0.17s
+197/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_script                          OK              0.21s
+198/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_script_interactive              OK              0.28s
+199/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_error                    OK              0.17s
+200/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_match                    OK              0.17s
+201/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_no_match                 OK              0.17s
+202/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_retry                    OK              0.17s
+203/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_script                   OK              0.26s
+204/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_with_retry                      OK              0.17s
+205/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_finger_status                          OK              0.17s
+206/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_finger_status_after_sleep              OK              0.18s
+207/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_match                         OK              0.17s
+208/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_missing_print                 OK              0.17s
+209/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_no_match                      OK              0.18s
+210/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_retry                         OK              0.17s
+211/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_unsupported                   OK              0.17s
+212/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_delete                            OK              1.67s
+213/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_delete_missing                    OK              0.69s
+214/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_empty                             OK              0.67s
+215/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_error                             OK              0.27s
+216/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_populated                         OK              0.68s
+217/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_open_error                             OK              0.17s
+218/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_open_error_with_keep_alive             OK              0.17s
+219/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_quick_enroll                           OK              0.17s
+220/262 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_verify_missing_print                   OK              0.17s
+221/262 virtual-driver+virtual-device+VirtualDeviceUnplugging - libfprint:VirtualDeviceUnplugging.test_device_unplug                    OK              0.17s
+222/262 virtual-driver+virtual-device+VirtualDeviceUnplugging - libfprint:VirtualDeviceUnplugging.test_device_unplug_during_verify      OK              0.67s
+223/262 drivers+capture - libfprint:aes2501                                                                                             OK              1.26s
+224/262 drivers+custom - libfprint:aes2550-custom                                                                                       OK              1.29s
+225/262 drivers+capture - libfprint:aes2550-capture                                                                                     OK              1.60s
+226/262 drivers+capture - libfprint:aes3500                                                                                             OK              0.42s
+227/262 drivers+capture - libfprint:elan                                                                                                OK              0.85s
+228/262 drivers+capture - libfprint:elan-cobo                                                                                           OK              0.94s
+229/262 drivers+custom - libfprint:elanmoc                                                                                              OK              0.27s
+230/262 drivers+capture - libfprint:elanspi                                                                                             OK              2.73s
+231/262 drivers+custom - libfprint:synaptics                                                                                            OK              0.28s
+232/262 drivers+capture - libfprint:upektc_img                                                                                          OK              0.37s
+233/262 drivers+capture - libfprint:upektc_img-tcs1s                                                                                    OK              0.38s
+234/262 drivers+capture - libfprint:uru4000-msv2                                                                                        OK              0.48s
+235/262 drivers+capture - libfprint:uru4000-4500                                                                                        OK              0.43s
+236/262 drivers+capture - libfprint:vfs0050                                                                                             OK              0.57s
+237/262 drivers+capture - libfprint:vfs301                                                                                              OK              0.97s
+238/262 drivers+capture - libfprint:vfs5011                                                                                             OK              0.38s
+239/262 drivers+capture - libfprint:vfs7552                                                                                             OK              1.66s
+240/262 drivers+custom - libfprint:goodixmoc                                                                                            OK              0.36s
+241/262 drivers+capture - libfprint:nb1010                                                                                              OK              0.42s
+242/262 drivers+capture - libfprint:egis0570                                                                                            OK              0.93s
+243/262 drivers+custom - libfprint:egismoc                                                                                              OK              0.35s
+244/262 drivers+custom - libfprint:egis_etu905                                                                                          OK              0.30s
+245/262 drivers+custom - libfprint:egismoc-05a1                                                                                         OK              0.33s
+246/262 drivers+custom - libfprint:egismoc-0586                                                                                         OK              0.37s
+247/262 drivers+custom - libfprint:egismoc-0587                                                                                         OK              0.36s
+248/262 drivers+custom - libfprint:fpcmoc                                                                                               OK              0.28s
+249/262 drivers+custom - libfprint:realtek                                                                                              OK              0.28s
+250/262 drivers+custom - libfprint:realtek-5816                                                                                         OK              0.28s
+251/262 drivers+custom - libfprint:realtek-storage-errors                                                                               OK              0.26s
+252/262 drivers+custom - libfprint:focaltech_moc                                                                                        OK             14.44s
+253/262 drivers+custom - libfprint:focaltech_moc-6553                                                                                   OK              4.94s
+254/262 drivers+custom - libfprint:mafpmoc                                                                                              OK              5.35s
+255/262 drivers+capture - libfprint:secugen                                                                                             OK              1.00s
+256/262 unit-tests - libfprint:fpi-device                                                                                               OK              7.56s
+257/262 unit-tests - libfprint:fpi-ssm                                                                                                  OK              1.04s
+258/262 unit-tests - libfprint:fpi-assembling                                                                                           OK              0.17s
+259/262 unit-tests - libfprint:fp-context                                                                                               OK              0.90s
+260/262 unit-tests - libfprint:fp-device                                                                                                OK              3.63s
+261/262 unit-tests - libfprint:t1bridge-protocol                                                                                        OK              0.01s
+262/262 data+no-valgrind - libfprint:udev-hwdb                                                                                          OK              0.04s
+
+Ok:                262 
+Fail:              0   
+
+Full log written to /var/cache/intel-mac-build/libfprint-t1bridge/src/build/meson-logs/full-serial-recheck.txt
+==> Making package: libfprint-t1bridge 1.94.100-17 (Mon Sep 21 13:38:26 2026)
+==> Checking runtime dependencies...
+==> Checking buildtime dependencies...
+==> WARNING: Using existing $srcdir/ tree
+==> Removing existing $pkgdir/ directory...
+==> Starting build()...
+libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80 has no wrap files
++ exec meson setup --prefix /usr --libexecdir lib --sbindir bin --buildtype plain --auto-features enabled --wrap-mode nodownload -D b_pie=true -D python.bytecompile=1 libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80 build -D drivers=all -D installed-tests=false
+Directory already configured.
+
+Just run your build command (e.g. ninja) and Meson will regenerate as necessary.
+Run "meson setup --reconfigure" to force Meson to regenerate.
+
+If build failures persist, run "meson setup --wipe" to rebuild from scratch
+using the same options as passed when configuring the build.
+ninja: Entering directory `/var/cache/intel-mac-build/libfprint-t1bridge/src/build'
+ninja: no work to do.
+INFO: autodetecting backend as ninja
+INFO: calculating backend command to run: /usr/sbin/ninja -C /var/cache/intel-mac-build/libfprint-t1bridge/src/build
+==> Starting check()...
+ninja: Entering directory `/var/cache/intel-mac-build/libfprint-t1bridge/src/build'
+ninja: no work to do.
+  1/131 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_capture_prevents_close                                  OK              0.38s
+  2/131 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_enroll_verify                                           OK              1.04s
+  3/131 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_features                                                OK              0.38s
+  4/131 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_identify                                                OK              1.81s
+  5/131 virtual-driver+virtual-image+VirtualImage - libfprint:VirtualImage.test_verify_serialized                                       OK              0.66s
+  6/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_capture_unsupported                                  OK              0.17s
+  7/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_change_enroll_stages                                 OK              0.17s
+  8/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_change_scan_type                                     OK              0.17s
+  9/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_close_error                                          OK              0.27s
+ 10/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_close_while_opening                                  OK              0.67s
+ 11/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_delayed_open                                         OK              0.67s
+ 12/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_delayed_open_with_keep_alive                         OK              0.67s
+ 13/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_features                                      OK              0.18s
+ 14/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_properties                                    OK              0.17s
+ 15/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep                                         OK              0.67s
+ 16/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep_before_completing_verify                OK              1.07s
+ 17/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_device_sleep_on_cancellation                         OK              1.67s
+ 18/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll                                               OK              0.17s
+ 19/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_script                                        OK              0.21s
+ 20/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_script_interactive                            OK              0.27s
+ 21/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_error                                  OK              0.19s
+ 22/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_match                                  OK              0.17s
+ 23/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_no_match                               OK              0.17s
+ 24/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_retry                                  OK              0.17s
+ 25/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_verify_script                                 OK              0.26s
+ 26/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_enroll_with_retry                                    OK              0.18s
+ 27/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_finger_status                                        OK              0.17s
+ 28/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_finger_status_after_sleep                            OK              0.18s
+ 29/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_identify_unsupported                                 OK              0.17s
+ 30/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_open_error                                           OK              0.17s
+ 31/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_open_error_with_keep_alive                           OK              0.17s
+ 32/131 virtual-driver+virtual-device+VirtualDevice - libfprint:VirtualDevice.test_quick_enroll                                         OK              0.18s
+ 33/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_capture      OK              0.40s
+ 34/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_close        OK              0.38s
+ 35/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_delete_print OK              0.37s
+ 36/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_enroll       OK              0.37s
+ 37/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_identify     OK              0.37s
+ 38/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_list_prints  OK              0.37s
+ 39/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_open         OK              0.47s
+ 40/131 virtual-driver+virtual-device+VirtualDeviceBusyDeviceOperations - libfprint:VirtualDeviceBusyDeviceOperations.test_verify       OK              0.37s
+ 41/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_capture                                  OK              0.17s
+ 42/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_close                                    OK              0.19s
+ 43/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_delete_print                             OK              0.17s
+ 44/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_enroll                                   OK              0.17s
+ 45/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_identify                                 OK              0.17s
+ 46/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_list_prints                              OK              0.17s
+ 47/131 virtual-driver+virtual-device+VirtualDeviceClosed - libfprint:VirtualDeviceClosed.test_verify                                   OK              0.16s
+ 48/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_capture_unsupported                    OK              0.17s
+ 49/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_change_enroll_stages                   OK              0.18s
+ 50/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_change_scan_type                       OK              0.17s
+ 51/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_clear_storage                          OK              1.17s
+ 52/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_clear_storage_error                    OK              0.67s
+ 53/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_close_error                            OK              0.27s
+ 54/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_close_while_opening                    OK              0.67s
+ 55/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delayed_open                           OK              0.68s
+ 56/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delayed_open_with_keep_alive           OK              0.67s
+ 57/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delete_error                           OK              0.27s
+ 58/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_delete_multiple_times                  OK              1.17s
+ 59/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_features                        OK              0.17s
+ 60/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_properties                      OK              0.18s
+ 61/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep                           OK              0.67s
+ 62/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep_before_completing_verify  OK              1.07s
+ 63/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_device_sleep_on_cancellation           OK              1.70s
+ 64/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_duplicate_enroll                       OK              0.18s
+ 65/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll                                 OK              0.17s
+ 66/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_script                          OK              0.21s
+ 67/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_script_interactive              OK              0.28s
+ 68/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_error                    OK              0.17s
+ 69/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_match                    OK              0.18s
+ 70/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_no_match                 OK              0.17s
+ 71/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_retry                    OK              0.17s
+ 72/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_verify_script                   OK              0.26s
+ 73/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_enroll_with_retry                      OK              0.17s
+ 74/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_finger_status                          OK              0.17s
+ 75/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_finger_status_after_sleep              OK              0.18s
+ 76/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_match                         OK              0.17s
+ 77/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_missing_print                 OK              0.17s
+ 78/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_no_match                      OK              0.18s
+ 79/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_retry                         OK              0.17s
+ 80/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_identify_unsupported                   OK              0.17s
+ 81/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_delete                            OK              1.68s
+ 82/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_delete_missing                    OK              0.67s
+ 83/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_empty                             OK              0.67s
+ 84/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_error                             OK              0.27s
+ 85/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_list_populated                         OK              0.69s
+ 86/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_open_error                             OK              0.17s
+ 87/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_open_error_with_keep_alive             OK              0.16s
+ 88/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_quick_enroll                           OK              0.18s
+ 89/131 virtual-driver+virtual-device+VirtualDeviceStorage - libfprint:VirtualDeviceStorage.test_verify_missing_print                   OK              0.17s
+ 90/131 virtual-driver+virtual-device+VirtualDeviceUnplugging - libfprint:VirtualDeviceUnplugging.test_device_unplug                    OK              0.17s
+ 91/131 virtual-driver+virtual-device+VirtualDeviceUnplugging - libfprint:VirtualDeviceUnplugging.test_device_unplug_during_verify      OK              0.67s
+ 92/131 drivers+capture - libfprint:aes2501                                                                                             OK              1.18s
+ 93/131 drivers+custom - libfprint:aes2550-custom                                                                                       OK              1.29s
+ 94/131 drivers+capture - libfprint:aes2550-capture                                                                                     OK              1.49s
+ 95/131 drivers+capture - libfprint:aes3500                                                                                             OK              0.42s
+ 96/131 drivers+capture - libfprint:elan                                                                                                OK              0.87s
+ 97/131 drivers+capture - libfprint:elan-cobo                                                                                           OK              0.83s
+ 98/131 drivers+custom - libfprint:elanmoc                                                                                              OK              0.26s
+ 99/131 drivers+capture - libfprint:elanspi                                                                                             OK              2.80s
+100/131 drivers+custom - libfprint:synaptics                                                                                            OK              0.28s
+101/131 drivers+capture - libfprint:upektc_img                                                                                          OK              0.37s
+102/131 drivers+capture - libfprint:upektc_img-tcs1s                                                                                    OK              0.43s
+103/131 drivers+capture - libfprint:uru4000-msv2                                                                                        OK              0.47s
+104/131 drivers+capture - libfprint:uru4000-4500                                                                                        OK              0.46s
+105/131 drivers+capture - libfprint:vfs0050                                                                                             OK              0.56s
+106/131 drivers+capture - libfprint:vfs301                                                                                              OK              0.99s
+107/131 drivers+capture - libfprint:vfs5011                                                                                             OK              0.40s
+108/131 drivers+capture - libfprint:vfs7552                                                                                             OK              1.64s
+109/131 drivers+custom - libfprint:goodixmoc                                                                                            OK              0.35s
+110/131 drivers+capture - libfprint:nb1010                                                                                              OK              0.42s
+111/131 drivers+capture - libfprint:egis0570                                                                                            OK              0.85s
+112/131 drivers+custom - libfprint:egismoc                                                                                              OK              0.33s
+113/131 drivers+custom - libfprint:egis_etu905                                                                                          OK              0.30s
+114/131 drivers+custom - libfprint:egismoc-05a1                                                                                         OK              0.33s
+115/131 drivers+custom - libfprint:egismoc-0586                                                                                         OK              0.36s
+116/131 drivers+custom - libfprint:egismoc-0587                                                                                         OK              0.37s
+117/131 drivers+custom - libfprint:fpcmoc                                                                                               OK              0.27s
+118/131 drivers+custom - libfprint:realtek                                                                                              OK              0.28s
+119/131 drivers+custom - libfprint:realtek-5816                                                                                         OK              0.28s
+120/131 drivers+custom - libfprint:realtek-storage-errors                                                                               OK              0.26s
+121/131 drivers+custom - libfprint:focaltech_moc                                                                                        OK             14.44s
+122/131 drivers+custom - libfprint:focaltech_moc-6553                                                                                   OK              4.98s
+123/131 drivers+custom - libfprint:mafpmoc                                                                                              OK              5.35s
+124/131 drivers+capture - libfprint:secugen                                                                                             OK              1.01s
+125/131 unit-tests - libfprint:fpi-device                                                                                               OK              7.54s
+126/131 unit-tests - libfprint:fpi-ssm                                                                                                  OK              1.04s
+127/131 unit-tests - libfprint:fpi-assembling                                                                                           OK              0.16s
+128/131 unit-tests - libfprint:fp-context                                                                                               OK              0.90s
+129/131 unit-tests - libfprint:fp-device                                                                                                OK              3.60s
+130/131 unit-tests - libfprint:t1bridge-protocol                                                                                        OK              0.00s
+131/131 data+no-valgrind - libfprint:udev-hwdb                                                                                          OK              0.04s
+
+Ok:                131 
+Fail:              0   
+
+Full log written to /var/cache/intel-mac-build/libfprint-t1bridge/src/build/meson-logs/testlog.txt
+==> Entering fakeroot environment...
+==> Starting package()...
+ninja: Entering directory `/var/cache/intel-mac-build/libfprint-t1bridge/src/build'
+ninja: no work to do.
+Installing libfprint/fp-enums.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing libfprint/libfprint-2.so.2.0.0 to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib
+Installing libfprint/org.freedesktop.libfprint.metainfo.xml to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/share/metainfo
+Installing libfprint/70-libfprint-2.rules to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib/udev/rules.d
+Installing libfprint/FPrint-2.0.gir to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/share/gir-1.0
+Installing libfprint/FPrint-2.0.typelib to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib/girepository-1.0
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint/fprint.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint/fp-context.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint/fp-device.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint/fp-image-device.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint/fp-image.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint/fp-print.h to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/include/libfprint-2
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/data/autosuspend.hwdb to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib/udev/hwdb.d
+Installing /var/cache/intel-mac-build/libfprint-t1bridge/src/build/meson-private/libfprint-2.pc to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib/pkgconfig
+Installing symlink pointing to libfprint-2.so.2.0.0 to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib/libfprint-2.so.2
+Installing symlink pointing to libfprint-2.so.2 to /var/cache/intel-mac-build/libfprint-t1bridge/pkg/libfprint-t1bridge/usr/lib/libfprint-2.so
+Running custom install script '/usr/sbin/meson --internal gtkdoc --sourcedir=/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80 --builddir=/var/cache/intel-mac-build/libfprint-t1bridge/src/build --subdir=doc --headerdirs=/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/libfprint --mainfile=libfprint-docs.xml --modulename=libfprint-2 --moduleversion= --mode=auto --gtkdoc-scan=/usr/sbin/gtkdoc-scan --gtkdoc-scangobj=/usr/sbin/gtkdoc-scangobj --gtkdoc-mkdb=/usr/sbin/gtkdoc-mkdb --gtkdoc-mkhtml=/usr/sbin/gtkdoc-mkhtml --gtkdoc-fixxref=/usr/sbin/gtkdoc-fixxref --htmlargs= --scanargs= --scanobjsargs= --gobjects-types-file=/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/doc/libfprint-2.types --fixxrefargs=--html-dir=share/gtk-doc/html@@--extra-dir=/usr/share/gtk-doc/html/glib@@--extra-dir=/usr/share/gtk-doc/html/gobject --mkdbargs= --html-assets= --content-files=/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/doc/intro.xml --expand-content-files=/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/doc/intro.xml --ignore-headers=config.h@@nbis-helpers.h@@fprint.h@@drivers@@nbis --installdir= --cc=cc --ld=cc --cflags=-I/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/. -I/var/cache/intel-mac-build/libfprint-t1bridge/src/build/. -I/usr/include/gio-unix-2.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include/libmount -I/usr/include/blkid -I/usr/include/sysprof-6 -pthread -I/usr/include/gusb-1 -I/usr/include/libusb-1.0 -I/usr/include/json-glib-1.0 -I/usr/include/pixman-1 -I/usr/include/gudev-1.0 -I/var/cache/intel-mac-build/libfprint-t1bridge/src/libfprint-3f1e2817ed01660d0b422a0283effc0e5d3e4b80/doc/../libfprint -I/var/cache/intel-mac-build/libfprint-t1bridge/src/build/doc/../libfprint -march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security -fstack-clash-protection -fcf-protection -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -flto=auto -ffile-prefix-map=/var/cache/intel-mac-build/libfprint-t1bridge/src=/usr/src/libfprint-t1bridge -Wcast-align -Wformat-nonliteral -Wformat-security -Wformat=2 -Wignored-qualifiers -Wlogical-op -Wmissing-declarations -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wpointer-arith -Wshadow -Werror=switch-enum -Wtype-limits -Wundef -Wunused -Werror=address -Werror=array-bounds -Werror=empty-body -Werror=init-self -Werror=int-to-pointer-cast -Werror=main -Werror=missing-braces -Werror=nonnull -Werror=redundant-decls -Werror=return-type -Werror=sequence-point -Werror=trigraphs -Werror=write-strings -fno-strict-aliasing -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_68 -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_68 -D_GNU_SOURCE \'-DG_LOG_DOMAIN="libfprint"\' -Wimplicit-function-declaration -Wmissing-prototypes -Wnested-externs -Wold-style-definition -Wstrict-prototypes -Werror=implicit -Werror=pointer-to-int-cast --ldflags=-L/var/cache/intel-mac-build/libfprint-t1bridge/src/build/libfprint -Wl,-rpath,/var/cache/intel-mac-build/libfprint-t1bridge/src/build/libfprint -lfprint-2 -lgio-2.0 -lgobject-2.0 -lglib-2.0 -lgmodule-2.0 -pthread -lgusb -lusb-1.0 -ljson-glib-1.0 -lm -lpixman-1 -lssl -lcrypto -lgudev-1.0 -Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,-z,pack-relative-relocs -flto=auto -march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security -fstack-clash-protection -fcf-protection -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -flto=auto -ffile-prefix-map=/var/cache/intel-mac-build/libfprint-t1bridge/src=/usr/src/libfprint-t1bridge'
+==> Tidying install...
+  -> Removing libtool files...
+  -> Removing static library files...
+  -> Purging unwanted files...
+  -> Stripping unneeded symbols from binaries and libraries...
+  -> Compressing man and info pages...
+==> Checking for packaging issues...
+==> Creating package "libfprint-t1bridge"...
+  -> Generating .PKGINFO file...
+  -> Generating .BUILDINFO file...
+  -> Generating .MTREE file...
+  -> Compressing package...
+==> Leaving fakeroot environment.
+==> Finished making: libfprint-t1bridge 1.94.100-17 (Mon Sep 21 13:40:10 2026)

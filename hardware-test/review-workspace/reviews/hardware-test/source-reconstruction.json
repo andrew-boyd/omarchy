@@ -1,0 +1,41 @@
+[
+  {
+    "repository": "omacom/omarchy",
+    "base": "8f324c90b82790d31ab33565441e07cbdb8d2308",
+    "build_commit": "6096d649643d0d0e0bae65c7949e5043bf2cc338",
+    "tree": "da2f267754b4d21a2b7a4a98fc7330bcd872bd9a",
+    "bundle": "omarchy.bundle",
+    "bundle_sha256": "6c3b8d514f33571e855879e7bbc175f867c5b70721148595bfc1baa14a58d837",
+    "bundle_fresh_base_checkout_verified": true,
+    "patch": "omarchy.patch",
+    "patch_sha256": "a96603f11e6ecbdb485f9a8b501f9bcbcd32cba64356490423e90727fa44e512",
+    "patch_reconstruction_verified": true,
+    "build_validation": "Validated combined ISO 9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252; see final-validation.json for raw failures and qualified reruns."
+  },
+  {
+    "repository": "omacom/omarchy-pkgs",
+    "base": "e40f5a5da918e8b923115ebb4c335b6c4828fefe",
+    "build_commit": "25712c910f80fdf5989c6434e3e2fa8830ec2581",
+    "tree": "de8983478e1485d4d1e5dffb889b5497eae6f7c1",
+    "bundle": "omarchy-pkgs.bundle",
+    "bundle_sha256": "94767e0277d44ca0aa25490d85a6dcb94385c74ab091686ee44c77f7ddea85c3",
+    "bundle_fresh_base_checkout_verified": true,
+    "patch": "omarchy-pkgs.patch",
+    "patch_sha256": "85f5fe96a0d1ce7fdc1baa2d167ab96a63cc19172bedff9b1474339eca7e4457",
+    "patch_reconstruction_verified": true,
+    "build_validation": "Validated combined ISO 9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252; see final-validation.json for raw failures and qualified reruns."
+  },
+  {
+    "repository": "omacom/omarchy-iso",
+    "base": "7cfb7111a06873d61c45d37034577d4ba08d3f4f",
+    "build_commit": "d692d24f95c6611f86beef7e4d7c6e23a7d2f42a",
+    "tree": "3bbf1c50a904e71810198be84e7a620c252bc341",
+    "bundle": "omarchy-iso.bundle",
+    "bundle_sha256": "b59c010fbcdec761652e0277695b13b498881a6fba1d92bebabd406897082bda",
+    "bundle_fresh_base_checkout_verified": true,
+    "patch": "omarchy-iso.patch",
+    "patch_sha256": "f070aab875a7c1d91bf6a1d9b62f75e45039f721f9440ce040e1c5536dbc9b78",
+    "patch_reconstruction_verified": true,
+    "build_validation": "Validated combined ISO 9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252; see final-validation.json for raw failures and qualified reruns."
+  }
+]

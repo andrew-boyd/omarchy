@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9637",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "lid-wake"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "cd65bd611baf1d66b4b35c0cf30cbdc49d26a058",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9637,
+  "checked_at": "2026-09-21T11:56:47.163011+00:00",
+  "title": "Restore brightness when the laptop lid opens",
+  "author": "fresh3nough",
+  "head_sha": "cd65bd611baf1d66b4b35c0cf30cbdc49d26a058",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:20Z",
+  "state": "open",
+  "body": "## Summary\n\nAfter suspend, opening the laptop lid only ran `omarchy-hyprland-monitor-clamshell`. That reconciles internal/external monitor state but does not turn the panel backlight back on or restore the keyboard backlight.\n\nThe idle wake path already does the full restore via `omarchy-system-wake`:\n\n```bash\nomarchy-brightness-display on\nomarchy-brightness-keyboard restore\nomarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true\n```\n\nOn hardware where ACPI backlight restore is slow or incomplete (reported on MacBook10,1 in #9628), lid open left a black internal panel until a power-button press, while idle wake recovered cleanly.\n\n## Fix\n\nPoint `switch:off:Lid Switch` at `omarchy-system-wake` so lid open gets the same restore sequence, then the same clamshell reconciliation wake already performs. Close path is unchanged (`omarchy-system-lid-close`).\n\n## Tests\n\n- `test/shell.d/monitor-recovery-test.sh` \u2014 binding now expects `omarchy-system-wake`; asserts wake restores display + keyboard brightness before clamshell\n- `test/shell.d/lid-close-test.sh` \u2014 still passes (close path untouched)\n- `test/shell.d/monitor-clamshell-scale-test.sh` \u2014 still passes\n\nFixes #9628",
+  "draft": false,
+  "files": [
+    {
+      "sha": "d2418729bf0829e9bee46f484327c3e8335f6ce7",
+      "filename": "default/hypr/bindings/utilities.lua",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 1,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/cd65bd611baf1d66b4b35c0cf30cbdc49d26a058/default%2Fhypr%2Fbindings%2Futilities.lua",
+      "raw_url": "https://github.com/omacom/omarchy/raw/cd65bd611baf1d66b4b35c0cf30cbdc49d26a058/default%2Fhypr%2Fbindings%2Futilities.lua",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fhypr%2Fbindings%2Futilities.lua?ref=cd65bd611baf1d66b4b35c0cf30cbdc49d26a058",
+      "patch": "@@ -32,7 +32,12 @@ o.bind_toggle(\"SUPER + CTRL + N\", \"Toggle nightlight\", \"nightlight\")\n o.bind(\"SUPER + CTRL + Delete\", \"Toggle laptop display\", \"omarchy-hyprland-monitor-internal toggle\")\n o.bind(\"SUPER + CTRL + ALT + Delete\", \"Toggle laptop display mirroring\", \"omarchy-hyprland-monitor-internal-mirror toggle\")\n o.bind(\"switch:on:Lid Switch\", nil, \"omarchy-system-lid-close\", { locked = true })\n-o.bind(\"switch:off:Lid Switch\", nil, \"omarchy-hyprland-monitor-clamshell\", { locked = true })\n+-- Lid open after suspend only reconciled clamshell state. That left the\n+-- internal panel black on hardware where ACPI backlight restore is slow or\n+-- incomplete (see #9628). omarchy-system-wake already turns the display back\n+-- on, restores the keyboard backlight, and then runs the same clamshell\n+-- reconciliation the previous binding did alone.\n+o.bind(\"switch:off:Lid Switch\", nil, \"omarchy-system-wake\", { locked = true })\n \n o.bind(\"PRINT\", \"Screenshot\", \"omarchy-capture-screenshot\")\n o.bind(\"ALT + PRINT\", \"Screenrecording\", \"omarchy-capture-screenrecording --stop-recording || omarchy-menu toggle trigger.capture.screenrecord\")"
+    },
+    {
+      "sha": "27ba7dde01b9f5661caf3c695ea928ba032691f4",
+      "filename": "test/shell.d/monitor-recovery-test.sh",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 3,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/cd65bd611baf1d66b4b35c0cf30cbdc49d26a058/test%2Fshell.d%2Fmonitor-recovery-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/cd65bd611baf1d66b4b35c0cf30cbdc49d26a058/test%2Fshell.d%2Fmonitor-recovery-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmonitor-recovery-test.sh?ref=cd65bd611baf1d66b4b35c0cf30cbdc49d26a058",
+      "patch": "@@ -98,11 +98,13 @@ grep -F 'omarchy-hyprland-monitor-external-active' \"$monitor_mirror\" >/dev/null\n pass \"internal mirror helper recovers when no active external display remains\"\n \n grep -F 'switch:on:Lid Switch\", nil, \"omarchy-system-lid-close\"' \"$utilities\" >/dev/null\n-grep -F 'switch:off:Lid Switch\", nil, \"omarchy-hyprland-monitor-clamshell\"' \"$utilities\" >/dev/null\n-pass \"lid switch bindings lock on close and reconcile clamshell display state\"\n+grep -F 'switch:off:Lid Switch\", nil, \"omarchy-system-wake\"' \"$utilities\" >/dev/null\n+pass \"lid switch bindings lock on close and wake displays on open\"\n \n+grep -F 'omarchy-brightness-display on' \"$system_wake\" >/dev/null\n+grep -F 'omarchy-brightness-keyboard restore' \"$system_wake\" >/dev/null\n grep -F 'omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true' \"$system_wake\" >/dev/null\n-pass \"system wake resyncs clamshell display state\"\n+pass \"system wake restores display and keyboard brightness then resyncs clamshell\"\n \n grep -F 'lock-pending: no-real-screen' \"$lock_service\" >/dev/null\n grep -F 'lock-pending: screen-stabilizing' \"$lock_service\" >/dev/null"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

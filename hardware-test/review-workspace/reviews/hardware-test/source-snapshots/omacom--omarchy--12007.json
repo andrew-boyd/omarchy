@@ -1,0 +1,122 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12007",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "spi-retirement"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+      "state": "open"
+    },
+    {
+      "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+      "state": "open",
+      "updated_at": "2026-09-15T23:27:10Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12007,
+  "checked_at": "2026-09-21T11:57:06.346557+00:00",
+  "title": "Drop macbook12-spi-driver-dkms, which no longer builds on 7.x kernels",
+  "author": "karlentwistle",
+  "head_sha": "88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T23:27:10Z",
+  "state": "open",
+  "body": "`install/hardware/apple/fix-spi-keyboard.sh` installs `macbook12-spi-driver-dkms` on SPI-keyboard MacBooks, but the package no longer builds against 7.x kernels (`linux-omarchy` is 7.2.3). On 7.2.3 the DKMS build fails whenever headers are installed or the kernel updates:\n\n```\napple-ib-als.c:679:19: error: initialization of 'void (*)(struct platform_device *)' from incompatible pointer type 'int (*)(struct platform_device *)'\napple-ibridge.c:901:10: error: 'struct acpi_driver' has no member named 'owner'\n==> WARNING: `dkms install --no-depmod macbook12-spi-driver/0+git.315 -k 7.2.3-arch1-3' exited 10\n```\n\nThe keyboard and trackpad don't depend on it: `applespi` has been in mainline since 5.3, and it's what gets loaded (`/lib/modules/7.2.3-arch1-3/kernel/drivers/input/keyboard/applespi.ko.zst`). The mkinitcpio `MODULES` drop-in only names in-tree modules, so it stays as it is.\n\nChanges:\n- Stop installing the package in `fix-spi-keyboard.sh`\n- Remove it from `omarchy-other.packages`\n- Add a migration that drops it from existing installs\n\nTested on a MacBook9,1 (Omarchy 4.0.3, kernel 7.2.3-arch1-3): removed the package, the UKI rebuilt cleanly, and after a reboot the keyboard works at the LUKS prompt and in the session. The migration no-ops when the package is absent. `./test/cli` and `test/shell.d/t2-hardware-test.sh` (which reads `omarchy-other.packages`) pass.\n\nOne note for the 2016\u201317 Touch Bar MacBook Pros (MacBookPro13,2/13,3/14,2/14,3): the Touch Bar and ambient light sensor drivers came from this package. They already fail to build, so removing it doesn't take anything away that currently works, but I haven't been able to test on those models.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f980235dcd1eaa145bb09f428f543994dac71f18",
+      "filename": "install/hardware/apple/fix-spi-keyboard.sh",
+      "status": "modified",
+      "additions": 0,
+      "deletions": 1,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/88d7114fc73e8236b90ae1c416a67e6d2c3e82eb/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/88d7114fc73e8236b90ae1c416a67e6d2c3e82eb/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh?ref=88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+      "patch": "@@ -3,7 +3,6 @@ product_name=\"$(cat /sys/class/dmi/id/product_name 2>/dev/null)\"\n if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n   echo \"Detected MacBook with SPI keyboard\"\n \n-  omarchy-pkg-add macbook12-spi-driver-dkms\n   sudo mkdir -p /etc/mkinitcpio.conf.d\n   if [[ $product_name == \"MacBook8,1\" ]]; then\n     echo \"MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\" | \\"
+    },
+    {
+      "sha": "3ee898d7669cde74cbd16f09001057e747479eb0",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 0,
+      "deletions": 1,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/88d7114fc73e8236b90ae1c416a67e6d2c3e82eb/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/88d7114fc73e8236b90ae1c416a67e6d2c3e82eb/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+      "patch": "@@ -23,7 +23,6 @@ limine-snapper-sync\n linux-firmware\n linux-omarchy\n linux-omarchy-headers\n-macbook12-spi-driver-dkms\n nvidia-580xx-dkms\n nvidia-dkms\n nvidia-open-dkms"
+    },
+    {
+      "sha": "2f39761bf58e60b9bd425c94742e35a935e7830d",
+      "filename": "migrations/1789490499.sh",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/88d7114fc73e8236b90ae1c416a67e6d2c3e82eb/migrations%2F1789490499.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/88d7114fc73e8236b90ae1c416a67e6d2c3e82eb/migrations%2F1789490499.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789490499.sh?ref=88d7114fc73e8236b90ae1c416a67e6d2c3e82eb",
+      "patch": "@@ -0,0 +1,7 @@\n+echo \"Remove macbook12-spi-driver-dkms, which no longer builds and isn't needed\"\n+\n+# applespi has been in the mainline kernel since 5.3 and drives the keyboard and\n+# trackpad on these MacBooks. The out-of-tree package fails to build on 7.x, so\n+# every kernel update prints a DKMS error for it. The mkinitcpio MODULES drop-in\n+# stays: it only names in-tree modules.\n+omarchy-pkg-drop macbook12-spi-driver-dkms"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5689538929",
+      "html_url": "https://github.com/omacom/omarchy/pull/12007#issuecomment-5689538929",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12007",
+      "id": 5689538929,
+      "node_id": "IC_kwDOO0Cobs8AAAABUx95cQ",
+      "user": {
+        "login": "neheb",
+        "id": 2918873,
+        "node_id": "MDQ6VXNlcjI5MTg4NzM=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/2918873?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/neheb",
+        "html_url": "https://github.com/neheb",
+        "followers_url": "https://api.github.com/users/neheb/followers",
+        "following_url": "https://api.github.com/users/neheb/following{/other_user}",
+        "gists_url": "https://api.github.com/users/neheb/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/neheb/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/neheb/subscriptions",
+        "organizations_url": "https://api.github.com/users/neheb/orgs",
+        "repos_url": "https://api.github.com/users/neheb/repos",
+        "events_url": "https://api.github.com/users/neheb/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/neheb/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-15T23:27:10Z",
+      "updated_at": "2026-09-15T23:27:10Z",
+      "body": "Sounds like it should be forked, fixed, and the upstreamed stuff removed.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5689538929/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

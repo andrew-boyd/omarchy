@@ -1,0 +1,654 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6921",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "macbook-cs4208"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "state": "open"
+    },
+    {
+      "head_sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:44Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 6921,
+  "checked_at": "2026-09-21T11:56:49.804493+00:00",
+  "title": "Install the CS4208 speaker driver on 12-inch MacBooks",
+  "author": "sunoxen-lab",
+  "head_sha": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:44Z",
+  "state": "open",
+  "body": "## Summary\n\nOn the 12-inch MacBook (`MacBook9,1` / 2016 and `MacBook10,1` / 2017), mainline `snd_hda_codec_cs420x` detects the Cirrus Logic CS4208 and PipeWire plays to it, but the speaker amplifier is never enabled. The OS thinks audio is working; the speakers stay silent. Headphones can still work because they use a different path.\n\nThis is the same gap as #2101. Grok diagnosed it on a `MacBook10,1` running Omarchy 4, installed [leifliddy/macbook12-audio-driver](https://github.com/leifliddy/macbook12-audio-driver) via DKMS, and speakers came up. This PR is that fix paid forward to the next installer.\n\n## What it does\n\n- New hardware leaf `install/hardware/apple/fix-cs4208-audio.sh`, same shape as the SPI keyboard fix: detect `MacBook9,1` / `MacBook10,1`, then `omarchy-pkg-add macbook12-audio-driver-dkms`.\n- `MacBook8,1` (2015) is left alone; that model is not supported by this driver.\n- Migration `1786719479.sh` for existing installs. No-ops if the package is already present or if the same DKMS module was installed by hand.\n- Cached in `install/omarchy-other.packages` so the ISO can ship it.\n- Manual note in `manual/44-mac-support.md`.\n\nOmarchy already applies software volume globally, so the extra WirePlumber soft-mixer step from the driver README is not needed here.\n\n## Package\n\nThis needs `macbook12-audio-driver-dkms` in `pkgs.omarchy.org`, built from https://github.com/leifliddy/macbook12-audio-driver \u2014 the same source that restored speakers on the machine this was written on.\n\nIt is not in the repo yet. Land the package with this PR (or immediately before), the way `macbook12-spi-driver-dkms` already is. The DKMS `PRE_BUILD` downloads matching kernel HD-audio headers on the target, so the package only needs to ship the driver source and `dkms.conf`.\n\n## Test plan\n\n- [x] `test/shell.d/cs4208-audio-test.sh` \u2014 leaf and migration fire only on `MacBook9,1` / `MacBook10,1`, skip 2015 / Pro / non-Apple, skip when the package or a hand-installed DKMS module is already there\n- [x] Verified on a 2017 12-inch MacBook (`MacBook10,1`): after the DKMS module, speakers play; jack switch still works",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a34a96bf07a16811f8a9c3e5ef2ce98910658751",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/2d7cbf608cb6884ffa9240f2949670f38d935800/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/2d7cbf608cb6884ffa9240f2949670f38d935800/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "patch": "@@ -33,6 +33,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs4208-audio.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\""
+    },
+    {
+      "sha": "677ee94e9aa4e08114e440afeab207e28dfb55eb",
+      "filename": "install/hardware/apple/fix-cs4208-audio.sh",
+      "status": "added",
+      "additions": 14,
+      "deletions": 0,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/2d7cbf608cb6884ffa9240f2949670f38d935800/install%2Fhardware%2Fapple%2Ffix-cs4208-audio.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/2d7cbf608cb6884ffa9240f2949670f38d935800/install%2Fhardware%2Fapple%2Ffix-cs4208-audio.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-cs4208-audio.sh?ref=2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "patch": "@@ -0,0 +1,14 @@\n+# Enable speakers on 12-inch MacBooks (MacBook9,1 / 2016 and MacBook10,1 / 2017).\n+# Mainline snd_hda_codec_cs420x detects the CS4208 but never runs the macOS\n+# init that powers the speaker amplifier, so PipeWire plays to a silent analog\n+# path. The out-of-tree module replays that init.\n+# MacBook8,1 (2015) is not supported by this driver.\n+# https://github.com/leifliddy/macbook12-audio-driver\n+# https://github.com/basecamp/omarchy/issues/2101\n+\n+product_name=\"${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+if [[ $product_name == \"MacBook9,1\" || $product_name == \"MacBook10,1\" ]]; then\n+  echo \"Detected 12-inch MacBook with CS4208 audio\"\n+\n+  omarchy-pkg-add macbook12-audio-driver-dkms\n+fi"
+    },
+    {
+      "sha": "7754725d8b724b6e4511ef9e646209d755439f86",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/2d7cbf608cb6884ffa9240f2949670f38d935800/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/2d7cbf608cb6884ffa9240f2949670f38d935800/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "patch": "@@ -26,6 +26,7 @@ linux-headers\n linux-ptl\n linux-ptl-headers\n macbook12-spi-driver-dkms\n+macbook12-audio-driver-dkms\n nvidia-580xx-dkms\n nvidia-dkms\n nvidia-open-dkms"
+    },
+    {
+      "sha": "da08f53ffed9bdbc4baa3e6a576b0257ccbe0c9d",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/2d7cbf608cb6884ffa9240f2949670f38d935800/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/2d7cbf608cb6884ffa9240f2949670f38d935800/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "patch": "@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, an NVMe suspend fix for those same models, and the CS4208 speaker driver on the 12-inch MacBook (2016 and 2017).\n \n ### Known Limitations\n "
+    },
+    {
+      "sha": "23c3ffeb3baf11fca942ace292811f91698b252c",
+      "filename": "migrations/1786719479.sh",
+      "status": "added",
+      "additions": 23,
+      "deletions": 0,
+      "changes": 23,
+      "blob_url": "https://github.com/omacom/omarchy/blob/2d7cbf608cb6884ffa9240f2949670f38d935800/migrations%2F1786719479.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/2d7cbf608cb6884ffa9240f2949670f38d935800/migrations%2F1786719479.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786719479.sh?ref=2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "patch": "@@ -0,0 +1,23 @@\n+echo \"Install the CS4208 speaker driver on 12-inch MacBooks\"\n+\n+# Fresh installs get this from install/hardware/apple/fix-cs4208-audio.sh.\n+# Existing MacBook9,1 / MacBook10,1 installs still have silent speakers:\n+# mainline detects the codec and PipeWire plays, but the speaker amp is never\n+# enabled. Skip machines that already have the packaged module or the same\n+# DKMS driver installed by hand.\n+\n+product_name=\"${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+if [[ $product_name != \"MacBook9,1\" && $product_name != \"MacBook10,1\" ]]; then\n+  exit 0\n+fi\n+\n+if omarchy-pkg-present macbook12-audio-driver-dkms; then\n+  exit 0\n+fi\n+\n+if dkms status 2>/dev/null | grep -q '^macbook12-audio-driver/'; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add macbook12-audio-driver-dkms\n+omarchy-state set reboot-required"
+    },
+    {
+      "sha": "430b55272e459966806a964cc22cf348127d87c6",
+      "filename": "test/shell.d/cs4208-audio-test.sh",
+      "status": "added",
+      "additions": 118,
+      "deletions": 0,
+      "changes": 118,
+      "blob_url": "https://github.com/omacom/omarchy/blob/2d7cbf608cb6884ffa9240f2949670f38d935800/test%2Fshell.d%2Fcs4208-audio-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/2d7cbf608cb6884ffa9240f2949670f38d935800/test%2Fshell.d%2Fcs4208-audio-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fcs4208-audio-test.sh?ref=2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "patch": "@@ -0,0 +1,118 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-cs4208-audio.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+other_packages=\"$ROOT/install/omarchy-other.packages\"\n+migration=\"$ROOT/migrations/1786719479.sh\"\n+\n+grep -q 'apple/fix-cs4208-audio.sh' \"$all\" ||\n+  fail \"the CS4208 audio fix runs during hardware setup\"\n+grep -qx 'macbook12-audio-driver-dkms' \"$other_packages\" ||\n+  fail \"the ISO caches the CS4208 speaker driver\"\n+grep -Fq 'MacBook9,1' \"$leaf\" && grep -Fq 'MacBook10,1' \"$leaf\" ||\n+  fail \"the CS4208 leaf matches the 12-inch MacBooks\"\n+pass \"the CS4208 audio fix is wired into setup\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-present\" <<'SH'\n+#!/bin/bash\n+\n+(( ${CS4208_PKG_PRESENT:-0} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/dkms\" <<'SH'\n+#!/bin/bash\n+\n+if (( ${CS4208_DKMS_INSTALLED:-0} == 1 )); then\n+  # The name upstream's dkms.conf registers, which is what dkms status prints.\n+  echo 'macbook12-audio-driver/0.1, 7.1.8-arch1-3, x86_64: installed (Original modules exist)'\n+  exit 0\n+fi\n+echo 'macbook12-spi-driver/0+git.315: added'\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local model=\"$1\"\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_MACBOOK12_AUDIO_MODEL=\"$model\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\"\n+}\n+\n+run_leaf \"MacBook10,1\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-audio-driver-dkms' \"$calls\" ||\n+  fail \"a 2017 12-inch MacBook gets the CS4208 driver\" \"$(cat \"$calls\")\"\n+pass \"a 2017 12-inch MacBook gets the CS4208 driver\"\n+\n+run_leaf \"MacBook9,1\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-audio-driver-dkms' \"$calls\" ||\n+  fail \"a 2016 12-inch MacBook gets the CS4208 driver\" \"$(cat \"$calls\")\"\n+pass \"a 2016 12-inch MacBook gets the CS4208 driver\"\n+\n+run_leaf \"MacBook8,1\" >/dev/null\n+[[ ! -s $calls ]] || fail \"the 2015 12-inch MacBook is left alone\" \"$(cat \"$calls\")\"\n+pass \"the 2015 12-inch MacBook is left alone\"\n+\n+run_leaf \"MacBookPro14,1\" >/dev/null\n+[[ ! -s $calls ]] || fail \"a MacBook Pro is left alone\" \"$(cat \"$calls\")\"\n+pass \"a MacBook Pro is left alone\"\n+\n+run_leaf \"XPS 13 9310\" >/dev/null\n+[[ ! -s $calls ]] || fail \"non-Apple hardware is left alone\" \"$(cat \"$calls\")\"\n+pass \"non-Apple hardware is left alone\"\n+\n+run_migration() {\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_MACBOOK12_AUDIO_MODEL=\"$1\" \\\n+    CS4208_PKG_PRESENT=\"${2:-0}\" \\\n+    CS4208_DKMS_INSTALLED=\"${3:-0}\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration \"MacBook10,1\" 0 0\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-audio-driver-dkms' \"$calls\" ||\n+  fail \"the migration installs the CS4208 driver\" \"$(cat \"$calls\")\"\n+grep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"the migration asks for the reboot that loads the module\" \"$(cat \"$calls\")\"\n+pass \"the migration installs the CS4208 driver\"\n+\n+run_migration \"MacBook10,1\" 1 0\n+[[ ! -s $calls ]] || fail \"the migration skips a machine that already has the package\" \"$(cat \"$calls\")\"\n+pass \"the migration skips a machine that already has the package\"\n+\n+run_migration \"MacBook10,1\" 0 1\n+[[ ! -s $calls ]] || fail \"the migration skips a hand-installed DKMS driver\" \"$(cat \"$calls\")\"\n+pass \"the migration skips a hand-installed DKMS driver\"\n+\n+run_migration \"MacBookPro14,1\" 0 0\n+[[ ! -s $calls ]] || fail \"the migration skips unrelated hardware\" \"$(cat \"$calls\")\"\n+pass \"the migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5306432914",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#issuecomment-5306432914",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6921",
+      "id": 5306432914,
+      "node_id": "IC_kwDOO0Cobs8AAAABPEm9kg",
+      "user": {
+        "login": "doctor",
+        "id": 6294535,
+        "node_id": "MDQ6VXNlcjYyOTQ1MzU=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6294535?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/doctor",
+        "html_url": "https://github.com/doctor",
+        "followers_url": "https://api.github.com/users/doctor/followers",
+        "following_url": "https://api.github.com/users/doctor/following{/other_user}",
+        "gists_url": "https://api.github.com/users/doctor/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/doctor/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/doctor/subscriptions",
+        "organizations_url": "https://api.github.com/users/doctor/orgs",
+        "repos_url": "https://api.github.com/users/doctor/repos",
+        "events_url": "https://api.github.com/users/doctor/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/doctor/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-16T08:00:08Z",
+      "updated_at": "2026-08-16T08:00:08Z",
+      "body": "I validated this approach on the affected hardware: a MacBook10,1 running Omarchy with the CS4208 codec. The internal speakers work, and PipeWire reports the expected two-channel stereo profile.\n\nI found two integration gaps before this can land cleanly:\n\n1. `macbook12-audio-driver-dkms` did not yet exist in the Omarchy package repository. I added it in [omarchy-pkgs#153](https://github.com/omacom-io/omarchy-pkgs/pull/153).\n2. The CS4208 needs its hardware mixer held at full scale while user volume is handled in software. I opened [sunoxen-lab/omarchy#1](https://github.com/sunoxen-lab/omarchy/pull/1) directly against this PR's source branch, so you can merge it here without superseding your original contribution. It also makes the migration idempotent, preserves working manual installations, repairs missing current-kernel DKMS builds, and adds 12 focused tests.\n\nThe corresponding upstream driver lifecycle fix is [macbook12-audio-driver#60](https://github.com/leifliddy/macbook12-audio-driver/pull/60).\n\nThis keeps #6921 as the main Omarchy PR while giving each repository a focused, reviewable change.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5306432914/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4942937636,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJp8-JA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds automatic installation and migration support for the CS4208 speaker driver on 12-inch MacBooks (2016/2017), plus coverage to validate wiring and behavior.\n\n**Changes:**\n- Wire a new Apple hardware setup leaf to install the CS4208 DKMS driver on supported MacBook models.\n- Add a migration to retrofit existing installs while skipping machines already configured.\n- Add shell tests asserting setup wiring, model matching, and migration behavior.\n\n### Reviewed changes\n\nCopilot reviewed 6 out of 6 changed files in this pull request and generated 5 comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| test/shell.d/cs4208-audio-test.sh | Adds integration-style shell tests for the new leaf + migration behavior. |\r\n| migrations/1786719479.sh | Introduces a migration to install the CS4208 driver on eligible machines and request reboot. |\r\n| manual/44-mac-support.md | Documents that the installer applies the CS4208 speaker driver fix on supported models. |\r\n| install/omarchy-other.packages | Ensures the ISO caches `macbook12-audio-driver-dkms`. |\r\n| install/hardware/apple/fix-cs4208-audio.sh | Adds the install-time hardware fix leaf for CS4208 audio. |\r\n| install/hardware/all.sh | Wires the new CS4208 fix into the hardware setup pipeline. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#pullrequestreview-4942937636",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#pullrequestreview-4942937636"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "submitted_at": "2026-08-15T05:14:14Z",
+      "commit_id": "316e1f0b97f4f8362473af69f76695cb75c7466d"
+    },
+    {
+      "id": 4943636008,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqnmKA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 6 out of 6 changed files in this pull request and generated 1 comment.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**install/hardware/apple/fix-cs4208-audio.sh:13**\n* Installing only the DKMS module leaves this hardware setup incomplete. Upstream marks software volume as required because the speaker path has no usable hardware volume control, but this repository only copies `alsa-soft-mixer.conf` for ASUS ROG machines (`install/user/hardware/asus/fix-audio-mixer.sh:3-5`). These MacBooks therefore get no soft mixer or persisted mixer initialization, so the volume slider can remain ineffective. Add MacBook-specific user setup and backfill it for existing users.\n```\n  omarchy-pkg-add macbook12-audio-driver-dkms\n```\n**migrations/1786719479.sh:18**\n* This matches every DKMS state, including `macbook12-audio-driver/0.1: added` or a build installed only for an old kernel. In those cases the migration exits even though the running kernel still lacks the driver. Query the running kernel and only skip when DKMS reports `installed`.\n```\nif dkms status 2>/dev/null | grep -q '^macbook12-audio-driver/'; then\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#pullrequestreview-4943636008",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#pullrequestreview-4943636008"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "submitted_at": "2026-08-15T10:18:36Z",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583666",
+      "pull_request_review_id": 4942937636,
+      "id": 3788583666,
+      "node_id": "PRRC_kwDOO0Cobs7h0TLy",
+      "diff_hunk": "@@ -0,0 +1,14 @@\n+# Enable speakers on 12-inch MacBooks (MacBook9,1 / 2016 and MacBook10,1 / 2017).\n+# Mainline snd_hda_codec_cs420x detects the CS4208 but never runs the macOS\n+# init that powers the speaker amplifier, so PipeWire plays to a silent analog\n+# path. The out-of-tree module replays that init.\n+# MacBook8,1 (2015) is not supported by this driver.\n+# https://github.com/leifliddy/macbook12-audio-driver\n+# https://github.com/basecamp/omarchy/issues/2101\n+\n+product_name=\"${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+if [[ $product_name == \"MacBook9,1\" || $product_name == \"MacBook10,1\" ]]; then\n+  echo \"Detected 12-inch MacBook with CS4208 audio\"\n+\n+  omarchy-pkg-add macbook12-audio-driver-dkms\n+fi",
+      "path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "original_commit_id": "316e1f0b97f4f8362473af69f76695cb75c7466d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This new leaf script lacks a shebang and explicit shell options. Since it\u2019s executed via the hardware setup pipeline, add a `#!/bin/bash` (or `#!/usr/bin/env bash`, consistent with the repo) and consider `set -euo pipefail` so failures are surfaced deterministically and behavior is consistent with other installer scripts.",
+      "created_at": "2026-08-15T05:14:12Z",
+      "updated_at": "2026-08-15T05:14:14Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583666",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583666"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583666"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583666/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 14,
+      "original_line": 14,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 14,
+      "position": 14,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583679",
+      "pull_request_review_id": 4942937636,
+      "id": 3788583679,
+      "node_id": "PRRC_kwDOO0Cobs7h0TL_",
+      "diff_hunk": "@@ -0,0 +1,14 @@\n+# Enable speakers on 12-inch MacBooks (MacBook9,1 / 2016 and MacBook10,1 / 2017).\n+# Mainline snd_hda_codec_cs420x detects the CS4208 but never runs the macOS\n+# init that powers the speaker amplifier, so PipeWire plays to a silent analog\n+# path. The out-of-tree module replays that init.\n+# MacBook8,1 (2015) is not supported by this driver.\n+# https://github.com/leifliddy/macbook12-audio-driver\n+# https://github.com/basecamp/omarchy/issues/2101\n+\n+product_name=\"${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+if [[ $product_name == \"MacBook9,1\" || $product_name == \"MacBook10,1\" ]]; then\n+  echo \"Detected 12-inch MacBook with CS4208 audio\"\n+\n+  omarchy-pkg-add macbook12-audio-driver-dkms",
+      "path": "install/hardware/apple/fix-cs4208-audio.sh",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "original_commit_id": "316e1f0b97f4f8362473af69f76695cb75c7466d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The install-time leaf always calls `omarchy-pkg-add` for supported models, while the migration explicitly skips machines where the package is already present or the DKMS driver is already installed by hand. To avoid redundant package operations (and potential install-time failures if `omarchy-pkg-add` isn\u2019t fully idempotent), consider mirroring the migration\u2019s skip checks here (package-present + `dkms status` check).",
+      "created_at": "2026-08-15T05:14:13Z",
+      "updated_at": "2026-08-15T05:14:14Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583679",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583679"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583679"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583679/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 13,
+      "original_line": 13,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 13,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583691",
+      "pull_request_review_id": 4942937636,
+      "id": 3788583691,
+      "node_id": "PRRC_kwDOO0Cobs7h0TML",
+      "diff_hunk": "@@ -0,0 +1,23 @@\n+echo \"Install the CS4208 speaker driver on 12-inch MacBooks\"\n+\n+# Fresh installs get this from install/hardware/apple/fix-cs4208-audio.sh.\n+# Existing MacBook9,1 / MacBook10,1 installs still have silent speakers:\n+# mainline detects the codec and PipeWire plays, but the speaker amp is never\n+# enabled. Skip machines that already have the packaged module or the same\n+# DKMS driver installed by hand.\n+\n+product_name=\"${OMARCHY_MACBOOK12_AUDIO_MODEL:-$(cat /sys/class/dmi/id/product_name 2>/dev/null)}\"\n+if [[ $product_name != \"MacBook9,1\" && $product_name != \"MacBook10,1\" ]]; then\n+  exit 0\n+fi\n+\n+if omarchy-pkg-present macbook12-audio-driver-dkms; then\n+  exit 0\n+fi\n+\n+if dkms status 2>/dev/null | grep -q '^macbook12-audio/'; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add macbook12-audio-driver-dkms\n+omarchy-state set reboot-required",
+      "path": "migrations/1786719479.sh",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "original_commit_id": "316e1f0b97f4f8362473af69f76695cb75c7466d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This new migration script has no shebang and doesn\u2019t set shell strictness (`set -euo pipefail`). If migrations are ever executed directly (or by a runner that doesn\u2019t force `bash` options), missing these can lead to inconsistent behavior and harder-to-debug failures. Add a shebang and align options with the project\u2019s migration/script conventions.",
+      "created_at": "2026-08-15T05:14:13Z",
+      "updated_at": "2026-08-15T05:14:14Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583691",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583691"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583691"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583691/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 23,
+      "original_line": 23,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 23,
+      "position": 56,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583698",
+      "pull_request_review_id": 4942937636,
+      "id": 3788583698,
+      "node_id": "PRRC_kwDOO0Cobs7h0TMS",
+      "diff_hunk": "@@ -0,0 +1,117 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-cs4208-audio.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+other_packages=\"$ROOT/install/omarchy-other.packages\"\n+migration=\"$ROOT/migrations/1786719479.sh\"\n+\n+grep -q 'apple/fix-cs4208-audio.sh' \"$all\" ||\n+  fail \"the CS4208 audio fix runs during hardware setup\"\n+grep -qx 'macbook12-audio-driver-dkms' \"$other_packages\" ||\n+  fail \"the ISO caches the CS4208 speaker driver\"\n+grep -Fq 'MacBook9,1' \"$leaf\" && grep -Fq 'MacBook10,1' \"$leaf\" ||\n+  fail \"the CS4208 leaf matches the 12-inch MacBooks\"\n+pass \"the CS4208 audio fix is wired into setup\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-present\" <<'SH'\n+#!/bin/bash\n+\n+(( ${CS4208_PKG_PRESENT:-0} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/dkms\" <<'SH'\n+#!/bin/bash\n+\n+if (( ${CS4208_DKMS_INSTALLED:-0} == 1 )); then\n+  echo 'macbook12-audio/0.1, 7.1.8-arch1-3, x86_64: installed (Original modules exist)'\n+  exit 0\n+fi\n+echo 'macbook12-spi-driver/0+git.315: added'\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local model=\"$1\"\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_MACBOOK12_AUDIO_MODEL=\"$model\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\"\n+}\n+\n+run_leaf \"MacBook10,1\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-audio-driver-dkms' \"$calls\" ||\n+  fail \"a 2017 12-inch MacBook gets the CS4208 driver\" \"$(cat \"$calls\")\"\n+pass \"a 2017 12-inch MacBook gets the CS4208 driver\"\n+\n+run_leaf \"MacBook9,1\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-audio-driver-dkms' \"$calls\" ||\n+  fail \"a 2016 12-inch MacBook gets the CS4208 driver\" \"$(cat \"$calls\")\"\n+pass \"a 2016 12-inch MacBook gets the CS4208 driver\"\n+\n+run_leaf \"MacBook8,1\" >/dev/null\n+[[ ! -s $calls ]] || fail \"the 2015 12-inch MacBook is left alone\" \"$(cat \"$calls\")\"\n+pass \"the 2015 12-inch MacBook is left alone\"\n+\n+run_leaf \"MacBookPro14,1\" >/dev/null\n+[[ ! -s $calls ]] || fail \"a MacBook Pro is left alone\" \"$(cat \"$calls\")\"\n+pass \"a MacBook Pro is left alone\"\n+\n+run_leaf \"XPS 13 9310\" >/dev/null\n+[[ ! -s $calls ]] || fail \"non-Apple hardware is left alone\" \"$(cat \"$calls\")\"\n+pass \"non-Apple hardware is left alone\"\n+\n+run_migration() {\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_MACBOOK12_AUDIO_MODEL=\"$1\" \\\n+    CS4208_PKG_PRESENT=\"${2:-0}\" \\\n+    CS4208_DKMS_INSTALLED=\"${3:-0}\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration \"MacBook10,1\" 0 0\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-audio-driver-dkms' \"$calls\" ||\n+  fail \"the migration installs the CS4208 driver\" \"$(cat \"$calls\")\"\n+grep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"the migration asks for the reboot that loads the module\" \"$(cat \"$calls\")\"\n+pass \"the migration installs the CS4208 driver\"\n+",
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "original_commit_id": "316e1f0b97f4f8362473af69f76695cb75c7466d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration supports both `MacBook9,1` and `MacBook10,1`, but the test only validates the positive migration path for `MacBook10,1`. Add an equivalent `run_migration \\\"MacBook9,1\\\" 0 0` assertion (install + reboot-required) to ensure both supported models remain covered.",
+      "created_at": "2026-08-15T05:14:13Z",
+      "updated_at": "2026-08-15T05:14:14Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583698",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583698"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583698"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583698/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 107,
+      "original_line": 106,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 106,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583699",
+      "pull_request_review_id": 4942937636,
+      "id": 3788583699,
+      "node_id": "PRRC_kwDOO0Cobs7h0TMT",
+      "diff_hunk": "@@ -0,0 +1,117 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-cs4208-audio.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+other_packages=\"$ROOT/install/omarchy-other.packages\"\n+migration=\"$ROOT/migrations/1786719479.sh\"\n+\n+grep -q 'apple/fix-cs4208-audio.sh' \"$all\" ||\n+  fail \"the CS4208 audio fix runs during hardware setup\"\n+grep -qx 'macbook12-audio-driver-dkms' \"$other_packages\" ||\n+  fail \"the ISO caches the CS4208 speaker driver\"\n+grep -Fq 'MacBook9,1' \"$leaf\" && grep -Fq 'MacBook10,1' \"$leaf\" ||",
+      "path": "test/shell.d/cs4208-audio-test.sh",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "original_commit_id": "316e1f0b97f4f8362473af69f76695cb75c7466d",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This relies on `&&`/`||` precedence to decide when to fail. It works, but it\u2019s easy to misread and accidentally break during edits. Consider grouping the greps with `{ ...; }` (or splitting across explicit `if` statements) to make the intent unambiguous.",
+      "created_at": "2026-08-15T05:14:13Z",
+      "updated_at": "2026-08-15T05:14:14Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583699",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583699"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#discussion_r3788583699"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788583699/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 16,
+      "original_line": 16,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 16,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3789171347",
+      "pull_request_review_id": 4943636008,
+      "id": 3789171347,
+      "node_id": "PRRC_kwDOO0Cobs7h2iqT",
+      "diff_hunk": "@@ -26,6 +26,7 @@ linux-headers\n linux-ptl\n linux-ptl-headers\n macbook12-spi-driver-dkms\n+macbook12-audio-driver-dkms",
+      "path": "install/omarchy-other.packages",
+      "commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "original_commit_id": "2d7cbf608cb6884ffa9240f2949670f38d935800",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The PR description says this package is not yet published in `pkgs.omarchy.org`. Both ISO caching and the new `omarchy-pkg-add` calls depend on it being available through pacman, so the ISO build or hardware setup cannot succeed as submitted. Publish the package before merging this reference.",
+      "created_at": "2026-08-15T10:18:36Z",
+      "updated_at": "2026-08-15T10:18:36Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6921#discussion_r3789171347",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6921",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3789171347"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6921#discussion_r3789171347"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6921"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3789171347/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 29,
+      "original_line": 29,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 4,
+      "position": 13,
+      "subject_type": "line"
+    }
+  ]
+}

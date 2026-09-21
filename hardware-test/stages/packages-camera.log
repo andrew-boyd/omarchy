@@ -1,0 +1,4 @@
+tar: Removing leading `/' from member names
+tar: Removing leading `/' from hard link targets
+[1;35m==> Package scenario exit 0. Artifacts: /home/boyd/Work/vintage-pr-review/.state/vm-install/2026-09-20/builds/build-20260921T134109Z-CppI9m/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-102008-mac-packages-camera[0m
+[1;35m==> Stopping test VM[0m

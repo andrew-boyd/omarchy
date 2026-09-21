@@ -1,0 +1,211 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7950",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "t1-touchbar"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "c391c2ef85891cd628730ee674168476b15fd098",
+      "state": "open"
+    },
+    {
+      "head_sha": "c391c2ef85891cd628730ee674168476b15fd098",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:35Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7950,
+  "checked_at": "2026-09-21T11:57:14.365335+00:00",
+  "title": "Rebind the T1 Touch Bar's display sub-device so it doesn't stay dark",
+  "author": "csk-grit42",
+  "head_sha": "c391c2ef85891cd628730ee674168476b15fd098",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:35Z",
+  "state": "open",
+  "body": "## Why\n\nOn T1 Touch Bar MacBook Pros (`MacBookPro13,2`/`13,3`/`14,2`/`14,3`), once `apple-ib-tb` is loaded and the iBridge's `05AC:8600` HID interfaces are bound to `apple-ibridge-hid`, the driver spawns a second, virtual HID sub-device (`1D6B:0301`) carrying the \"display on\" field. The bar's icon row can already be lit at this point, but the bar itself stays completely dark until that sub-device is *also* explicitly bound, this time to `apple-ib-touchbar`. It does not reliably win its own auto-bind race, and nothing logs the failure. The whole chain re-enumerates on resume too, so this triggers off USB add rather than module add.\n\nThis is additive to #7064, which installs the driver stack and binds the two real `05AC:8600` interfaces, but does not yet rebind the virtual sub-device \u2014 a T1 Touch Bar can still ship dark even with that fix applied. This PR only adds the missing rebind; it needs a T1 Touch Bar driver already present to have anything to act on.\n\nDiagnosed and field-verified (Part 2 of the linked recipe) on a MacBookPro14,2: [csk-grit42/OmarchyOnMacBookPro14.2-2017---A1706- \u2014 HOWTO.md](https://github.com/csk-grit42/OmarchyOnMacBookPro14.2-2017---A1706-/blob/main/HOWTO.md).\n\n> **Model note:** built and verified on one MacBookPro14,2 unit. T1 firmware and HID interface numbering can vary slightly by production batch/model (13,2 / 13,3 / 14,3) \u2014 the bind targets a bus-ID pattern rather than a fixed path, but if it doesn't take effect on a different T1 model, check the actual `lsusb -t` / `/sys/bus/hid/devices/` layout before assuming the fix itself is wrong.\n\n## What\n\n- `bin/omarchy-hw-apple-t1-touchbar-disp-bind` \u2014 force-binds the `1D6B:0301` sub-device to `apple-ib-touchbar` once it appears (short retry loop; it's spawned asynchronously right after the parent bind).\n- `default/udev/apple-t1-touchbar-disp.rules` \u2014 runs it on every `05AC:8600` USB add, covering boot and resume.\n- `install/hardware/apple/t1-touchbar-disp-bind.sh` \u2014 shared `needed` / `installed` / `install` helpers for the leaf hook and migration.\n- `install/hardware/apple/fix-t1-touchbar-disp-bind.sh` \u2014 install-time hook, wired into `install/hardware/all.sh` right after the SPI keyboard hook.\n- Migration `1787508990` does the same for existing installs.\n- `test/shell.d/apple-t1-touchbar-disp-bind-test.sh` covers the hardware gate, the rebind logic against a faked `/sys/bus/hid` tree, and the install/migration wiring.\n\nNo change to `manual/44-mac-support.md` \u2014 the Touch Bar isn't fully wired up on `quattro` without #7064 (or an equivalent driver install) landing first; this only removes the second failure mode once that's in place.\n\n## Test plan\n\n- [x] `./test/cli`\n- [x] `test/shell.d/apple-t1-touchbar-disp-bind-test.sh`\n- [x] MacBookPro14,2: with #7064's driver stack and Stage 1 bind applied manually, this rebind step is what takes the bar from icons-only to fully lit; without it, the bar stays dark indefinitely.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "54d2fde2a1f1e607745de32d7b260c76e9b64cfa",
+      "filename": "bin/omarchy-hw-apple-t1-touchbar-disp-bind",
+      "status": "added",
+      "additions": 30,
+      "deletions": 0,
+      "changes": 30,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/bin%2Fomarchy-hw-apple-t1-touchbar-disp-bind",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/bin%2Fomarchy-hw-apple-t1-touchbar-disp-bind",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-t1-touchbar-disp-bind?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -0,0 +1,30 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Force-bind the T1 Touch Bar's virtual display sub-device\n+# omarchy:hidden=true\n+\n+# apple-ib-tb spawns a virtual HID sub-device (1D6B:0301) once the iBridge's\n+# real 05AC:8600 interfaces are bound to apple-ibridge-hid. That sub-device\n+# carries the \"display on\" field, but it does not reliably win its own\n+# auto-bind race \u2014 the bar then shows icons but stays dark, with nothing\n+# logged anywhere. It appears asynchronously right after the parent bind, so\n+# this retries briefly rather than assuming it's already there.\n+hid_root=${OMARCHY_T1_HID_ROOT:-/sys/bus/hid}\n+\n+for _ in $(seq 1 15); do\n+  found=0\n+  for dev in \"$hid_root\"/devices/0003:1D6B:0301.*; do\n+    [[ -d $dev ]] || continue\n+    found=1\n+    name=$(basename \"$dev\")\n+    drv=\"\"\n+    [[ -e $dev/driver ]] && drv=$(basename \"$(readlink -f \"$dev/driver\")\")\n+    [[ $drv == apple-ib-touchbar ]] && continue\n+    [[ -n $drv && -e \"$hid_root/drivers/$drv/unbind\" ]] &&\n+      echo -n \"$name\" >\"$hid_root/drivers/$drv/unbind\"\n+    [[ -e \"$hid_root/drivers/apple-ib-touchbar/bind\" ]] &&\n+      echo -n \"$name\" >\"$hid_root/drivers/apple-ib-touchbar/bind\"\n+  done\n+  ((found)) && break\n+  sleep 0.2\n+done"
+    },
+    {
+      "sha": "8906835bbab7217507bccdbd5dabb50734dbb1a4",
+      "filename": "default/udev/apple-t1-touchbar-disp.rules",
+      "status": "added",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/default%2Fudev%2Fapple-t1-touchbar-disp.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/default%2Fudev%2Fapple-t1-touchbar-disp.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Fapple-t1-touchbar-disp.rules?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -0,0 +1,5 @@\n+# The T1 iBridge (05AC:8600) re-enumerates on every resume, and the virtual\n+# Touch Bar display sub-device it spawns (1D6B:0301) does not reliably win\n+# its own bind race when it reappears. See\n+# bin/omarchy-hw-apple-t1-touchbar-disp-bind.\n+ACTION==\"add\", SUBSYSTEM==\"usb\", ATTR{idVendor}==\"05ac\", ATTR{idProduct}==\"8600\", RUN+=\"/usr/bin/omarchy-hw-apple-t1-touchbar-disp-bind\""
+    },
+    {
+      "sha": "e17f762ff5e2face6ec6b58a35af18fd9be49e39",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -33,6 +33,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t1-touchbar-disp-bind.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\""
+    },
+    {
+      "sha": "acc54446e8fd8c358a62318c1de192bfa0dd1d30",
+      "filename": "install/hardware/apple/fix-t1-touchbar-disp-bind.sh",
+      "status": "added",
+      "additions": 19,
+      "deletions": 0,
+      "changes": 19,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/install%2Fhardware%2Fapple%2Ffix-t1-touchbar-disp-bind.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/install%2Fhardware%2Fapple%2Ffix-t1-touchbar-disp-bind.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t1-touchbar-disp-bind.sh?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -0,0 +1,19 @@\n+# The T1 Touch Bar's virtual display sub-device (1D6B:0301) does not\n+# reliably win its own auto-bind race even once the driver stack is\n+# loaded \u2014 the bar shows icons but stays dark. See\n+# t1-touchbar-disp-bind.sh for the mechanism.\n+\n+: \"${OMARCHY_PATH:=/usr/share/omarchy}\"\n+: \"${OMARCHY_INSTALL:=$OMARCHY_PATH/install}\"\n+# shellcheck source=t1-touchbar-disp-bind.sh\n+source \"$OMARCHY_INSTALL/hardware/apple/t1-touchbar-disp-bind.sh\"\n+\n+if ! t1_touchbar_disp_needed; then\n+  return 0\n+fi\n+if t1_touchbar_disp_installed; then\n+  return 0\n+fi\n+\n+echo \"Wiring up the T1 Touch Bar display-bind fix\"\n+t1_touchbar_disp_install"
+    },
+    {
+      "sha": "35fda984cae9f415526c7964afe3c2f28a10b3f6",
+      "filename": "install/hardware/apple/t1-touchbar-disp-bind.sh",
+      "status": "added",
+      "additions": 35,
+      "deletions": 0,
+      "changes": 35,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/install%2Fhardware%2Fapple%2Ft1-touchbar-disp-bind.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/install%2Fhardware%2Fapple%2Ft1-touchbar-disp-bind.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ft1-touchbar-disp-bind.sh?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -0,0 +1,35 @@\n+# Shared helpers for the T1 Touch Bar display-bind fix (install leaf + migration).\n+#\n+# apple-ib-tb spawns a virtual Touch Bar sub-device (1D6B:0301) once the\n+# iBridge's 05AC:8600 HID interfaces are on apple-ibridge-hid. That\n+# sub-device carries the \"display on\" field, but it does not reliably win\n+# its own auto-bind race, so the bar can show icons and still stay dark.\n+# See bin/omarchy-hw-apple-t1-touchbar-disp-bind for the rebind itself and\n+# https://github.com/csk-grit42/OmarchyOnMacBookPro14.2-2017---A1706-/blob/main/HOWTO.md\n+# (Part 2) for how this was diagnosed on a MacBookPro14,2.\n+#\n+# This only rebinds the sub-device; it needs a T1 Touch Bar driver already\n+# on the system (apple-ib-tb / apple-ibridge \u2014 see #7064) to have anything\n+# to act on.\n+\n+t1_touchbar_disp_rule_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_DISP_RULE_DEST:-/etc/udev/rules.d/91-apple-t1-touchbar-disp.rules}\"\n+}\n+\n+t1_touchbar_disp_needed() {\n+  local product_name\n+  product_name=$(cat \"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\" 2>/dev/null)\n+  [[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]]\n+}\n+\n+t1_touchbar_disp_installed() {\n+  [[ -f \"$(t1_touchbar_disp_rule_dest)\" ]]\n+}\n+\n+t1_touchbar_disp_install() {\n+  local dest\n+  dest=$(t1_touchbar_disp_rule_dest)\n+  sudo mkdir -p \"$(dirname \"$dest\")\"\n+  sudo cp -f \"${OMARCHY_PATH:-/usr/share/omarchy}/default/udev/apple-t1-touchbar-disp.rules\" \"$dest\"\n+  sudo udevadm control --reload\n+}"
+    },
+    {
+      "sha": "7c946320151093c8dcb72c654c38949e886ff2ea",
+      "filename": "migrations/1787508990.sh",
+      "status": "added",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/migrations%2F1787508990.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/migrations%2F1787508990.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787508990.sh?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -0,0 +1,15 @@\n+echo \"Wire up the T1 Touch Bar display-bind fix for existing installs\"\n+\n+: \"${OMARCHY_PATH:=/usr/share/omarchy}\"\n+: \"${OMARCHY_INSTALL:=$OMARCHY_PATH/install}\"\n+# shellcheck source=../install/hardware/apple/t1-touchbar-disp-bind.sh\n+source \"$OMARCHY_INSTALL/hardware/apple/t1-touchbar-disp-bind.sh\"\n+\n+if ! t1_touchbar_disp_needed; then\n+  exit 0\n+fi\n+if t1_touchbar_disp_installed; then\n+  exit 0\n+fi\n+\n+t1_touchbar_disp_install"
+    },
+    {
+      "sha": "7f72fd950a30b08580597a2534060a8cea27e573",
+      "filename": "test/shell.d/apple-t1-touchbar-disp-bind-test.sh",
+      "status": "added",
+      "additions": 174,
+      "deletions": 0,
+      "changes": 174,
+      "blob_url": "https://github.com/omacom/omarchy/blob/c391c2ef85891cd628730ee674168476b15fd098/test%2Fshell.d%2Fapple-t1-touchbar-disp-bind-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/c391c2ef85891cd628730ee674168476b15fd098/test%2Fshell.d%2Fapple-t1-touchbar-disp-bind-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-t1-touchbar-disp-bind-test.sh?ref=c391c2ef85891cd628730ee674168476b15fd098",
+      "patch": "@@ -0,0 +1,174 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+bind=\"$ROOT/bin/omarchy-hw-apple-t1-touchbar-disp-bind\"\n+helpers=\"$ROOT/install/hardware/apple/t1-touchbar-disp-bind.sh\"\n+fix=\"$ROOT/install/hardware/apple/fix-t1-touchbar-disp-bind.sh\"\n+rule=\"$ROOT/default/udev/apple-t1-touchbar-disp.rules\"\n+migration=\"$ROOT/migrations/1787508990.sh\"\n+\n+[[ -x $bind ]] || fail \"the rebind script is executable\"\n+\n+grep -Fq 'omarchy-hw-apple-t1-touchbar-disp-bind' \"$rule\" ||\n+  fail \"udev rule runs the rebind script\"\n+grep -Fq 'idProduct}==\"8600\"' \"$rule\" ||\n+  fail \"udev rule fires on the iBridge USB device, not just module load\"\n+pass \"udev rule rebinds on every iBridge (re)enumeration, including resume\"\n+\n+grep -Fq 'fix-t1-touchbar-disp-bind.sh' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"hardware install runs the display-bind hook\"\n+pass \"display-bind hook is wired into the installer\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+# --- hardware gate ---\n+# shellcheck source=../../install/hardware/apple/t1-touchbar-disp-bind.sh\n+source \"$helpers\"\n+\n+assert_needed() {\n+  local model=$1 expect=$2 description=$3\n+  local tmp\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$model\" >\"$tmp\"\n+  if OMARCHY_DMI_PRODUCT_NAME=\"$tmp\" t1_touchbar_disp_needed; then\n+    [[ $expect == yes ]] || fail \"$description\"\n+  else\n+    [[ $expect == no ]] || fail \"$description\"\n+  fi\n+  rm -f \"$tmp\"\n+  pass \"$description\"\n+}\n+\n+assert_needed MacBookPro14,3 yes \"MacBookPro14,3 is a T1 Touch Bar\"\n+assert_needed MacBookPro13,2 yes \"MacBookPro13,2 is a T1 Touch Bar\"\n+assert_needed MacBookPro14,2 yes \"MacBookPro14,2 is a T1 Touch Bar\"\n+assert_needed MacBookPro13,1 no \"MacBookPro13,1 has no Touch Bar\"\n+assert_needed MacBookPro15,1 no \"MacBookPro15,1 is T2, not T1\"\n+\n+# --- rebind script against a faked /sys/bus/hid tree ---\n+# The real unbind/bind sysfs files are write-only actions the kernel consumes\n+# to move a driver symlink; a plain tmp file can't reproduce that, so these\n+# assert on which files the script writes to rather than the resulting link.\n+hid_root=\"$test_tmp/hid\"\n+mkdir -p \"$hid_root/devices\" \"$hid_root/drivers/hid-sensor-hub\" \"$hid_root/drivers/apple-ib-touchbar\"\n+: >\"$hid_root/drivers/hid-sensor-hub/unbind\"\n+: >\"$hid_root/drivers/apple-ib-touchbar/bind\"\n+\n+dev=\"$hid_root/devices/0003:1D6B:0301.0042\"\n+mkdir -p \"$dev\"\n+ln -s \"../../drivers/hid-sensor-hub\" \"$dev/driver\"\n+\n+OMARCHY_T1_HID_ROOT=\"$hid_root\" \"$bind\"\n+[[ -s $hid_root/drivers/hid-sensor-hub/unbind ]] ||\n+  fail \"rebind script unbinds the sub-device from whatever driver holds it\"\n+[[ -s $hid_root/drivers/apple-ib-touchbar/bind ]] ||\n+  fail \"rebind script binds the sub-device to apple-ib-touchbar\"\n+pass \"rebind script moves the virtual sub-device onto apple-ib-touchbar\"\n+\n+# Already on the right driver: no unbind attempted.\n+already_root=\"$test_tmp/hid-already\"\n+mkdir -p \"$already_root/devices\" \"$already_root/drivers/apple-ib-touchbar\"\n+already_dev=\"$already_root/devices/0003:1D6B:0301.0042\"\n+mkdir -p \"$already_dev\"\n+ln -s \"../../drivers/apple-ib-touchbar\" \"$already_dev/driver\"\n+OMARCHY_T1_HID_ROOT=\"$already_root\" \"$bind\"\n+[[ -L $already_dev/driver ]] || fail \"already-bound sub-device keeps its driver link\"\n+pass \"rebind script is a no-op once the sub-device is already on apple-ib-touchbar\"\n+\n+# No sub-device present yet: give up after the retry budget instead of hanging.\n+empty_root=\"$test_tmp/hid-empty\"\n+mkdir -p \"$empty_root/devices\"\n+time_start=$SECONDS\n+OMARCHY_T1_HID_ROOT=\"$empty_root\" \"$bind\"\n+(( SECONDS - time_start < 10 )) ||\n+  fail \"rebind script does not hang when the sub-device never appears\"\n+pass \"rebind script gives up after its retry budget with no sub-device present\"\n+\n+# --- install hook + migration wiring ---\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+cat >\"$stub_bin/udevadm\" <<'SH'\n+#!/bin/bash\n+printf 'udevadm' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+chmod +x \"$stub_bin\"/*\n+\n+dmi=\"$test_tmp/dmi\"\n+rule_dest=\"$test_tmp/etc/udev/rules.d/91-apple-t1-touchbar-disp.rules\"\n+\n+printf 'MacBookPro14,1\\n' >\"$dmi\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_DISP_RULE_DEST=\"$rule_dest\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+[[ ! -f $rule_dest ]] || fail \"install hook no-ops on non-T1 hardware\"\n+pass \"install hook no-ops on non-T1 hardware\"\n+\n+printf 'MacBookPro14,2\\n' >\"$dmi\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_DISP_RULE_DEST=\"$rule_dest\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+[[ -f $rule_dest ]] || fail \"install hook writes the udev rule on T1 hardware\"\n+grep -Fq $'udevadm\\tcontrol\\t--reload' \"$calls\" ||\n+  fail \"install hook reloads udev after writing the rule\"\n+pass \"install hook wires the display-bind fix on T1 hardware\"\n+\n+rm -f \"$rule_dest\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_DISP_RULE_DEST=\"$rule_dest\" \\\n+  bash -euo pipefail \"$migration\"\n+[[ -f $rule_dest ]] || fail \"migration writes the udev rule on existing T1 installs\"\n+pass \"migration wires the display-bind fix on existing T1 installs\"\n+\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_DISP_RULE_DEST=\"$rule_dest\" \\\n+  bash -euo pipefail \"$migration\"\n+[[ ! -s $calls ]] || fail \"migration is idempotent once already wired\" \"$(cat \"$calls\")\"\n+pass \"migration is a no-op on a machine already wired up\"\n+\n+printf 'MacBookPro16,1\\n' >\"$dmi\"\n+rm -f \"$rule_dest\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_DISP_RULE_DEST=\"$rule_dest\" \\\n+  bash -euo pipefail \"$migration\"\n+[[ ! -f $rule_dest ]] || fail \"migration skips unrelated hardware\"\n+[[ ! -s $calls ]] || fail \"migration skips unrelated hardware\" \"$(cat \"$calls\")\"\n+pass \"migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5529833834",
+      "html_url": "https://github.com/omacom/omarchy/pull/7950#issuecomment-5529833834",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7950",
+      "id": 5529833834,
+      "node_id": "IC_kwDOO0Cobs8AAAABSZqRag",
+      "user": {
+        "login": "smoothunit",
+        "id": 8444038,
+        "node_id": "MDQ6VXNlcjg0NDQwMzg=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/8444038?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/smoothunit",
+        "html_url": "https://github.com/smoothunit",
+        "followers_url": "https://api.github.com/users/smoothunit/followers",
+        "following_url": "https://api.github.com/users/smoothunit/following{/other_user}",
+        "gists_url": "https://api.github.com/users/smoothunit/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/smoothunit/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/smoothunit/subscriptions",
+        "organizations_url": "https://api.github.com/users/smoothunit/orgs",
+        "repos_url": "https://api.github.com/users/smoothunit/repos",
+        "events_url": "https://api.github.com/users/smoothunit/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/smoothunit/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-03T17:52:31Z",
+      "updated_at": "2026-09-03T17:52:31Z",
+      "body": "https://github",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5529833834/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5003150607,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKjYFDw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds T1 Touch Bar display rebinding for boot and resume events.\n\n**Changes:**\n- Adds a udev-triggered HID rebinding command.\n- Installs the rule on fresh and existing systems.\n- Adds shell coverage for detection, binding, and installation.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 6 out of 7 changed files in this pull request and generated no comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `bin/omarchy-hw-apple-t1-touchbar-disp-bind` | Rebinds the virtual display HID device. |\r\n| `default/udev/apple-t1-touchbar-disp.rules` | Triggers rebinding on iBridge enumeration. |\r\n| `install/hardware/apple/t1-touchbar-disp-bind.sh` | Provides detection and installation helpers. |\r\n| `install/hardware/apple/fix-t1-touchbar-disp-bind.sh` | Adds the installer hook. |\r\n| `install/hardware/all.sh` | Runs the new hardware hook. |\r\n| `migrations/1787508990.sh` | Installs the rule on existing systems. |\r\n| `test/shell.d/apple-t1-touchbar-disp-bind-test.sh` | Tests detection, rebinding, and wiring. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7950#pullrequestreview-5003150607",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7950",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7950#pullrequestreview-5003150607"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7950"
+        }
+      },
+      "submitted_at": "2026-08-23T19:09:49Z",
+      "commit_id": "c391c2ef85891cd628730ee674168476b15fd098"
+    }
+  ],
+  "inline": []
+}

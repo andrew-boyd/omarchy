@@ -1,0 +1,45 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9062",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "model-docs"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "630f172aa00dab4d07c7b1fd73ba9d14f94387d8",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9062,
+  "checked_at": "2026-09-21T11:56:55.074582+00:00",
+  "title": "docs(mac): fix T1 chip model identifiers and remove non-Touch Bar A1708",
+  "author": "agush22",
+  "head_sha": "630f172aa00dab4d07c7b1fd73ba9d14f94387d8",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:25Z",
+  "state": "open",
+  "body": "## Summary\r\nCorrects inaccurate model mappings in `mac-support.md`:\r\n\r\n- Fixes `A1706` port count (4 Thunderbolt 3 ports, Touch Bar).\r\n- Removes `A1708` (2 Thunderbolt 3 ports, physical function keys) from the T1 list as it does not contain a T1 chip.\r\n- Clarifies that `A1706` and `A1707` cover both 2016 and 2017 Touch Bar generations.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e144d0970046537c7261323873c177021aa35131",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 3,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/630f172aa00dab4d07c7b1fd73ba9d14f94387d8/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/630f172aa00dab4d07c7b1fd73ba9d14f94387d8/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=630f172aa00dab4d07c7b1fd73ba9d14f94387d8",
+      "patch": "@@ -44,9 +44,8 @@ Members of the community are constantly working on solutions to these challenges\n #### Devices with T1 Chip\n \n The Apple T1 chip was introduced in late 2016 and used exclusively in the first-generation MacBook Pro models with Touch Bar.\n-- MacBook Pro 13-inch (2016, two Thunderbolt 3 ports) \u2013 Model: A1706\n-- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) \u2013 Model: A1708\n-- MacBook Pro 15-inch (2016) \u2013 Model: A1707\n+- MacBook Pro 13-inch (2016-2017, four Thunderbolt 3 ports) \u2013 Model: A1706\n+- MacBook Pro 15-inch (2016-2017) \u2013 Model: A1707\n \n #### Known Issues\n "
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

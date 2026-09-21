@@ -1,0 +1,61 @@
+{
+  "passed_negative_control": true,
+  "reason": {
+    "required_inventory_references_missing_from_bodies": {
+      "P01": [
+        "https://github.com/omacom/omarchy/pull/10468"
+      ],
+      "P02": [
+        "https://github.com/omacom/omarchy/pull/10797",
+        "https://github.com/omacom/omarchy/pull/11897",
+        "https://github.com/omacom/omarchy/pull/11898"
+      ],
+      "P04": [
+        "https://github.com/omacom/omarchy/pull/11570",
+        "https://github.com/omacom/omarchy/pull/8560",
+        "https://github.com/omacom/omarchy/pull/9211",
+        "https://github.com/omacom/omarchy/pull/9637"
+      ],
+      "P06": [
+        "https://github.com/omacom/omarchy/pull/7732"
+      ],
+      "P08": [
+        "https://github.com/omacom/omarchy-pkgs/pull/182",
+        "https://github.com/omacom/omarchy/pull/7732"
+      ],
+      "P10": [
+        "https://github.com/omacom/omarchy-pkgs/pull/422",
+        "https://github.com/omacom/omarchy/pull/10306",
+        "https://github.com/omacom/omarchy/pull/10314",
+        "https://github.com/omacom/omarchy/pull/10332",
+        "https://github.com/omacom/omarchy/pull/10910",
+        "https://github.com/omacom/omarchy/pull/11311",
+        "https://github.com/omacom/omarchy/pull/11536",
+        "https://github.com/omacom/omarchy/pull/11570",
+        "https://github.com/omacom/omarchy/pull/11623",
+        "https://github.com/omacom/omarchy/pull/11748",
+        "https://github.com/omacom/omarchy/pull/5140",
+        "https://github.com/omacom/omarchy/pull/7180",
+        "https://github.com/omacom/omarchy/pull/7333",
+        "https://github.com/omacom/omarchy/pull/7589",
+        "https://github.com/omacom/omarchy/pull/8812",
+        "https://github.com/omacom/omarchy/pull/9803"
+      ],
+      "P11": [
+        "https://github.com/omacom/omarchy-pkgs/pull/182",
+        "https://github.com/omacom/omarchy/pull/11064",
+        "https://github.com/omacom/omarchy/pull/11623",
+        "https://github.com/omacom/omarchy/pull/7732"
+      ],
+      "P12": [
+        "https://github.com/omacom/omarchy-iso/pull/174",
+        "https://github.com/omacom/omarchy/pull/8560",
+        "https://github.com/omacom/omarchy/pull/9211"
+      ],
+      "P13": [
+        "https://github.com/omacom/omarchy-pkgs/pull/422",
+        "https://github.com/omacom/omarchy-pkgs/pull/544"
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12074",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+      "state": "open"
+    },
+    {
+      "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+      "state": "open",
+      "updated_at": "2026-09-16T08:20:51Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12074,
+  "checked_at": "2026-09-21T11:56:36.711382+00:00",
+  "title": "Install stock kernel headers for broadcom-wl-dkms on upgraded Macs",
+  "author": "oliverox",
+  "head_sha": "6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T08:20:51Z",
+  "state": "open",
+  "body": "Arch dropped the prebuilt `broadcom-wl` on 2026-09-02, and `broadcom-wl-dkms` carries `replaces=(broadcom-wl)`. On an upgrade, pacman swaps the package in and pulls `dkms`, but nothing pulls `linux-headers`, so the module never builds:\n\n```\nrunning '70-dkms-install.hook'...\n==> ERROR: Missing 7.2.3-arch1-3 kernel headers for module broadcom-wl/6.30.223.271.\n```\n\n2012-2015 MacBooks with a BCM4360 or BCM4331 then come back from the Quattro upgrade with no driver bound and no Wi-Fi device at all. The installer's `fix-bcm43xx.sh` never runs on those machines, and `1789444024` only covers `linux-omarchy` and `linux-t2`.\n\n`1789325478` will give `linux-omarchy` its headers, but it deliberately leaves the stock kernel installed as the boot fallback. On these Macs that fallback still has no Wi-Fi, which is usually the way back to a working system.\n\nThis migration installs headers for any installed Arch kernel (`linux`, `linux-lts`, `linux-zen`, `linux-hardened`) when `broadcom-wl-dkms` is present. The dkms pacman hook triggers on `usr/lib/modules/*/build/include/`, so installing the headers builds the module.\n\n## Testing\n\n- `test/shell.d/broadcom-wl-headers-migration-test.sh` covers the repair, idempotency, leaving `linux-omarchy` to its own migration, skipping machines without `broadcom-wl-dkms`, and propagating a failed install. It fails when the install line is removed.\n- `test/shell.d/kernel-headers-migration-test.sh` and the other migration tests still pass.\n- Verified on a MacBook (BCM4360, `14e4:43a0`) upgraded to 4.0.3 on stock `linux` 7.2.3. Installing `linux-headers` built `wl` through the hook, `modprobe wl` brought up `wlp3s0`, and NetworkManager connected.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "bf7ce5575595e7eefe33376616c30e63854b2424",
+      "filename": "migrations/1789546355.sh",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6d9986a1704f166ea3134e0ade2148f8291ce3d8/migrations%2F1789546355.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6d9986a1704f166ea3134e0ade2148f8291ce3d8/migrations%2F1789546355.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789546355.sh?ref=6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+      "patch": "@@ -0,0 +1,16 @@\n+echo \"Install headers so the Broadcom wl driver builds for the stock kernel\"\n+\n+# Arch dropped the prebuilt broadcom-wl on 2026-09-02, and its replaces entry\n+# swapped in broadcom-wl-dkms during the next upgrade. That pulls in dkms but not\n+# the headers the module builds against, so 2012-2015 MacBooks with a BCM4360 or\n+# BCM4331 came back from the upgrade with no Wi-Fi driver at all. The kernel\n+# migration gives linux-omarchy its headers, but the stock kernel stays installed\n+# as the boot fallback, and without headers that fallback still has no Wi-Fi.\n+# Installing the headers is enough: the dkms pacman hook builds the module.\n+omarchy-pkg-present broadcom-wl-dkms || exit 0\n+\n+for kernel in linux linux-lts linux-zen linux-hardened; do\n+  if omarchy-pkg-present \"$kernel\"; then\n+    omarchy-pkg-add \"$kernel-headers\"\n+  fi\n+done"
+    },
+    {
+      "sha": "25c40410b01d16d9eac3f8bddd027c5c4900c4c1",
+      "filename": "test/shell.d/broadcom-wl-headers-migration-test.sh",
+      "status": "added",
+      "additions": 60,
+      "deletions": 0,
+      "changes": 60,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6d9986a1704f166ea3134e0ade2148f8291ce3d8/test%2Fshell.d%2Fbroadcom-wl-headers-migration-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6d9986a1704f166ea3134e0ade2148f8291ce3d8/test%2Fshell.d%2Fbroadcom-wl-headers-migration-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbroadcom-wl-headers-migration-test.sh?ref=6d9986a1704f166ea3134e0ade2148f8291ce3d8",
+      "patch": "@@ -0,0 +1,60 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp_dir=$(mktemp -d)\n+trap 'rm -rf \"$tmp_dir\"' EXIT\n+mkdir -p \"$tmp_dir/bin\"\n+export INSTALLED_PACKAGES=\"$tmp_dir/installed\" CALL_LOG=\"$tmp_dir/calls\"\n+export PATH=\"$tmp_dir/bin:$ROOT/bin:$PATH\"\n+\n+# Keep the real package helpers, but contain every pacman transaction here.\n+cat > \"$tmp_dir/bin/pacman\" <<'SH'\n+#!/bin/bash\n+case \"$1\" in\n+  -Q) grep -Fxq -- \"$2\" \"$INSTALLED_PACKAGES\" ;;\n+  -S)\n+    [[ ${FAIL_INSTALL:-0} == 0 ]] || exit 1\n+    shift 3 # -S --noconfirm --needed\n+    printf '%s\\n' \"$@\" >> \"$INSTALLED_PACKAGES\"\n+    printf '%s\\n' \"$@\" >> \"$CALL_LOG\"\n+    ;;\n+  *) exit 1 ;;\n+esac\n+SH\n+cat > \"$tmp_dir/bin/sudo\" <<'SH'\n+#!/bin/bash\n+[[ $1 == \"pacman\" ]] || exit 1\n+\"$@\"\n+SH\n+chmod +x \"$tmp_dir/bin/\"*\n+\n+migration=\"$ROOT/migrations/1789546355.sh\"\n+for kernels in linux 'linux linux-lts' 'linux linux-omarchy linux-omarchy-headers'; do\n+  read -ra installed <<< \"$kernels\"\n+  printf '%s\\n' broadcom-wl-dkms dkms \"${installed[@]}\" > \"$INSTALLED_PACKAGES\"\n+  : > \"$CALL_LOG\"\n+  bash -euo pipefail \"$migration\" >/dev/null\n+  for kernel in \"${installed[@]}\"; do\n+    [[ $kernel == *-headers || $kernel == linux-omarchy ]] && continue\n+    grep -Fxq \"$kernel-headers\" \"$INSTALLED_PACKAGES\" || fail \"$kernel gets its headers\"\n+  done\n+  ! grep -Fxq linux-omarchy-headers \"$CALL_LOG\" || fail \"the Omarchy kernel is left to its own migration\"\n+  : > \"$CALL_LOG\"\n+  bash -euo pipefail \"$migration\" >/dev/null\n+  [[ ! -s $CALL_LOG ]] || fail \"header repair is idempotent\"\n+  pass \"missing headers are repaired once for $kernels\"\n+done\n+\n+printf '%s\\n' linux > \"$INSTALLED_PACKAGES\"\n+: > \"$CALL_LOG\"\n+bash -euo pipefail \"$migration\" >/dev/null\n+[[ ! -s $CALL_LOG ]] || fail \"machines without broadcom-wl-dkms are left alone\"\n+pass \"machines without broadcom-wl-dkms are left alone\"\n+\n+printf '%s\\n' broadcom-wl-dkms linux > \"$INSTALLED_PACKAGES\"\n+if FAIL_INSTALL=1 bash -euo pipefail \"$migration\" >/dev/null; then\n+  fail \"a failed header installation must leave the migration pending\"\n+fi\n+pass \"header installation failure is propagated\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

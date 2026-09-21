@@ -1,0 +1,318 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7044",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "alpine-ridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7044,
+  "checked_at": "2026-09-21T11:55:57.937720+00:00",
+  "title": "Keep Thunderbolt USB-C xHCI awake on Intel MacBooks",
+  "author": "shawnyeager",
+  "head_sha": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+  "base_sha": "b9ddccfc377abe0b8fc3ff1ee5b31a86bf202d4a",
+  "base_ref": "dev",
+  "updated_at": "2026-08-15T23:51:34Z",
+  "state": "open",
+  "body": "## Summary\r\n\r\nOn Intel MacBooks whose USB-C ports sit behind an Intel JHL6540 Thunderbolt 3 xHCI controller (`8086:15d4`), the controller runtime-suspends into D3cold after a device is unplugged. The next plug-in never enumerates \u2014 no kernel USB event, no `/dev/sd*`, nothing for udiskie to mount \u2014 until `xhci_hcd` is rebound.\r\n\r\nThis is separate from `usbcore.autosuspend` (already disabled by `usb-autosuspend.sh`). The PCI device itself is asleep.\r\n\r\n## Fix\r\n\r\n- New hardware script `install/config/hardware/apple/fix-tb-usb-wakeup.sh`\r\n- Installs a udev rule that sets `power/control=on` and `d3cold_allowed=0` on `8086:15d4`\r\n- Gated on Apple DMI + that PCI ID (2016\u20132017 MacBook Pro / Alpine Ridge)\r\n- Wired into `install/config/all.sh` for fresh installs\r\n- Migration `1786836656.sh` applies the same script on existing machines\r\n\r\n## Tested\r\n\r\nReproduced on Omarchy 4 / `MacBookPro14,3` (2017 15\" T1):\r\n\r\n- After unplugging a SanDisk USB-C drive, both TB xHCI devices showed `enable=0`, `runtime=suspended`\r\n- A second USB-C drive produced no kernel events until `power/control=on` and an xhci rebind\r\n- With the udev rule, the same drive enumerated immediately as `/dev/sda`\r\n\r\n## Notes\r\n\r\nT2 Macs use different Thunderbolt silicon and already have their own suspend path. This only matches JHL6540 (`8086:15d4`).\r\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "59e9aea9477555d351a8f4ba6efa725e31980c91",
+      "filename": "install/config/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/65131c9b8d98b61bf69f641b41ace50800f7a5a0/install%2Fconfig%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/65131c9b8d98b61bf69f641b41ace50800f7a5a0/install%2Fconfig%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fall.sh?ref=65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "patch": "@@ -64,6 +64,7 @@ run_logged $OMARCHY_INSTALL/config/hardware/framework/qmk-hid.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-spi-keyboard.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-suspend-nvme.sh\n run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-t2.sh\n+run_logged $OMARCHY_INSTALL/config/hardware/apple/fix-tb-usb-wakeup.sh\n \n run_logged $OMARCHY_INSTALL/config/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\n "
+    },
+    {
+      "sha": "85f55ba8d19ddfe6a876576ae180f00a9aae4dbd",
+      "filename": "install/config/hardware/apple/fix-tb-usb-wakeup.sh",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/65131c9b8d98b61bf69f641b41ace50800f7a5a0/install%2Fconfig%2Fhardware%2Fapple%2Ffix-tb-usb-wakeup.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/65131c9b8d98b61bf69f641b41ace50800f7a5a0/install%2Fconfig%2Fhardware%2Fapple%2Ffix-tb-usb-wakeup.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fconfig%2Fhardware%2Fapple%2Ffix-tb-usb-wakeup.sh?ref=65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "patch": "@@ -0,0 +1,16 @@\n+# Intel JHL6540 Thunderbolt 3 USB xHCI (8086:15d4) on Apple laptops.\n+# Runtime suspend + D3cold leaves the controller asleep after unplug, so the\n+# next USB-C device never enumerates until xhci is rebound.\n+sys_vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\n+\n+if [[ $sys_vendor == Apple* ]] && lspci -nn | grep -q \"8086:15d4\"; then\n+  echo \"Detected Apple Thunderbolt USB-C xHCI (8086:15d4). Keeping it awake...\"\n+\n+  cat <<'EOF' | sudo tee /etc/udev/rules.d/99-omarchy-apple-tb-usb-wakeup.rules >/dev/null\n+# Intel JHL6540 Thunderbolt 3 USB xHCI (8086:15d4)\n+ACTION==\"add\", SUBSYSTEM==\"pci\", ATTR{vendor}==\"0x8086\", ATTR{device}==\"0x15d4\", ATTR{power/control}=\"on\", ATTR{d3cold_allowed}=\"0\"\n+EOF\n+\n+  sudo udevadm control --reload\n+  sudo udevadm trigger --subsystem-match=pci --attr-match=vendor=0x8086 --attr-match=device=0x15d4\n+fi"
+    },
+    {
+      "sha": "227e089d028342a2f947eb0a51ff71470f0dc723",
+      "filename": "migrations/1786836656.sh",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/65131c9b8d98b61bf69f641b41ace50800f7a5a0/migrations%2F1786836656.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/65131c9b8d98b61bf69f641b41ace50800f7a5a0/migrations%2F1786836656.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786836656.sh?ref=65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "patch": "@@ -0,0 +1,4 @@\n+echo \"Keep Thunderbolt USB-C xHCI awake on Intel MacBooks\"\n+\n+# shellcheck source=install/config/hardware/apple/fix-tb-usb-wakeup.sh\n+source \"$OMARCHY_PATH/install/config/hardware/apple/fix-tb-usb-wakeup.sh\""
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4944971857,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJr5IUQ",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds an Apple Intel Thunderbolt USB\u2011C xHCI \u201ckeep awake\u201d workaround by installing a udev rule and wiring it into both the installer and migrations.\n\n**Changes:**\n- Add a new Apple hardware config script that installs a udev rule for Intel JHL6540 (8086:15d4).\n- Add a migration that applies the same fix via sourcing the config script.\n- Run the new fix as part of the global hardware configuration flow.\n\n### Reviewed changes\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated 3 comments.\n\n| File | Description |\n| ---- | ----------- |\n| migrations/1786836656.sh | New migration to apply the Thunderbolt USB\u2011C xHCI wake workaround. |\n| install/config/hardware/apple/fix-tb-usb-wakeup.sh | New installer script that writes a udev rule and triggers it. |\n| install/config/all.sh | Hooks the new Apple workaround into the standard install sequence. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/dev?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7044#pullrequestreview-4944971857",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7044",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7044#pullrequestreview-4944971857"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7044"
+        }
+      },
+      "submitted_at": "2026-08-15T23:51:34Z",
+      "commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534658",
+      "pull_request_review_id": 4944971857,
+      "id": 3790534658,
+      "node_id": "PRRC_kwDOO0Cobs7h7vgC",
+      "diff_hunk": "@@ -0,0 +1,16 @@\n+# Intel JHL6540 Thunderbolt 3 USB xHCI (8086:15d4) on Apple laptops.\n+# Runtime suspend + D3cold leaves the controller asleep after unplug, so the\n+# next USB-C device never enumerates until xhci is rebound.\n+sys_vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)\n+\n+if [[ $sys_vendor == Apple* ]] && lspci -nn | grep -q \"8086:15d4\"; then",
+      "path": "install/config/hardware/apple/fix-tb-usb-wakeup.sh",
+      "commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "original_commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This script uses bash-specific syntax (`[[ ... ]]`) but does not declare an interpreter. If it\u2019s invoked by a runner using `/bin/sh`, it will fail. Add an explicit bash shebang (or rewrite to POSIX `[`), and ensure the execution path uses bash consistently.",
+      "created_at": "2026-08-15T23:51:33Z",
+      "updated_at": "2026-08-15T23:51:34Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7044#discussion_r3790534658",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7044",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534658"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7044#discussion_r3790534658"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7044"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534658/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 6,
+      "original_line": 6,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 6,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534664",
+      "pull_request_review_id": 4944971857,
+      "id": 3790534664,
+      "node_id": "PRRC_kwDOO0Cobs7h7vgI",
+      "diff_hunk": "@@ -0,0 +1,4 @@\n+echo \"Keep Thunderbolt USB-C xHCI awake on Intel MacBooks\"\n+\n+# shellcheck source=install/config/hardware/apple/fix-tb-usb-wakeup.sh\n+source \"$OMARCHY_PATH/install/config/hardware/apple/fix-tb-usb-wakeup.sh\"",
+      "path": "migrations/1786836656.sh",
+      "commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "original_commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration sources the script via `$OMARCHY_PATH`, while the install flow wires hardware scripts via `$OMARCHY_INSTALL` (see `install/config/all.sh`). If `$OMARCHY_PATH` is unset or differs from `$OMARCHY_INSTALL`, this migration will fail to locate the script. Use the same base variable as the rest of the install/config pipeline (or derive the path from the migration location) to make the migration robust.",
+      "created_at": "2026-08-15T23:51:33Z",
+      "updated_at": "2026-08-15T23:51:34Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7044#discussion_r3790534664",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7044",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534664"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7044#discussion_r3790534664"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7044"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534664/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 3,
+      "original_start_line": 3,
+      "start_side": "RIGHT",
+      "line": 4,
+      "original_line": 4,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 4,
+      "position": 4,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534673",
+      "pull_request_review_id": 4944971857,
+      "id": 3790534673,
+      "node_id": "PRRC_kwDOO0Cobs7h7vgR",
+      "diff_hunk": "@@ -0,0 +1,4 @@\n+echo \"Keep Thunderbolt USB-C xHCI awake on Intel MacBooks\"\n+\n+# shellcheck source=install/config/hardware/apple/fix-tb-usb-wakeup.sh\n+source \"$OMARCHY_PATH/install/config/hardware/apple/fix-tb-usb-wakeup.sh\"",
+      "path": "migrations/1786836656.sh",
+      "commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "original_commit_id": "65131c9b8d98b61bf69f641b41ace50800f7a5a0",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Sourcing an installer script from a migration can leak variables and shell options into the migration\u2019s execution environment (e.g., `sys_vendor`), which makes future migrations harder to reason about. Prefer executing the script in a separate process (or subshell), or refactor the fix script to expose a function API that can be invoked without side effects.",
+      "created_at": "2026-08-15T23:51:33Z",
+      "updated_at": "2026-08-15T23:51:34Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7044#discussion_r3790534673",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7044",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534673"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7044#discussion_r3790534673"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7044"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790534673/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 3,
+      "original_start_line": 3,
+      "start_side": "RIGHT",
+      "line": 4,
+      "original_line": 4,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 4,
+      "position": 4,
+      "subject_type": "line"
+    }
+  ]
+}

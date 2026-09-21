@@ -1,0 +1,41 @@
+..............................................
+    › opening installer context
+
+    › installing base system (mkinitcpio deferred to final Limine UKI build)
+
+    › creating user (with /etc/skel populated)
+
+    › installing Omarchy runtime + omarchy-base.packages
+
+    › opening installer context
+
+    › installing base system (mkinitcpio deferred to final Limine UKI build)
+
+    › opening installer context
+
+    › installing base system (mkinitcpio deferred to final Limine UKI build)
+
+    › creating user (with /etc/skel populated)
+
+    › installing Omarchy runtime + omarchy-base.packages
+
+    › opening installer context
+
+    › installing base system (mkinitcpio deferred to final Limine UKI build)
+
+    › opening installer context
+
+    › installing base system (mkinitcpio deferred to final Limine UKI build)
+
+    › creating user (with /etc/skel populated)
+
+    › installing Omarchy runtime + omarchy-base.packages
+
+    › opening installer context
+
+    › installing base system (mkinitcpio deferred to final Limine UKI build)
+................................
+----------------------------------------------------------------------
+Ran 78 tests in 0.636s
+
+OK

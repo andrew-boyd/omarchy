@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/315",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "t1-als"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+      "state": "open"
+    },
+    {
+      "head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+      "state": "open",
+      "updated_at": "2026-09-05T15:32:02Z"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 315,
+  "checked_at": "2026-09-21T11:57:08.962996+00:00",
+  "title": "Install the T1 ALS auto-brightness user unit",
+  "author": "shawnyeager",
+  "head_sha": "608fd68e55709c1508abbe844f7deb03727f0b4d",
+  "base_sha": "5d656b0b8a6475735ed9c32cb53f63b66243d072",
+  "base_ref": "master",
+  "updated_at": "2026-09-05T15:32:02Z",
+  "state": "open",
+  "body": "Pairs with [omacom/omarchy#10331](https://github.com/omacom/omarchy/pull/10331). That PR adds `omarchy-als-brightness.service`; this installs it in both `omarchy-settings` and `omarchy-settings-dev`.\n\nWithout this, first-run enable and the T1 migration have nothing to point at under `/usr/lib/systemd/user/`. The unit's own `ExecCondition` / IIO glob keep it inert off T1 hardware.\n\nRelated: omacom/omarchy#10331\nRelated: omacom/omarchy-pkgs#193\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e13535086a43839113482232d2efe23f87e21c47",
+      "filename": "pkgbuilds/omarchy-settings-dev/PKGBUILD",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/608fd68e55709c1508abbe844f7deb03727f0b4d/pkgbuilds%2Fomarchy-settings-dev%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/608fd68e55709c1508abbe844f7deb03727f0b4d/pkgbuilds%2Fomarchy-settings-dev%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fomarchy-settings-dev%2FPKGBUILD?ref=608fd68e55709c1508abbe844f7deb03727f0b4d",
+      "patch": "@@ -170,6 +170,7 @@ package() {\n   install -Dm644 default/systemd/user/omarchy-tailscale-receive.service \"$pkgdir/usr/lib/systemd/user/omarchy-tailscale-receive.service\"\n   install -Dm644 default/systemd/user/omarchy-fcitx5.service \"$pkgdir/usr/lib/systemd/user/omarchy-fcitx5.service\"\n   install -Dm644 default/systemd/user/omarchy-crash-watch.service \"$pkgdir/usr/lib/systemd/user/omarchy-crash-watch.service\"\n+  install -Dm644 default/systemd/user/omarchy-als-brightness.service \"$pkgdir/usr/lib/systemd/user/omarchy-als-brightness.service\"\n   # Marks app.slice (and only app.slice) as a systemd-oomd kill candidate, so\n   # memory pressure costs one app scope instead of the compositor session.\n   # Thresholds live in etc/systemd/oomd.conf.d/10-omarchy.conf."
+    },
+    {
+      "sha": "eb24bd5889b9040db608cd2dc182be113574f577",
+      "filename": "pkgbuilds/omarchy-settings/PKGBUILD",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/608fd68e55709c1508abbe844f7deb03727f0b4d/pkgbuilds%2Fomarchy-settings%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/608fd68e55709c1508abbe844f7deb03727f0b4d/pkgbuilds%2Fomarchy-settings%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fomarchy-settings%2FPKGBUILD?ref=608fd68e55709c1508abbe844f7deb03727f0b4d",
+      "patch": "@@ -165,6 +165,7 @@ package() {\n   install -Dm644 default/systemd/user/omarchy-tailscale-receive.service \"$pkgdir/usr/lib/systemd/user/omarchy-tailscale-receive.service\"\n   install -Dm644 default/systemd/user/omarchy-fcitx5.service \"$pkgdir/usr/lib/systemd/user/omarchy-fcitx5.service\"\n   install -Dm644 default/systemd/user/omarchy-crash-watch.service \"$pkgdir/usr/lib/systemd/user/omarchy-crash-watch.service\"\n+  install -Dm644 default/systemd/user/omarchy-als-brightness.service \"$pkgdir/usr/lib/systemd/user/omarchy-als-brightness.service\"\n   # Marks app.slice (and only app.slice) as a systemd-oomd kill candidate, so\n   # memory pressure costs one app scope instead of the compositor session.\n   # Thresholds live in etc/systemd/oomd.conf.d/10-omarchy.conf."
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

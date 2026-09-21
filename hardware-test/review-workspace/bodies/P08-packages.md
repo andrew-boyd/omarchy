@@ -1,0 +1,42 @@
+# [Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages
+
+Propose the existing facetimehd-dkms, facetimehd-firmware and facetimehd-data recipes as the delivery companion for P08. Preserve the pinned AUR/upstream implementations; only their established packaging/repository adaptations are included. USB/iBridge cameras are outside this package proposal.
+
+**Draft consolidation for source review and hardware-owner follow-up.** Known defects remain; no hardware or merge-readiness certification is claimed. Part of the [14-feature Intel Mac series](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/INTEL-MAC-ROLLUPS.md) with three package companions.
+
+**Contribute:** open follow-up PRs in `andrew-boyd/omarchy-pkgs` with base **`intel-mac/p08-facetime-camera`**. Use `[Intel Mac P08/packages]` in the title and a contributor branch such as `intel-mac/p08/describe-change`. Link this feature in the series index. Merging a follow-up into this branch updates its roll-up.
+
+This existing draft: [https://github.com/omacom/omarchy-pkgs/pull/556](https://github.com/omacom/omarchy-pkgs/pull/556).
+
+## Full Intel Mac scope and current revision
+
+The project covers **all 64-bit Intel Macs: pre-T1, T1 and T2**. MacBookPro13,3 is only the first available physical test machine. Each feature has its own hardware boundary; one model's success does not validate the rest.
+
+Candidate head: `16f57d2aedb47a88b0b49cba59781f3c18c96af3`; reconciled upstream: `e40f5a5da918e8b923115ebb4c335b6c4828fefe`. Published contribution commits and author/co-author metadata remain in the history.
+
+**Ready for attended physical testing; Mac hardware remains untested by this effort.** The reconciled combined ISO passed fresh unencrypted/encrypted VM installations, desktop/password-lock checks, strict Neovim startup/theme checks, synthetic Apple EFI preservation through a disk wipe, and affected package/DKMS/migration checks. ISO SHA-256: `9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252`.
+
+[Exact sources, results, retained failures and reproduction](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/hardware-test/HANDOFF.md). These results cover the pinned combined image; [standalone-versus-combined differences](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/hardware-test/receipts/integration-coverage.json) remain explicit. [Full inventory and retained work tracks](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/hardware-test/INVENTORY.md).
+
+## Scope and dependencies
+
+Use the P08 package companion before installer trials. This is the Broadcom PCIe camera track; USB/iBridge cameras use a different path. Keep the complete MacBookPro13,1 bundle visible as an alternative.
+
+The inventory now records 188 source/context PRs: 101 have dispositions in feature tables and 87 remain only in separate work tracks. **This is not 188 implemented PRs or 188-to-14 compression.** The 14 feature PRs and three package companions remain the published coordination targets; retained backlog is not claimed complete.
+
+## Every affected source PR and recommended action
+
+Current open/closed/merged state is administrative history, not proof that two patches preserve identical behavior. Included/partial identifies selected contributions; alternatives, deferred work and context are not automatically ISO content.
+
+| Source and author | State | Treatment and rationale | Recommended action |
+| --- | --- | --- | --- |
+| [omacom/omarchy-pkgs#182](https://github.com/omacom/omarchy-pkgs/pull/182) — @gjinali | open | **alternative**: Camera/audio package bundle for omacom/omarchy#7732 with offline source preparation and post-transaction DKMS verification. Compare its delivery guarantees with the selected package companions; the whole bundle is not incorporated merely because package names overlap. | Retain for comparison; do not stack competing implementations automatically. |
+| [omacom/omarchy#11381](https://github.com/omacom/omarchy/pull/11381) — @rand0mdud3 | open | **partial**: Apple DMI gate incorporated. AUR delivery, nonfatal package-failure policy, live module load and second migration remain separate alternatives. | Keep uncovered work open; this feature alone does not fully supersede it. |
+| [omacom/omarchy#12067](https://github.com/omacom/omarchy/pull/12067) — @MrBazzieB | open | **included**: Packaged FaceTime PCIe delivery, detector, installer wiring, original migration, manual and tests; exact Apple DMI predicate added from omacom/omarchy#11381. | Consider closure only after maintainers accept preserved behavior and hardware coverage. |
+| [omacom/omarchy#7732](https://github.com/omacom/omarchy/pull/7732) — @gjinali | open | **alternative**: Complete MacBookPro13,1 camera/audio/SPI transition bundle with reported hardware validation, dependent on package omacom/omarchy-pkgs#182. Preserve as a broader model-specific alternative; no one feature roll-up supersedes all of its coverage. | Retain for comparison; do not stack competing implementations automatically. |
+
+## Validation and attribution
+
+Required fresh-image checks are satisfied, with qualified reruns. The full source suite passed 273 files with two disclosed skips, but repeated NetworkManager Polkit failures during that suite temporarily locked its test account. The following password/desktop/recovery checks failed there and passed separately in a clean overlay of the same ISO; the original aggregate remains failed. The first build attempt also failed one libfprint USB-emulation test; unchanged-source isolated repeats, two complete suites and normal package checks passed afterward. That intermittent build-test failure remains documented, and its cause is not established. VM fixtures and DKMS builds do not establish physical device behavior. Physical Wi-Fi, audio, camera, Touch Bar, fingerprint, graphics and suspend behavior remain unverified by this effort.
+
+Original source histories remain linked above. Source-authored commits already included in the roll-ups remain ancestors of this revision; additional copied contributions receive native attribution. [Original attribution mapping](https://github.com/andrew-boyd/omarchy/blob/intel-mac/review-index/AUTHORSHIP.md). No original PR is edited or closed by this effort.

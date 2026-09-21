@@ -1,0 +1,7 @@
+{
+  "iso_harness_commit": "d692d24f95c6611f86beef7e4d7c6e23a7d2f42a",
+  "omarchy_tests_commit": "6096d649643d0d0e0bae65c7949e5043bf2cc338",
+  "test_only_ocr_patch_sha256": "e6cc8ca92e9ac149546d6af07c5c6360d5f0aa9e2928d41552f29e17f79d6c1d",
+  "dependency_preflight": "The host omarchy-pkg-add function is replaced only for this harness invocation with pacman -Q. Missing dependencies fail rather than installing or changing host packages.",
+  "product_injection": false
+}

@@ -1,0 +1,159 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11901",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "state": "merged"
+    },
+    {
+      "head_sha": "8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "state": "merged",
+      "updated_at": "2026-09-15T05:34:12Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11901,
+  "checked_at": "2026-09-21T11:56:36.625253+00:00",
+  "title": "Treat kernel headers as part of the 4.0.4 base system",
+  "author": "ryanrhughes",
+  "head_sha": "8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+  "base_sha": "cbaab83a1e504d02c858880122a78192135ab49a",
+  "base_ref": "v4-0-4",
+  "updated_at": "2026-09-15T05:34:12Z",
+  "state": "merged",
+  "body": "Backport the base-system kernel-header guarantee to 4.0.4. The ISO always installs the selected kernel's headers, so hardware and Xbox installers only install their drivers.\n\nA small migration repairs headers omitted by earlier fresh installs, including linux-omarchy and linux-t2 systems. Acceptance tests check the running kernel and matching headers. The Cam Link feature remains absent from this release branch.\n\nValidation: migration fixtures pass for both kernel families, multiple kernels, idempotence, unrelated kernels, and package-install failure. A fresh ISO built from this branch at 8f3ab025 and omacom/omarchy-iso#184 passed installation, reboot, and the full KVM acceptance suite (88s). The guest has linux-omarchy and linux-omarchy-headers 7.2.5-3, with release 7.2.5-3-omarchy and no stock linux/linux-headers. Installed migration and NVIDIA script hashes match this source, and the removed selector is absent.\n\nUpstream runtime: #11900. ISO guarantee: omacom/omarchy-iso#184. Package dependency cleanup: omacom/omarchy-pkgs#454. The corrected packages and runtime need publication before building the next release ISO.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "aa993e5e54bd035da1119e57b53fc939c23d49e7",
+      "filename": "agents/skills/install-scripts.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/agents%2Fskills%2Finstall-scripts.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/agents%2Fskills%2Finstall-scripts.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/agents%2Fskills%2Finstall-scripts.md?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -13,6 +13,7 @@ commands and reusable setup leaves:\n - use `$OMARCHY_INSTALL` and `$OMARCHY_PATH` instead of hard-coded Omarchy paths.\n - keep root-scoped hardware setup under `install/hardware/` and orchestrate it through `install/hardware/all.sh`.\n - keep every per-user setup leaf under `install/user/` (including `install/user/hardware/` and `install/user/first-run/`) so it is clear what must run for each user.\n+- The base install supplies matching kernel headers before hardware setup. DKMS installers should install their driver packages and assume the headers exist.\n - prefer helper commands for package and command checks where available.\n \n Raw `command -v`, `pacman`, and `pacman-key` are acceptable in package-helper"
+    },
+    {
+      "sha": "f2cda4e7c6c4a2ed28a2e9b796f118a3b7412303",
+      "filename": "bin/omarchy-install-gaming-xbox-controllers",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/bin%2Fomarchy-install-gaming-xbox-controllers",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/bin%2Fomarchy-install-gaming-xbox-controllers",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-install-gaming-xbox-controllers?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -10,7 +10,7 @@ set -e\n echo \"Installing Xbox controller Bluetooth support...\"\n \n # Install xpadneo to ensure controllers work out of the box\n-omarchy-pkg-add linux-headers xpadneo-dkms\n+omarchy-pkg-add xpadneo-dkms\n \n # Prevent xpad/xpadneo driver conflict\n echo blacklist xpad | sudo tee /etc/modprobe.d/blacklist-xpad.conf >/dev/null"
+    },
+    {
+      "sha": "0f9cf474a5beecf3feebdabdb1e7301cc0b59c13",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -6,5 +6,5 @@ pci_info=$(lspci -nn)\n \n if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n   echo \"BCM4360 / BCM4331 detected\"\n-  omarchy-pkg-add broadcom-wl-dkms linux-omarchy-headers\n+  omarchy-pkg-add broadcom-wl-dkms\n fi"
+    },
+    {
+      "sha": "7fb408e0d543f72c3d0da09d4bed6ba5c121b034",
+      "filename": "install/hardware/fix-tuxedo-backlight.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Ffix-tuxedo-backlight.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Ffix-tuxedo-backlight.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-tuxedo-backlight.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -1,7 +1,7 @@\n # Install Tuxedo drivers for keyboard backlighting on Tuxedo laptops and\n # compatible devices like the Slimbook Executive (Clevo/Tuxedo chassis).\n if cat /sys/class/dmi/id/sys_vendor 2>/dev/null | grep -qi \"TUXEDO\\|Slimbook\"; then\n-  omarchy-pkg-add linux-omarchy-headers tuxedo-drivers-nocompatcheck-dkms\n+  omarchy-pkg-add tuxedo-drivers-nocompatcheck-dkms\n \n   # Blacklist the legacy clevo_xsm_wmi module which conflicts with the tuxedo-drivers\n   # clevo_wmi module. When clevo_xsm_wmi loads first, it grabs the Clevo WMI GUIDs,"
+    },
+    {
+      "sha": "f88a9cec624be7b71c4bb4456377b918a6ea88c3",
+      "filename": "install/hardware/fix-yt6801-ethernet-adapter.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -1,4 +1,4 @@\n # Install drivers for Motorcomm YT6801 ethernet adapter used by the Slimbook Executive\n if lspci | grep -i \"YT6801\\|Motorcomm.*Ethernet\"; then\n-  omarchy-pkg-add linux-omarchy-headers yt6801-dkms\n+  omarchy-pkg-add yt6801-dkms\n fi"
+    },
+    {
+      "sha": "1c36787b77052be58bce88b02cf0e3eb2ca67610",
+      "filename": "install/hardware/nvidia.sh",
+      "status": "modified",
+      "additions": 0,
+      "deletions": 4,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Fnvidia.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fhardware%2Fnvidia.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fnvidia.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -1,8 +1,4 @@\n if lspci | grep -qi 'nvidia'; then\n-  # Check which kernel is installed and set appropriate headers package\n-  KERNEL_PACKAGE=$(pacman -Qqs '^linux(-zen|-lts|-hardened|-t2|-ptl|-omarchy(-bore|-ptl-novrr-mm)?)?$' | head -1 || true)\n-  [[ -n $KERNEL_PACKAGE ]] && omarchy-pkg-add \"$KERNEL_PACKAGE-headers\"\n-\n   if omarchy-hw-nvidia-gsp; then\n     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)\n   elif omarchy-hw-nvidia-without-gsp; then"
+    },
+    {
+      "sha": "bd0738c3b850bc870715fd27acea83c4f8381aee",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 0,
+      "deletions": 2,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -20,9 +20,7 @@ libva-nvidia-driver\n limine\n limine-mkinitcpio-hook\n limine-snapper-sync\n-linux\n linux-firmware\n-linux-headers\n linux-omarchy\n linux-omarchy-headers\n macbook12-spi-driver-dkms"
+    },
+    {
+      "sha": "b5bc9149ddeddc2bfff0f09bccc898faf2bdade8",
+      "filename": "migrations/1789444024.sh",
+      "status": "added",
+      "additions": 10,
+      "deletions": 0,
+      "changes": 10,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/migrations%2F1789444024.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/migrations%2F1789444024.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789444024.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -0,0 +1,10 @@\n+echo \"Install missing headers for the Omarchy or T2 kernel\"\n+\n+# Fresh ISO installs mark earlier migrations complete, so the kernel migration\n+# cannot repair headers omitted by those installers. Package installation is\n+# idempotent when another user has already applied this repair.\n+for kernel in linux-omarchy linux-t2; do\n+  if omarchy-pkg-present \"$kernel\"; then\n+    omarchy-pkg-add \"$kernel-headers\"\n+  fi\n+done"
+    },
+    {
+      "sha": "af0d5204f83cdb5e0683ed18ccb2cde1d85935dd",
+      "filename": "test/acceptance.d/system-test.sh",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 1,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/test%2Facceptance.d%2Fsystem-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/test%2Facceptance.d%2Fsystem-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Facceptance.d%2Fsystem-test.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -24,6 +24,20 @@ verify_core_packages() {\n   pass \"all Omarchy core packages are installed (${#missing[@]} missing)\"\n }\n \n+verify_kernel_headers() {\n+  local kernel=linux-omarchy\n+  local release\n+  release=$(uname -r)\n+  omarchy-pkg-present linux-t2 && kernel=linux-t2\n+\n+  [[ $(cat \"/usr/lib/modules/$release/pkgbase\") == \"$kernel\" ]] ||\n+    fail \"the installed system boots the supported kernel\" \"$release is not $kernel\"\n+  omarchy-pkg-present \"$kernel-headers\" || fail \"kernel headers are installed\" \"$kernel-headers is missing\"\n+  [[ $(cat \"/usr/lib/modules/$release/build/include/config/kernel.release\") == \"$release\" ]] ||\n+    fail \"headers match the running kernel\" \"$release has missing or mismatched headers\"\n+  pass \"the running $kernel kernel has matching headers ($release)\"\n+}\n+\n verify_defaults() {\n   [[ $(omarchy-default-browser) == \"chromium\" ]] || fail \"Chromium is the default browser\"\n   pass \"Chromium is the default browser\"\n@@ -112,7 +126,7 @@ verify_user_setup() {\n   pass \"Omarchy user state and shell configuration exist\"\n }\n \n-for check in verify_core_packages verify_defaults verify_services verify_runtime_tools verify_user_setup; do\n+for check in verify_core_packages verify_kernel_headers verify_defaults verify_services verify_runtime_tools verify_user_setup; do\n   if ! (\"$check\"); then\n     status=1\n   fi"
+    },
+    {
+      "sha": "458ea3307ecf09e090187a657b805644fc9d2416",
+      "filename": "test/shell.d/kernel-headers-migration-test.sh",
+      "status": "added",
+      "additions": 58,
+      "deletions": 0,
+      "changes": 58,
+      "blob_url": "https://github.com/omacom/omarchy/blob/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/test%2Fshell.d%2Fkernel-headers-migration-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3/test%2Fshell.d%2Fkernel-headers-migration-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fkernel-headers-migration-test.sh?ref=8f3ab025b8bbcd055b8ccd32ce5f9bfdf4c448c3",
+      "patch": "@@ -0,0 +1,58 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp_dir=$(mktemp -d)\n+trap 'rm -rf \"$tmp_dir\"' EXIT\n+mkdir -p \"$tmp_dir/bin\"\n+export INSTALLED_PACKAGES=\"$tmp_dir/installed\" CALL_LOG=\"$tmp_dir/calls\"\n+export PATH=\"$tmp_dir/bin:$ROOT/bin:$PATH\"\n+\n+# Keep the real package helpers, but contain every pacman transaction here.\n+cat > \"$tmp_dir/bin/pacman\" <<'SH'\n+#!/bin/bash\n+case \"$1\" in\n+  -Q) grep -Fxq -- \"$2\" \"$INSTALLED_PACKAGES\" ;;\n+  -S)\n+    [[ ${FAIL_INSTALL:-0} == 0 ]] || exit 1\n+    shift 3 # -S --noconfirm --needed\n+    printf '%s\\n' \"$@\" >> \"$INSTALLED_PACKAGES\"\n+    printf '%s\\n' \"$@\" >> \"$CALL_LOG\"\n+    ;;\n+  *) exit 1 ;;\n+esac\n+SH\n+cat > \"$tmp_dir/bin/sudo\" <<'SH'\n+#!/bin/bash\n+[[ $1 == \"pacman\" ]] || exit 1\n+\"$@\"\n+SH\n+chmod +x \"$tmp_dir/bin/\"*\n+\n+migration=\"$ROOT/migrations/1789444024.sh\"\n+for kernels in linux-omarchy linux-t2 'linux-omarchy linux-t2'; do\n+  read -ra installed <<< \"$kernels\"\n+  printf '%s\\n' linux linux-headers \"${installed[@]}\" > \"$INSTALLED_PACKAGES\"\n+  : > \"$CALL_LOG\"\n+  bash -euo pipefail \"$migration\" >/dev/null\n+  for kernel in \"${installed[@]}\"; do\n+    grep -Fxq \"$kernel-headers\" \"$INSTALLED_PACKAGES\" || fail \"$kernel gets its headers\"\n+  done\n+  : > \"$CALL_LOG\"\n+  bash -euo pipefail \"$migration\" >/dev/null\n+  [[ ! -s $CALL_LOG ]] || fail \"header repair is idempotent\"\n+  pass \"missing headers are repaired once for $kernels\"\n+done\n+\n+printf '%s\\n' linux linux-aarch64 > \"$INSTALLED_PACKAGES\"\n+: > \"$CALL_LOG\"\n+bash -euo pipefail \"$migration\" >/dev/null\n+[[ ! -s $CALL_LOG ]] || fail \"header repair skips unrelated kernels\"\n+pass \"header repair skips unrelated kernels\"\n+\n+echo linux-omarchy > \"$INSTALLED_PACKAGES\"\n+if FAIL_INSTALL=1 bash -euo pipefail \"$migration\" >/dev/null; then\n+  fail \"a failed header installation must leave the migration pending\"\n+fi\n+pass \"header installation failure is propagated\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

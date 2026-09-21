@@ -1,0 +1,129 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11432",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cpu-power"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11432,
+  "checked_at": "2026-09-21T11:56:14.973520+00:00",
+  "title": "Make power profiles change the CPU on Intel machines without HWP",
+  "author": "TheoAndersen",
+  "head_sha": "55c69a65923fbba7c838ad52e83959a1b86857f2",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T08:42:00Z",
+  "state": "open",
+  "body": "Targets older Intel CPUs without hardware P-states (anything pre-Skylake without the `hwp` CPU flag), verified on a **MacBookPro11,5 (15-inch MacBook Pro, Mid 2015, i7-4980HQ)**.\n\n`power-profiles-daemon` steers Intel CPUs through `energy_performance_preference`, which only exists with HWP. On this hardware, `powerprofilesctl` itself reports `PlatformDriver: placeholder` for balanced and power-saver \u2014 PPD has no active backend here, so every profile leaves the CPU identical and turbo stays unrestricted on battery.\n\nThis maps the three profiles onto `no_turbo`/`scaling_max_freq` instead, watched over D-Bus so it reacts to `powerprofilesctl` too, plus a `system-sleep` hook to reapply the limits after resume (which otherwise drops them silently). Covered by a migration for existing installs, and an integration test that runs the install leaf against a faked root and validates the generated systemd unit with `systemd-analyze verify` against the real `power-profiles-daemon` unit graph.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "1bcc9a8b055190b680011f4bd4a63e7a6ab5526f",
+      "filename": "bin/omarchy-hw-intel-no-hwp",
+      "status": "added",
+      "additions": 13,
+      "deletions": 0,
+      "changes": 13,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/bin%2Fomarchy-hw-intel-no-hwp",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/bin%2Fomarchy-hw-intel-no-hwp",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-intel-no-hwp?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,13 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect an Intel CPU without hardware P-states (pre-Skylake)\n+\n+# power-profiles-daemon steers the CPU through energy_performance_preference,\n+# which only exists with HWP. Without it every profile is a no-op.\n+\n+cpuinfo=\"${OMARCHY_CPUINFO:-/proc/cpuinfo}\"\n+pstate=\"${OMARCHY_CPU_ROOT:-/sys/devices/system/cpu}/intel_pstate\"\n+\n+omarchy-hw-intel &&\n+  [[ -d $pstate ]] &&\n+  ! grep -qEm1 \"^flags.* hwp( |$)\" \"$cpuinfo\""
+    },
+    {
+      "sha": "8bc84351849de0c948f563e13fff33ed8089b7fb",
+      "filename": "bin/omarchy-powerprofiles-intel-no-hwp-apply",
+      "status": "added",
+      "additions": 72,
+      "deletions": 0,
+      "changes": 72,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/bin%2Fomarchy-powerprofiles-intel-no-hwp-apply",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/bin%2Fomarchy-powerprofiles-intel-no-hwp-apply",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-powerprofiles-intel-no-hwp-apply?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,72 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Apply CPU frequency limits for a power profile\n+# omarchy:args=[performance|balanced|power-saver]\n+# omarchy:hidden=true\n+\n+# On Intel CPUs without HWP (pre-Skylake) there is no energy_performance_preference\n+# for power-profiles-daemon to write, so every profile leaves the CPU identical and\n+# turbo stays unrestricted on battery. Supply the missing backend by mapping each\n+# profile onto no_turbo and scaling_max_freq.\n+\n+CPU_ROOT=\"${OMARCHY_CPU_ROOT:-/sys/devices/system/cpu}\"\n+PSTATE=\"$CPU_ROOT/intel_pstate\"\n+\n+if [[ ! -w $PSTATE/no_turbo ]]; then\n+  exit 0\n+fi\n+\n+profile=\"${1:-}\"\n+\n+if [[ -z $profile ]]; then\n+  profile=$(busctl get-property net.hadess.PowerProfiles /net/hadess/PowerProfiles \\\n+    net.hadess.PowerProfiles ActiveProfile 2>/dev/null | awk '{gsub(/\"/, \"\"); print $2}')\n+fi\n+\n+if [[ -z $profile ]]; then\n+  exit 0\n+fi\n+\n+# This unconditionally overwrites scaling_max_freq, which sounds like it could\n+# fight a thermal daemon (thermald's Processor cooling devices, RAPL power\n+# limits) that lowered it independently. It doesn't: those act as an\n+# additional, separate ceiling via the kernel's cpufreq QoS layer, which the\n+# governor intersects with whatever is written here -- the lower of the two\n+# always wins, so this can only ever request a limit, never actually exceed a\n+# thermal one.\n+set_max_freq() {\n+  local cpu\n+  for cpu in \"$CPU_ROOT\"/cpu[0-9]*/cpufreq/scaling_max_freq; do\n+    echo \"$1\" >\"$cpu\" 2>/dev/null\n+  done\n+}\n+\n+# Ask the kernel for the base clock rather than deriving it from a model table:\n+# with turbo disabled scaling_max_freq reports the non-turbo maximum.\n+max_freq=$(<\"$CPU_ROOT/cpu0/cpufreq/cpuinfo_max_freq\")\n+echo 1 >\"$PSTATE/no_turbo\"\n+base_freq=$(<\"$CPU_ROOT/cpu0/cpufreq/scaling_max_freq\")\n+\n+case $profile in\n+  performance)\n+    echo 0 >\"$PSTATE/no_turbo\"\n+    set_max_freq \"$max_freq\"\n+    ;;\n+  balanced)\n+    # Midway between base and full turbo: keeps headroom while trimming the top\n+    # of the voltage curve, where the last few hundred MHz cost the most power.\n+    echo 0 >\"$PSTATE/no_turbo\"\n+    set_max_freq $(((base_freq + max_freq) / 2))\n+    ;;\n+  power-saver)\n+    # no_turbo already clamps scaling_max_freq to the base clock.\n+    set_max_freq \"$max_freq\"\n+    ;;\n+  *)\n+    echo \"Unknown power profile: $profile\" >&2\n+    exit 1\n+    ;;\n+esac\n+\n+logger -t omarchy-powerprofiles-intel-no-hwp \\\n+  \"profile=$profile no_turbo=$(<\"$PSTATE/no_turbo\") max_freq=$(<\"$CPU_ROOT/cpu0/cpufreq/scaling_max_freq\")\""
+    },
+    {
+      "sha": "b4572a2097b690bdb91be1eb9c91cdbd941a5dd9",
+      "filename": "bin/omarchy-powerprofiles-intel-no-hwp-watch",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/bin%2Fomarchy-powerprofiles-intel-no-hwp-watch",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/bin%2Fomarchy-powerprofiles-intel-no-hwp-watch",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-powerprofiles-intel-no-hwp-watch?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,22 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Track the active power profile and apply CPU frequency limits\n+# omarchy:hidden=true\n+\n+# power-profiles-daemon exposes no hook mechanism, so follow ActiveProfile over\n+# D-Bus. Watching the property rather than wrapping omarchy-powerprofiles-set\n+# also catches powerprofilesctl invoked directly.\n+\n+BUS=\"net.hadess.PowerProfiles\"\n+OBJECT=\"/net/hadess/PowerProfiles\"\n+\n+omarchy-powerprofiles-intel-no-hwp-apply\n+\n+# Re-query on each signal instead of parsing the payload, so gdbus output\n+# formatting is not load-bearing.\n+gdbus monitor --system --dest \"$BUS\" --object-path \"$OBJECT\" 2>/dev/null |\n+  while read -r line; do\n+    if [[ $line == *ActiveProfile* ]]; then\n+      omarchy-powerprofiles-intel-no-hwp-apply\n+    fi\n+  done"
+    },
+    {
+      "sha": "5c5d2cb43d75916d651cf5953ca7ef01212873b6",
+      "filename": "default/systemd/system-sleep/powerprofiles-intel-no-hwp",
+      "status": "added",
+      "additions": 11,
+      "deletions": 0,
+      "changes": 11,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/default%2Fsystemd%2Fsystem-sleep%2Fpowerprofiles-intel-no-hwp",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/default%2Fsystemd%2Fsystem-sleep%2Fpowerprofiles-intel-no-hwp",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem-sleep%2Fpowerprofiles-intel-no-hwp?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,11 @@\n+#!/bin/bash\n+\n+# Reapply the CPU frequency limits for the active power profile after resume.\n+# Resuming re-registers cpufreq and drops the limits omarchy-powerprofiles-intel-no-hwp-apply\n+# set, and the D-Bus watcher only reacts to an actual profile change -- not to\n+# resume -- so without this hook the previous profile's limits silently\n+# disappear until the user switches profiles again.\n+\n+if [[ $1 == \"post\" ]]; then\n+  omarchy-powerprofiles-intel-no-hwp-apply\n+fi"
+    },
+    {
+      "sha": "762ea26941908795b71de3573c56bf7e2e9c2bed",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -14,6 +14,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/vulkan.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/intel/video-acceleration.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/intel/lpmd.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/intel/thermald.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/intel/cpu-profile-limits.sh\"\n # Swap in the Panther Lake kernel before anything pulls DKMS modules in.\n # intel-ipu7-camera drags in ipu7-drivers, vision-drivers and v4l2loopback,\n # and building all three against the stock kernel only to rebuild them against"
+    },
+    {
+      "sha": "5a19ee9852aaf9e05004b7e9932474e88b340b15",
+      "filename": "install/hardware/intel/cpu-profile-limits.sh",
+      "status": "added",
+      "additions": 45,
+      "deletions": 0,
+      "changes": 45,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/install%2Fhardware%2Fintel%2Fcpu-profile-limits.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/install%2Fhardware%2Fintel%2Fcpu-profile-limits.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fintel%2Fcpu-profile-limits.sh?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,45 @@\n+# Make power profiles change the CPU on Intel machines without hardware P-states.\n+#\n+# power-profiles-daemon drives the CPU through energy_performance_preference,\n+# which only exists with HWP (Skylake and newer). On older Intel laptops the\n+# file is absent, so every profile leaves the CPU in an identical state and\n+# turbo stays unrestricted on battery. Map the profiles onto no_turbo and\n+# scaling_max_freq instead.\n+\n+if omarchy-hw-intel-no-hwp && omarchy-battery-present; then\n+  echo \"Detected Intel CPU without HWP, enabling CPU frequency limits for power profiles\"\n+\n+  sudo tee /etc/systemd/system/omarchy-powerprofiles-intel-no-hwp-watch.service >/dev/null <<'EOF'\n+[Unit]\n+Description=Omarchy CPU Frequency Limits for Power Profiles (Intel, no HWP)\n+# power-profiles-daemon is D-Bus activated (Type=dbus, BusName=...), so\n+# querying or watching its ActiveProfile starts it on demand -- this only\n+# needs D-Bus itself to be up. Do not add After=/Wants=power-profiles-daemon\n+# here: the packaged unit is itself After=multi-user.target, while this unit\n+# is (implicitly, via WantedBy=multi-user.target) Before=multi-user.target,\n+# so ordering directly after it creates a cycle that systemd breaks by\n+# dropping this unit's start job.\n+After=dbus.service\n+\n+[Service]\n+Type=simple\n+ExecStart=/usr/bin/omarchy-powerprofiles-intel-no-hwp-watch\n+Restart=always\n+RestartSec=5\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+  sudo systemctl enable omarchy-powerprofiles-intel-no-hwp-watch.service\n+\n+  # Resuming re-registers cpufreq and drops the limits, and the watcher only\n+  # fires on an actual profile change, not on resume. A service ordered\n+  # After=/WantedBy= the sleep targets is not a post-resume hook (that\n+  # ordering fires around entering sleep, not waking from it, and can itself\n+  # cycle against those targets) -- system-sleep is the real, kernel-driven\n+  # pre/post hook mechanism, and this repo already uses it elsewhere.\n+  sudo install -m 0755 -o root -g root \\\n+    \"$OMARCHY_PATH/default/systemd/system-sleep/powerprofiles-intel-no-hwp\" \\\n+    /usr/lib/systemd/system-sleep/powerprofiles-intel-no-hwp\n+fi"
+    },
+    {
+      "sha": "3eb972ecece9d268cce2ecd39522e1c89ca4036e",
+      "filename": "migrations/1788983548.sh",
+      "status": "added",
+      "additions": 6,
+      "deletions": 0,
+      "changes": 6,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/migrations%2F1788983548.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/migrations%2F1788983548.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788983548.sh?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,6 @@\n+echo \"Enable CPU frequency limits for power profiles on Intel CPUs without HWP\"\n+\n+if omarchy-hw-intel-no-hwp && omarchy-battery-present; then\n+  source \"$OMARCHY_PATH/install/hardware/intel/cpu-profile-limits.sh\"\n+  sudo systemctl start omarchy-powerprofiles-intel-no-hwp-watch.service\n+fi"
+    },
+    {
+      "sha": "6caa7ff56f2593691e65e98094f06235e8cc8939",
+      "filename": "test/shell.d/cpu-profile-limits-test.sh",
+      "status": "added",
+      "additions": 256,
+      "deletions": 0,
+      "changes": 256,
+      "blob_url": "https://github.com/omacom/omarchy/blob/55c69a65923fbba7c838ad52e83959a1b86857f2/test%2Fshell.d%2Fcpu-profile-limits-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/55c69a65923fbba7c838ad52e83959a1b86857f2/test%2Fshell.d%2Fcpu-profile-limits-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fcpu-profile-limits-test.sh?ref=55c69a65923fbba7c838ad52e83959a1b86857f2",
+      "patch": "@@ -0,0 +1,256 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+detector=\"$ROOT/bin/omarchy-hw-intel-no-hwp\"\n+apply=\"$ROOT/bin/omarchy-powerprofiles-intel-no-hwp-apply\"\n+leaf=\"$ROOT/install/hardware/intel/cpu-profile-limits.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=$(grep -l \"cpu-profile-limits\" \"$ROOT\"/migrations/*.sh | head -1)\n+\n+grep -q 'run_logged .*hardware/intel/cpu-profile-limits.sh' \"$all\" ||\n+  fail \"the CPU profile limits run during hardware setup\"\n+pass \"the CPU profile limits run during hardware setup\"\n+\n+[[ -n $migration ]] || fail \"a migration enables the limits on existing installs\"\n+pass \"a migration enables the limits on existing installs\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+mkdir -p \"$test_tmp/bin\"\n+\n+cat >\"$test_tmp/bin/omarchy-hw-intel\" <<'SH'\n+#!/bin/bash\n+[[ ${TEST_IS_INTEL:-1} == 1 ]]\n+SH\n+\n+cat >\"$test_tmp/bin/logger\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+\n+chmod +x \"$test_tmp/bin\"/*\n+\n+# --- detector -------------------------------------------------------------\n+\n+make_cpuinfo() {\n+  local flags=\"$1\"\n+  printf 'vendor_id\\t: GenuineIntel\\nflags\\t\\t: %s\\n' \"$flags\" >\"$test_tmp/cpuinfo\"\n+}\n+\n+make_cpu_root() {\n+  local root=\"$test_tmp/cpu\"\n+  rm -rf \"$root\"\n+  mkdir -p \"$root/intel_pstate\" \"$root/cpu0/cpufreq\" \"$root/cpu1/cpufreq\"\n+  printf '0\\n' >\"$root/intel_pstate/no_turbo\"\n+  printf '%s\\n' \"${1:-4000000}\" >\"$root/cpu0/cpufreq/cpuinfo_max_freq\"\n+  printf '%s\\n' \"${2:-2800000}\" >\"$root/cpu0/cpufreq/scaling_max_freq\"\n+  printf '%s\\n' \"${2:-2800000}\" >\"$root/cpu1/cpufreq/scaling_max_freq\"\n+  echo \"$root\"\n+}\n+\n+run_detector() {\n+  PATH=\"$test_tmp/bin:$PATH\" \\\n+    TEST_IS_INTEL=\"${1:-1}\" \\\n+    OMARCHY_CPUINFO=\"$test_tmp/cpuinfo\" \\\n+    OMARCHY_CPU_ROOT=\"${2:-$(make_cpu_root)}\" \\\n+    bash \"$detector\"\n+}\n+\n+make_cpuinfo \"fpu vme de pse tsc msr\"\n+run_detector || fail \"the detector matches an Intel CPU without HWP\"\n+pass \"the detector matches an Intel CPU without HWP\"\n+\n+make_cpuinfo \"fpu vme de hwp hwp_notify hwp_act_window\"\n+run_detector && fail \"the detector rejects a CPU with HWP\"\n+pass \"the detector rejects a CPU with HWP\"\n+\n+make_cpuinfo \"fpu vme de pse tsc msr\"\n+run_detector 0 && fail \"the detector rejects a non-Intel CPU\"\n+pass \"the detector rejects a non-Intel CPU\"\n+\n+run_detector 1 \"$test_tmp/missing\" && fail \"the detector rejects a CPU without intel_pstate\"\n+pass \"the detector rejects a CPU without intel_pstate\"\n+\n+# --- apply ----------------------------------------------------------------\n+\n+run_apply() {\n+  local root=\"$1\" profile=\"$2\"\n+  PATH=\"$test_tmp/bin:$PATH\" OMARCHY_CPU_ROOT=\"$root\" bash \"$apply\" \"$profile\"\n+}\n+\n+root=$(make_cpu_root 4000000 2800000)\n+run_apply \"$root\" performance || fail \"performance applies cleanly\"\n+[[ $(<\"$root/intel_pstate/no_turbo\") == 0 ]] || fail \"performance re-enables turbo\"\n+[[ $(<\"$root/cpu0/cpufreq/scaling_max_freq\") == 4000000 ]] || fail \"performance uses full turbo\"\n+pass \"performance uses full turbo\"\n+\n+root=$(make_cpu_root 4000000 2800000)\n+run_apply \"$root\" balanced || fail \"balanced applies cleanly\"\n+[[ $(<\"$root/intel_pstate/no_turbo\") == 0 ]] || fail \"balanced keeps turbo enabled\"\n+[[ $(<\"$root/cpu0/cpufreq/scaling_max_freq\") == 3400000 ]] ||\n+  fail \"balanced caps midway between base and turbo\"\n+pass \"balanced caps midway between base and turbo\"\n+\n+root=$(make_cpu_root 4000000 2800000)\n+run_apply \"$root\" power-saver || fail \"power-saver applies cleanly\"\n+[[ $(<\"$root/intel_pstate/no_turbo\") == 1 ]] || fail \"power-saver disables turbo\"\n+pass \"power-saver disables turbo\"\n+\n+# Every core must be capped, not just cpu0.\n+root=$(make_cpu_root 4000000 2800000)\n+run_apply \"$root\" balanced\n+[[ $(<\"$root/cpu1/cpufreq/scaling_max_freq\") == 3400000 ]] ||\n+  fail \"the cap applies to every core\"\n+pass \"the cap applies to every core\"\n+\n+# A different SKU must derive its own frequencies rather than reuse constants.\n+root=$(make_cpu_root 3600000 2400000)\n+run_apply \"$root\" balanced\n+[[ $(<\"$root/cpu0/cpufreq/scaling_max_freq\") == 3000000 ]] ||\n+  fail \"the frequencies derive from the CPU rather than a model table\"\n+pass \"the frequencies derive from the CPU rather than a model table\"\n+\n+root=$(make_cpu_root 4000000 2800000)\n+run_apply \"$root\" nonsense 2>/dev/null && fail \"an unknown profile fails\"\n+pass \"an unknown profile fails\"\n+\n+root=$(make_cpu_root 4000000 2800000)\n+chmod -w \"$root/intel_pstate/no_turbo\"\n+run_apply \"$root\" balanced || fail \"a read-only pstate is a no-op rather than an error\"\n+pass \"a read-only pstate is a no-op rather than an error\"\n+chmod +w \"$root/intel_pstate/no_turbo\"\n+\n+# --- leaf -----------------------------------------------------------------\n+#\n+# Grep-only coverage caught none of the ordering bugs this branch shipped\n+# with: a watch unit that cycled against multi-user.target through the real\n+# power-profiles-daemon.service unit, and a \"resume\" unit that was never\n+# actually a post-resume hook. Actually run the leaf against a faked root and\n+# inspect what it generates, then hand the real generated unit to\n+# `systemd-analyze verify` together with the real target units, the same way\n+# the original cycle was found and confirmed fixed by hand.\n+\n+grep -q 'omarchy-hw-intel-no-hwp' \"$leaf\" || fail \"the leaf gates on the detector\"\n+grep -q 'omarchy-battery-present' \"$leaf\" || fail \"the leaf gates on a battery\"\n+pass \"the leaf gates on the detector and a battery\"\n+\n+sleep_hook=\"$ROOT/default/systemd/system-sleep/powerprofiles-intel-no-hwp\"\n+[[ -x $sleep_hook ]] || fail \"the resume hook exists and is executable\"\n+grep -qE '^\\s*if \\[\\[ \\$1 == \"post\" \\]\\]; then$' \"$sleep_hook\" ||\n+  fail \"the resume hook only fires on the post-resume call, not pre-suspend\"\n+pass \"the resume hook exists, is executable, and only fires post-resume\"\n+\n+leaf_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\" \"$leaf_tmp\"' EXIT\n+mkdir -p \"$leaf_tmp/bin\" \"$leaf_tmp/etc/systemd/system\" \"$leaf_tmp/usr/lib/systemd/system-sleep\"\n+calls=\"$leaf_tmp/calls.log\"\n+\n+cat >\"$leaf_tmp/bin/omarchy-hw-intel-no-hwp\" <<'SH'\n+#!/bin/bash\n+[[ ${LEAF_MATCH:-1} == 1 ]]\n+SH\n+\n+cat >\"$leaf_tmp/bin/omarchy-battery-present\" <<'SH'\n+#!/bin/bash\n+[[ ${LEAF_BATTERY:-1} == 1 ]]\n+SH\n+\n+cat >\"$leaf_tmp/bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+exec \"$@\"\n+SH\n+\n+cat >\"$leaf_tmp/bin/systemctl\" <<'SH'\n+#!/bin/bash\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+# The real `install -o root -g root` fails for a non-root test user; log the\n+# call and copy the file, dropping ownership (mode is what the test cares\n+# about) rather than chowning.\n+cat >\"$leaf_tmp/bin/install\" <<'SH'\n+#!/bin/bash\n+printf 'install' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\n+mode=0644\n+args=(\"$@\")\n+last=$((${#args[@]} - 1))\n+src=\"${args[$((last - 1))]}\"\n+dst=\"${args[$last]}\"\n+\n+for ((i = 0; i < last - 1; i++)); do\n+  [[ ${args[$i]} == -m ]] && mode=\"${args[$((i + 1))]}\"\n+done\n+\n+cp -f -- \"$src\" \"$dst\" && chmod \"$mode\" -- \"$dst\"\n+SH\n+\n+chmod +x \"$leaf_tmp/bin\"/*\n+\n+unit=\"$leaf_tmp/etc/systemd/system/omarchy-powerprofiles-intel-no-hwp-watch.service\"\n+installed_hook=\"$leaf_tmp/usr/lib/systemd/system-sleep/powerprofiles-intel-no-hwp\"\n+\n+run_leaf() {\n+  local script=\"$leaf_tmp/leaf.sh\"\n+  rm -f \"$unit\" \"$installed_hook\"\n+  : >\"$calls\"\n+  sed -e \"s|/etc/systemd/system|$leaf_tmp/etc/systemd/system|g\" \\\n+    -e \"s|/usr/lib/systemd/system-sleep|$leaf_tmp/usr/lib/systemd/system-sleep|g\" \\\n+    \"$leaf\" >\"$script\"\n+  LEAF_MATCH=\"${1:-1}\" LEAF_BATTERY=\"${2:-1}\" OMARCHY_PATH=\"$ROOT\" \\\n+    TEST_LOG=\"$calls\" PATH=\"$leaf_tmp/bin:$PATH\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+run_leaf 0 1 >/dev/null\n+[[ ! -f $unit ]] || fail \"the leaf is a no-op without matching hardware\"\n+pass \"the leaf is a no-op without matching hardware\"\n+\n+run_leaf 1 0 >/dev/null\n+[[ ! -f $unit ]] || fail \"the leaf is a no-op without a battery\"\n+pass \"the leaf is a no-op without a battery\"\n+\n+run_leaf 1 1 >/dev/null\n+[[ -f $unit ]] || fail \"matching hardware gets the watch unit installed\"\n+grep -qE '^After=dbus\\.service$' \"$unit\" ||\n+  fail \"the generated unit orders after dbus.service\"\n+grep -qE '^(After|Wants)=.*power-profiles-daemon' \"$unit\" &&\n+  fail \"the generated unit must not order after/want power-profiles-daemon.service directly: the packaged unit is itself After=multi-user.target while this unit is (implicitly) Before=multi-user.target, so that ordering is a cycle systemd breaks by dropping this unit's start job\" \"$(cat \"$unit\")\"\n+grep -q $'systemctl\\tenable\\tomarchy-powerprofiles-intel-no-hwp-watch.service' \"$calls\" ||\n+  fail \"the watch unit gets enabled\" \"$(cat \"$calls\")\"\n+[[ -x $installed_hook ]] || fail \"the resume hook is installed and made executable\"\n+cmp -s \"$installed_hook\" \"$sleep_hook\" ||\n+  fail \"the installed hook is the repo's copy, not a divergent inline one\"\n+pass \"matching hardware installs the watch unit (ordered after dbus, not PPD) and the resume hook\"\n+\n+# Re-running must not fail or duplicate anything -- an existing install\n+# running the migration, or a fresh install re-running hardware setup.\n+run_leaf 1 1 >/dev/null\n+[[ -f $unit && -x $installed_hook ]] || fail \"re-running the leaf is idempotent\"\n+pass \"re-running the leaf is idempotent\"\n+\n+if command -v systemd-analyze >/dev/null; then\n+  check_unit=\"$leaf_tmp/check.service\"\n+  sed 's#^ExecStart=.*#ExecStart=/usr/bin/true#' \"$unit\" >\"$check_unit\"\n+\n+  # Force the real power-profiles-daemon.service and its targets into the\n+  # graph: verifying the generated unit in isolation resolves referenced\n+  # units too shallowly to reproduce the cycle this test guards against.\n+  cycle_output=$(systemd-analyze verify multi-user.target graphical.target \\\n+    power-profiles-daemon.service \"$check_unit\" 2>&1) || true\n+  [[ $cycle_output != *\"ordering cycle\"* ]] ||\n+    fail \"the generated unit has an ordering cycle against the real power-profiles-daemon.service unit\" \"$cycle_output\"\n+  pass \"the generated unit has no ordering cycle against the real power-profiles-daemon.service unit\"\n+else\n+  pass \"systemd-analyze unavailable; skipping the live ordering-cycle check\"\n+fi"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

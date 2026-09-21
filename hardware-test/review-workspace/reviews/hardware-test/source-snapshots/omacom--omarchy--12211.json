@@ -1,0 +1,140 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12211",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "alpine-ridge"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5e177a33d22c32417f8d1ce82058a6539d364bcf",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12211,
+  "checked_at": "2026-09-21T11:55:57.987038+00:00",
+  "title": "Keep T1 MacBook Pros in S3 instead of an Alpine Ridge wake loop",
+  "author": "ijt",
+  "head_sha": "5e177a33d22c32417f8d1ce82058a6539d364bcf",
+  "base_sha": "9c5482c58dbe4974de337450754885083c91eada",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-17T01:02:19Z",
+  "state": "open",
+  "body": "Fixes https://github.com/omacom/omarchy/issues/12194\n\n## Why\n\nOn MacBookPro14,2 (2017 13\\\", T1, no T2 chip) the two JHL6540 Alpine Ridge Thunderbolt 3 controllers emit PME about every 45s and pull the machine out of `deep` S3 with the lid still closed. logind sees the closed lid and suspends again. That loop ran for hours here: the chassis got hot in a bag, and after enough cycles thunderbolt resume hung (`tb_cfg_read/write: -108`, `pcieport \u2026 D3cold to D0, device inaccessible`). Opening the lid did nothing; only a power-button hold recovered it.\n\n`install/hardware/apple/fix-suspend-nvme.sh` already matches these DMI ids. T2 setup correctly no-ops (`106b:180[12]` is absent). This is the missing T1 half.\n\n## What\n\nGated on `MacBookPro13,[123]|MacBookPro14,[123]`:\n\n- Disable ACPI wakeup on RP05/RP09/XHC2/XHC3 (TB) and RP12 (Wi-Fi PME). LID0 and SPIT stay enabled.\n- udev: `8086:15d2` / `8086:15d4` `power/wakeup=disabled`.\n- Limine drop-in `pcie_port_pm=off` so those ports do not sit in D3 for ~1s each on resume.\n- Oneshoot at boot reapplies the ACPI toggles (they reset).\n- Migration sources the same installer leaf (no-op on any other machine).\n\n## Explicitly not in this PR\n\n- **Not** `pm_async=off`. That is correct on some T2 boxes and wrong here: it serialized the D3 waits into a ~60s black screen.\n- **Not** `blacklist thunderbolt`. USB-C charging still works without the module; docks / DP-alt would not. Wakeup disable + `pcie_port_pm=off` is the conservative first patch.\n- **Not** switching to s2idle. S3 works on this firmware; s2idle is the heat path.\n\n## Test plan\n\n- On MacBookPro14,2 / 13,x: close lid, leave closed. Journal should show one `PM: suspend entry (deep)` and no wake until lid open. Machine stays cool.\n- Open lid: resume to the lock screen.\n- Other hardware: installer/migration no-op.\n- `./test/cli` and `test/shell.d/alpine-ridge-suspend-test.sh`.\n\nProven on Omarchy 4.0.2-1, MacBookPro14,2, kernel 7.1.9-arch1-2. After these local equivalents, a 30-minute lid-closed stretch came back immediately and was cool to the touch.\n\nSibling: lid-close debounce in https://github.com/omacom/omarchy/pull/12210 (#12193).",
+  "draft": false,
+  "files": [
+    {
+      "sha": "854941db87cc61bf9601862a55755c6db0a7895e",
+      "filename": "bin/omarchy-hw-alpine-ridge-wakeup",
+      "status": "added",
+      "additions": 23,
+      "deletions": 0,
+      "changes": 23,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e177a33d22c32417f8d1ce82058a6539d364bcf/bin%2Fomarchy-hw-alpine-ridge-wakeup",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e177a33d22c32417f8d1ce82058a6539d364bcf/bin%2Fomarchy-hw-alpine-ridge-wakeup",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-alpine-ridge-wakeup?ref=5e177a33d22c32417f8d1ce82058a6539d364bcf",
+      "patch": "@@ -0,0 +1,23 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Disable Alpine Ridge Thunderbolt wakeup from S3\n+# omarchy:group=hw\n+# omarchy:hidden=true\n+# omarchy:requires-sudo=true\n+\n+# Alpine Ridge NHIs emit PME about every 45s and pull T1 MacBooks out of deep\n+# sleep with the lid still closed. logind then suspends again. That loop is the\n+# heat, and after enough cycles resume hangs.\n+#\n+# Toggle /proc/acpi/wakeup only while a node is currently enabled. LID0 and\n+# SPIT stay enabled so the lid and keyboard can still wake the machine.\n+\n+wakeup_file=${OMARCHY_ACPI_WAKEUP:-/proc/acpi/wakeup}\n+\n+[[ -w $wakeup_file || -f $wakeup_file ]] || exit 0\n+\n+for dev in RP05 RP09 XHC2 XHC3 RP12; do\n+  if grep -Eq \"^${dev}[[:space:]].*enabled\" \"$wakeup_file\"; then\n+    printf '%s\\n' \"$dev\" > \"$wakeup_file\"\n+  fi\n+done"
+    },
+    {
+      "sha": "b73ba7faad9f85b1cdb5fc705b8f44b4dea21f49",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e177a33d22c32417f8d1ce82058a6539d364bcf/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e177a33d22c32417f8d1ce82058a6539d364bcf/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=5e177a33d22c32417f8d1ce82058a6539d364bcf",
+      "patch": "@@ -37,6 +37,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-alpine-ridge.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n "
+    },
+    {
+      "sha": "19d227c4898c8cf4023f319c9e35424d22a5d8b7",
+      "filename": "install/hardware/apple/fix-suspend-alpine-ridge.sh",
+      "status": "added",
+      "additions": 58,
+      "deletions": 0,
+      "changes": 58,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e177a33d22c32417f8d1ce82058a6539d364bcf/install%2Fhardware%2Fapple%2Ffix-suspend-alpine-ridge.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e177a33d22c32417f8d1ce82058a6539d364bcf/install%2Fhardware%2Fapple%2Ffix-suspend-alpine-ridge.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-suspend-alpine-ridge.sh?ref=5e177a33d22c32417f8d1ce82058a6539d364bcf",
+      "patch": "@@ -0,0 +1,58 @@\n+# Stop Intel Alpine Ridge Thunderbolt 3 from waking 2016\u20132017 MacBook Pros\n+# out of S3. These machines are T1 (no T2 chip). Keep deep sleep; s2idle is\n+# the heat path. Do not set pm_async=off (that serializes D3 timeouts into a\n+# minute-long black screen) and do not blacklist thunderbolt (USB-C docks).\n+\n+MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n+\n+if [[ ! $MACBOOK_MODEL =~ MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n+  return 0 2>/dev/null || exit 0\n+fi\n+\n+echo \"Detected $MACBOOK_MODEL; disabling Alpine Ridge S3 wakeup\"\n+\n+udev_rules=/etc/udev/rules.d/99-omarchy-alpine-ridge-wakeup.rules\n+limine_conf=/etc/limine-entry-tool.d/alpine-ridge-suspend.conf\n+service=/etc/systemd/system/omarchy-alpine-ridge-wakeup.service\n+\n+sudo mkdir -p /etc/udev/rules.d /etc/limine-entry-tool.d /etc/systemd/system /etc/omarchy\n+\n+# S3 resume on these parts is ~7s, so lid-close waits 20s (see\n+# omarchy-system-lid-suspend) instead of the 3s default. Leave an admin-set\n+# value alone.\n+if [[ ! -f /etc/omarchy/lid-suspend-delay ]]; then\n+  printf '20\\n' | sudo tee /etc/omarchy/lid-suspend-delay >/dev/null\n+fi\n+\n+sudo tee \"$udev_rules\" >/dev/null <<'EOF'\n+# Alpine Ridge NHI (8086:15d2) and xHCI (8086:15d4) must not wake S3.\n+ACTION==\"add\", SUBSYSTEM==\"pci\", ATTR{vendor}==\"0x8086\", ATTR{device}==\"0x15d2\", ATTR{power/wakeup}=\"disabled\"\n+ACTION==\"add\", SUBSYSTEM==\"pci\", ATTR{vendor}==\"0x8086\", ATTR{device}==\"0x15d4\", ATTR{power/wakeup}=\"disabled\"\n+EOF\n+\n+sudo tee \"$limine_conf\" >/dev/null <<'EOF'\n+# Alpine Ridge ports do not return from D3; skip PCIe port power management.\n+KERNEL_CMDLINE[default]+=\" pcie_port_pm=off\"\n+EOF\n+\n+sudo tee \"$service\" >/dev/null <<'EOF'\n+[Unit]\n+Description=Disable Alpine Ridge Thunderbolt wakeup from S3\n+After=sysinit.target\n+\n+[Service]\n+Type=oneshot\n+RemainAfterExit=yes\n+ExecStart=/usr/bin/omarchy-hw-alpine-ridge-wakeup\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+sudo systemctl enable --now omarchy-alpine-ridge-wakeup.service\n+\n+if ! grep -Eq '(^| )pcie_port_pm=off( |$)' /proc/cmdline 2>/dev/null; then\n+  if command -v limine-mkinitcpio >/dev/null; then\n+    sudo limine-mkinitcpio\n+  fi\n+fi"
+    },
+    {
+      "sha": "3f5bf4f62829b441eb13605eaf2c69346ab8bd70",
+      "filename": "migrations/1789604768.sh",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e177a33d22c32417f8d1ce82058a6539d364bcf/migrations%2F1789604768.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e177a33d22c32417f8d1ce82058a6539d364bcf/migrations%2F1789604768.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789604768.sh?ref=5e177a33d22c32417f8d1ce82058a6539d364bcf",
+      "patch": "@@ -0,0 +1,8 @@\n+echo \"Stop Alpine Ridge Thunderbolt from waking T1 MacBooks out of S3\"\n+\n+fix=\"$OMARCHY_PATH/install/hardware/apple/fix-suspend-alpine-ridge.sh\"\n+[[ -f $fix ]] || exit 0\n+\n+# The installer leaf is meant to be sourced; it returns when the DMI id does\n+# not match so a migration on any other machine is a no-op.\n+source \"$fix\""
+    },
+    {
+      "sha": "e9ce189167b4516cfa361e55993019c609c723e4",
+      "filename": "test/shell.d/alpine-ridge-suspend-test.sh",
+      "status": "added",
+      "additions": 47,
+      "deletions": 0,
+      "changes": 47,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e177a33d22c32417f8d1ce82058a6539d364bcf/test%2Fshell.d%2Falpine-ridge-suspend-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e177a33d22c32417f8d1ce82058a6539d364bcf/test%2Fshell.d%2Falpine-ridge-suspend-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Falpine-ridge-suspend-test.sh?ref=5e177a33d22c32417f8d1ce82058a6539d364bcf",
+      "patch": "@@ -0,0 +1,47 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+fix=\"$ROOT/install/hardware/apple/fix-suspend-alpine-ridge.sh\"\n+wakeup=\"$ROOT/bin/omarchy-hw-alpine-ridge-wakeup\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1789604768.sh\"\n+\n+grep -F 'MacBookPro13,[123]|MacBookPro14,[123]' \"$fix\" >/dev/null\n+grep -F 'pcie_port_pm=off' \"$fix\" >/dev/null\n+grep -F '/etc/omarchy/lid-suspend-delay' \"$fix\" >/dev/null\n+grep -F '20' \"$fix\" >/dev/null\n+grep -F '8086:15d2' \"$fix\" >/dev/null\n+grep -F '8086:15d4' \"$fix\" >/dev/null\n+! grep -E '^[^#]*pm_async=off' \"$fix\" >/dev/null ||\n+  fail \"Alpine Ridge setup does not set pm_async=off\"\n+! grep -E '^[^#]*blacklist thunderbolt' \"$fix\" >/dev/null ||\n+  fail \"Alpine Ridge setup does not blacklist thunderbolt\"\n+pass \"Alpine Ridge setup keeps deep S3 and Thunderbolt loaded\"\n+\n+grep -F 'fix-suspend-alpine-ridge.sh' \"$all\" >/dev/null\n+pass \"hardware install runs the Alpine Ridge suspend fix\"\n+\n+grep -F 'RP05 RP09 XHC2 XHC3 RP12' \"$wakeup\" >/dev/null\n+! grep -E '^[^#]*LID0' \"$wakeup\" >/dev/null || fail \"lid wake stays enabled\"\n+! grep -E '^[^#]*SPIT' \"$wakeup\" >/dev/null || fail \"keyboard wake stays enabled\"\n+pass \"Alpine Ridge wakeup disables TB and Wi-Fi PME only\"\n+\n+grep -F 'source \"$fix\"' \"$migration\" >/dev/null\n+pass \"migration reapplies the Alpine Ridge suspend fix\"\n+\n+tmpdir=$(mktemp -d)\n+trap 'rm -rf \"$tmpdir\"' EXIT\n+wakeup_file=\"$tmpdir/wakeup\"\n+cat >\"$wakeup_file\" <<'EOF'\n+RP05\tS3\t*enabled   pci:0000:00:1c.4\n+LID0\tS4\t*enabled   platform:PNP0C0D:00\n+SPIT\tS3\t*enabled   spi:spi-APP000D:00\n+EOF\n+\n+OMARCHY_ACPI_WAKEUP=\"$wakeup_file\" \"$wakeup\"\n+[[ $(<\"$wakeup_file\") == RP05 ]] ||\n+  fail \"wakeup helper toggles an enabled TB node\" \"got: $(<\"$wakeup_file\")\"\n+pass \"wakeup helper toggles an enabled TB node\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5706824565",
+      "html_url": "https://github.com/omacom/omarchy/pull/12211#issuecomment-5706824565",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12211",
+      "id": 5706824565,
+      "node_id": "IC_kwDOO0Cobs8AAAABVCc7dQ",
+      "user": {
+        "login": "ijt",
+        "id": 15530,
+        "node_id": "MDQ6VXNlcjE1NTMw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/15530?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ijt",
+        "html_url": "https://github.com/ijt",
+        "followers_url": "https://api.github.com/users/ijt/followers",
+        "following_url": "https://api.github.com/users/ijt/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ijt/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ijt/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ijt/subscriptions",
+        "organizations_url": "https://api.github.com/users/ijt/orgs",
+        "repos_url": "https://api.github.com/users/ijt/repos",
+        "events_url": "https://api.github.com/users/ijt/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ijt/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-17T01:02:19Z",
+      "updated_at": "2026-09-17T01:02:19Z",
+      "body": "Follow-up: the installer also writes `/etc/omarchy/lid-suspend-delay` with `20` on these DMI ids (leaves an existing value alone). That pairs with #12210, which reads the file and also keys the same 20s delay off DMI so T1 Macs get it even before this hardware leaf runs.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5706824565/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

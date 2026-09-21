@@ -1,0 +1,127 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/422",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-pre-t2-resume"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "c4d72c1cbc9ad769338793f789d2c39b1f47e80c",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 422,
+  "checked_at": "2026-09-21T11:57:40.679783+00:00",
+  "title": "fix: add Apple BCM43602 resume kernel",
+  "author": "avillagran",
+  "head_sha": "c4d72c1cbc9ad769338793f789d2c39b1f47e80c",
+  "base_sha": "bce3b368e7cf711c41fc29eb5f8bfc1c658ab5b8",
+  "base_ref": "master",
+  "updated_at": "2026-09-18T18:35:21Z",
+  "state": "open",
+  "body": "## Summary\n\n- add a distinct `linux-bcm43602` kernel and matching headers package\n- route the live-tested Apple BCM43602 (`106b:0133`) through brcmfmac's existing cold reprobe path after S3\n- keep the stock `linux` package installed and bootable as a rollback\n- leave every other BCM43602 device on the existing hot-resume path\n\n## Root cause\n\nOn the affected Mac, the BCM43602 retains a non-zero PCIe interrupt mask after S3 even though its firmware message rings are dead. The existing register heuristic therefore selects hot resume and subsequent firmware commands time out. The patch bypasses that unreliable heuristic only for BCM43602 with Apple PCI subsystem `106b:0133` and uses the driver's existing serialized remove/reprobe recovery path.\n\n## Live validation\n\nHardware:\n\n- Apple MacBookPro12,1, x86_64\n- Broadcom BCM43602 `14e4:43ba`\n- Apple subsystem `106b:0133`\n- `deep` S3 suspend\n\nA/B results:\n\n- stock `7.2.3-arch1-3`: reproduced the failure after S3 with 11 `brcmf_msgbuf_query_dcmd: Timeout` messages and unusable Wi-Fi\n- patched kernel: four initial S3 cycles completed with one firmware reprobe per resume and no original failure signature\n- final narrowed `106b:0133` module: rebuilt as an in-tree signed module, installed from the final package, booted with kernel taint `0`, and completed another real lid-close S3 cycle\n- final cycle: `success=1`, `fail=0`, `failed_suspend=0`, `failed_resume=0`; firmware loaded again after resume; zero message timeouts, D3 failures, Oopses, or general protection faults\n- post-resume: associated on 5 GHz and completed 5/5 Internet pings with 0% loss\n\nNo sleep hook, post-resume service, module unload/reload, or external reset script was present during validation.\n\n## Package validation\n\n- upstream kernel and Arch patch signatures verified with the listed official PGP keys\n- source hashes and the packaged patch hash verified\n- patch applies cleanly to Arch Linux `v7.2.3-arch1`\n- `scripts/checkpatch.pl --strict --no-tree`: 0 errors, 0 warnings\n- `makepkg --printsrcinfo` produces `linux-bcm43602` and `linux-bcm43602-headers`\n- full package built natively on the affected Mac; the final narrowed brcmfmac module was rebuilt in-tree from the retained build tree and verified inside the installed package\n- final installed module reports the expected kernel release, an in-tree marker, and the build-time kernel signature\n\n## Maintenance note\n\nThis package follows the existing `linux-ptl` local-kernel pattern and therefore uses `skip_build: true`. Kernel version bumps require an explicit package rebuild plus renewed suspend/resume validation on the affected hardware.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "c3ed3893c06e83c3b120f407c783fefbaf78c51b",
+      "filename": "pkgbuilds/linux-bcm43602/.omarchy/package.json",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2F.omarchy%2Fpackage.json",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2F.omarchy%2Fpackage.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Flinux-bcm43602%2F.omarchy%2Fpackage.json?ref=c4d72c1cbc9ad769338793f789d2c39b1f47e80c",
+      "patch": "@@ -0,0 +1,4 @@\n+{\n+  \"source\": \"local\",\n+  \"skip_build\": true\n+}"
+    },
+    {
+      "sha": "6873795456115b72d43ae858ad343f033b4104e3",
+      "filename": "pkgbuilds/linux-bcm43602/0001-brcmfmac-force-cold-resume-apple-bcm43602.patch",
+      "status": "added",
+      "additions": 71,
+      "deletions": 0,
+      "changes": 71,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2F0001-brcmfmac-force-cold-resume-apple-bcm43602.patch",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2F0001-brcmfmac-force-cold-resume-apple-bcm43602.patch",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Flinux-bcm43602%2F0001-brcmfmac-force-cold-resume-apple-bcm43602.patch?ref=c4d72c1cbc9ad769338793f789d2c39b1f47e80c",
+      "patch": "@@ -0,0 +1,71 @@\n+From: Andres Villagran <andres@villagranquiroz.cl>\n+Subject: [PATCH] wifi: brcmfmac: force cold resume for Apple BCM43602\n+\n+The BCM43602 in the MacBookPro12,1 can retain a non-zero interrupt mask\n+across S3 while its firmware message rings are no longer functional. The\n+current register heuristic consequently chooses hot resume, after which\n+firmware commands fail with brcmf_msgbuf_query_dcmd timeouts.\n+\n+Use brcmfmac's existing remove/reprobe recovery path for the live-tested\n+Apple subsystem 106b:0133. This leaves the generic hot-resume path\n+unchanged for every other BCM43602 device.\n+\n+Live testing on a MacBookPro12,1 completed four S3 cycles without a\n+firmware timeout. A stock-kernel A/B cycle reproduced eleven command\n+timeouts, while the patched kernel cold-reprobed the firmware and restored\n+Wi-Fi in about three seconds.\n+\n+Signed-off-by: Andres Villagran <andres@villagranquiroz.cl>\n+---\n+ drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c | 24 +++++++++++++++++++++++-\n+ 1 file changed, 23 insertions(+), 1 deletion(-)\n+\n+diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c\n+--- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c\n++++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/pcie.c\n+@@ -2663,11 +2663,28 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)\n+ }\n+ \n+ \n++static bool brcmf_pcie_force_cold_resume(struct brcmf_pciedev_info *devinfo)\n++{\n++\tstruct pci_dev *pdev = devinfo->pdev;\n++\n++\t/*\n++\t * Apple BCM43602 devices can retain a non-zero interrupt mask across\n++\t * S3 while their firmware message rings are no longer functional.  A\n++\t * hot resume then appears successful, but all subsequent firmware\n++\t * commands time out.  Skip the unreliable register heuristic and use\n++\t * the driver's existing remove/reprobe recovery path instead.\n++\t */\n++\treturn devinfo->ci->chip == BRCM_CC_43602_CHIP_ID &&\n++\t       pdev->subsystem_vendor == PCI_VENDOR_ID_APPLE &&\n++\t       pdev->subsystem_device == 0x0133;\n++}\n++\n+ static int brcmf_pcie_pm_leave_D3(struct device *dev)\n+ {\n+ \tstruct brcmf_pciedev_info *devinfo;\n+ \tstruct brcmf_bus *bus;\n+ \tstruct pci_dev *pdev;\n++\tbool force_cold_resume;\n+ \tint err;\n+ \n+ \tbrcmf_dbg(PCIE, \"Enter\\n\");\n+@@ -2676,8 +2693,13 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)\n+ \tdevinfo = bus->bus_priv.pcie->devinfo;\n+ \tbrcmf_dbg(PCIE, \"Enter, dev=%p, bus=%p\\n\", dev, bus);\n+ \n++\tforce_cold_resume = brcmf_pcie_force_cold_resume(devinfo);\n++\tif (force_cold_resume)\n++\t\tbrcmf_dbg(PCIE, \"Forcing cold resume on Apple BCM43602\\n\");\n++\n+ \t/* Check if device is still up and running, if so we are ready */\n+-\tif (brcmf_pcie_read_reg32(devinfo, devinfo->reginfo->intmask) != 0) {\n++\tif (!force_cold_resume &&\n++\t    brcmf_pcie_read_reg32(devinfo, devinfo->reginfo->intmask) != 0) {\n+ \t\tbrcmf_dbg(PCIE, \"Try to wakeup device....\\n\");\n+ \t\tif (brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D0_INFORM))\n+ \t\t\tgoto cleanup;\n+-- \n+2.48.1"
+    },
+    {
+      "sha": "3c4c06f874f15ca10c381fdd024b60d6c5c77c78",
+      "filename": "pkgbuilds/linux-bcm43602/PKGBUILD",
+      "status": "added",
+      "additions": 288,
+      "deletions": 0,
+      "changes": 288,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Flinux-bcm43602%2FPKGBUILD?ref=c4d72c1cbc9ad769338793f789d2c39b1f47e80c",
+      "patch": "@@ -0,0 +1,288 @@\n+# Maintainer: Andres Villagran <andres@villagranquiroz.cl>\n+# Based on Arch Linux linux package by Jan Alexander Steffens (heftig)\n+\n+pkgbase=linux-bcm43602\n+pkgver=7.2.3.arch1\n+pkgrel=1\n+pkgdesc='Linux with reliable BCM43602 suspend/resume for Apple PCI subsystem 106b:0133'\n+url='https://github.com/archlinux/linux'\n+arch=(\n+  x86_64\n+)\n+license=(GPL-2.0-only)\n+makedepends=(\n+  bc\n+  binutils\n+  cpio\n+  gettext\n+  glibc\n+  libelf\n+  libgcc\n+  openssl\n+  pahole\n+  perl\n+  python\n+  rust\n+  rust-bindgen\n+  rust-src\n+  tar\n+  xxhash\n+  xz\n+  zlib\n+  zstd\n+)\n+options=(\n+  !debug\n+  !strip\n+)\n+_srcname=linux-${pkgver%.*}\n+_srctag=v${pkgver%.*}-${pkgver##*.}\n+source=(\n+  https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}\n+  $url/releases/download/$_srctag/linux-$_srctag.patch.zst{,.sig}\n+  0001-brcmfmac-force-cold-resume-apple-bcm43602.patch\n+)\n+source_x86_64=(config.x86_64)\n+validpgpkeys=(\n+  ABAF11C65A2970B130ABE3C479BE3E4300411886  # Linus Torvalds\n+  647F28654894E3BD457199BE38DBBDC86092693E  # Greg Kroah-Hartman\n+  83BC8889351B5DEBBB68416EB8AC08600F108CDF  # Jan Alexander Steffens (heftig)\n+)\n+b2sums=('a1d10f1b4422f55c9c87fec0d319fd3dfaf8992f40f9c3d6da1d74e6e78ef220c24cdcd5b689070fb4a287070d1cb3659dc9ea79e5500027854f32c1326c67f7'\n+        'SKIP'\n+        'ee03773babee5126fb061bd7c9fb3b402c6bc96d49bce0a91a8b7a37f544b89ed38b2f4f71543dea355c965a80dfc264e9c6625da7ee5e3e7ada91441f4cf52c'\n+        'SKIP'\n+        'c6c82b7457b04622c207c43173aa49d46c973b2717d5f92a46b98a13bc8b7d690c5d8b7744748f7904dadb4361705038ba85246966a9b8a3a55d69892e8e6a8a')\n+b2sums_x86_64=('da56ce9b2f28b75436c52afbc16913027796d98b467575920d82e15fb626689438e69cc07fedde77a96f2cb2ce10b510a873c43f43105ccec9a44e656b0624e1')\n+\n+# https://www.kernel.org/pub/linux/kernel/v7.x/sha256sums.asc\n+sha256sums=('8ba259e8e7b13ec6ef0941c8a39ad90b24bd4a4d6c0010ba6bafb794550ecd03'\n+            'SKIP'\n+            '8c917e7ba5cbd93491f18d11d6adbdcb1ea64fd6f8b47a0fce5d04a0ac9aa4f6'\n+            'SKIP'\n+            '909f0727ba8acae2a102dd954c00c4a18a91b383fc5565bbd5249121bac43041')\n+sha256sums_x86_64=('09bf2e22e995baf6a2c38079cfb5ad896d4e10aa47af60864c2dd36d5cb9e25c')\n+\n+export KBUILD_BUILD_HOST=archlinux\n+export KBUILD_BUILD_USER=$pkgbase\n+export KBUILD_BUILD_TIMESTAMP=\"$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH})\"\n+\n+prepare() {\n+  cd $_srcname\n+\n+  echo \"Setting version...\"\n+  echo \"-$pkgrel\" > localversion.10-pkgrel\n+  echo \"${pkgbase#linux}\" > localversion.20-pkgname\n+\n+  local src\n+  for src in \"${source[@]}\"; do\n+    src=\"${src%%::*}\"\n+    src=\"${src##*/}\"\n+    src=\"${src%.zst}\"\n+    [[ $src = *.patch ]] || continue\n+    echo \"Applying patch $src...\"\n+    patch -Np1 < \"../$src\"\n+  done\n+\n+  echo \"Setting config...\"\n+  cp ../config.$CARCH .config\n+  make olddefconfig\n+  diff -u ../config.$CARCH .config || :\n+\n+  make -s kernelrelease > version\n+  echo \"Prepared $pkgbase version $(<version)\"\n+}\n+\n+build() {\n+  cd $_srcname\n+  make all\n+  make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1\n+}\n+\n+_package() {\n+  pkgdesc=\"The $pkgdesc kernel and modules\"\n+  depends=(\n+    coreutils\n+    initramfs\n+    kmod\n+    sof-firmware\n+  )\n+  optdepends=(\n+    \"$pkgbase-headers: headers and scripts for building modules\"\n+    'linux-firmware: firmware images needed for some devices'\n+    'scx-scheds: to use sched-ext schedulers'\n+    'wireless-regdb: to set the correct wireless channels of your country'\n+  )\n+  provides=(\n+    KSMBD-MODULE\n+    NTSYNC-MODULE\n+    VIRTUALBOX-GUEST-MODULES\n+    WIREGUARD-MODULE\n+  )\n+  replaces=(\n+    virtualbox-guest-modules-arch\n+    wireguard-arch\n+  )\n+\n+  cd $_srcname\n+  local modulesdir=\"$pkgdir/usr/lib/modules/$(<version)\"\n+\n+  echo \"Installing boot image...\"\n+  # systemd expects to find the kernel here to allow hibernation\n+  # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344\n+  install -Dm644 \"$(make -s image_name)\" \"$modulesdir/vmlinuz\"\n+\n+  # Used by mkinitcpio to name the kernel\n+  echo \"$pkgbase\" | install -Dm644 /dev/stdin \"$modulesdir/pkgbase\"\n+\n+  echo \"Installing modules...\"\n+  ZSTD_CLEVEL=19 make INSTALL_MOD_PATH=\"$pkgdir/usr\" INSTALL_MOD_STRIP=1 \\\n+    DEPMOD=/doesnt/exist modules_install  # Suppress depmod\n+\n+  # remove build link\n+  rm \"$modulesdir\"/build\n+}\n+\n+_package-headers() {\n+  pkgdesc=\"Headers and scripts for building modules for the $pkgdesc kernel\"\n+  depends=(\n+    binutils\n+    glibc\n+    libelf\n+    libgcc\n+    openssl\n+    pahole\n+    xxhash\n+    zlib\n+    zstd\n+  )\n+  provides=(LINUX-HEADERS)\n+\n+  cd $_srcname\n+  local builddir=\"$pkgdir/usr/lib/modules/$(<version)/build\"\n+\n+  local karch\n+  case $CARCH in\n+    x86_64) karch=x86 ;;\n+    *) echo \"Unknown CARCH $CARCH\"; exit 1 ;;\n+  esac\n+\n+  echo \"Installing build files...\"\n+  install -Dt \"$builddir\" -m644 .config Makefile Module.symvers System.map \\\n+    localversion.* version vmlinux tools/bpf/bpftool/vmlinux.h\n+  install -Dt \"$builddir/kernel\" -m644 kernel/Makefile\n+  install -Dt \"$builddir/arch/$karch\" -m644 arch/$karch/Makefile\n+  cp -t \"$builddir\" -a scripts\n+  ln -srt \"$builddir\" \"$builddir/scripts/gdb/vmlinux-gdb.py\"\n+\n+  if [[ $(scripts/config -s CONFIG_HAVE_STACK_VALIDATION) = y ]]; then\n+    install -Dt \"$builddir/tools/objtool\" tools/objtool/objtool\n+  fi\n+\n+  if [[ $(scripts/config -s CONFIG_DEBUG_INFO_BTF_MODULES) = y ]]; then\n+    install -Dt \"$builddir/tools/bpf/resolve_btfids\" tools/bpf/resolve_btfids/resolve_btfids\n+  fi\n+\n+  echo \"Installing headers...\"\n+  cp -t \"$builddir\" -a include\n+  cp -t \"$builddir/arch/$karch\" -a arch/$karch/include\n+  install -Dt \"$builddir/arch/$karch/kernel\" -m644 arch/$karch/kernel/asm-offsets.s\n+\n+  install -Dt \"$builddir/drivers/md\" -m644 drivers/md/*.h\n+  install -Dt \"$builddir/net/mac80211\" -m644 net/mac80211/*.h\n+\n+  # https://bugs.archlinux.org/task/13146\n+  install -Dt \"$builddir/drivers/media/i2c\" -m644 drivers/media/i2c/msp3400-driver.h\n+\n+  # https://bugs.archlinux.org/task/20402\n+  install -Dt \"$builddir/drivers/media/usb/dvb-usb\" -m644 drivers/media/usb/dvb-usb/*.h\n+  install -Dt \"$builddir/drivers/media/dvb-frontends\" -m644 drivers/media/dvb-frontends/*.h\n+  install -Dt \"$builddir/drivers/media/tuners\" -m644 drivers/media/tuners/*.h\n+\n+  # https://bugs.archlinux.org/task/71392\n+  install -Dt \"$builddir/drivers/iio/common/hid-sensors\" -m644 drivers/iio/common/hid-sensors/*.h\n+\n+  echo \"Installing KConfig files...\"\n+  find . -name 'Kconfig*' -exec install -Dm644 {} \"$builddir/{}\" \\;\n+\n+  echo \"Installing Rust files...\"\n+  if [[ $(scripts/config -s CONFIG_RUST) = y ]]; then\n+    install -Dt \"$builddir/rust\" -m644 rust/*.rmeta\n+    install -Dt \"$builddir/rust\" rust/*.so\n+  fi\n+\n+  echo \"Installing unstripped VDSO...\"\n+  make INSTALL_MOD_PATH=\"$pkgdir/usr\" vdso_install \\\n+    link=  # Suppress build-id symlinks\n+\n+  echo \"Removing unneeded architectures...\"\n+  local arch\n+  for arch in \"$builddir\"/arch/*/; do\n+    [[ $arch = */$karch/ ]] && continue\n+    echo \"Removing $(basename \"$arch\")\"\n+    rm -r \"$arch\"\n+  done\n+\n+  echo \"Removing documentation...\"\n+  rm -r \"$builddir/Documentation\"\n+\n+  echo \"Removing broken symlinks...\"\n+  find -L \"$builddir\" -type l -printf 'Removing %P\\n' -delete\n+\n+  echo \"Removing loose objects...\"\n+  find \"$builddir\" -type f -name '*.o' -printf 'Removing %P\\n' -delete\n+\n+  echo \"Stripping build tools...\"\n+  local file\n+  while read -rd '' file; do\n+    case \"$(file -Sib \"$file\")\" in\n+      application/x-sharedlib\\;*)      # Libraries (.so)\n+        strip -v $STRIP_SHARED \"$file\" ;;\n+      application/x-archive\\;*)        # Libraries (.a)\n+        strip -v $STRIP_STATIC \"$file\" ;;\n+      application/x-executable\\;*)     # Binaries\n+        strip -v $STRIP_BINARIES \"$file\" ;;\n+      application/x-pie-executable\\;*) # Relocatable binaries\n+        strip -v $STRIP_SHARED \"$file\" ;;\n+    esac\n+  done < <(find \"$builddir\" -type f -perm -u+x ! -name vmlinux -print0)\n+\n+  echo \"Stripping vmlinux...\"\n+  strip -v $STRIP_STATIC \"$builddir/vmlinux\"\n+\n+  echo \"Adding symlink...\"\n+  mkdir -p \"$pkgdir/usr/src\"\n+  ln -sr \"$builddir\" \"$pkgdir/usr/src/$pkgbase\"\n+}\n+\n+_package-docs() {\n+  pkgdesc=\"Documentation for the $pkgdesc kernel\"\n+\n+  cd $_srcname\n+  local builddir=\"$pkgdir/usr/lib/modules/$(<version)/build\"\n+\n+  echo \"Installing documentation...\"\n+  local src dst\n+  while read -rd '' src; do\n+    dst=\"${src#Documentation/}\"\n+    dst=\"$builddir/Documentation/${dst#output/}\"\n+    install -Dm644 \"$src\" \"$dst\"\n+  done < <(find Documentation -name '.*' -prune -o ! -type d -print0)\n+\n+  echo \"Adding symlink...\"\n+  mkdir -p \"$pkgdir/usr/share/doc\"\n+  ln -sr \"$builddir/Documentation\" \"$pkgdir/usr/share/doc/$pkgbase\"\n+}\n+\n+pkgname=(\n+  \"$pkgbase\"\n+  \"$pkgbase-headers\"\n+)\n+for _p in \"${pkgname[@]}\"; do\n+  eval \"package_$_p() {\n+    $(declare -f \"_package${_p#$pkgbase}\")\n+    _package${_p#$pkgbase}\n+  }\"\n+done\n+\n+# vim:set ts=8 sts=2 sw=2 et:"
+    },
+    {
+      "sha": "09ab75638b7e174c9aca886e60b5a3f146d2bebf",
+      "filename": "pkgbuilds/linux-bcm43602/config.x86_64",
+      "status": "added",
+      "additions": 12638,
+      "deletions": 0,
+      "changes": 12638,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2Fconfig.x86_64",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/c4d72c1cbc9ad769338793f789d2c39b1f47e80c/pkgbuilds%2Flinux-bcm43602%2Fconfig.x86_64",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Flinux-bcm43602%2Fconfig.x86_64?ref=c4d72c1cbc9ad769338793f789d2c39b1f47e80c"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5734519204",
+      "html_url": "https://github.com/omacom/omarchy-pkgs/pull/422#issuecomment-5734519204",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/422",
+      "id": 5734519204,
+      "node_id": "IC_kwDOPjeh9M8AAAABVc3RpA",
+      "user": {
+        "login": "ryanrhughes",
+        "id": 1630358,
+        "node_id": "MDQ6VXNlcjE2MzAzNTg=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1630358?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ryanrhughes",
+        "html_url": "https://github.com/ryanrhughes",
+        "followers_url": "https://api.github.com/users/ryanrhughes/followers",
+        "following_url": "https://api.github.com/users/ryanrhughes/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ryanrhughes/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ryanrhughes/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ryanrhughes/subscriptions",
+        "organizations_url": "https://api.github.com/users/ryanrhughes/orgs",
+        "repos_url": "https://api.github.com/users/ryanrhughes/repos",
+        "events_url": "https://api.github.com/users/ryanrhughes/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ryanrhughes/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-18T18:35:21Z",
+      "updated_at": "2026-09-18T18:35:21Z",
+      "body": "Held for review: this adds a full kernel package (`linux-bcm43602`, 13k lines) with `SKIP` on four source checksums. Kernel sources are signed, so `validpgpkeys` covers the tarball, but the patch and config should carry real sha256 sums. kwilczynski is requested since this is a kernel.",
+      "author_association": "COLLABORATOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy-pkgs/issues/comments/5734519204/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

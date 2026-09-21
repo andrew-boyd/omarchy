@@ -1,0 +1,104 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9409",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "bcm5974-trackpad"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "029f5331f9e4c2effd00cf5a80cd40a8d320db4f",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9409,
+  "checked_at": "2026-09-21T11:56:03.724263+00:00",
+  "title": "Fail clearly when trackpad reset finds no supported driver",
+  "author": "Chessing234",
+  "head_sha": "029f5331f9e4c2effd00cf5a80cd40a8d320db4f",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:23Z",
+  "state": "open",
+  "body": "## Summary\n- Update \u2192 Hardware \u2192 Trackpad only resets `i2c_hid_acpi` / `intel_quicki2c`.\n- Unsupported hardware (e.g. Apple bcm5974) exited 0 with no output, looking successful.\n\n## Test plan\n- [ ] `test/shell.d/restart-trackpad-unsupported-test.sh`\n- [ ] Supported i2c path still resets as before\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "ec35a14f2b41974582675a7a4c7e3e2cc497fc74",
+      "filename": "bin/omarchy-restart-trackpad",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/029f5331f9e4c2effd00cf5a80cd40a8d320db4f/bin%2Fomarchy-restart-trackpad",
+      "raw_url": "https://github.com/omacom/omarchy/raw/029f5331f9e4c2effd00cf5a80cd40a8d320db4f/bin%2Fomarchy-restart-trackpad",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-restart-trackpad?ref=029f5331f9e4c2effd00cf5a80cd40a8d320db4f",
+      "patch": "@@ -3,6 +3,8 @@\n # omarchy:summary=Reset the trackpad by unbinding and rebinding its driver.\n # omarchy:requires-sudo=true\n \n+reset=0\n+\n for dev in /sys/bus/i2c/drivers/i2c_hid_acpi/i2c-*; do\n   [[ -e $dev ]] || continue\n   I2C_DEVICE=$(basename \"$dev\")\n@@ -11,10 +13,17 @@ for dev in /sys/bus/i2c/drivers/i2c_hid_acpi/i2c-*; do\n   sleep 1\n   echo \"$I2C_DEVICE\" | sudo tee /sys/bus/i2c/drivers/i2c_hid_acpi/bind > /dev/null\n   echo \"Done\"\n+  reset=1\n done\n \n # Also try THC path\n if lsmod | grep -q intel_quicki2c; then\n   echo \"Reloading intel_quicki2c...\"\n   sudo modprobe -r intel_quicki2c && sudo modprobe intel_quicki2c\n+  reset=1\n+fi\n+\n+if (( reset == 0 )); then\n+  echo \"No supported trackpad driver found to reset (need i2c_hid_acpi or intel_quicki2c).\" >&2\n+  exit 1\n fi"
+    },
+    {
+      "sha": "5903120bd80a757a4e0c2db1b12dd40de721001e",
+      "filename": "test/shell.d/restart-trackpad-unsupported-test.sh",
+      "status": "added",
+      "additions": 37,
+      "deletions": 0,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/029f5331f9e4c2effd00cf5a80cd40a8d320db4f/test%2Fshell.d%2Frestart-trackpad-unsupported-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/029f5331f9e4c2effd00cf5a80cd40a8d320db4f/test%2Fshell.d%2Frestart-trackpad-unsupported-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Frestart-trackpad-unsupported-test.sh?ref=029f5331f9e4c2effd00cf5a80cd40a8d320db4f",
+      "patch": "@@ -0,0 +1,37 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp_dir=$(mktemp -d)\n+trap 'rm -r \"$tmp_dir\"' EXIT\n+\n+# Fake an empty i2c driver glob and no intel_quicki2c module.\n+cat >\"$tmp_dir/lsmod\" <<'INNER'\n+#!/bin/bash\n+exit 0\n+INNER\n+cat >\"$tmp_dir/sudo\" <<'INNER'\n+#!/bin/bash\n+exit 0\n+INNER\n+chmod +x \"$tmp_dir/lsmod\" \"$tmp_dir/sudo\"\n+\n+# Point the script's glob at an empty directory by running under a fake root\n+# is hard; instead wrap: create a copy that uses no matching devices.\n+export PATH=\"$tmp_dir:$PATH\"\n+\n+# Create a disposable copy that looks for devices under $tmp_dir\n+script=\"$tmp_dir/omarchy-restart-trackpad\"\n+sed \"s|/sys/bus/i2c/drivers/i2c_hid_acpi/i2c-\\\\*|$tmp_dir/no-such-i2c-\\\\*|g\" \\\n+  \"$ROOT/bin/omarchy-restart-trackpad\" >\"$script\"\n+chmod +x \"$script\"\n+\n+if \"$script\" >/dev/null 2>\"$tmp_dir/err\"; then\n+  fail \"restart-trackpad should fail when no supported driver is present\"\n+fi\n+grep -F 'No supported trackpad driver' \"$tmp_dir/err\" >/dev/null ||\n+  fail \"restart-trackpad should explain the unsupported driver case\"\n+\n+pass \"restart-trackpad fails clearly when no supported driver is present\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5560627383",
+      "html_url": "https://github.com/omacom/omarchy/pull/9409#issuecomment-5560627383",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9409",
+      "id": 5560627383,
+      "node_id": "IC_kwDOO0Cobs8AAAABS3Bwtw",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-06T16:37:01Z",
+      "updated_at": "2026-09-06T16:37:01Z",
+      "body": "@dhh @ryanrhughes ready for review",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5560627383/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

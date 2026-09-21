@@ -1,0 +1,110 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12328",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-policy"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+      "state": "open"
+    },
+    {
+      "head_sha": "33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+      "state": "open",
+      "updated_at": "2026-09-18T08:31:26Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12328,
+  "checked_at": "2026-09-21T11:56:39.439735+00:00",
+  "title": "Keep every Intel Mac on its kernel in the linux-omarchy migration",
+  "author": "nipunhsud",
+  "head_sha": "33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+  "base_sha": "9c5482c58dbe4974de337450754885083c91eada",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-18T08:31:26Z",
+  "state": "open",
+  "body": "Fixes #12281.\n\n## Problem\n\nMigration `1789325478` exempts Macs from the `linux-omarchy` swap, but the test only recognises T2 Macs: the `linux-t2` package or a `-t2` kernel release. A T1 or pre-T2 Mac running stock `linux` matches neither, so it is switched to `linux-omarchy` and has `BOOT_ORDER` rewritten. #12097 (MacBookAir6,1 boots to an emergency shell) and #12131 (Haswell Mac HDMI audio underruns) are non-T2 Macs that took that swap.\n\n## Fix\n\nAlso skip when `/sys/class/dmi/id/sys_vendor` starts with `Apple`, the same idiom `migrations/1786391100.sh` uses. `OMARCHY_KERNEL_DMI_VENDOR` overrides the path so the test stays hermetic, matching the other `OMARCHY_KERNEL_*` overrides in the file. A missing or unreadable vendor file still migrates, so non-DMI machines and VMs are unaffected.\n\nMachines that already ran the migration are untouched; this reaches late updaters coming from 4.0.3 or earlier.\n\n## Tests\n\n`test/shell.d/omarchy-kernel-migration-test.sh` gains three cases: `Apple Inc.` and `Apple Computer, Inc.` are skipped with no calls, no config change and no marker; a missing vendor file still installs the kernel. All prior cases still pass.\n\nNote: the existing assertion \"the superseded migration must not install the PTL variant first\" fails on current `quattro` independently of this change, because a73bcbfc re-added `migrations/1789095456.sh` after ff85faf8 removed it.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "d0975aca8f6cb1f3d2fa1845263b6cce5a11a488",
+      "filename": "migrations/1789325478.sh",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 3,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/33f076aa9127c7d8cc5ccf36da6b61f2005f3b11/migrations%2F1789325478.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/33f076aa9127c7d8cc5ccf36da6b61f2005f3b11/migrations%2F1789325478.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789325478.sh?ref=33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+      "patch": "@@ -1,10 +1,16 @@\n echo \"Install the Omarchy kernel and make it the first Limine boot entry\"\n \n-# linux-omarchy is an x86_64 kernel. T2 Macs must keep their specialized kernel,\n-# including when other kernels are installed or the running T2 package is gone.\n+# linux-omarchy is an x86_64 kernel. Macs keep the kernel they were installed\n+# with: T2 Macs need their specialized kernel, including when other kernels are\n+# installed or the running T2 package is gone, and T1 and older Macs carry\n+# their own out-of-tree drivers and quirks that linux-omarchy was never tested\n+# against (#12097, #12131). Read the DMI vendor for the latter, since nothing\n+# else on a pre-T2 Mac names it.\n [[ $(uname -m) == \"x86_64\" ]] || exit 0\n running_kernel=$(uname -r)\n-if omarchy-pkg-present linux-t2 || [[ ${running_kernel,,} == *-t2* ]]; then\n+dmi_vendor=\"${OMARCHY_KERNEL_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+if omarchy-pkg-present linux-t2 || [[ ${running_kernel,,} == *-t2* ]] ||\n+  [[ $(cat \"$dmi_vendor\" 2>/dev/null) == Apple* ]]; then\n   exit 0\n fi\n "
+    },
+    {
+      "sha": "7742cd6ef6c662a58a8a7b998cf4e44726b75b76",
+      "filename": "test/shell.d/omarchy-kernel-migration-test.sh",
+      "status": "modified",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/33f076aa9127c7d8cc5ccf36da6b61f2005f3b11/test%2Fshell.d%2Fomarchy-kernel-migration-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/33f076aa9127c7d8cc5ccf36da6b61f2005f3b11/test%2Fshell.d%2Fomarchy-kernel-migration-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fomarchy-kernel-migration-test.sh?ref=33f076aa9127c7d8cc5ccf36da6b61f2005f3b11",
+      "patch": "@@ -15,6 +15,7 @@ export INSTALLED_PACKAGES=\"$scratch/packages\"\n export OMARCHY_KERNEL_LIMINE_CONF=\"$scratch/limine\"\n export OMARCHY_KERNEL_LIMINE_DROP_INS=\"$scratch/drop-ins\"\n export OMARCHY_KERNEL_REBUILD_MARKER=\"$scratch/state/1789325478\"\n+export OMARCHY_KERNEL_DMI_VENDOR=\"$scratch/sys_vendor\"\n kernel=\"linux-omarchy\"\n boot_order='BOOT_ORDER=\"linux-omarchy, linux-omarchy-*, *, *fallback, Snapshots\"'\n \n@@ -82,6 +83,7 @@ reset_fixture() {\n   : > \"$CALL_LOG\"\n   printf '%s\\n' linux-ptl linux-ptl-headers > \"$INSTALLED_PACKAGES\"\n   rm -f \"$OMARCHY_KERNEL_REBUILD_MARKER\" \"$OMARCHY_KERNEL_LIMINE_DROP_INS/\"*\n+  printf '%s\\n' 'Dell Inc.' > \"$OMARCHY_KERNEL_DMI_VENDOR\"\n   cat > \"$OMARCHY_KERNEL_LIMINE_CONF\" <<'CONF'\n KERNEL_CMDLINE[default]=\"root=UUID=keep-me rw cryptdevice=UUID=keep-me:root\"\n BOOT_ORDER=\"*, *fallback, Snapshots\"\n@@ -133,6 +135,20 @@ TEST_ARCH=aarch64 run_migration\n assert_skipped\n pass \"ARM systems cannot receive an x86_64 kernel\"\n \n+for vendor in 'Apple Inc.' 'Apple Computer, Inc.'; do\n+  reset_fixture\n+  printf '%s\\n' \"$vendor\" > \"$OMARCHY_KERNEL_DMI_VENDOR\"\n+  run_migration\n+  assert_skipped\n+done\n+pass \"T1 and older Macs keep their kernel even without a T2 package or kernel\"\n+\n+reset_fixture\n+rm \"$OMARCHY_KERNEL_DMI_VENDOR\"\n+run_migration\n+grep -Fxq \"$kernel\" \"$INSTALLED_PACKAGES\" || fail \"an unreadable DMI vendor is not treated as a Mac\"\n+pass \"machines without DMI vendor information still receive the generic kernel\"\n+\n reset_fixture\n printf '%s\\n' linux-omarchy-ptl-novrr-mm > \"$INSTALLED_PACKAGES\"\n mkdir -p \"$scratch/state\" \"$scratch/user-markers\" \"$scratch/omarchy/migrations\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5727388615",
+      "html_url": "https://github.com/omacom/omarchy/pull/12328#issuecomment-5727388615",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12328",
+      "id": 5727388615,
+      "node_id": "IC_kwDOO0Cobs8AAAABVWEDxw",
+      "user": {
+        "login": "llstrk",
+        "id": 5097150,
+        "node_id": "MDQ6VXNlcjUwOTcxNTA=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5097150?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/llstrk",
+        "html_url": "https://github.com/llstrk",
+        "followers_url": "https://api.github.com/users/llstrk/followers",
+        "following_url": "https://api.github.com/users/llstrk/following{/other_user}",
+        "gists_url": "https://api.github.com/users/llstrk/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/llstrk/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/llstrk/subscriptions",
+        "organizations_url": "https://api.github.com/users/llstrk/orgs",
+        "repos_url": "https://api.github.com/users/llstrk/repos",
+        "events_url": "https://api.github.com/users/llstrk/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/llstrk/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-18T08:31:26Z",
+      "updated_at": "2026-09-18T08:31:26Z",
+      "body": "## Recommendation: no blocking issue found in the tested scope\n\n### Verified: Apple machines skip the kernel migration\n\nA/B-tested `33f076aa` against `9c5482c` with simulated package and boot operations:\n\n```text\nApple vendor fixture\n  Baseline -> install packages -> change boot configuration\n  PR       -> skip migration  -> boot configuration preserved\n                                no rebuild marker\n```\n\nBoth `Apple Inc.` and `Apple Computer, Inc.` are excluded, including a stock-`linux` fixture. Existing T2-package, running-T2 and ARM exclusions remain intact. Non-Apple, missing-DMI and empty-DMI cases still reach the migration path.\n\n**Impact:** prevents pending migrations from switching kernels on these Apple machines. It does not restore machines that already migrated.\n\n### Existing test failure, not introduced by this PR\n\n`omarchy-kernel-migration-test.sh` requires `1789095456.sh` to be absent, but that filename now contains an unrelated Mise repair. The same assertion fails on baseline.\n\n**Suggested follow-up:** correct the stale assertion without deleting the unrelated migration. The untouched full test file is not passing.\n\n**Test scope:** fixture execution only; no Intel Mac boot or real package installation tested.\n\n**Automated AI review:** Astra inspected the PR, Fable 5.1 and a separate Astra session reviewed it independently, then findings were checked against targeted tests.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5727388615/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

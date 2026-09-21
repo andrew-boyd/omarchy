@@ -1,0 +1,210 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10797",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "05795bb967612fd336759d74e339a50cc8e6bf87",
+      "state": "closed"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10797,
+  "checked_at": "2026-09-21T11:56:34.122384+00:00",
+  "title": "Install DKMS headers for the kernel that actually boots",
+  "author": "Chessing234",
+  "head_sha": "05795bb967612fd336759d74e339a50cc8e6bf87",
+  "base_sha": "b679363bed05415771a1b1dc92c6899a908236f7",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-17T10:11:45Z",
+  "state": "closed",
+  "body": "## Summary\n- Stock `linux` sorts first in `pacman` queries, so NVIDIA DKMS was taking `linux-headers` even when `linux-ptl` or `linux-t2` was the kernel we just swapped in. The Broadcom, Tuxedo, Motorcomm, and xpadneo leaves hardcoded `linux-headers` the same way, which can drag stock `linux` back onto a Panther Lake machine.\n- `omarchy-pkg-linux-headers` prefers flavor kernels, then stock, and those DKMS installers share it.\n\n## Test plan\n- [x] `bash test/shell.d/pkg-linux-headers-test.sh`\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "24634dd20ae2c4e53ab5fbf006f8c153569f98e6",
+      "filename": "bin/omarchy-install-gaming-xbox-controllers",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/bin%2Fomarchy-install-gaming-xbox-controllers",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/bin%2Fomarchy-install-gaming-xbox-controllers",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-install-gaming-xbox-controllers?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -10,7 +10,7 @@ set -e\n echo \"Installing Xbox controller Bluetooth support...\"\n \n # Install xpadneo to ensure controllers work out of the box\n-omarchy-pkg-add linux-headers xpadneo-dkms\n+omarchy-pkg-add \"$(omarchy-pkg-linux-headers)\" xpadneo-dkms\n \n # Prevent xpad/xpadneo driver conflict\n echo blacklist xpad | sudo tee /etc/modprobe.d/blacklist-xpad.conf >/dev/null"
+    },
+    {
+      "sha": "08344c884fb3d91136ad6f1d9bc83b9ffd8e9eb3",
+      "filename": "bin/omarchy-pkg-linux-headers",
+      "status": "added",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/bin%2Fomarchy-pkg-linux-headers",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/bin%2Fomarchy-pkg-linux-headers",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-pkg-linux-headers?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -0,0 +1,16 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Print the kernel-headers package matching the installed kernel flavor\n+# omarchy:hidden=true\n+\n+# Flavor kernels first: `pacman -Qqs '^linux\u2026' | head -1` returns stock linux\n+# whenever it is still installed, so NVIDIA / Broadcom / Tuxedo / Motorcomm\n+# DKMS builds against the kernel we just replaced.\n+for flavor in linux-ptl linux-t2 linux-zen linux-lts linux-hardened linux; do\n+  if pacman -Qq \"$flavor\" &>/dev/null; then\n+    printf '%s-headers\\n' \"$flavor\"\n+    exit 0\n+  fi\n+done\n+\n+printf 'linux-headers\\n'"
+    },
+    {
+      "sha": "d5cf154bc20c4539b9e749a0b17e014b7e5be831",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -6,5 +6,5 @@ pci_info=$(lspci -nn)\n \n if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n   echo \"BCM4360 / BCM4331 detected\"\n-  omarchy-pkg-add broadcom-wl-dkms linux-headers\n+  omarchy-pkg-add broadcom-wl-dkms \"$(omarchy-pkg-linux-headers)\"\n fi"
+    },
+    {
+      "sha": "0dc32cb655a1ac0981c3e4e34073ae55922aa1e3",
+      "filename": "install/hardware/fix-tuxedo-backlight.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Ffix-tuxedo-backlight.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Ffix-tuxedo-backlight.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-tuxedo-backlight.sh?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -1,7 +1,7 @@\n # Install Tuxedo drivers for keyboard backlighting on Tuxedo laptops and\n # compatible devices like the Slimbook Executive (Clevo/Tuxedo chassis).\n if cat /sys/class/dmi/id/sys_vendor 2>/dev/null | grep -qi \"TUXEDO\\|Slimbook\"; then\n-  omarchy-pkg-add linux-headers tuxedo-drivers-nocompatcheck-dkms\n+  omarchy-pkg-add \"$(omarchy-pkg-linux-headers)\" tuxedo-drivers-nocompatcheck-dkms\n \n   # Blacklist the legacy clevo_xsm_wmi module which conflicts with the tuxedo-drivers\n   # clevo_wmi module. When clevo_xsm_wmi loads first, it grabs the Clevo WMI GUIDs,"
+    },
+    {
+      "sha": "de388a5df87f9a479fd2d3ed89a1ea18a5dd4fb9",
+      "filename": "install/hardware/fix-yt6801-ethernet-adapter.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -1,4 +1,4 @@\n # Install drivers for Motorcomm YT6801 ethernet adapter used by the Slimbook Executive\n if lspci | grep -i \"YT6801\\|Motorcomm.*Ethernet\"; then\n-  omarchy-pkg-add linux-headers yt6801-dkms\n+  omarchy-pkg-add \"$(omarchy-pkg-linux-headers)\" yt6801-dkms\n fi"
+    },
+    {
+      "sha": "04fa4a12302afd214b6aaf4719328a509106ef73",
+      "filename": "install/hardware/nvidia.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 3,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Fnvidia.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/install%2Fhardware%2Fnvidia.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fnvidia.sh?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -1,7 +1,5 @@\n if lspci | grep -qi 'nvidia'; then\n-  # Check which kernel is installed and set appropriate headers package\n-  KERNEL_PACKAGE=$(pacman -Qqs '^linux(-zen|-lts|-hardened|-t2|-ptl|-omarchy-ptl-novrr-mm)?$' | head -1 || true)\n-  [[ -n $KERNEL_PACKAGE ]] && omarchy-pkg-add \"$KERNEL_PACKAGE-headers\"\n+  omarchy-pkg-add \"$(omarchy-pkg-linux-headers)\"\n \n   if omarchy-hw-nvidia-gsp; then\n     PACKAGES=(nvidia-open-dkms nvidia-utils lib32-nvidia-utils libva-nvidia-driver)"
+    },
+    {
+      "sha": "b502430392316fb05e87f5d81e5f4a2841b317cd",
+      "filename": "test/shell.d/pkg-linux-headers-test.sh",
+      "status": "added",
+      "additions": 67,
+      "deletions": 0,
+      "changes": 67,
+      "blob_url": "https://github.com/omacom/omarchy/blob/05795bb967612fd336759d74e339a50cc8e6bf87/test%2Fshell.d%2Fpkg-linux-headers-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/05795bb967612fd336759d74e339a50cc8e6bf87/test%2Fshell.d%2Fpkg-linux-headers-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fpkg-linux-headers-test.sh?ref=05795bb967612fd336759d74e339a50cc8e6bf87",
+      "patch": "@@ -0,0 +1,67 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+helper=\"$ROOT/bin/omarchy-pkg-linux-headers\"\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+mkdir -p \"$test_tmp/bin\"\n+\n+cat >\"$test_tmp/bin/pacman\" <<'SH'\n+#!/bin/bash\n+if [[ $1 == -Qq && -n ${2:-} ]]; then\n+  grep -qx \"$2\" \"$TEST_PACMAN_Q\" && { printf '%s\\n' \"$2\"; exit 0; }\n+  exit 1\n+fi\n+exit 1\n+SH\n+chmod +x \"$test_tmp/bin/pacman\"\n+\n+installed() {\n+  printf '%s\\n' \"$@\" >\"$test_tmp/installed\"\n+}\n+\n+headers() {\n+  TEST_PACMAN_Q=\"$test_tmp/installed\" PATH=\"$test_tmp/bin:$PATH\" \"$helper\"\n+}\n+\n+installed linux\n+[[ $(headers) == linux-headers ]] || fail \"stock linux selects linux-headers\"\n+pass \"stock linux selects linux-headers\"\n+\n+installed linux linux-ptl\n+[[ $(headers) == linux-ptl-headers ]] || fail \"linux-ptl wins over leftover stock linux\"\n+pass \"linux-ptl wins over leftover stock linux\"\n+\n+installed linux linux-t2\n+[[ $(headers) == linux-t2-headers ]] || fail \"linux-t2 wins over leftover stock linux\"\n+pass \"linux-t2 wins over leftover stock linux\"\n+\n+installed linux-zen\n+[[ $(headers) == linux-zen-headers ]] || fail \"linux-zen selects linux-zen-headers\"\n+pass \"linux-zen selects linux-zen-headers\"\n+\n+installed linux-lts linux-hardened\n+[[ $(headers) == linux-lts-headers ]] || fail \"linux-lts is preferred over linux-hardened\"\n+pass \"linux-lts is preferred over linux-hardened\"\n+\n+: >\"$test_tmp/installed\"\n+[[ $(headers) == linux-headers ]] || fail \"no kernel package still names linux-headers\"\n+pass \"no kernel package still names linux-headers\"\n+\n+for leaf in \\\n+  install/hardware/nvidia.sh \\\n+  install/hardware/fix-bcm43xx.sh \\\n+  install/hardware/fix-yt6801-ethernet-adapter.sh \\\n+  install/hardware/fix-tuxedo-backlight.sh \\\n+  bin/omarchy-install-gaming-xbox-controllers\n+do\n+  grep -q 'omarchy-pkg-linux-headers' \"$ROOT/$leaf\" ||\n+    fail \"$leaf asks the helper for kernel headers\"\n+  if grep -F 'linux-headers' \"$ROOT/$leaf\" | grep -vq 'omarchy-pkg-linux-headers'; then\n+    fail \"$leaf does not hardcode linux-headers next to DKMS\"\n+  fi\n+done\n+pass \"DKMS installers ask the helper instead of hardcoding linux-headers\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5584685762",
+      "html_url": "https://github.com/omacom/omarchy/pull/10797#issuecomment-5584685762",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10797",
+      "id": 5584685762,
+      "node_id": "IC_kwDOO0Cobs8AAAABTN-Kwg",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-08T11:51:08Z",
+      "updated_at": "2026-09-08T11:51:08Z",
+      "body": "hey @dhh if you have a minute: this and #10798 are the ptl/dkms kernel install bits. the lspci\u2192sysfs cleanup is #10806 #10807 #10808 #10810, plus a smaller font-set fc-list filter in #10811",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5584685762/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5712632826",
+      "html_url": "https://github.com/omacom/omarchy/pull/10797#issuecomment-5712632826",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10797",
+      "id": 5712632826,
+      "node_id": "IC_kwDOO0Cobs8AAAABVH_b-g",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-17T10:11:42Z",
+      "updated_at": "2026-09-17T10:11:42Z",
+      "body": "folding into #12249 (dkms headers helper)",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5712632826/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

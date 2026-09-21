@@ -1,0 +1,75 @@
+{
+  "url": "https://github.com/omacom/omarchy-iso/pull/182",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-policy"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "b507a20b7e0406cd10779ca332105f9a89754731",
+      "state": "merged"
+    },
+    {
+      "head_sha": "b507a20b7e0406cd10779ca332105f9a89754731",
+      "state": "merged",
+      "updated_at": "2026-09-15T01:39:34Z"
+    }
+  ],
+  "repository": "omacom/omarchy-iso",
+  "number": 182,
+  "checked_at": "2026-09-21T11:56:39.131498+00:00",
+  "title": "Install linux-omarchy by default except on T2 Macs",
+  "author": "ryanrhughes",
+  "head_sha": "b507a20b7e0406cd10779ca332105f9a89754731",
+  "base_sha": "447f6d2e587735d000eb600e816b088f2bccacc8",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T01:39:34Z",
+  "state": "merged",
+  "body": "Fresh non-T2 installs select stock `linux`, even when the bundled Omarchy runtime and offline mirror carry `linux-omarchy`. Select `linux-omarchy` in the configurator and use it as the boot-validation fallback. T2 Macs still select `linux-t2`, and explicit kernel selections remain respected.\n\nValidation:\n\n- `./test/all` passed: 65 Python tests plus the shell checks. Partition-numbering checks skipped because `parted` is unavailable.\n- Added coverage for both T2 PCI IDs, non-T2 hardware, and validation of default and explicit kernel UKIs.\n- Built an unsigned 4.0.4rc1 ISO from this commit. Mounted it read-only, confirmed the installer files match the tested source, exercised its non-T2/T2 kernel probe, and checked the bundled Omarchy, settings, kernel, headers, and IPU7 packages against their published RC SHA256 hashes.\n\nRan `omarchy-iso-test` on a fresh KVM guest: interactive installation and reboot succeeded. Verified the running kernel is `7.2.5-3-omarchy`, owned by `linux-omarchy`, with no stock, T2, or retired PTL kernel installed. The first acceptance run hit a weather-location OCR false negative (the saved screenshot visibly contains the location); the unchanged full suite passed on a second run using `--reuse-base`. Tests were synced from runtime commit `ec73ba5d0002dc76462209002d8804c98342e69c`. No physical hardware boot test was run.\n\nUnsigned RC ISO: https://iso.omarchy.org/omarchy-4.0.4rc1.iso\n\nSHA256: `9d251238932880c892769ff97754a2d7f2a5709ede4920c065e9068e484abe9a`\n\nThe complete public download was hashed and matches the build output.\n\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2960c065d7fa9b5d6c5148cdab9131beded98880",
+      "filename": "configs/airootfs/root/configurator",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/b507a20b7e0406cd10779ca332105f9a89754731/configs%2Fairootfs%2Froot%2Fconfigurator",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/b507a20b7e0406cd10779ca332105f9a89754731/configs%2Fairootfs%2Froot%2Fconfigurator",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/configs%2Fairootfs%2Froot%2Fconfigurator?ref=b507a20b7e0406cd10779ca332105f9a89754731",
+      "patch": "@@ -415,7 +415,7 @@ detect_kernel() {\n   if lspci -nn 2>/dev/null | grep -q \"106b:180[12]\"; then\n     echo \"linux-t2\"\n   else\n-    echo \"linux\"\n+    echo \"linux-omarchy\"\n   fi\n }\n "
+    },
+    {
+      "sha": "e489ee45ce9aec0d7e6f1c21271f93eb836a5d81",
+      "filename": "configs/airootfs/usr/share/omarchy-iso/orchestrator/phases_impl.py",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/b507a20b7e0406cd10779ca332105f9a89754731/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/b507a20b7e0406cd10779ca332105f9a89754731/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/configs%2Fairootfs%2Fusr%2Fshare%2Fomarchy-iso%2Forchestrator%2Fphases_impl.py?ref=b507a20b7e0406cd10779ca332105f9a89754731",
+      "patch": "@@ -790,7 +790,7 @@ def verify_protected_mounts(ctx: InstallContext) -> None:\n         esp_mp.mkdir(parents=True, exist_ok=True)\n         subprocess.run([\"mount\", esp_dev, str(esp_mp)], check=True)\n \n-    info(f\"\u203a protected target verified: kernel={storage.get('kernel', 'linux')} esp={boot['esp_mount']}\")\n+    info(f\"\u203a protected target verified: kernel={storage.get('kernel', 'linux-omarchy')} esp={boot['esp_mount']}\")\n \n \n def _is_mountpoint(path: Path) -> bool:\n@@ -1666,7 +1666,7 @@ def validate_boot(ctx: InstallContext) -> None:\n     default_limine = ctx.target / \"etc\" / \"default\" / \"limine\"\n     config_text = _limine_combined_config_text(ctx, default_limine.read_text())\n     uki_prefix = _limine_setting(config_text, \"CUSTOM_UKI_NAME\", \"omarchy\") or \"omarchy\"\n-    kernel = storage.get(\"kernel\") or (ctx.user_configuration.get(\"kernels\") or [\"linux\"])[0]\n+    kernel = storage.get(\"kernel\") or (ctx.user_configuration.get(\"kernels\") or [\"linux-omarchy\"])[0]\n \n     if arch.has_uefi():\n         limine_binary = esp_mount / boot.get(\"esp_path\", \"/EFI/limine\").lstrip(\"/\") / boot.get(\"efi_binary\", \"limine_x64.efi\")"
+    },
+    {
+      "sha": "773e4196d2e96697cbece1d7c8b54f2bf78f6cd9",
+      "filename": "test/unit/test_kernel_selection.py",
+      "status": "added",
+      "additions": 82,
+      "deletions": 0,
+      "changes": 82,
+      "blob_url": "https://github.com/omacom/omarchy-iso/blob/b507a20b7e0406cd10779ca332105f9a89754731/test%2Funit%2Ftest_kernel_selection.py",
+      "raw_url": "https://github.com/omacom/omarchy-iso/raw/b507a20b7e0406cd10779ca332105f9a89754731/test%2Funit%2Ftest_kernel_selection.py",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-iso/contents/test%2Funit%2Ftest_kernel_selection.py?ref=b507a20b7e0406cd10779ca332105f9a89754731",
+      "patch": "@@ -0,0 +1,82 @@\n+\"\"\"Fresh installs use the Omarchy kernel, except for T2 Macs.\"\"\"\n+\n+import os\n+import re\n+import subprocess\n+import sys\n+import tempfile\n+import types\n+import unittest\n+from pathlib import Path\n+from unittest import mock\n+\n+ROOT = Path(__file__).resolve().parents[2]\n+sys.path.insert(0, str(ROOT / \"configs/airootfs/usr/share/omarchy-iso\"))\n+sys.modules.setdefault(\n+    \"orchestrator.archinstall_adapter\",\n+    types.ModuleType(\"orchestrator.archinstall_adapter\"),\n+)\n+from orchestrator import phases_impl  # noqa: E402\n+\n+\n+class KernelSelectionTest(unittest.TestCase):\n+    def test_hardware_detection(self):\n+        # Run the configurator's actual probe without starting its disk wizard.\n+        configurator = (ROOT / \"configs/airootfs/root/configurator\").read_text()\n+        probe = re.search(r\"^detect_kernel\\(\\) \\{\\n.*?^\\}\", configurator, re.M | re.S)\n+        self.assertIsNotNone(probe)\n+        cases = [\n+            (\"00:02.0 VGA compatible controller [0300]: Intel [8086:b080]\", \"linux-omarchy\"),\n+            (\"00:01.0 Ethernet controller [0200]: Apple [106b:2001]\", \"linux-omarchy\"),\n+            (\"04:00.0 Mass storage controller [0180]: Apple [106b:1801]\", \"linux-t2\"),\n+            (\"04:00.0 Mass storage controller [0180]: Apple [106b:1802]\", \"linux-t2\"),\n+            (\"\", \"linux-omarchy\"),\n+        ]\n+        for devices, expected in cases:\n+            with self.subTest(devices=devices):\n+                result = subprocess.run(\n+                    [\"bash\", \"-c\", 'lspci() { printf \"%s\\\\n\" \"$TEST_PCI\"; }\\n'\n+                     + probe.group() + \"\\ndetect_kernel\"],\n+                    env={**os.environ, \"TEST_PCI\": devices},\n+                    check=True, capture_output=True, text=True,\n+                )\n+                self.assertEqual(result.stdout.strip(), expected)\n+\n+    def test_boot_validation_uses_default_or_explicit_kernel(self):\n+        for storage, configuration, expected in [\n+            ({}, {}, \"linux-omarchy\"),\n+            ({}, {\"kernels\": [\"linux-t2\"]}, \"linux-t2\"),\n+            ({\"kernel\": \"linux-t2\"}, {\"kernels\": [\"linux-omarchy\"]}, \"linux-t2\"),\n+            ({}, {\"kernels\": [\"linux-lts\"]}, \"linux-lts\"),\n+        ]:\n+            with self.subTest(kernel=expected, storage=storage), tempfile.TemporaryDirectory() as tmp:\n+                target = Path(tmp)\n+                files = {\n+                    \"boot/limine.conf\": \"/Omarchy\\n\",\n+                    \"etc/kernel/cmdline\": \"root=UUID=test\\n\",\n+                    \"etc/default/limine\": \"CUSTOM_UKI_NAME=omarchy\\n\",\n+                    \"boot/EFI/limine/limine_x64.efi\": \"bootloader\",\n+                    f\"boot/EFI/Linux/omarchy_{expected}.efi\": \"UKI\",\n+                }\n+                for name, content in files.items():\n+                    path = target / name\n+                    path.parent.mkdir(parents=True, exist_ok=True)\n+                    path.write_text(content)\n+                ctx = types.SimpleNamespace(\n+                    target=target, omarchy_install={\"storage\": storage},\n+                    user_configuration=configuration, encrypt=False,\n+                    is_protected=False, defer_provisioning=False,\n+                )\n+                with mock.patch.object(phases_impl, \"_assert_boot_hooks_restored\"), \\\n+                     mock.patch.object(phases_impl.arch, \"has_uefi\", return_value=True, create=True), \\\n+                     mock.patch.object(phases_impl, \"_read_efibootmgr\", return_value={\n+                         \"entries\": {\"0001\": \"Limine\\tHD(1,GPT,test)\"},\n+                     }):\n+                    phases_impl.validate_boot(ctx)\n+                    (target / f\"boot/EFI/Linux/omarchy_{expected}.efi\").unlink()\n+                    with self.assertRaisesRegex(RuntimeError, \"missing or empty\"):\n+                        phases_impl.validate_boot(ctx)\n+\n+\n+if __name__ == \"__main__\":\n+    unittest.main()"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

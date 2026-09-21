@@ -1,0 +1,45 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11296",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "trackpad-defaults"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "27dbb9a23a2b558b487abfe1e8bd798f547c81c7",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11296,
+  "checked_at": "2026-09-21T11:57:33.966197+00:00",
+  "title": "Document custom MacBook trackpad gestures",
+  "author": "lupinsansei",
+  "head_sha": "27dbb9a23a2b558b487abfe1e8bd798f547c81c7",
+  "base_sha": "b5589faaf80c6f87c07d4560fca37c4a81722f28",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-11T09:16:54Z",
+  "state": "open",
+  "body": "## Summary\n\n- Document optional three-finger swipe up/down gestures for fullscreen and restoring the focused window.\n- Clarify that the existing horizontal three-finger gesture changes workspaces.\n\nThis gives MacBook users a small, useful customization recipe while keeping the behavior explicitly optional.\n\n## Testing\n\n- `git diff --check`\n- Reviewed the rendered Markdown structure and Lua example.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "5b5015390644357d5d38a409baa2b9efcaeb77c4",
+      "filename": "manual/34-keyboard-mouse-trackpad.md",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/27dbb9a23a2b558b487abfe1e8bd798f547c81c7/manual%2F34-keyboard-mouse-trackpad.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/27dbb9a23a2b558b487abfe1e8bd798f547c81c7/manual%2F34-keyboard-mouse-trackpad.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F34-keyboard-mouse-trackpad.md?ref=27dbb9a23a2b558b487abfe1e8bd798f547c81c7",
+      "patch": "@@ -55,6 +55,28 @@ You can also turn on [touchpad gestures](https://wiki.hypr.land/Configuring/Adva\n hl.gesture({ fingers = 3, direction = \"horizontal\", action = \"workspace\" })\n ```\n \n+For a MacBook-style setup, you can also use three-finger swipes to fullscreen the focused window and restore it:\n+\n+```lua\n+hl.gesture({\n+  fingers = 3,\n+  direction = \"up\",\n+  action = function()\n+    hl.dispatch(hl.dsp.window.fullscreen({ mode = \"fullscreen\", action = \"set\" }))\n+  end,\n+})\n+\n+hl.gesture({\n+  fingers = 3,\n+  direction = \"down\",\n+  action = function()\n+    hl.dispatch(hl.dsp.window.fullscreen({ mode = \"fullscreen\", action = \"unset\" }))\n+  end,\n+})\n+```\n+\n+These gestures are optional. The up and down actions apply to the focused window, while the horizontal gesture changes workspaces.\n+\n On Dell XPS laptops with a haptic touchpad, you can also set the click strength to low, mid, or high under _Trigger > Hardware > Touchpad Haptics_.\n \n ### Typing in Chinese, Japanese, and other languages"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,134 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10808",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "pci-detection"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "state": "closed"
+    },
+    {
+      "head_sha": "7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "state": "closed",
+      "updated_at": "2026-09-16T08:24:40Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10808,
+  "checked_at": "2026-09-21T11:56:58.646110+00:00",
+  "title": "Share one sysfs T2 helper for packages and arch-mact2",
+  "author": "Chessing234",
+  "head_sha": "7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T08:24:40Z",
+  "state": "closed",
+  "body": "## Summary\n- `fix-t2.sh` and `hardware/pacman.sh` both grepped `lspci -nn` for Apple 106b:1801/1802.\n- New `omarchy-hw-t2` reads sysfs like `omarchy-hw-nvidia`, so we do not SIGPIPE a chatty lspci under pipefail (the #6608 class of bug).\n\n## Test plan\n- [x] `test/shell.d/hw-t2-test.sh`\n- [ ] T2 Mac still gets linux-t2 and the arch-mact2 repo\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "50034968204db3a0e1570677c68c7743c078e383",
+      "filename": "bin/omarchy-hw-t2",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/bin%2Fomarchy-hw-t2",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/bin%2Fomarchy-hw-t2",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-t2?ref=7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "patch": "@@ -0,0 +1,22 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the computer has an Apple T2 security chip.\n+# omarchy:hidden=true\n+\n+# Vendor 106b (Apple), devices 1801/1802. Read cached sysfs IDs rather than\n+# lspci, which reads PCI config space. The chatty lspci | grep -q form also\n+# SIGPIPE'd on a long device list and looked like \"no T2\" under pipefail.\n+\n+pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n+\n+shopt -s nullglob\n+\n+for device in \"$pci_devices_path\"/*; do\n+  [[ -r $device/vendor && -r $device/device ]] || continue\n+  [[ $(<\"$device/vendor\") == \"0x106b\" ]] || continue\n+  case $(<\"$device/device\") in\n+    0x1801 | 0x1802) exit 0 ;;\n+  esac\n+done\n+\n+exit 1"
+    },
+    {
+      "sha": "fb7be59b0df98c719b0f2b0a08611897447e3ada",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 3,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "patch": "@@ -1,6 +1,5 @@\n-# Detect T2 MacBook models using PCI IDs\n-# Vendor: 106b (Apple), Device IDs: 1801 or 1802 (T2 Security Chip)\n-if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+# Detect T2 MacBook models using the T2 PCI IDs (Apple 106b:1801/1802).\n+if omarchy-hw-t2; then\n   echo \"Detected MacBook with T2 chip. Installing support items...\"\n \n   omarchy-pkg-add \\"
+    },
+    {
+      "sha": "0812dea758a23aa52f327c1f5ac4675d323b28ad",
+      "filename": "install/hardware/pacman.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/install%2Fhardware%2Fpacman.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/install%2Fhardware%2Fpacman.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fpacman.sh?ref=7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "patch": "@@ -1,6 +1,6 @@\n # Hardware-specific pacman repository extensions that must survive the final\n # pacman.conf restore.\n-if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+if omarchy-hw-t2; then\n   if ! grep -q '^\\[arch-mact2\\]' /etc/pacman.conf; then\n     cat >> /etc/pacman.conf <<'EOF'\n "
+    },
+    {
+      "sha": "232ae9143cece42d73aaacb869bcb17f26e56e23",
+      "filename": "test/shell.d/hw-t2-test.sh",
+      "status": "added",
+      "additions": 52,
+      "deletions": 0,
+      "changes": 52,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/test%2Fshell.d%2Fhw-t2-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7b174ef52a4d19a9e728cf90f9f5fedb74138b93/test%2Fshell.d%2Fhw-t2-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhw-t2-test.sh?ref=7b174ef52a4d19a9e728cf90f9f5fedb74138b93",
+      "patch": "@@ -0,0 +1,52 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp=$(mktemp -d)\n+trap 'rm -rf \"$tmp\"' EXIT\n+\n+write_pci() {\n+  rm -rf \"$tmp/devices\"\n+  mkdir -p \"$tmp/devices\"\n+  local index=0 spec slot\n+  for spec in \"$@\"; do\n+    slot=$(printf '0000:%02x:00.0' \"$index\")\n+    mkdir -p \"$tmp/devices/$slot\"\n+    printf '%s\\n' \"${spec%%:*}\" >\"$tmp/devices/$slot/vendor\"\n+    printf '%s\\n' \"$(cut -d: -f2 <<<\"$spec\")\" >\"$tmp/devices/$slot/device\"\n+    printf '%s\\n' \"${spec##*:}\" >\"$tmp/devices/$slot/class\"\n+    index=$((index + 1))\n+  done\n+}\n+\n+hw_t2() {\n+  OMARCHY_PCI_DEVICES_PATH=\"$tmp/devices\" \"$ROOT/bin/omarchy-hw-t2\"\n+}\n+\n+write_pci 0x106b:0x1801:0x068000\n+hw_t2 || fail \"T2 chip 1801 is detected\"\n+pass \"Apple T2 device 1801 is detected from sysfs\"\n+\n+write_pci 0x106b:0x1802:0x068000\n+hw_t2 || fail \"T2 chip 1802 is detected\"\n+pass \"Apple T2 device 1802 is detected from sysfs\"\n+\n+write_pci 0x106b:0x1803:0x068000\n+hw_t2 && fail \"a different Apple PCI id is not a T2 chip\"\n+pass \"other Apple PCI functions are not treated as T2\"\n+\n+write_pci\n+hw_t2 && fail \"empty PCI space is not T2\"\n+pass \"a machine with no PCI devices is not T2\"\n+\n+grep -Fq 'omarchy-hw-t2' \"$ROOT/install/hardware/apple/fix-t2.sh\" ||\n+  fail \"T2 package install uses omarchy-hw-t2\"\n+grep -Fq 'omarchy-hw-t2' \"$ROOT/install/hardware/pacman.sh\" ||\n+  fail \"the arch-mact2 repo drop-in uses omarchy-hw-t2\"\n+! grep -q 'lspci' \"$ROOT/install/hardware/apple/fix-t2.sh\" ||\n+  fail \"T2 package install no longer greps lspci\"\n+! grep -q 'lspci' \"$ROOT/install/hardware/pacman.sh\" ||\n+  fail \"the arch-mact2 repo drop-in no longer greps lspci\"\n+pass \"T2 install paths share one sysfs helper\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5694413070",
+      "html_url": "https://github.com/omacom/omarchy/pull/10808#issuecomment-5694413070",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10808",
+      "id": 5694413070,
+      "node_id": "IC_kwDOO0Cobs8AAAABU2nZDg",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-16T08:24:38Z",
+      "updated_at": "2026-09-16T08:24:38Z",
+      "body": "folded into #12076 \u2014 same sysfs hardware detect work, easier as one review.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5694413070/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

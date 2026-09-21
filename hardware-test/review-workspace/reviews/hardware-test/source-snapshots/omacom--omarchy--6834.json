@@ -1,0 +1,197 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6834",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "keyboard-device"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+      "state": "open"
+    },
+    {
+      "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+      "state": "open",
+      "updated_at": "2026-09-12T14:05:31Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 6834,
+  "checked_at": "2026-09-21T11:56:44.464075+00:00",
+  "title": "Ignore T2 headset remotes when switching layouts",
+  "author": "yashranaway",
+  "head_sha": "e342bd48cc1c8639192c64075c450693d8e5a3a2",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T14:05:31Z",
+  "state": "open",
+  "body": "Keep the keyboard-layout widget attached to a keyboard people can type on.\n\n<<< AI wording below >>>\n\n## Problem\n\nT2 Macs expose the headphone jack's inline remote as `apple-headset`, a keyboard-shaped HID device. Hyprland gives it the seat's layout list, so when it is further through that list than the real keyboard, the widget selects and switches the headset instead. The label moves while typed input does not.\n\n## Fix\n\nClassify `apple-headset` alongside the other non-typing devices already excluded from keyboard-layout selection.\n\nThe regression test models the reported T2 seat directly: the headset is on Greek, the real `apple-spi-keyboard` is on English, and filtering must leave the real keyboard as the switch target.\n\nFixes #6833.\n\n## Verification\n\n- `bash test/shell.d/keyboard-layout-test.sh`\n- `bash -n test/shell.d/keyboard-layout-test.sh`\n- `git diff --check`\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2e4adf9cf4c1b4eae7bd5ef749733d5a44cf3412",
+      "filename": "shell/plugins/bar/widgets/KeyboardLayoutModel.js",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 5,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e342bd48cc1c8639192c64075c450693d8e5a3a2/shell%2Fplugins%2Fbar%2Fwidgets%2FKeyboardLayoutModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e342bd48cc1c8639192c64075c450693d8e5a3a2/shell%2Fplugins%2Fbar%2Fwidgets%2FKeyboardLayoutModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fbar%2Fwidgets%2FKeyboardLayoutModel.js?ref=e342bd48cc1c8639192c64075c450693d8e5a3a2",
+      "patch": "@@ -76,14 +76,16 @@ function eventKeyboardName(event) {\n // Hyprland reports more than keyboards as keyboards. fcitx5 binds a virtual one\n // to inject through, which keeps the us layout the input method gave it, and the\n // ACPI power button, lid switch and sleep key each arrive carrying the seat's\n-// layout list without anyone ever typing on them. Both answer to switchxkblayout\n-// and both can hold the main flag, so a widget that reads or switches whatever\n-// the seat hands it ends up describing a button. Leave them out and what remains\n-// is keyboards, which is what the rest of this file can then assume.\n+// layout list without anyone ever typing on them. T2 Macs do the same with the\n+// headphone jack's inline remote, exposed through apple-bce as apple-headset.\n+// They all answer to switchxkblayout and can hold the main flag, so a widget\n+// that reads or switches whatever the seat hands it ends up describing a\n+// button. Leave them out and what remains is keyboards, which is what the rest\n+// of this file can then assume.\n //\n // Missing a name here costs the accuracy the seat had before, never a keyboard:\n // anything unrecognised stays in the list.\n-var UNTYPED_KEYBOARDS = /^(hl-virtual-keyboard|power-button|sleep-button|lid-switch|video-bus)/\n+var UNTYPED_KEYBOARDS = /^(hl-virtual-keyboard|power-button|sleep-button|lid-switch|video-bus|apple-headset)/\n \n function isTypedKeyboard(name) {\n   return !UNTYPED_KEYBOARDS.test(String(name || \"\"))"
+    },
+    {
+      "sha": "c149aa2ca8fdee878aaf85220206c58d5877f87b",
+      "filename": "test/shell.d/keyboard-layout-test.sh",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 0,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e342bd48cc1c8639192c64075c450693d8e5a3a2/test%2Fshell.d%2Fkeyboard-layout-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e342bd48cc1c8639192c64075c450693d8e5a3a2/test%2Fshell.d%2Fkeyboard-layout-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fkeyboard-layout-test.sh?ref=e342bd48cc1c8639192c64075c450693d8e5a3a2",
+      "patch": "@@ -123,6 +123,20 @@ assertEqual(model.isTypedKeyboard('sleep-button'), false, 'a sleep button is not\n assertEqual(model.isTypedKeyboard('hl-virtual-keyboard-1'), false, 'the keyboard an input method injects through is not')\n assertEqual(model.isTypedKeyboard(''), true, 'a keyboard reporting no name is left where it was found')\n \n+// T2 Macs expose the headphone jack's inline remote through apple-bce as a\n+// keyboard. It carries and advances through the seat's layouts, but switching\n+// it changes nothing anyone types. Filtering the actual Hyprland device name\n+// must leave the real keyboard as the target even when the headset is further\n+// through the layout list.\n+const t2Seat = [\n+  { name: 'apple-headset', active_layout_index: 1, active_keymap: 'Greek' },\n+  { name: 'apple-spi-keyboard', active_layout_index: 0, active_keymap: 'English (US)' },\n+]\n+const t2Typed = t2Seat.filter(keyboard => model.isTypedKeyboard(keyboard.name))\n+\n+assertEqual(model.isTypedKeyboard('apple-headset'), false, 'the T2 inline remote is not a keyboard')\n+assertEqual(model.selectKeyboard(t2Typed).name, 'apple-spi-keyboard', 'a T2 layout switch targets the keyboard used for typing')\n+\n // The activelayout event names the keyboard ahead of the layout it moved to,\n // and a description with a comma in it has to survive the split.\n const rawEvent = data => ({ data })"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5332333522",
+      "html_url": "https://github.com/omacom/omarchy/pull/6834#issuecomment-5332333522",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6834",
+      "id": 5332333522,
+      "node_id": "IC_kwDOO0Cobs8AAAABPdTz0g",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-18T18:23:53Z",
+      "updated_at": "2026-08-18T18:23:53Z",
+      "body": "Confirmed on a live MacBookPro16,3. `/proc/bus/input/devices` still has `Name=\"Apple Headset\"` at `05ac:8103`, and it is a `kbd` handler. This is the right exclusion.\n\nI did not re-run the multi-layout click repro here (this machine is on a single layout), so this is a hardware confirm, not a second functional test.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5332333522/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5460910300",
+      "html_url": "https://github.com/omacom/omarchy/pull/6834#issuecomment-5460910300",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6834",
+      "id": 5460910300,
+      "node_id": "IC_kwDOO0Cobs8AAAABRX7g3A",
+      "user": {
+        "login": "yashranaway",
+        "id": 153842990,
+        "node_id": "U_kgDOCSt1Lg",
+        "avatar_url": "https://avatars.githubusercontent.com/u/153842990?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/yashranaway",
+        "html_url": "https://github.com/yashranaway",
+        "followers_url": "https://api.github.com/users/yashranaway/followers",
+        "following_url": "https://api.github.com/users/yashranaway/following{/other_user}",
+        "gists_url": "https://api.github.com/users/yashranaway/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/yashranaway/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/yashranaway/subscriptions",
+        "organizations_url": "https://api.github.com/users/yashranaway/orgs",
+        "repos_url": "https://api.github.com/users/yashranaway/repos",
+        "events_url": "https://api.github.com/users/yashranaway/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/yashranaway/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-29T06:51:17Z",
+      "updated_at": "2026-08-29T06:51:17Z",
+      "body": "Thanks for confirming the device identity on real hardware; it matches the exclusion and test fixture here.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5460910300/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4931429783,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJe-llw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nFilters T2 Mac `apple-headset` HID devices so keyboard layout switching targets a usable keyboard.\n\n**Changes:**\n- Adds `apple-headset` to the non-typing device filter.\n- Adds a regression test modeling a T2 keyboard seat.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated no comments.\n\n| File | Description |\n| ---- | ----------- |\n| `shell/plugins/bar/widgets/KeyboardLayoutModel.js` | Excludes T2 headset remotes from keyboard selection. |\n| `test/shell.d/keyboard-layout-test.sh` | Verifies selection of the real T2 keyboard. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6834#pullrequestreview-4931429783",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6834",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6834#pullrequestreview-4931429783"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6834"
+        }
+      },
+      "submitted_at": "2026-08-13T20:44:02Z",
+      "commit_id": "f179938c35e4d4fdf3374361a936c1f55466559a"
+    }
+  ],
+  "inline": []
+}

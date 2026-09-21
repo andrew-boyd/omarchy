@@ -1,0 +1,81 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9238",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-hibernation"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9238,
+  "checked_at": "2026-09-21T11:57:18.726315+00:00",
+  "title": "Refuse hibernation setup on Apple T2 Macs by default",
+  "author": "spuder",
+  "head_sha": "0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:23Z",
+  "state": "open",
+  "body": "Fixes #9237\n\n## Problem\n\n`omarchy hibernation setup` will happily configure hibernation (swapfile + resume kernel params) on Apple T2 Macs, and the System-menu *Hibernate* entry becomes available once it's set up. But T2 Macs don't reliably survive true hibernate (S4): the T2 controller, which also owns the internal keyboard/trackpad SPI bus, often fails to come back after resuming from a hibernation image, and the machine can hang mid-hibernate and need a hard power-off \u2014 see #9237 for a concrete case with journal evidence, and https://wiki.t2linux.org/state/ for the platform-level confirmation that hibernation isn't supported on T2.\n\nSuspend-to-RAM (S3) is unaffected and already works on T2 via the existing `t2-wifi-suspend` sleep hook, so this only touches hibernation.\n\n## Fix (2 commits)\n\n**1. Block new setups.** Add `bin/omarchy-hw-t2`, a hardware-detection helper following the existing `omarchy-hw-*` convention (same `106b:1801`/`1802` PCI-ID check already used by the other Apple T2 install fixes). `omarchy-hibernation-setup` now refuses by default on T2 hardware, printing an explanation and a link to the t2linux wiki. `--force` still allows setting it up anyway. The check sits after the \"already configured\" early-return, so it's a no-op for anyone who already has hibernation configured, and after the internal `omarchy-system-factory-reset` caller (which already passes `--force`) so re-provisioning an existing T2 setup after factory reset is unaffected.\n\nSince the System-menu *Hibernate* entry is gated on `omarchy-hibernation-available` (which checks for actual swap+resume configuration), this keeps that entry hidden by default on T2 Macs too, not just the setup command \u2014 but **only for machines that haven't configured hibernation yet**.\n\n**2. Clean up existing setups.** Commit 1 alone doesn't help anyone who already ran `omarchy hibernation setup` on a T2 Mac before this fix shipped \u2014 their swapfile/resume config stays in place and Hibernate stays in the menu. Add a migration (`migrations/1788120123.sh`) that runs `omarchy-hibernation-remove` on T2 hardware, reusing its own confirm prompt and no-op-when-unconfigured behavior, so it applies automatically on the next `omarchy update` (or via the login migration notifier for anyone who updates another way).\n\nOne-line caveat added to `manual/36-system-sleep.md` covering both cases.\n\n## Testing\n\n`./test/cli` passes (116/116) after both commits. Manually verified on a real MacBookAir9,1 (T2):\n- `omarchy-hw-t2` correctly detects the hardware.\n- With hibernation already removed, `PATH=<checkout>/bin omarchy-hibernation-setup` (no `--force`) prints the warning and exits without configuring anything.\n- The migration script, run directly against the same machine, correctly no-ops (\"Hibernation is not set up\") since nothing is configured.\n- `omarchy-hibernation-available` exits 1 (unavailable) and the System-menu Hibernate entry is gone.\n\nNo existing test harness mocks hardware detection for `omarchy-hibernation-setup` or migrations, so this doesn't add a new automated regression test for either \u2014 happy to add one if there's a preferred pattern for mocking `omarchy-hw-*` in `test/cli`.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "7db9601383a167cbcb1116488d0884ed513a99c5",
+      "filename": "bin/omarchy-hibernation-setup",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/bin%2Fomarchy-hibernation-setup",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/bin%2Fomarchy-hibernation-setup",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hibernation-setup?ref=0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1",
+      "patch": "@@ -47,6 +47,15 @@ if [[ -f $MKINITCPIO_CONF ]] && grep -q \"^HOOKS+=(resume)$\" \"$MKINITCPIO_CONF\";\n   exit 0\n fi\n \n+if omarchy-hw-t2 && ! $FORCE; then\n+  echo \"Hibernation is unreliable on Apple T2 Macs: the T2 controller often\" >&2\n+  echo \"fails to bring the internal keyboard and trackpad back after resuming\" >&2\n+  echo \"from a hibernation image, and the machine can hang mid-hibernate and\" >&2\n+  echo \"need a hard power-off. See https://wiki.t2linux.org/state/ for details.\" >&2\n+  echo \"Pass --force to set it up anyway.\" >&2\n+  exit 0\n+fi\n+\n if ! $FORCE; then\n   MEM_TOTAL_HUMAN=$(free --human | awk '/Mem/ {print $2}')\n   if ! gum confirm \"Use $MEM_TOTAL_HUMAN on boot drive to make hibernation available?\"; then"
+    },
+    {
+      "sha": "df7ab8992f345e5dace7fd4b4e37f3deb8bda8c5",
+      "filename": "bin/omarchy-hw-t2",
+      "status": "added",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/bin%2Fomarchy-hw-t2",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/bin%2Fomarchy-hw-t2",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-t2?ref=0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1",
+      "patch": "@@ -0,0 +1,5 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the computer has an Apple T2 security chip.\n+\n+lspci -nn | grep -q \"106b:180[12]\""
+    },
+    {
+      "sha": "7415581fb63175de51a0aa38c80d4e9de23804a4",
+      "filename": "manual/36-system-sleep.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/manual%2F36-system-sleep.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/manual%2F36-system-sleep.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F36-system-sleep.md?ref=0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1",
+      "patch": "@@ -16,4 +16,6 @@ You toggle suspend by running `omarchy toggle suspend` from the terminal. That j\n \n You set up hibernation by running `omarchy hibernation setup` from the terminal. Hibernation creates a /swap subvolume on your boot drive the size of your physical RAM allocation, so make sure you have plenty of room to spare. On a 32GB machine, you'll always need 32GB+ free for this volume. Hibernation also requires the default Limine bootloader.\n \n+On Apple T2 Macs, `omarchy hibernation setup` refuses by default: the T2 controller often fails to bring the internal keyboard and trackpad back after resuming from a hibernation image, and the machine can hang mid-hibernate and need a hard power-off. Pass `--force` if you want to set it up anyway. If you had already set up hibernation on a T2 Mac before this warning existed, a migration removes it for you on your next `omarchy update`.\n+\n When set up, you'll see the hibernate option under _System_ (or `Super + Esc`), and then you can see if it works consistently on your system. If not, you can remove it again by running `omarchy hibernation remove`."
+    },
+    {
+      "sha": "e114cc85404c5617771832f97d661f7a2dd27ca6",
+      "filename": "migrations/1788120123.sh",
+      "status": "added",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/migrations%2F1788120123.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1/migrations%2F1788120123.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788120123.sh?ref=0ed5b6cf0bb64ef8b8304d3843c9390026dd18b1",
+      "patch": "@@ -0,0 +1,5 @@\n+echo \"Remove hibernation setup on Apple T2 Macs: it can hang the machine mid-hibernate and needs a hard power-off (https://wiki.t2linux.org/state/)\"\n+\n+if omarchy-hw-t2; then\n+  omarchy-hibernation-remove\n+fi"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

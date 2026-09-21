@@ -1,0 +1,429 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8053",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "brightness-routing"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "0eb09d133634d948e9575827dcc979b2b8263795",
+      "state": "closed"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8053,
+  "checked_at": "2026-09-21T11:56:12.261086+00:00",
+  "title": "Route an all-in-one's built-in panel to the kernel backlight",
+  "author": "Chessing234",
+  "head_sha": "0eb09d133634d948e9575827dcc979b2b8263795",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-17T10:35:09Z",
+  "state": "closed",
+  "body": "Fixes #8015.\n\n`omarchy-brightness-display` picks its backend from the connector name: `eDP`/`LVDS`/`DSI` means the kernel backlight, anything else means DDC/CI. All-in-ones wire their built-in panel to a DisplayPort connector, so it is classified as external, sent to DDC/CI \u2014 which a built-in panel does not answer \u2014 and brightness fails outright. No slider in the Display panel, dead `XF86MonBrightness` keys, and a working backlight device sitting unused in `/sys/class/backlight`.\n\n## What this does\n\nFalls back to the kernel backlight when **both** are true:\n\n1. The connector answers no DDC display at all (not merely a failed read).\n2. The machine has no connected `eDP`/`LVDS`/`DSI` connector that could own the backlight instead.\n\nBoth halves matter. (1) keeps a real external monitor on DDC \u2014 including one plugged into the same all-in-one, which the reporter's monitor-count version could not. (2) keeps a laptop's DDC-less external monitor failing rather than silently moving the laptop's own panel while the user is asking for the other one.\n\nTo make (1) possible, `omarchy-brightness-display-ddc` now exits 3 for \"this connector answers no DDC display\" and keeps 1 for a transient read failure. It already tracked that difference internally to decide what to negative-cache; it just could not report it. Along the way, `read -r bus current maximum < <(read_brightness)` reported the `read` builtin's status rather than `read_brightness`'s, so no status could have escaped that function anyway.\n\nConnectors are read from DRM (`OMARCHY_DRM_PATH`, the way `omarchy-hw-external-monitors` already does) rather than by counting Hyprland outputs \u2014 Hyprland invents a `FALLBACK` output when every monitor is disabled, so an output count is not a count of panels (#8027).\n\n## Verification\n\n`test/shell.d/brightness-display-test.sh` gained DRM fixtures for both machine shapes and five cases:\n\n| Shape | Connector | Backend |\n|---|---|---|\n| All-in-one, no eDP | `DP-1`, no DDC display | kernel backlight |\n| All-in-one, no eDP | `DP-1`, no DDC display, `60%` | `brightnessctl set 60%` |\n| All-in-one + external | `DP-2`, answers DDC | DDC |\n| Laptop (eDP present) | `DP-2`, no DDC display | fails, as before |\n| All-in-one, no eDP | `DP-1`, transient read failure | fails, retried later |\n\nAll 16 assertions in that file pass, plus `monitor-state-test` and `bin-style-test`. Reverting only the `bin/` changes makes the first new case fail, so the tests have teeth.\n\nNot run: this machine has no Hyprland/Quickshell, so the Display panel was not opened and no real DDC or backlight hardware was touched \u2014 the evidence above is stub-level, and the reporter offered to test a patch on the affected iMac.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2ecf779e4d0a0fcb5769653dbc2a93a078c1c0ad",
+      "filename": "bin/omarchy-brightness-display",
+      "status": "modified",
+      "additions": 72,
+      "deletions": 34,
+      "changes": 106,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0eb09d133634d948e9575827dcc979b2b8263795/bin%2Fomarchy-brightness-display",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0eb09d133634d948e9575827dcc979b2b8263795/bin%2Fomarchy-brightness-display",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display?ref=0eb09d133634d948e9575827dcc979b2b8263795",
+      "patch": "@@ -6,6 +6,11 @@\n \n no_osd=0\n monitor=\"\"\n+drm_path=\"${OMARCHY_DRM_PATH:-/sys/class/drm}\"\n+\n+# omarchy-brightness-display-ddc's \"this connector answers no DDC display\",\n+# as opposed to a transient read failure worth retrying.\n+no_ddc_display=3\n \n while (( $# > 0 )); do\n   case \"$1\" in\n@@ -35,6 +40,29 @@ monitor_is_internal() {\n   [[ $monitor =~ ^(eDP|LVDS|DSI)- ]]\n }\n \n+# All-in-ones wire their built-in panel to a DisplayPort connector, so its\n+# output name carries no hint that it is internal and the panel gets routed to\n+# DDC/CI, which a built-in panel does not answer. The kernel backlight is the\n+# right target there -- but only on a machine with no eDP/LVDS/DSI connector to\n+# own that backlight instead, or a laptop's DDC-less external monitor would move\n+# the laptop's own panel. Read the connectors rather than counting Hyprland\n+# outputs: Hyprland invents a FALLBACK output when every monitor is disabled.\n+machine_has_internal_connector() {\n+  local status\n+\n+  for status in \"$drm_path\"/card*-*/status; do\n+    [[ -e $status ]] || continue\n+    [[ $status =~ -(eDP|LVDS|DSI)-[^/]+/status$ ]] || continue\n+    [[ $(<\"$status\") == \"connected\" ]] && return 0\n+  done\n+\n+  return 1\n+}\n+\n+backlight_owns_named_monitor() {\n+  ! machine_has_internal_connector && omarchy-hw-display >/dev/null 2>&1\n+}\n+\n use_apple_display() {\n   omarchy-hyprland-monitor-focused-apple \"$monitor\"\n }\n@@ -49,7 +77,9 @@ if (( $# == 0 )); then\n     exit\n   elif use_ddc_display; then\n     omarchy-brightness-display-ddc \"$monitor\"\n-    exit\n+    ddc_status=$?\n+    (( ddc_status == 0 )) && exit 0\n+    (( ddc_status == no_ddc_display )) && backlight_owns_named_monitor || exit 1\n   fi\n \n   device=\"$(omarchy-hw-display)\" || exit 1\n@@ -82,41 +112,49 @@ if use_apple_display; then\n   else\n     omarchy-brightness-display-apple \"$step\"\n   fi\n-elif use_ddc_display; then\n-  brightness=\"$(omarchy-brightness-display-ddc \"$monitor\" \"$step\")\" || exit 1\n-  (( no_osd )) || omarchy-osd -i brightness -p \"$brightness\"\n-else\n-  # Current device highlighted\n-  device=\"$(omarchy-hw-display)\" || exit 1\n+  exit\n+fi\n \n-  # Current brightness percentage\n-  current=$(backlight_brightness \"$device\") || exit 1\n-\n-  # Apply non-uniform step size: 1% steps if at or below 5%, otherwise set an\n-  # absolute target percentage to avoid raw backlight rounding causing uneven OSD steps.\n-  if [[ $step == \"+5%\" ]]; then\n-    if (( current < 5 )); then\n-      (( target = current + 1 ))\n-    else\n-      (( target = current + 5 ))\n-    fi\n-\n-    (( target > 100 )) && target=100\n-    step=\"$target%\"\n-  elif [[ $step == \"5%-\" ]]; then\n-    if (( current <= 5 )); then\n-      (( target = current - 1 ))\n-    else\n-      (( target = current - 5 ))\n-    fi\n-\n-    (( target < 1 )) && target=1\n-    step=\"$target%\"\n+if use_ddc_display; then\n+  brightness=\"$(omarchy-brightness-display-ddc \"$monitor\" \"$step\")\"\n+  ddc_status=$?\n+  if (( ddc_status == 0 )); then\n+    (( no_osd )) || omarchy-osd -i brightness -p \"$brightness\"\n+    exit 0\n   fi\n+  (( ddc_status == no_ddc_display )) && backlight_owns_named_monitor || exit 1\n+fi\n \n-  # Set brightness of the display device.\n-  brightnessctl -d \"$device\" set \"$step\" >/dev/null\n+# Current device highlighted\n+device=\"$(omarchy-hw-display)\" || exit 1\n \n-  # Show the new brightness in OSD\n-  (( no_osd )) || omarchy-osd -i brightness -p \"$(backlight_brightness \"$device\")\"\n+# Current brightness percentage\n+current=$(backlight_brightness \"$device\") || exit 1\n+\n+# Apply non-uniform step size: 1% steps if at or below 5%, otherwise set an\n+# absolute target percentage to avoid raw backlight rounding causing uneven OSD steps.\n+if [[ $step == \"+5%\" ]]; then\n+  if (( current < 5 )); then\n+    (( target = current + 1 ))\n+  else\n+    (( target = current + 5 ))\n+  fi\n+\n+  (( target > 100 )) && target=100\n+  step=\"$target%\"\n+elif [[ $step == \"5%-\" ]]; then\n+  if (( current <= 5 )); then\n+    (( target = current - 1 ))\n+  else\n+    (( target = current - 5 ))\n+  fi\n+\n+  (( target < 1 )) && target=1\n+  step=\"$target%\"\n fi\n+\n+# Set brightness of the display device.\n+brightnessctl -d \"$device\" set \"$step\" >/dev/null\n+\n+# Show the new brightness in OSD\n+(( no_osd )) || omarchy-osd -i brightness -p \"$(backlight_brightness \"$device\")\""
+    },
+    {
+      "sha": "0dee0cf131d3639c1e22ac7bbb4ce0df89949d79",
+      "filename": "bin/omarchy-brightness-display-ddc",
+      "status": "modified",
+      "additions": 16,
+      "deletions": 7,
+      "changes": 23,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0eb09d133634d948e9575827dcc979b2b8263795/bin%2Fomarchy-brightness-display-ddc",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0eb09d133634d948e9575827dcc979b2b8263795/bin%2Fomarchy-brightness-display-ddc",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-brightness-display-ddc?ref=0eb09d133634d948e9575827dcc979b2b8263795",
+      "patch": "@@ -9,6 +9,11 @@ step=\"${2:-}\"\n \n [[ -n $monitor ]] || exit 1\n \n+# Distinguishes \"this connector answers no DDC display\" from a transient read\n+# failure, so a caller can route the connector somewhere else rather than retry\n+# a bus that is never going to appear.\n+no_ddc_display=3\n+\n cache_dir=\"${XDG_RUNTIME_DIR:-/tmp}/omarchy-brightness-display-ddc\"\n cache_name=\"${monitor//[^[:alnum:]_.-]/_}\"\n cache_file=\"$cache_dir/$cache_name.bus\"\n@@ -51,7 +56,7 @@ find_bus() {\n   if [[ $bus == \"unavailable\" ]]; then\n     now=$(date +%s)\n     if [[ $cached_value =~ ^[0-9]+$ ]] && (( now - cached_value < unavailable_cache_seconds )); then\n-      return 1\n+      return \"$no_ddc_display\"\n     fi\n     bus=\"\"\n     rm -f \"$cache_file\"\n@@ -61,7 +66,7 @@ find_bus() {\n     bus=\"$(detect_bus)\" || return 1\n     if [[ ! $bus =~ ^[0-9]+$ ]]; then\n       cache_unavailable\n-      return 1\n+      return \"$no_ddc_display\"\n     fi\n     mkdir -p \"$cache_dir\" 2>/dev/null || true\n     printf '%s\\n' \"$bus\" >\"$cache_file\" 2>/dev/null || true\n@@ -89,7 +94,7 @@ read_brightness() {\n   local now=0\n   local values=\"\"\n \n-  bus=\"$(find_bus)\" || return 1\n+  bus=\"$(find_bus)\" || return $?\n   values=\"$(read_vcp \"$bus\")\" || {\n     rm -f \"$cache_file\"\n     return 1\n@@ -108,7 +113,8 @@ percent=\"\"\n range_cached_at=\"\"\n \n if [[ -z $step ]]; then\n-  read -r bus current maximum < <(read_brightness) || exit 1\n+  brightness=\"$(read_brightness)\" || exit $?\n+  read -r bus current maximum <<<\"$brightness\"\n   [[ -n ${bus:-} && -n ${current:-} && -n ${maximum:-} ]] || exit 1\n   (( percent = (current * 100 + maximum / 2) / maximum ))\n   printf '%s\\n' \"$percent\"\n@@ -130,10 +136,12 @@ if [[ $step =~ ^([0-9]+)%$ ]]; then\n   fi\n \n   if (( ! range_cache_fresh )); then\n-    read -r bus current maximum < <(read_brightness) || exit 1\n+    brightness=\"$(read_brightness)\" || exit $?\n+    read -r bus current maximum <<<\"$brightness\"\n   fi\n elif [[ $step =~ ^\\+([0-9]+)%$ ]]; then\n-  read -r bus current maximum < <(read_brightness) || exit 1\n+  brightness=\"$(read_brightness)\" || exit $?\n+  read -r bus current maximum <<<\"$brightness\"\n   [[ -n ${bus:-} && -n ${current:-} && -n ${maximum:-} ]] || exit 1\n   (( percent = (current * 100 + maximum / 2) / maximum ))\n   amount=\"${BASH_REMATCH[1]}\"\n@@ -143,7 +151,8 @@ elif [[ $step =~ ^\\+([0-9]+)%$ ]]; then\n     (( target = percent + amount ))\n   fi\n elif [[ $step =~ ^([0-9]+)%-$ ]]; then\n-  read -r bus current maximum < <(read_brightness) || exit 1\n+  brightness=\"$(read_brightness)\" || exit $?\n+  read -r bus current maximum <<<\"$brightness\"\n   [[ -n ${bus:-} && -n ${current:-} && -n ${maximum:-} ]] || exit 1\n   (( percent = (current * 100 + maximum / 2) / maximum ))\n   amount=\"${BASH_REMATCH[1]}\""
+    },
+    {
+      "sha": "3820df56813249e93aa89a23f021fd52df33b567",
+      "filename": "test/shell.d/brightness-display-test.sh",
+      "status": "modified",
+      "additions": 69,
+      "deletions": 1,
+      "changes": 70,
+      "blob_url": "https://github.com/omacom/omarchy/blob/0eb09d133634d948e9575827dcc979b2b8263795/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/0eb09d133634d948e9575827dcc979b2b8263795/test%2Fshell.d%2Fbrightness-display-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbrightness-display-test.sh?ref=0eb09d133634d948e9575827dcc979b2b8263795",
+      "patch": "@@ -53,8 +53,27 @@ SH\n \n chmod +x \"$mock_bin\"/*\n \n+# Machine shape, as the kernel presents it. A laptop owns its backlight through\n+# an eDP connector; an all-in-one wires its built-in panel to DisplayPort and has\n+# no internal-named connector at all. The all-in-one gets both topologies, alone\n+# and with a second display attached, so each case runs against the DRM set it\n+# actually describes.\n+drm_laptop=\"$test_tmp/drm-laptop\"\n+drm_aio=\"$test_tmp/drm-aio\"\n+drm_aio_docked=\"$test_tmp/drm-aio-docked\"\n+mkdir -p \"$drm_laptop/card1-eDP-1\" \"$drm_laptop/card1-DP-2\" \\\n+  \"$drm_aio/card1-DP-1\" \"$drm_aio/card1-DP-2\" \\\n+  \"$drm_aio_docked/card1-DP-1\" \"$drm_aio_docked/card1-DP-2\"\n+printf 'connected\\n' >\"$drm_laptop/card1-eDP-1/status\"\n+printf 'connected\\n' >\"$drm_laptop/card1-DP-2/status\"\n+printf 'connected\\n' >\"$drm_aio/card1-DP-1/status\"\n+printf 'disconnected\\n' >\"$drm_aio/card1-DP-2/status\"\n+printf 'connected\\n' >\"$drm_aio_docked/card1-DP-1/status\"\n+printf 'connected\\n' >\"$drm_aio_docked/card1-DP-2/status\"\n+\n run_brightness() {\n-  CALL_LOG=\"$call_log\" XDG_RUNTIME_DIR=\"$runtime_dir\" PATH=\"$mock_bin:$ROOT/bin:$PATH\" \\\n+  CALL_LOG=\"$call_log\" XDG_RUNTIME_DIR=\"$runtime_dir\" OMARCHY_DRM_PATH=\"${DRM_PATH:-$drm_laptop}\" \\\n+    PATH=\"$mock_bin:$ROOT/bin:$PATH\" \\\n     \"$ROOT/bin/omarchy-brightness-display\" \"$@\"\n }\n \n@@ -144,3 +163,52 @@ if PATH=\"$mock_bin:$PATH\" \"$ROOT/bin/omarchy-hyprland-monitor-focused-apple\"; th\n   fail \"focused non-Apple display is not detected as Apple\"\n fi\n pass \"named Apple display is detected independently of focus\"\n+\n+# An all-in-one's built-in panel is named DP-1 and answers no DDC display, and\n+# the machine has no eDP/LVDS/DSI connector that could own the kernel backlight\n+# instead -- so the backlight is the panel behind that connector.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-9 run_brightness --monitor DP-1) ||\n+  fail \"all-in-one panel falls back to the kernel backlight\" \"the command exited nonzero\"\n+[[ $brightness == \"40\" ]] || fail \"all-in-one panel falls back to the kernel backlight\" \"actual: $brightness\"\n+pass \"a DisplayPort panel with no DDC display uses the kernel backlight\"\n+\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-9 run_brightness --no-osd --monitor DP-1 60%\n+grep -F 'brightnessctl -d mock_backlight set 60%' \"$call_log\" >/dev/null ||\n+  fail \"all-in-one panel sets brightness through the kernel backlight\"\n+pass \"a DisplayPort panel with no DDC display is adjusted through the kernel backlight\"\n+\n+# The same all-in-one with a real external monitor attached and connected: that\n+# one answers DDC, so it keeps using it. Only the connector without a DDC display\n+# falls back.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio_docked\" DDC_CONNECTOR=DP-2 run_brightness --monitor DP-2) ||\n+  fail \"an external monitor on an all-in-one still uses DDC\" \"the command exited nonzero\"\n+[[ $brightness == \"50\" ]] || fail \"an external monitor on an all-in-one still uses DDC\" \"actual: $brightness\"\n+pass \"an external monitor that answers DDC still uses DDC\"\n+\n+# The built-in panel of that same docked all-in-one still has to reach the\n+# backlight. A second connected display is not an internal panel, so it cannot\n+# be what the backlight belongs to.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio_docked\" DDC_CONNECTOR=DP-2 run_brightness --monitor DP-1) ||\n+  fail \"a docked all-in-one still drives its own panel\" \"the command exited nonzero\"\n+[[ $brightness == \"40\" ]] || fail \"a docked all-in-one still drives its own panel\" \"actual: $brightness\"\n+pass \"an all-in-one panel keeps the kernel backlight with a second display connected\"\n+\n+# A laptop's DDC-less external monitor must keep failing. Falling back would\n+# move the laptop's own panel while the user is asking for the other one.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+if DRM_PATH=\"$drm_laptop\" DDC_CONNECTOR=DP-9 run_brightness --monitor DP-2 >/dev/null 2>&1; then\n+  fail \"a laptop's DDC-less external monitor does not move the internal backlight\"\n+fi\n+pass \"an external monitor on a machine with an internal panel does not fall back\"\n+\n+# A transient DDC read failure is not \"no display on this connector\", so it must\n+# not fall back either -- the monitor is there and will answer on the next try.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+if DRM_PATH=\"$drm_aio\" DDC_READ_FAIL=1 run_brightness --monitor DP-1 >/dev/null 2>&1; then\n+  fail \"a transient DDC read failure does not fall back to the backlight\"\n+fi\n+pass \"a transient DDC read failure is not treated as a missing DDC display\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5397488379",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#issuecomment-5397488379",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8053",
+      "id": 5397488379,
+      "node_id": "IC_kwDOO0Cobs8AAAABQbci-w",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-24T15:29:31Z",
+      "updated_at": "2026-08-24T15:29:31Z",
+      "body": "fair \u2014 the fixture was not describing the machine the comment claimed. the routing result happens to be the same either way, since the internal-connector scan only looks at eDP/LVDS/DSI, but a case that says \"external monitor attached\" against a disconnected DP-2 could never catch a change that reads the connected set.\n\nsplit the all-in-one DRM tree into two, alone and docked with DP-2 connected, and each case now runs against the set it names.\n\nalso added the one your note implied: the built-in panel of the docked machine still has to reach the backlight. a second connected display is not an internal panel, so it cannot be what the backlight belongs to \u2014 nothing was checking that. 17 assertions now, green with the fix and red on the first new case without it.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5397488379/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5560636971",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#issuecomment-5560636971",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8053",
+      "id": 5560636971,
+      "node_id": "IC_kwDOO0Cobs8AAAABS3CWKw",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-06T16:38:46Z",
+      "updated_at": "2026-09-06T16:38:46Z",
+      "body": "@dhh @ryanrhughes ready for review",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5560636971/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5712935851",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#issuecomment-5712935851",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8053",
+      "id": 5712935851,
+      "node_id": "IC_kwDOO0Cobs8AAAABVIR7qw",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-17T10:35:07Z",
+      "updated_at": "2026-09-17T10:35:07Z",
+      "body": "folded into #12267 for easier review.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5712935851/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5009197012,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKpJH1A",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nRoutes DDC-less all-in-one panels to the kernel backlight while preserving DDC routing for external displays.\n\n**Changes:**\n- Adds DDC absence status handling and kernel-backlight fallback.\n- Detects internal connectors through DRM.\n- Adds topology and failure-path tests.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 3 changed files in this pull request and generated 1 comment.\n\n| File | Description |\n| ---- | ----------- |\n| `bin/omarchy-brightness-display` | Adds DRM-aware backlight fallback routing. |\n| `bin/omarchy-brightness-display-ddc` | Distinguishes absent DDC displays from read failures. |\n| `test/shell.d/brightness-display-test.sh` | Adds all-in-one and failure-path fixtures. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#pullrequestreview-5009197012",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8053",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8053#pullrequestreview-5009197012"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8053"
+        }
+      },
+      "submitted_at": "2026-08-24T14:52:01Z",
+      "commit_id": "ed2677d32788acab2ec00c8dee2e163223748b16"
+    },
+    {
+      "id": 5014856590,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKuijjg",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?u=494ceae433b97f20de206463a10840158da96dea&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#pullrequestreview-5014856590",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8053",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8053#pullrequestreview-5014856590"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8053"
+        }
+      },
+      "submitted_at": "2026-08-25T04:10:22Z",
+      "commit_id": "0eb09d133634d948e9575827dcc979b2b8263795"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3844622949",
+      "pull_request_review_id": 5009197012,
+      "id": 3844622949,
+      "node_id": "PRRC_kwDOO0Cobs7lKEpl",
+      "diff_hunk": "@@ -144,3 +156,42 @@ if PATH=\"$mock_bin:$PATH\" \"$ROOT/bin/omarchy-hyprland-monitor-focused-apple\"; th\n   fail \"focused non-Apple display is not detected as Apple\"\n fi\n pass \"named Apple display is detected independently of focus\"\n+\n+# An all-in-one's built-in panel is named DP-1 and answers no DDC display, and\n+# the machine has no eDP/LVDS/DSI connector that could own the kernel backlight\n+# instead -- so the backlight is the panel behind that connector.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-9 run_brightness --monitor DP-1) ||\n+  fail \"all-in-one panel falls back to the kernel backlight\" \"the command exited nonzero\"\n+[[ $brightness == \"40\" ]] || fail \"all-in-one panel falls back to the kernel backlight\" \"actual: $brightness\"\n+pass \"a DisplayPort panel with no DDC display uses the kernel backlight\"\n+\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-9 run_brightness --no-osd --monitor DP-1 60%\n+grep -F 'brightnessctl -d mock_backlight set 60%' \"$call_log\" >/dev/null ||\n+  fail \"all-in-one panel sets brightness through the kernel backlight\"\n+pass \"a DisplayPort panel with no DDC display is adjusted through the kernel backlight\"\n+\n+# The same all-in-one with a real external monitor attached: that one answers\n+# DDC, so it keeps using it. Only the connector without a DDC display falls back.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-2 run_brightness --monitor DP-2) ||\n+  fail \"an external monitor on an all-in-one still uses DDC\" \"the command exited nonzero\"\n+[[ $brightness == \"50\" ]] || fail \"an external monitor on an all-in-one still uses DDC\" \"actual: $brightness\"",
+      "path": "test/shell.d/brightness-display-test.sh",
+      "commit_id": "0eb09d133634d948e9575827dcc979b2b8263795",
+      "original_commit_id": "ed2677d32788acab2ec00c8dee2e163223748b16",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The fixture still marks `card1-DP-2/status` as `disconnected`, so this case does not exercise the \u201call-in-one with a real external monitor attached\u201d topology described above it. Mark DP-2 connected for this case (and restore it afterward) so the test can catch routing changes that depend on the connected DRM set.",
+      "created_at": "2026-08-24T14:52:00Z",
+      "updated_at": "2026-08-24T14:52:01Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#discussion_r3844622949",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8053",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3844622949"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8053#discussion_r3844622949"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8053"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3844622949/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 185,
+      "original_start_line": 177,
+      "start_side": "RIGHT",
+      "line": 188,
+      "original_line": 180,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 47,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3849492086",
+      "pull_request_review_id": 5014856590,
+      "id": 3849492086,
+      "node_id": "PRRC_kwDOO0Cobs7lcpZ2",
+      "diff_hunk": "@@ -144,3 +156,42 @@ if PATH=\"$mock_bin:$PATH\" \"$ROOT/bin/omarchy-hyprland-monitor-focused-apple\"; th\n   fail \"focused non-Apple display is not detected as Apple\"\n fi\n pass \"named Apple display is detected independently of focus\"\n+\n+# An all-in-one's built-in panel is named DP-1 and answers no DDC display, and\n+# the machine has no eDP/LVDS/DSI connector that could own the kernel backlight\n+# instead -- so the backlight is the panel behind that connector.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-9 run_brightness --monitor DP-1) ||\n+  fail \"all-in-one panel falls back to the kernel backlight\" \"the command exited nonzero\"\n+[[ $brightness == \"40\" ]] || fail \"all-in-one panel falls back to the kernel backlight\" \"actual: $brightness\"\n+pass \"a DisplayPort panel with no DDC display uses the kernel backlight\"\n+\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-9 run_brightness --no-osd --monitor DP-1 60%\n+grep -F 'brightnessctl -d mock_backlight set 60%' \"$call_log\" >/dev/null ||\n+  fail \"all-in-one panel sets brightness through the kernel backlight\"\n+pass \"a DisplayPort panel with no DDC display is adjusted through the kernel backlight\"\n+\n+# The same all-in-one with a real external monitor attached: that one answers\n+# DDC, so it keeps using it. Only the connector without a DDC display falls back.\n+rm -rf \"$runtime_dir/omarchy-brightness-display-ddc\"\n+brightness=$(DRM_PATH=\"$drm_aio\" DDC_CONNECTOR=DP-2 run_brightness --monitor DP-2) ||\n+  fail \"an external monitor on an all-in-one still uses DDC\" \"the command exited nonzero\"\n+[[ $brightness == \"50\" ]] || fail \"an external monitor on an all-in-one still uses DDC\" \"actual: $brightness\"",
+      "path": "test/shell.d/brightness-display-test.sh",
+      "commit_id": "0eb09d133634d948e9575827dcc979b2b8263795",
+      "original_commit_id": "ed2677d32788acab2ec00c8dee2e163223748b16",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "split the fixture \u2014 there's an AIO-alone tree and a docked one with DP-2 connected.",
+      "created_at": "2026-08-25T04:10:22Z",
+      "updated_at": "2026-08-25T04:10:22Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8053#discussion_r3849492086",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8053",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3849492086"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8053#discussion_r3849492086"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8053"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3849492086/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 185,
+      "original_start_line": 177,
+      "start_side": "RIGHT",
+      "line": 188,
+      "original_line": 180,
+      "side": "RIGHT",
+      "in_reply_to_id": 3844622949,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 47,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

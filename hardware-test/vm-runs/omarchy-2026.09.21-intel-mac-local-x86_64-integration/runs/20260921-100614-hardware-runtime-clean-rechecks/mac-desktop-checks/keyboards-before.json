@@ -1,0 +1,59 @@
+{
+"mice": [
+    {
+        "address": "0x57fb43991b30",
+        "name": "qemu-qemu-usb-tablet",
+        "defaultSpeed": 0.00000,
+        "scrollFactor": -1.00
+    },    {
+        "address": "0x57fb43bb32c0",
+        "name": "virtualps/2-vmware-vmmouse",
+        "defaultSpeed": 0.00000,
+        "scrollFactor": -1.00
+    },    {
+        "address": "0x57fb43c90e50",
+        "name": "virtualps/2-vmware-vmmouse-1",
+        "defaultSpeed": 0.00000,
+        "scrollFactor": -1.00
+    }
+],
+"keyboards": [
+    {
+        "address": "0x57fb43799ca0",
+        "name": "power-button",
+        "rules": "",
+        "model": "",
+        "layout": "us,de",
+        "variant": "",
+        "options": "compose:caps,shift:both_capslock_cancel",
+        "active_layout_index": 0,
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": true,
+        "main": false
+    },    {
+        "address": "0x57fb43c2d4d0",
+        "name": "at-translated-set-2-keyboard",
+        "rules": "",
+        "model": "",
+        "layout": "us,de",
+        "variant": "",
+        "options": "compose:caps,shift:both_capslock_cancel",
+        "active_layout_index": 0,
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": true,
+        "main": true
+    }
+],
+"tablets": [
+
+],
+"touch": [
+
+],
+"switches": [
+
+]
+}
+

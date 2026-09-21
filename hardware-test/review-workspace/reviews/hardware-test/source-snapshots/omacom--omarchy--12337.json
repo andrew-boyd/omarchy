@@ -1,0 +1,164 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12337",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "outside-scope"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12337,
+  "checked_at": "2026-09-21T11:56:58.017853+00:00",
+  "title": "Make night light temperatures configurable in shell.json",
+  "author": "satchlj",
+  "head_sha": "100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+  "base_sha": "9c5482c58dbe4974de337450754885083c91eada",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-18T18:54:25Z",
+  "state": "open",
+  "body": "## What\n\nNight light was hard-coded to 4000K (on) / 6500K (off) in two places: the shell's nightlight service (`shell/plugins/services/nightlight/Service.qml`) and `bin/omarchy-toggle-nightlight`. This adds `nightlight.night` and `nightlight.day` to `shell.json` and reads them from both, so the shell indicator, the IPC toggle, the keybinding and the menu all agree.\n\n```json\n\"nightlight\": { \"night\": 4000, \"day\": 6500 }\n```\n\nDefaults are unchanged, so existing installs behave exactly as before.\n\n## Why\n\nSome of us never want a fully blue screen and use a warm baseline all day (for example day 4000K, night 2700K). Today the only way is to hand-edit two package files, which updates overwrite. Being able to set these in `shell.json`, next to the idle timeouts, is the natural place.\n\n## Semantics\n\n\"Enabled\" now means warmer than both the 6000K identity point *and* the configured day temperature. With the defaults this is identical to the current behaviour (6000 and 6500 both read as off). With a warm day baseline like 4000K, 4000K reads as off and 2700K as on, so the bar indicator and toggle still make sense.\n\nInvalid values (non-integer, outside 1000..20000) or an inverted pair (`night >= day`) fall back to the defaults, so a typo in `shell.json` can't leave the toggle stuck.\n\n`bin/omarchy-toggle-nightlight` resolves the config the same way `shell.qml` does: the user's `~/.config/omarchy/shell.json` when it carries `version: 1`, else `$OMARCHY_PATH/config/omarchy/shell.json`.\n\n## Changes\n\n- `shell/plugins/services/nightlight/NightlightModel.js`: `temperaturesFromConfig()` with validation; `isNightlight(temperature, dayTemperature)`.\n- `shell/plugins/services/nightlight/Service.qml`: read `shell.shellConfig.nightlight`.\n- `bin/omarchy-toggle-nightlight`: same keys via `jq`; toggle decision uses the same threshold.\n- `config/omarchy/shell.json` and the built-in fallback in `shell/shell.qml`: new defaults block.\n- `docs/omarchy-shell.md`: documented under the `shell.json` rules.\n- `test/shell.d/nightlight-test.sh`: model cases for config resolution and the new threshold; CLI cases with a custom `shell.json` (2700/4000) and an inverted pair.\n\n## Testing\n\n`test/shell.d/nightlight-test.sh` passes (22 assertions). `./test/shell` on this branch shows the same failure set as untouched `quattro` on the same machine (macOS host without `magick`, bluetoothctl, etc.); no new failures.\n\nVerified on a MacBook Neo running Omarchy 4.0.1 with `\"nightlight\": {\"night\": 2700, \"day\": 4000}` in `~/.config/omarchy/shell.json`: `omarchy-toggle-nightlight --status` reports 4000K as disabled and 2700K as enabled, the CLI toggle, `omarchy-shell nightlight toggle/enable`, and the stock Super+Ctrl+N binding all move between 2700K and 4000K, and the shell's status matches after each.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e853011a44cbc8f6d3f1be709357d4cc81890aea",
+      "filename": "bin/omarchy-toggle-nightlight",
+      "status": "modified",
+      "additions": 38,
+      "deletions": 4,
+      "changes": 42,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/bin%2Fomarchy-toggle-nightlight",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/bin%2Fomarchy-toggle-nightlight",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-toggle-nightlight?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -4,9 +4,43 @@\n # omarchy:args=[--status]\n # omarchy:examples=omarchy toggle nightlight\n \n-ON_TEMP=4000\n-OFF_TEMP=6500\n IDENTITY_TEMP=6000\n+DEFAULT_ON_TEMP=4000\n+DEFAULT_OFF_TEMP=6500\n+\n+# Temperatures live in shell.json (`nightlight.night` / `nightlight.day`), the\n+# same keys the shell's nightlight service reads. The user file replaces the\n+# defaults wholesale when it carries version 1, mirroring shell.qml.\n+shell_config_file() {\n+  local user=\"${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/shell.json\"\n+  if [[ -f $user ]] && jq -e '.version == 1' \"$user\" >/dev/null 2>&1; then\n+    printf '%s\\n' \"$user\"\n+  elif [[ -n ${OMARCHY_PATH:-} && -f $OMARCHY_PATH/config/omarchy/shell.json ]]; then\n+    printf '%s\\n' \"$OMARCHY_PATH/config/omarchy/shell.json\"\n+  fi\n+}\n+\n+configured_temp() {\n+  local key=$1 fallback=$2 file value\n+  file=$(shell_config_file)\n+  [[ -n $file ]] || { printf '%s\\n' \"$fallback\"; return; }\n+  value=$(jq -r --arg key \"$key\" '.nightlight[$key] // empty' \"$file\" 2>/dev/null)\n+  if [[ $value =~ ^[0-9]+$ ]] && (( value >= 1000 && value <= 20000 )); then\n+    printf '%s\\n' \"$value\"\n+  else\n+    printf '%s\\n' \"$fallback\"\n+  fi\n+}\n+\n+ON_TEMP=$(configured_temp night \"$DEFAULT_ON_TEMP\")\n+OFF_TEMP=$(configured_temp day \"$DEFAULT_OFF_TEMP\")\n+if (( ON_TEMP >= OFF_TEMP )); then\n+  ON_TEMP=$DEFAULT_ON_TEMP\n+  OFF_TEMP=$DEFAULT_OFF_TEMP\n+fi\n+# Night light counts as on below both the identity point and the day\n+# temperature, so a warm day baseline still reads as \"off\".\n+ENABLED_BELOW=$(( OFF_TEMP < IDENTITY_TEMP ? OFF_TEMP : IDENTITY_TEMP ))\n \n current_temp() {\n   local output\n@@ -19,7 +53,7 @@ status_json() {\n   local temp enabled\n \n   temp=$(current_temp)\n-  if [[ -n $temp ]] && (( temp < IDENTITY_TEMP )); then\n+  if [[ -n $temp ]] && (( temp < ENABLED_BELOW )); then\n     enabled=true\n   else\n     enabled=false\n@@ -42,7 +76,7 @@ fi\n # Query the current temperature\n CURRENT_TEMP=$(current_temp)\n \n-if [[ -z $CURRENT_TEMP || $CURRENT_TEMP == $OFF_TEMP ]]; then\n+if [[ -z $CURRENT_TEMP ]] || (( CURRENT_TEMP >= ENABLED_BELOW )); then\n   TARGET_TEMP=$ON_TEMP\n else\n   TARGET_TEMP=$OFF_TEMP"
+    },
+    {
+      "sha": "17a30df0f656acdde3ddb5da608683ca1a11e61e",
+      "filename": "config/omarchy/shell.json",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/config%2Fomarchy%2Fshell.json",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/config%2Fomarchy%2Fshell.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/config%2Fomarchy%2Fshell.json?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -4,6 +4,10 @@\n     \"screensaver\": 150,\n     \"lock\": 300\n   },\n+  \"nightlight\": {\n+    \"night\": 4000,\n+    \"day\": 6500\n+  },\n   \"bar\": {\n     \"position\": \"top\",\n     \"transparent\": false,"
+    },
+    {
+      "sha": "558bd95cefe0ea9464241f47aa96a9e57a16b4c5",
+      "filename": "docs/omarchy-shell.md",
+      "status": "modified",
+      "additions": 10,
+      "deletions": 1,
+      "changes": 11,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/docs%2Fomarchy-shell.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/docs%2Fomarchy-shell.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/docs%2Fomarchy-shell.md?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -130,6 +130,10 @@ string on a miss.\n     \"screensaver\": 150,\n     \"lock\": 300\n   },\n+  \"nightlight\": {\n+    \"night\": 4000,\n+    \"day\": 6500\n+  },\n   \"bar\": {\n     \"id\": \"omarchy.bar\",\n     \"position\": \"top\",\n@@ -161,7 +165,12 @@ Rules:\n    First-party non-bar plugins are enabled unless listed in `disabledPlugins[]`.\n 6. `barWidget.allowMultiple: true` in the manifest permits multiple instances.\n 7. `idle.screensaver` and `idle.lock` are seconds since user idle began.\n-8. `version: 1` is required.\n+8. `nightlight.night` and `nightlight.day` are the hyprsunset temperatures\n+   (kelvin) that night light toggles between; defaults 4000 and 6500. Night\n+   light reads as on below both 6000 and `day`, so a warm `day` (say 4000\n+   with `night` 2700) keeps a permanent warm baseline that still toggles.\n+   Invalid or inverted values fall back to the defaults.\n+9. `version: 1` is required.\n \n `config/omarchy/shell.json` describes the fresh-install state. When no\n user `shell.json` exists, defaults are used verbatim. Once the user"
+    },
+    {
+      "sha": "eb2c6f5228bf4d8cfdea90a7d6da88a87836d95c",
+      "filename": "shell/plugins/services/nightlight/NightlightModel.js",
+      "status": "modified",
+      "additions": 35,
+      "deletions": 2,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/shell%2Fplugins%2Fservices%2Fnightlight%2FNightlightModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/shell%2Fplugins%2Fservices%2Fnightlight%2FNightlightModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fservices%2Fnightlight%2FNightlightModel.js?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -2,19 +2,52 @@\n // with bin/omarchy-toggle-nightlight, which applies the same threshold.\n var IDENTITY_TEMPERATURE = 6000\n \n+// Defaults for shell.json `nightlight.night` / `nightlight.day` (kelvin).\n+var DEFAULT_NIGHT_TEMPERATURE = 4000\n+var DEFAULT_DAY_TEMPERATURE = 6500\n+var MIN_TEMPERATURE = 1000\n+var MAX_TEMPERATURE = 20000\n+\n function temperatureFromOutput(output) {\n   var match = String(output === undefined || output === null ? \"\" : output).match(/[0-9]+/)\n   return match ? Number(match[0]) : null\n }\n \n-function isNightlight(temperature) {\n-  return temperature !== null && temperature !== undefined && temperature < IDENTITY_TEMPERATURE\n+function temperatureFromConfig(value, fallback) {\n+  var temp = Number(value)\n+  if (!Number.isInteger(temp) || temp < MIN_TEMPERATURE || temp > MAX_TEMPERATURE) return fallback\n+  return temp\n+}\n+\n+// Resolves the configured night/day pair; invalid or inverted values fall\n+// back to the defaults so a typo in shell.json cannot leave the toggle stuck.\n+function temperaturesFromConfig(config) {\n+  var source = config && typeof config === \"object\" ? config : {}\n+  var night = temperatureFromConfig(source.night, DEFAULT_NIGHT_TEMPERATURE)\n+  var day = temperatureFromConfig(source.day, DEFAULT_DAY_TEMPERATURE)\n+  if (night >= day) {\n+    night = DEFAULT_NIGHT_TEMPERATURE\n+    day = DEFAULT_DAY_TEMPERATURE\n+  }\n+  return { night: night, day: day }\n+}\n+\n+// Night light is on when the screen is warmer than both the identity point\n+// and the configured day temperature, so a warm `day` baseline (for people\n+// who never want a blue screen) still reads as \"off\".\n+function isNightlight(temperature, dayTemperature) {\n+  if (temperature === null || temperature === undefined) return false\n+  var day = temperatureFromConfig(dayTemperature, IDENTITY_TEMPERATURE)\n+  return temperature < Math.min(IDENTITY_TEMPERATURE, day)\n }\n \n if (typeof module !== \"undefined\") {\n   module.exports = {\n     IDENTITY_TEMPERATURE: IDENTITY_TEMPERATURE,\n+    DEFAULT_NIGHT_TEMPERATURE: DEFAULT_NIGHT_TEMPERATURE,\n+    DEFAULT_DAY_TEMPERATURE: DEFAULT_DAY_TEMPERATURE,\n     temperatureFromOutput: temperatureFromOutput,\n+    temperaturesFromConfig: temperaturesFromConfig,\n     isNightlight: isNightlight\n   }\n }"
+    },
+    {
+      "sha": "772dd0c566f88d0fe2e5b9e00a379762ff7dbc28",
+      "filename": "shell/plugins/services/nightlight/Service.qml",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 5,
+      "changes": 13,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/shell%2Fplugins%2Fservices%2Fnightlight%2FService.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/shell%2Fplugins%2Fservices%2Fnightlight%2FService.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fservices%2Fnightlight%2FService.qml?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -8,14 +8,17 @@ Item {\n   // Injected by omarchy-shell (the first-party service loader).\n   property var shell: null\n \n-  // Keep in sync with bin/omarchy-toggle-nightlight, which sets the same\n-  // temperatures for callers outside the shell (keybindings, menu, ssh).\n-  readonly property int nightTemperature: 4000\n-  readonly property int dayTemperature: 6500\n+  // Temperatures come from shell.json `nightlight.night` / `nightlight.day`\n+  // (defaults 4000 / 6500). bin/omarchy-toggle-nightlight reads the same keys\n+  // for callers outside the shell (keybindings, menu, ssh).\n+  readonly property var nightlightConfig: shell && shell.shellConfig && shell.shellConfig.nightlight ? shell.shellConfig.nightlight : ({})\n+  readonly property var temperatures: NightlightModel.temperaturesFromConfig(nightlightConfig)\n+  readonly property int nightTemperature: temperatures.night\n+  readonly property int dayTemperature: temperatures.day\n \n   property bool stateLoaded: false\n   property var temperature: null\n-  readonly property bool enabled: stateLoaded && NightlightModel.isNightlight(temperature)\n+  readonly property bool enabled: stateLoaded && NightlightModel.isNightlight(temperature, dayTemperature)\n \n   property bool hasPendingTemperature: false\n   property int pendingTemperature: 0"
+    },
+    {
+      "sha": "f4a8c8600b22fbacda5c9868b1755fb517e4f5fb",
+      "filename": "shell/shell.qml",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/shell%2Fshell.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/shell%2Fshell.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fshell.qml?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -40,6 +40,10 @@ ShellRoot {\n       screensaver: 150,\n       lock: 300\n     },\n+    nightlight: {\n+      night: 4000,\n+      day: 6500\n+    },\n     bar: {\n       position: \"top\",\n       transparent: false,"
+    },
+    {
+      "sha": "90d56454838552ecd5b84b820ad6a047e55d87d3",
+      "filename": "test/shell.d/nightlight-test.sh",
+      "status": "modified",
+      "additions": 37,
+      "deletions": 0,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/100ea6ae793b13f8dd963bf890b675b7e22bddb2/test%2Fshell.d%2Fnightlight-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/100ea6ae793b13f8dd963bf890b675b7e22bddb2/test%2Fshell.d%2Fnightlight-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fnightlight-test.sh?ref=100ea6ae793b13f8dd963bf890b675b7e22bddb2",
+      "patch": "@@ -13,6 +13,15 @@ assertEqual(nightlight.isNightlight(4000), true, 'nightlight reports warm temper\n assertEqual(nightlight.isNightlight(5999), true, 'nightlight reports warmer-than-identity values as enabled')\n assertEqual(nightlight.isNightlight(6000), false, 'nightlight reports identity temperature as disabled')\n assertEqual(nightlight.isNightlight(null), false, 'nightlight reports unknown temperature as disabled')\n+assertEqual(nightlight.temperaturesFromConfig(undefined).night, 4000, 'nightlight defaults night temperature without config')\n+assertEqual(nightlight.temperaturesFromConfig(undefined).day, 6500, 'nightlight defaults day temperature without config')\n+assertEqual(nightlight.temperaturesFromConfig({ night: 2700, day: 4000 }).night, 2700, 'nightlight reads night temperature from config')\n+assertEqual(nightlight.temperaturesFromConfig({ night: 2700, day: 4000 }).day, 4000, 'nightlight reads day temperature from config')\n+assertEqual(nightlight.temperaturesFromConfig({ night: 'warm', day: 4000 }).night, 4000, 'nightlight ignores a non-numeric night temperature')\n+assertEqual(nightlight.temperaturesFromConfig({ night: 5000, day: 4000 }).day, 6500, 'nightlight falls back when night is not below day')\n+assertEqual(nightlight.isNightlight(4000, 4000), false, 'nightlight reports the configured day temperature as disabled')\n+assertEqual(nightlight.isNightlight(2700, 4000), true, 'nightlight reports below-day temperatures as enabled')\n+assertEqual(nightlight.isNightlight(6000, 6500), false, 'nightlight keeps identity disabled with a default day temperature')\n JS\n \n TMPDIR=$(mktemp -d)\n@@ -53,6 +62,8 @@ nightlight_cli() {\n   PATH=\"$TMPDIR/bin:$PATH\" \\\n   HYPRSUNSET_STATE=\"$STATE\" \\\n   OMARCHY_SHELL_LOG=\"$SHELL_LOG\" \\\n+  XDG_CONFIG_HOME=\"$TMPDIR/config\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n     \"$ROOT/bin/omarchy-toggle-nightlight\" \"$@\"\n }\n \n@@ -90,3 +101,29 @@ if rg -q 'omarchy.indicators' \"$ROOT/bin/omarchy-toggle-nightlight\"; then\n   fail \"nightlight toggle leaves indicator refresh to the nightlight service\"\n fi\n pass \"nightlight toggle leaves indicator refresh to the nightlight service\"\n+\n+# Custom temperatures from shell.json: a warm day baseline that still toggles.\n+mkdir -p \"$TMPDIR/config/omarchy\"\n+jq '.nightlight = { night: 2700, day: 4000 }' \"$ROOT/config/omarchy/shell.json\" >\"$TMPDIR/config/omarchy/shell.json\"\n+\n+[[ $(nightlight_status 4000 | jq -r .enabled) == \"false\" ]] || fail \"nightlight status reports the configured day temperature as disabled\"\n+pass \"nightlight status reports the configured day temperature as disabled\"\n+\n+[[ $(nightlight_status 2700 | jq -r .enabled) == \"true\" ]] || fail \"nightlight status reports the configured night temperature as enabled\"\n+pass \"nightlight status reports the configured night temperature as enabled\"\n+\n+printf '4000\\n' >\"$STATE\"\n+nightlight_cli >/dev/null\n+[[ $(<\"$STATE\") == 2700 ]] || fail \"nightlight toggle warms to the configured night temperature\"\n+pass \"nightlight toggle warms to the configured night temperature\"\n+\n+nightlight_cli >/dev/null\n+[[ $(<\"$STATE\") == 4000 ]] || fail \"nightlight toggle restores the configured day temperature\"\n+pass \"nightlight toggle restores the configured day temperature\"\n+\n+# Inverted or invalid values fall back to the defaults.\n+jq '.nightlight = { night: 5000, day: 4000 }' \"$ROOT/config/omarchy/shell.json\" >\"$TMPDIR/config/omarchy/shell.json\"\n+printf '6500\\n' >\"$STATE\"\n+nightlight_cli >/dev/null\n+[[ $(<\"$STATE\") == 4000 ]] || fail \"nightlight toggle ignores an inverted temperature pair\"\n+pass \"nightlight toggle ignores an inverted temperature pair\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5729284114",
+      "html_url": "https://github.com/omacom/omarchy/pull/12337#issuecomment-5729284114",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12337",
+      "id": 5729284114,
+      "node_id": "IC_kwDOO0Cobs8AAAABVX3wEg",
+      "user": {
+        "login": "sprajs",
+        "id": 5939928,
+        "node_id": "MDQ6VXNlcjU5Mzk5Mjg=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/5939928?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/sprajs",
+        "html_url": "https://github.com/sprajs",
+        "followers_url": "https://api.github.com/users/sprajs/followers",
+        "following_url": "https://api.github.com/users/sprajs/following{/other_user}",
+        "gists_url": "https://api.github.com/users/sprajs/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/sprajs/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/sprajs/subscriptions",
+        "organizations_url": "https://api.github.com/users/sprajs/orgs",
+        "repos_url": "https://api.github.com/users/sprajs/repos",
+        "events_url": "https://api.github.com/users/sprajs/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/sprajs/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-18T11:23:31Z",
+      "updated_at": "2026-09-18T11:23:31Z",
+      "body": "This overlaps the still-open #10430, which also shares Night Light configuration between the CLI and shell but uses `nightlight.temperature`. This PR extends the design to a configurable daytime baseline with `nightlight.night`/`nightlight.day`.\n\nLinking the two so the intended schema and which PR supersedes the other can be settled before merging. The warm-day-baseline test here is a useful distinction to preserve.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5729284114/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

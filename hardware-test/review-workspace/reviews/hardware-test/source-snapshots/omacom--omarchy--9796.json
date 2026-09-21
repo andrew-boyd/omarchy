@@ -1,0 +1,105 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9796",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "external-modes"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9796,
+  "checked_at": "2026-09-21T11:56:23.311875+00:00",
+  "title": "Stop the Apple Studio Display flickering at 5K on T2 Macs",
+  "author": "phedoreanu",
+  "head_sha": "7927f39a8fc45294539d5700ffa8b1101afe4def",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:18Z",
+  "state": "open",
+  "body": "## Problem\n\nPlug an Apple Studio Display into a T2 MacBook Pro with the Radeon Pro (a MacBookPro16,1 here) and it comes up at 5120x2880@60, then flickers, glitches and periodically blacks out. 3840x2160 is stable.\n\nThe display advertises an HBR2 DisplayPort link through its Thunderbolt tunnel (`Reported: 4 0x14` in amdgpu's debugfs). 5K@60 does not fit HBR2 uncompressed, so amdgpu enables DSC, and that HBR2+DSC path is what glitches: `dsc_clock_en` is 1 while it flickers. The panel trains fine at HBR3, where 5K needs no compression. Someone hit the same thing on the same machine and worked it out first: https://discuss.cachyos.org/t/29495\n\n## Fix\n\n`omarchy-hw-apple-display-link` looks for connected connectors whose EDID names a StudioDisplay and writes `4 0x1e` to that connector's `link_settings` in debugfs, which retrains the link at HBR3 right away. If the compositor had already set the 5K mode over the compressed link, it simulates a replug through `trigger_hotplug` so the mode gets set again over the new link. The preferred rate sticks to the connector until reboot, so it survives replugs and suspend.\n\nA oneshot service runs the helper at boot and a udev rule starts it on every DRM hotplug. `fix-t2.sh` installs both on new T2 installs and a migration installs them on existing ones. The helper does nothing without a Studio Display and skips connectors that have no amdgpu debugfs files, so it is inert on other GPUs and other displays.\n\n## Verified\n\nOn the MacBookPro16,1: `Current: 4 0x1e`, `dsc_clock_en` 0, 5120x2880@60 with no flicker since. Putting the link back to HBR2 with DSC on and firing a real hotplug through `trigger_hotplug` had udev start the service and land the display on HBR3 without DSC. Simulated unplug/replug and a suspend cycle kept the preference. Camera, speakers, microphone and brightness through `omarchy brightness display` keep working.\n\n`test/shell.d/apple-display-link-test.sh` runs the helper against a fake sysfs and debugfs tree (pins only connected Studio Displays, leaves other monitors and internal panels alone, replugs only a stream that stayed compressed) and the migration with stubbed `lspci`, `sudo`, `systemctl` and `udevadm` (installs, idempotent, skips non-T2). `./test/cli` and `test/shell.d/t2-hardware-test.sh` pass.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "70c37022960fd02b5366f489642303f115693518",
+      "filename": "bin/omarchy-hw-apple-display-link",
+      "status": "added",
+      "additions": 58,
+      "deletions": 0,
+      "changes": 58,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7927f39a8fc45294539d5700ffa8b1101afe4def/bin%2Fomarchy-hw-apple-display-link",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7927f39a8fc45294539d5700ffa8b1101afe4def/bin%2Fomarchy-hw-apple-display-link",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-display-link?ref=7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "patch": "@@ -0,0 +1,58 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Pin an Apple Studio Display's DisplayPort link to HBR3 so 5K runs without DSC\n+# omarchy:hidden=true\n+# omarchy:requires-sudo=true\n+\n+# The Studio Display advertises an HBR2 link through its Thunderbolt tunnel.\n+# 5120x2880@60 does not fit HBR2 uncompressed, so amdgpu turns on DSC, and that\n+# path flickers and blacks out on the Radeon Pro in T2 MacBooks. The panel\n+# trains fine at HBR3, where 5K needs no compression, so prefer that rate on\n+# every connector carrying a Studio Display.\n+#\n+# The preferred rate sticks to the connector until reboot, across replugs and\n+# suspend, so one pass per connector is enough. Writing it retrains the link at\n+# once; when the compositor had already lit the panel over the compressed link,\n+# a simulated replug makes it set the mode again over the new one.\n+#\n+# Runs as root from omarchy-apple-display-link.service, at boot and on every\n+# DRM hotplug via udev. Without a Studio Display it does nothing.\n+\n+drm_path=\"${OMARCHY_DRM_PATH:-/sys/class/drm}\"\n+debug_path=\"${OMARCHY_DRI_DEBUG_PATH:-/sys/kernel/debug/dri}\"\n+settle=\"${OMARCHY_APPLE_DISPLAY_SETTLE:-2}\"\n+\n+# debugfs is root-only; a test pointing at its own tree needs no privileges.\n+if (( EUID != 0 )) && [[ -z ${OMARCHY_DRI_DEBUG_PATH:-} ]]; then\n+  exec sudo \"$0\" \"$@\"\n+fi\n+\n+shopt -s nullglob\n+\n+for edid in \"$drm_path\"/card*-DP-*/edid; do\n+  connector=${edid%/edid}\n+  [[ $(<\"$connector/status\") == connected ]] || continue\n+  grep -aq StudioDisplay \"$edid\" || continue\n+\n+  name=${connector##*/}\n+  card=${name%%-*}\n+  debug=\"$debug_path/${card#card}/${name#\"$card\"-}\"\n+  [[ -w $debug/link_settings ]] || continue\n+\n+  preferred=$(tr -d '\\0' <\"$debug/link_settings\" |\n+    sed -nE 's/.*Preferred:[[:space:]]+[0-9]+[[:space:]]+(0x[0-9a-fA-F]+).*/\\1/p')\n+  [[ $preferred == 0x1e ]] && continue\n+\n+  echo \"4 0x1e\" >\"$debug/link_settings\"\n+  echo \"$name: DisplayPort link pinned to HBR3\"\n+\n+  # Give a modeset that raced this write time to finish before judging it.\n+  sleep \"$settle\"\n+  [[ $(tr -d '\\0' <\"$debug/dsc_clock_en\") == 1 ]] || continue\n+  echo \"$name: stream still compressed, replugging for a fresh modeset\"\n+  echo 0 >\"$debug/trigger_hotplug\"\n+  sleep 1\n+  echo 1 >\"$debug/trigger_hotplug\"\n+done\n+\n+exit 0"
+    },
+    {
+      "sha": "d3548d5e9b3c64cf516e85d0a3b877d80a425700",
+      "filename": "default/systemd/system/omarchy-apple-display-link.service",
+      "status": "added",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7927f39a8fc45294539d5700ffa8b1101afe4def/default%2Fsystemd%2Fsystem%2Fomarchy-apple-display-link.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7927f39a8fc45294539d5700ffa8b1101afe4def/default%2Fsystemd%2Fsystem%2Fomarchy-apple-display-link.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem%2Fomarchy-apple-display-link.service?ref=7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "patch": "@@ -0,0 +1,15 @@\n+[Unit]\n+Description=Pin the Apple Studio Display DisplayPort link to HBR3\n+# Runs once at boot for a display already attached and again from udev on every\n+# DRM hotplug. Does nothing when no Studio Display is connected.\n+RequiresMountsFor=/sys/kernel/debug\n+# udev fires several DRM change events within milliseconds when the display\n+# comes back through Thunderbolt; the run that sees the connector is a late one.\n+StartLimitIntervalSec=0\n+\n+[Service]\n+Type=oneshot\n+ExecStart=/usr/bin/omarchy-hw-apple-display-link\n+\n+[Install]\n+WantedBy=multi-user.target"
+    },
+    {
+      "sha": "a182eb434f9b5050c63cbb402e147a36f0d77117",
+      "filename": "default/udev/apple-display-link.rules",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7927f39a8fc45294539d5700ffa8b1101afe4def/default%2Fudev%2Fapple-display-link.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7927f39a8fc45294539d5700ffa8b1101afe4def/default%2Fudev%2Fapple-display-link.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Fapple-display-link.rules?ref=7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "patch": "@@ -0,0 +1,3 @@\n+# Apple Studio Display: on every DRM hotplug, pin its DisplayPort link to HBR3 so\n+# 5K runs without DSC, which flickers on amdgpu. See omarchy-hw-apple-display-link.\n+ACTION==\"change\", SUBSYSTEM==\"drm\", ENV{DEVTYPE}==\"drm_minor\", RUN+=\"/usr/bin/systemctl --no-block start omarchy-apple-display-link.service\""
+    },
+    {
+      "sha": "01ef9ba864fb0e55d5cee81c386d038a2883bc60",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7927f39a8fc45294539d5700ffa8b1101afe4def/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7927f39a8fc45294539d5700ffa8b1101afe4def/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "patch": "@@ -47,4 +47,12 @@ high_temp=75\n speed_curve=linear\n always_full_speed=false\n EOF\n+\n+  # The Studio Display flickers at 5K over the HBR2+DSC link amdgpu picks by\n+  # default; the service pins the link to HBR3, where 5K needs no compression.\n+  install -Dm644 \"$OMARCHY_PATH/default/udev/apple-display-link.rules\" \\\n+    /etc/udev/rules.d/90-omarchy-apple-display-link.rules\n+  install -Dm644 \"$OMARCHY_PATH/default/systemd/system/omarchy-apple-display-link.service\" \\\n+    /etc/systemd/system/omarchy-apple-display-link.service\n+  systemctl enable omarchy-apple-display-link.service\n fi"
+    },
+    {
+      "sha": "aa4f2e956890f5ceb6b2f9cd3455af1c095f83fa",
+      "filename": "migrations/1788346426.sh",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7927f39a8fc45294539d5700ffa8b1101afe4def/migrations%2F1788346426.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7927f39a8fc45294539d5700ffa8b1101afe4def/migrations%2F1788346426.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788346426.sh?ref=7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "patch": "@@ -0,0 +1,22 @@\n+echo \"Stop the Apple Studio Display flickering at 5K on T2 Macs\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+unit=\"${OMARCHY_APPLE_DISPLAY_UNIT:-/etc/systemd/system/omarchy-apple-display-link.service}\"\n+rule=\"${OMARCHY_APPLE_DISPLAY_RULE:-/etc/udev/rules.d/90-omarchy-apple-display-link.rules}\"\n+\n+# Both files present is the machine-wide completion state another user's run leaves.\n+if [[ -f $unit && -f $rule ]]; then\n+  exit 0\n+fi\n+\n+# The Studio Display advertises an HBR2 link, 5K@60 only fits HBR2 with DSC, and\n+# that path flickers on amdgpu. The service pins the link to HBR3 at boot and on\n+# every DRM hotplug; see omarchy-hw-apple-display-link.\n+sudo install -Dm644 \"$OMARCHY_PATH/default/udev/apple-display-link.rules\" \"$rule\"\n+sudo install -Dm644 \"$OMARCHY_PATH/default/systemd/system/omarchy-apple-display-link.service\" \"$unit\"\n+sudo systemctl daemon-reload\n+sudo udevadm control --reload\n+sudo systemctl enable --now omarchy-apple-display-link.service"
+    },
+    {
+      "sha": "5eccde9fc8bebe82e4913b0dd2b706877049332d",
+      "filename": "test/shell.d/apple-display-link-test.sh",
+      "status": "added",
+      "additions": 176,
+      "deletions": 0,
+      "changes": 176,
+      "blob_url": "https://github.com/omacom/omarchy/blob/7927f39a8fc45294539d5700ffa8b1101afe4def/test%2Fshell.d%2Fapple-display-link-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/7927f39a8fc45294539d5700ffa8b1101afe4def/test%2Fshell.d%2Fapple-display-link-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-display-link-test.sh?ref=7927f39a8fc45294539d5700ffa8b1101afe4def",
+      "patch": "@@ -0,0 +1,176 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+helper=\"$ROOT/bin/omarchy-hw-apple-display-link\"\n+unit=\"$ROOT/default/systemd/system/omarchy-apple-display-link.service\"\n+rule=\"$ROOT/default/udev/apple-display-link.rules\"\n+fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n+migration=\"$ROOT/migrations/1788346426.sh\"\n+\n+[[ -x $helper ]] || fail \"the Apple display link helper is tracked executable\"\n+grep -Fq 'ExecStart=/usr/bin/omarchy-hw-apple-display-link' \"$unit\" ||\n+  fail \"the service runs the packaged helper\"\n+grep -Fq 'ACTION==\"change\", SUBSYSTEM==\"drm\"' \"$rule\" ||\n+  fail \"the udev rule fires on DRM hotplug\"\n+grep -Fq 'systemctl --no-block start omarchy-apple-display-link.service' \"$rule\" ||\n+  fail \"the udev rule starts the service without blocking udev\"\n+grep -Fq 'default/udev/apple-display-link.rules' \"$fix_t2\" ||\n+  fail \"T2 setup installs the udev rule\"\n+grep -Fq 'default/systemd/system/omarchy-apple-display-link.service' \"$fix_t2\" ||\n+  fail \"T2 setup installs the service\"\n+grep -Fq 'systemctl enable omarchy-apple-display-link.service' \"$fix_t2\" ||\n+  fail \"T2 setup enables the service\"\n+pass \"T2 setup ships the Apple display link service\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+drm=\"$test_tmp/drm\"\n+dri=\"$test_tmp/dri\"\n+\n+debug_dir() {\n+  local name=\"$1\" card=${1%%-*}\n+  printf '%s\\n' \"$dri/${card#card}/${name#\"$card\"-}\"\n+}\n+\n+# A fake connector with the amdgpu debugfs files the helper reads and writes.\n+# debugfs pads its reads with NUL bytes, so the fixtures do too.\n+add_connector() {\n+  local name=\"$1\" status=\"$2\" product=\"$3\" preferred=\"$4\" dsc=\"$5\"\n+  local debug\n+  debug=$(debug_dir \"$name\")\n+  mkdir -p \"$drm/$name\" \"$debug\"\n+  echo \"$status\" >\"$drm/$name/status\"\n+  printf 'edid %s\\0' \"$product\" >\"$drm/$name/edid\"\n+  printf 'Current:  4  0x14  0  Verified:  4  0x14  16  Reported:  4  0x14  16  Preferred:  %s\\n\\0' \"$preferred\" \\\n+    >\"$debug/link_settings\"\n+  printf '%s\\n\\0' \"$dsc\" >\"$debug/dsc_clock_en\"\n+  echo untouched >\"$debug/trigger_hotplug\"\n+}\n+\n+run_helper() {\n+  OMARCHY_DRM_PATH=\"$drm\" OMARCHY_DRI_DEBUG_PATH=\"$dri\" OMARCHY_APPLE_DISPLAY_SETTLE=0 bash \"$helper\"\n+}\n+\n+link_settings() {\n+  tr -d '\\0' <\"$(debug_dir \"$1\")/link_settings\"\n+}\n+\n+trigger_hotplug() {\n+  tr -d '\\0' <\"$(debug_dir \"$1\")/trigger_hotplug\"\n+}\n+\n+add_connector card2-DP-6 connected StudioDisplay \"0  0x0  0\" 1\n+add_connector card2-DP-7 connected StudioDisplay \"4  0x1e  0\" 0\n+add_connector card2-DP-4 connected \"DELL U2723QE\" \"0  0x0  0\" 1\n+add_connector card2-DP-5 disconnected StudioDisplay \"0  0x0  0\" 0\n+add_connector card2-eDP-1 connected StudioDisplay \"0  0x0  0\" 0\n+\n+output=$(run_helper)\n+\n+[[ $(link_settings card2-DP-6) == \"4 0x1e\" ]] ||\n+  fail \"a connected Studio Display on an HBR2 link gets HBR3 preferred\" \"$output\"\n+[[ $(trigger_hotplug card2-DP-6) == 1 ]] ||\n+  fail \"a stream still compressed after the retrain gets a simulated replug\" \"$output\"\n+grep -Fq 'card2-DP-6: DisplayPort link pinned to HBR3' <<<\"$output\" ||\n+  fail \"the helper names the connector it pinned\" \"$output\"\n+[[ $(link_settings card2-DP-7) == Current:* ]] ||\n+  fail \"a link already preferring HBR3 is left alone\"\n+[[ $(trigger_hotplug card2-DP-7) == untouched ]] ||\n+  fail \"a link already preferring HBR3 is not replugged\"\n+[[ $(link_settings card2-DP-4) == Current:* ]] ||\n+  fail \"other monitors keep their link settings\"\n+[[ $(link_settings card2-DP-5) == Current:* ]] ||\n+  fail \"a disconnected Studio Display is left alone\"\n+[[ $(link_settings card2-eDP-1) == Current:* ]] ||\n+  fail \"internal panels are never touched\"\n+pass \"the helper pins HBR3 on connected Studio Displays only\"\n+\n+rm -rf \"$drm\" \"$dri\"\n+add_connector card2-DP-6 connected StudioDisplay \"0  0x0  0\" 0\n+\n+run_helper >/dev/null\n+\n+[[ $(link_settings card2-DP-6) == \"4 0x1e\" ]] ||\n+  fail \"the helper still pins HBR3 when the retrain alone drops DSC\"\n+[[ $(trigger_hotplug card2-DP-6) == untouched ]] ||\n+  fail \"an uncompressed stream after the retrain is not replugged\"\n+pass \"the helper only replugs a stream that stayed compressed\"\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the T2\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no T2 hardware\" (#6608).\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+for tool in systemctl udevadm; do\n+  cat >\"$stub_bin/$tool\" <<SH\n+#!/bin/bash\n+\n+printf '$tool' >>\"\\$TEST_LOG\"\n+printf '\\\\t%s' \"\\$@\" >>\"\\$TEST_LOG\"\n+printf '\\\\n' >>\"\\$TEST_LOG\"\n+SH\n+done\n+\n+chmod +x \"$stub_bin\"/*\n+\n+unit_target=\"$test_tmp/etc/systemd/system/omarchy-apple-display-link.service\"\n+rule_target=\"$test_tmp/etc/udev/rules.d/90-omarchy-apple-display-link.rules\"\n+\n+run_migration() {\n+  PATH=\"$stub_bin:$PATH\" \\\n+    TEST_LOG=\"$calls\" \\\n+    T2_HARDWARE=\"$1\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_APPLE_DISPLAY_UNIT=\"$unit_target\" \\\n+    OMARCHY_APPLE_DISPLAY_RULE=\"$rule_target\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration 1\n+\n+cmp -s \"$unit\" \"$unit_target\" || fail \"the migration installs the shipped service\"\n+cmp -s \"$rule\" \"$rule_target\" || fail \"the migration installs the shipped udev rule\"\n+grep -Fq $'systemctl\\tdaemon-reload' \"$calls\" || fail \"the migration reloads systemd\" \"$(cat \"$calls\")\"\n+grep -Fq $'udevadm\\tcontrol\\t--reload' \"$calls\" || fail \"the migration reloads udev\" \"$(cat \"$calls\")\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-apple-display-link.service' \"$calls\" ||\n+  fail \"the migration enables and starts the service\" \"$(cat \"$calls\")\"\n+pass \"the migration installs the Apple display link service on existing T2 installs\"\n+\n+: >\"$calls\"\n+run_migration 1\n+[[ ! -s $calls ]] || fail \"an already repaired T2 install is left unchanged\" \"$(cat \"$calls\")\"\n+pass \"the migration is idempotent\"\n+\n+rm -rf \"$test_tmp/etc\"\n+: >\"$calls\"\n+run_migration 0\n+[[ ! -e $unit_target && ! -e $rule_target ]] || fail \"non-T2 systems get no Apple display link service\"\n+[[ ! -s $calls ]] || fail \"non-T2 systems skip the repair\" \"$(cat \"$calls\")\"\n+pass \"the migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

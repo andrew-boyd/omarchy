@@ -1,0 +1,128 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10224",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-ethernet"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "e9d011328f230aab529d4020499222eb15343c3c",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10224,
+  "checked_at": "2026-09-21T11:57:15.805633+00:00",
+  "title": "Exclude the internal Apple T2 Ethernet link from automatic wired profiles",
+  "author": "piotrsynowiec",
+  "head_sha": "e9d011328f230aab529d4020499222eb15343c3c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:41:15Z",
+  "state": "closed",
+  "body": "## Problem\n\nOn an Intel T2 MacBookPro16,1 with linux-t2 7.1.8, NetworkManager creates a temporary wired DHCP connection for the internal Apple T2 USB Ethernet link (cdc_ncm, USB 05ac:8233). This link is not an external LAN adapter. Repeated activation attempts fail; the same device also logged repeated transmit watchdog timeouts after resume. We do not claim this configuration change fixes every possible cdc_ncm kernel timeout.\n\nT2 Linux documents excluding this internal connection: https://wiki.t2linux.org/guides/postinstall/\n\n## Change\n\n- Fresh T2 setup installs a NetworkManager `no-auto-default` snippet for the documented fixed internal MAC address.\n- Append to existing exclusions rather than replacing them.\n- A hardware-gated migration installs the same snippet for existing T2 systems.\n- Preserve customized snippets and all saved connection profiles.\n- No interface renaming, driver blacklisting, NetworkManager restart, or changes to USB Ethernet/tethering.\n\n## Migration behavior\n\nThe setting prevents generation of a default profile; it does not disable saved profiles. At reboot, temporary generated profiles disappear and the exclusion takes effect. A user who previously saved such a profile must review its autoconnect setting separately. The migration intentionally does not delete connections based on a localized name such as Wired connection 1.\n\nOn the test machine the active configuration was verified with `NetworkManager --print-config`, loaded without restarting NetworkManager, and the already-existing profile's autoconnect was disabled separately. Wi-Fi remained connected. This local profile edit is not an automated destructive migration.\n\n## Tests\n\nNew executable migration tests cover non-T2 hosts, chatty lspci with pipefail, first install, repeat invocation, customized configuration preservation, and absence of service restarts. The fresh-install path uses the same snippet. `git diff --check` passes.\n\nReboot/resume and physical USB Ethernet/tethering validation remain outstanding; those are explicitly not claimed as tested.\n\nFull suite: `env -u NO_COLOR ./test/all` completed; CLI passes, 226/227 shell test files pass. The remaining existing network-qr test invokes `ip route get` without a stub and exits under sandbox routing restrictions. Initial missing omarchy-pkgs/omarchy-iso checkout failures were resolved by fetching those test dependencies. No unrelated test or product behavior was changed to force a green result.\n\nThe remaining `network-qr-test.sh` passes all seven cases when rerun outside the sandbox with routing access. Thus every test file has passed, though the sandboxed aggregate run itself remains nonzero.\n",
+  "draft": true,
+  "files": [
+    {
+      "sha": "b3b114c75525fe672b91131ac36b782b5a63fe71",
+      "filename": "default/networkmanager/t2-ncm.conf",
+      "status": "added",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9d011328f230aab529d4020499222eb15343c3c/default%2Fnetworkmanager%2Ft2-ncm.conf",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9d011328f230aab529d4020499222eb15343c3c/default%2Fnetworkmanager%2Ft2-ncm.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fnetworkmanager%2Ft2-ncm.conf?ref=e9d011328f230aab529d4020499222eb15343c3c",
+      "patch": "@@ -0,0 +1,5 @@\n+# The Apple T2 internal USB Ethernet link is not a LAN connection.\n+# Its fixed address is documented by https://wiki.t2linux.org/guides/postinstall/\n+# Append rather than replace other no-auto-default exclusions.\n+[main]\n+no-auto-default+=mac:ac:de:48:00:11:22"
+    },
+    {
+      "sha": "e58f9d144f18a0a8f7470acea21a6260035e90b6",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9d011328f230aab529d4020499222eb15343c3c/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9d011328f230aab529d4020499222eb15343c3c/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=e9d011328f230aab529d4020499222eb15343c3c",
+      "patch": "@@ -13,6 +13,13 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n   # Enable T2 fan control\n   systemctl enable t2fanrd.service\n \n+  # Do not create a DHCP connection for the internal T2 USB Ethernet link.\n+  # Keep USB Ethernet adapters and manually configured connections available.\n+  if [[ ! -e /etc/NetworkManager/conf.d/90-omarchy-t2-ncm.conf ]]; then\n+    install -Dm644 \"$OMARCHY_PATH/default/networkmanager/t2-ncm.conf\" \\\n+      /etc/NetworkManager/conf.d/90-omarchy-t2-ncm.conf\n+  fi\n+\n   mkdir -p /etc/modules-load.d\n   {\n     echo \"t2bce_vhci\""
+    },
+    {
+      "sha": "57fb544646e59a2b444d269744abbda36e992a18",
+      "filename": "migrations/1788548210.sh",
+      "status": "added",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9d011328f230aab529d4020499222eb15343c3c/migrations%2F1788548210.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9d011328f230aab529d4020499222eb15343c3c/migrations%2F1788548210.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788548210.sh?ref=e9d011328f230aab529d4020499222eb15343c3c",
+      "patch": "@@ -0,0 +1,15 @@\n+echo \"Prevent automatic wired connections to the internal Apple T2 interface\"\n+\n+# Do not let grep exit early: with pipefail, a chatty lspci can get SIGPIPE.\n+if lspci -nn | grep '106b:180[12]' >/dev/null; then\n+  t2_ncm_conf=${OMARCHY_T2_NCM_CONF:-/etc/NetworkManager/conf.d/90-omarchy-t2-ncm.conf}\n+  if [[ ! -e $t2_ncm_conf ]]; then\n+    sudo install -Dm644 \"$OMARCHY_PATH/default/networkmanager/t2-ncm.conf\" \"$t2_ncm_conf\"\n+  elif ! cmp -s \"$OMARCHY_PATH/default/networkmanager/t2-ncm.conf\" \"$t2_ncm_conf\"; then\n+    echo \"Preserving customized $t2_ncm_conf; review the T2 no-auto-default exclusion.\"\n+  fi\n+  # Avoid interrupting networking during an update. At reboot, NetworkManager\n+  # drops its temporary generated profile and loads this exclusion. Persistent\n+  # profiles are deliberately untouched, even if named 'Wired connection 1'.\n+  echo \"T2 network exclusion applies on reboot; existing saved profiles are unchanged.\"\n+fi"
+    },
+    {
+      "sha": "c11ede79599c0c8ab3e42ada0a8153ffbe8164c6",
+      "filename": "test/shell.d/t2-ncm-test.sh",
+      "status": "added",
+      "additions": 45,
+      "deletions": 0,
+      "changes": 45,
+      "blob_url": "https://github.com/omacom/omarchy/blob/e9d011328f230aab529d4020499222eb15343c3c/test%2Fshell.d%2Ft2-ncm-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/e9d011328f230aab529d4020499222eb15343c3c/test%2Fshell.d%2Ft2-ncm-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-ncm-test.sh?ref=e9d011328f230aab529d4020499222eb15343c3c",
+      "patch": "@@ -0,0 +1,45 @@\n+#!/bin/bash\n+set -euo pipefail\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+mkdir -p \"$test_tmp/bin\"\n+cat > \"$test_tmp/bin/lspci\" <<'EOF'\n+#!/bin/bash\n+if [[ ${TEST_T2:-0} == 1 ]]; then\n+  echo 'Bridge: Apple T2 [106b:1801]'\n+fi\n+for _ in {1..4096}; do echo 'Unrelated device [ffff:0000]'; done\n+EOF\n+cat > \"$test_tmp/bin/sudo\" <<'EOF'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >> \"$TEST_CALLS\"\n+\"$@\"\n+EOF\n+chmod +x \"$test_tmp/bin/\"*\n+export PATH=\"$test_tmp/bin:$PATH\" TEST_CALLS=\"$test_tmp/calls\"\n+export OMARCHY_PATH=\"$ROOT\" OMARCHY_T2_NCM_CONF=\"$test_tmp/conf/t2.conf\"\n+migration=\"$ROOT/migrations/1788548210.sh\"\n+\n+TEST_T2=0 bash -euo pipefail \"$migration\"\n+[[ ! -e $OMARCHY_T2_NCM_CONF && ! -e $TEST_CALLS ]] || fail \"non-T2 host changed\"\n+pass \"non-T2 hosts are untouched\"\n+\n+TEST_T2=1 bash -euo pipefail \"$migration\"\n+cmp \"$ROOT/default/networkmanager/t2-ncm.conf\" \"$OMARCHY_T2_NCM_CONF\"\n+[[ $(stat -c %a \"$OMARCHY_T2_NCM_CONF\") == 644 ]] || fail \"wrong config mode\"\n+[[ $(wc -l < \"$TEST_CALLS\") == 1 ]] || fail \"unexpected privileged operations\"\n+TEST_T2=1 bash -euo pipefail \"$migration\"\n+[[ $(wc -l < \"$TEST_CALLS\") == 1 ]] || fail \"second invocation changed system\"\n+pass \"T2 migration installs once, without restarting networking\"\n+\n+printf '[main]\\nno-auto-default=*\\n' > \"$OMARCHY_T2_NCM_CONF\"\n+TEST_T2=1 bash -euo pipefail \"$migration\"\n+grep -Fxq 'no-auto-default=*' \"$OMARCHY_T2_NCM_CONF\" || fail \"custom config overwritten\"\n+[[ $(wc -l < \"$TEST_CALLS\") == 1 ]] || fail \"custom config modified\"\n+pass \"customized configuration and saved connection profiles are preserved\"\n+\n+grep -Fxq 'no-auto-default+=mac:ac:de:48:00:11:22' \"$ROOT/default/networkmanager/t2-ncm.conf\" || fail \"exclusion must append only the T2 address\"\n+grep -Fq '\"$OMARCHY_PATH/default/networkmanager/t2-ncm.conf\"' \"$ROOT/install/hardware/apple/fix-t2.sh\" || fail \"fresh installs missing exclusion\"\n+pass \"fresh installs share the narrowly scoped exclusion\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758449698",
+      "html_url": "https://github.com/omacom/omarchy/pull/10224#issuecomment-5758449698",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10224",
+      "id": 5758449698,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzr4Ig",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:41:14Z",
+      "updated_at": "2026-09-21T09:41:14Z",
+      "body": "Automated duplication check: this pull request looks similar to #8204, which covers the same T2 NCM link exclusion. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758449698/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

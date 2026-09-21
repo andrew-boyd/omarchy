@@ -1,0 +1,1085 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7410",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-installation"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7410,
+  "checked_at": "2026-09-21T11:57:21.189802+00:00",
+  "title": "Point T2 overlay Limine at /boot/efi and write linux-t2",
+  "author": "twfyke",
+  "head_sha": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:41Z",
+  "state": "open",
+  "body": "Sections 1\u20132 of https://github.com/basecamp/omarchy/issues/7347 only. Does not close the issue (PipeWire ALSA remains #7348; hid_apple fnmode is #7110 / #7343).\n\nOn a MacBookPro16,3 that came up through t2archinstall + `curl -fsSL https://omarchy.org/install`, the ESP is vfat at `/boot/efi` and `/boot` is a directory on btrfs. Omarchy Limine still has `ESP_PATH=\"/boot\"`. `limine-update` then writes the branding-only template where Apple firmware never looks, toasts `Target OS name 'Omarchy' not found`, and leaves no `protocol: linux` entry. The gold EFI fallback black-screens; the machine only boots the leftover Arch entry.\n\nThe official installer path, where `/boot` itself is the ESP, is unchanged.\n\n## Changes\n- `migrations/1787076745.sh` is T2-gated on the same `lspci -nn` / `106b:180[12]` check (`grep >/dev/null`, not `grep -q`, so a chatty lspci cannot SIGPIPE into a false skip)\n- When `/boot` is already vfat, the migration exits 0 and writes nothing\n- When `/boot` is not vfat and `/boot/efi` is, it sets `ESP_PATH=/boot/efi`, copies `vmlinuz-linux-t2` and `initramfs-linux-t2.img` onto that ESP, and writes `/Omarchy` plus `//linux-t2` (`protocol: linux`) on the ESP `limine.conf` files firmware and limine-entry-tool actually read\n- The enroll reset hook `10-limine-reset-enroll` is renamed `10-limine-reset-enroll.disabled` so a later limine/pacman run cannot wipe the working ESP entry (section 2)\n- `test/shell.d/t2-esp-migration-test.sh` covers overlay repair, idempotence, official `/boot`-as-ESP no-op, and non-T2 skip, in the same stub style as `t2-hardware-test.sh`\n\nDoes not touch PipeWire, hid_apple / fnmode, or `omarchy-refresh-limine`.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b9b96d02f46a09582580e035b7c5495e36e77b1b",
+      "filename": "migrations/1787076745.sh",
+      "status": "added",
+      "additions": 137,
+      "deletions": 0,
+      "changes": 137,
+      "blob_url": "https://github.com/omacom/omarchy/blob/917a19cde4ba573db1c089e910ee87624e3d2e10/migrations%2F1787076745.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/917a19cde4ba573db1c089e910ee87624e3d2e10/migrations%2F1787076745.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787076745.sh?ref=917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "patch": "@@ -0,0 +1,137 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+has_linux_t2_entry() {\n+  local conf=$1\n+\n+  [[ -f $conf ]] || return 1\n+\n+  awk '\n+    $0 == \"/Omarchy\" { expect_kernel = 1; next }\n+    expect_kernel {\n+      expect_kernel = 0\n+      if ($0 == \"//linux-t2\") {\n+        in_kernel = 1\n+        next\n+      }\n+    }\n+    in_kernel && /^[[:space:]]*protocol:[[:space:]]*linux[[:space:]]*$/ {\n+      found = 1\n+      exit\n+    }\n+    in_kernel && /^\\// { in_kernel = 0 }\n+    END { exit !found }\n+  ' \"$conf\"\n+}\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if has_linux_t2_entry \"$conf\"; then\n+    return 0\n+  fi\n+\n+  if [[ ! -f $conf ]]; then\n+    local template=\"${OMARCHY_PATH:-/usr/share/omarchy}/default/limine/limine.conf\"\n+    if [[ -f $template ]]; then\n+      sudo install -Dm644 \"$template\" \"$conf\"\n+    else\n+      sudo install -Dm644 /dev/null \"$conf\"\n+    fi\n+  fi\n+\n+  sudo tee -a \"$conf\" >/dev/null <<EOF\n+\n+/Omarchy\n+//linux-t2\n+    protocol: linux\n+    path: boot():/vmlinuz-linux-t2\n+    cmdline: $cmdline\n+    module_path: boot():/initramfs-linux-t2.img\n+EOF\n+}\n+\n+if [[ -f $esp_mount/vmlinuz-linux-t2 ]]; then\n+  write_linux_t2_entry \"$esp_mount/limine.conf\"\n+\n+  if [[ -d $esp_mount/EFI/BOOT ]]; then\n+    write_linux_t2_entry \"$esp_mount/EFI/BOOT/limine.conf\"\n+  fi\n+\n+  if [[ -d $esp_mount/EFI/limine ]]; then\n+    write_linux_t2_entry \"$esp_mount/EFI/limine/limine.conf\"\n+  fi\n+fi\n+\n+# The reset hook rewrites the enrolled Limine config and can put branding-only\n+# back on this ESP. Disable it the way limine-entry-tool documents.\n+if [[ -e $reset_enroll ]]; then\n+  sudo mv \"$reset_enroll\" \"${reset_enroll}.disabled\"\n+fi"
+    },
+    {
+      "sha": "66b4a034af888f771a953fd2942e7d3af82ff651",
+      "filename": "test/shell.d/t2-esp-migration-test.sh",
+      "status": "added",
+      "additions": 248,
+      "deletions": 0,
+      "changes": 248,
+      "blob_url": "https://github.com/omacom/omarchy/blob/917a19cde4ba573db1c089e910ee87624e3d2e10/test%2Fshell.d%2Ft2-esp-migration-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/917a19cde4ba573db1c089e910ee87624e3d2e10/test%2Fshell.d%2Ft2-esp-migration-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-esp-migration-test.sh?ref=917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "patch": "@@ -0,0 +1,248 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+migration=\"$ROOT/migrations/1787076745.sh\"\n+\n+[[ -f $migration ]] || fail \"T2 ESP migration exists\"\n+! grep -q '^#!' \"$migration\" || fail \"T2 ESP migration has no shebang\"\n+grep -Fq 'echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"' \"$migration\" ||\n+  fail \"T2 ESP migration starts with an echo\"\n+grep -Fq 'lspci -nn | grep \"106b:180[12]\" >/dev/null' \"$migration\" ||\n+  fail \"T2 ESP migration uses the same PCI check as fix-t2.sh\"\n+! grep -E 'lspci[^[:space:]]*[[:space:]].*grep -q' \"$migration\" >/dev/null ||\n+  fail \"T2 ESP migration does not grep -q a chatty lspci\"\n+grep -Fq '${OMARCHY_PATH:-/usr/share/omarchy}' \"$migration\" ||\n+  fail \"T2 ESP migration defaults OMARCHY_PATH the same way as other migrations\"\n+pass \"T2 ESP migration is a T2-gated quattro migration\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the T2\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no T2 hardware\" (#6608).\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+boot=\"$test_tmp/boot\"\n+esp=\"$test_tmp/boot/efi\"\n+limine_default=\"$test_tmp/etc/default/limine\"\n+reset_enroll=\"$test_tmp/hooks/10-limine-reset-enroll\"\n+cmdline_file=\"$test_tmp/cmdline\"\n+\n+mkdir -p \"$boot\" \"$esp/EFI/BOOT\" \"$esp/EFI/limine\" \"$(dirname \"$limine_default\")\" \"$(dirname \"$reset_enroll\")\"\n+\n+cp \"$ROOT/default/limine/default.conf\" \"$limine_default\"\n+cp \"$ROOT/default/limine/limine.conf\" \"$esp/limine.conf\"\n+cp \"$ROOT/default/limine/limine.conf\" \"$esp/EFI/BOOT/limine.conf\"\n+cp \"$ROOT/default/limine/limine.conf\" \"$esp/EFI/limine/limine.conf\"\n+printf 'vmlinuz-linux-t2\\n' >\"$boot/vmlinuz-linux-t2\"\n+printf 'initramfs-linux-t2\\n' >\"$boot/initramfs-linux-t2.img\"\n+printf 'limine-reset-enroll\\n' >\"$reset_enroll\"\n+printf 'root=/dev/mapper/root rw rootflags=subvol=@ intel_iommu=on iommu=pt\\n' >\"$cmdline_file\"\n+\n+run_migration() {\n+  local -a env=(\n+    PATH=\"$stub_bin:$PATH\"\n+    TEST_LOG=\"$calls\"\n+    OMARCHY_T2_BOOT=\"$boot\"\n+    OMARCHY_T2_ESP=\"$esp\"\n+    OMARCHY_T2_BOOT_FSTYPE=\"$boot_fstype\"\n+    OMARCHY_T2_ESP_FSTYPE=\"$esp_fstype\"\n+    OMARCHY_T2_LIMINE_DEFAULT=\"$limine_default\"\n+    OMARCHY_T2_RESET_ENROLL=\"$reset_enroll\"\n+    OMARCHY_T2_RUNNING_CMDLINE=\"$cmdline_file\"\n+  )\n+\n+  if [[ ${SET_OMARCHY_PATH:-1} == 1 ]]; then\n+    env+=(OMARCHY_PATH=\"$ROOT\")\n+    env \"${env[@]}\" bash -euo pipefail \"$migration\" >/dev/null\n+  else\n+    env -u OMARCHY_PATH \"${env[@]}\" bash -euo pipefail \"$migration\" >/dev/null\n+  fi\n+}\n+\n+has_contiguous_linux_t2_entry() {\n+  local conf=$1\n+\n+  [[ -f $conf ]] || return 1\n+\n+  awk '\n+    $0 == \"/Omarchy\" { expect_kernel = 1; next }\n+    expect_kernel {\n+      expect_kernel = 0\n+      if ($0 == \"//linux-t2\") {\n+        in_kernel = 1\n+        next\n+      }\n+    }\n+    in_kernel && /^[[:space:]]*protocol:[[:space:]]*linux[[:space:]]*$/ {\n+      found = 1\n+      exit\n+    }\n+    in_kernel && /^\\// { in_kernel = 0 }\n+    END { exit !found }\n+  ' \"$conf\"\n+}\n+\n+assert_linux_t2_entry() {\n+  local conf=$1\n+  local label=$2\n+\n+  has_contiguous_linux_t2_entry \"$conf\" ||\n+    fail \"$label writes contiguous /Omarchy, //linux-t2, protocol: linux\"\n+  grep -Fq 'path: boot():/vmlinuz-linux-t2' \"$conf\" || fail \"$label points at vmlinuz-linux-t2 on the ESP\"\n+  grep -Fq 'module_path: boot():/initramfs-linux-t2.img' \"$conf\" ||\n+    fail \"$label points at initramfs-linux-t2.img on the ESP\"\n+  grep -Fq 'cmdline: root=/dev/mapper/root rw rootflags=subvol=@ intel_iommu=on iommu=pt' \"$conf\" ||\n+    fail \"$label uses the running kernel command line\"\n+}\n+\n+boot_fstype=btrfs\n+esp_fstype=vfat\n+T2_HARDWARE=1 run_migration\n+\n+grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\" ||\n+  fail \"overlay T2 migration sets ESP_PATH=/boot/efi\"\n+! grep -Eq '^ESP_PATH=[\"'\\'']?/boot[\"'\\'']?$' \"$limine_default\" ||\n+  fail \"overlay T2 migration replaces ESP_PATH=/boot\"\n+assert_linux_t2_entry \"$esp/limine.conf\" \"ESP limine.conf\"\n+assert_linux_t2_entry \"$esp/EFI/BOOT/limine.conf\" \"EFI fallback limine.conf\"\n+assert_linux_t2_entry \"$esp/EFI/limine/limine.conf\" \"EFI/limine limine.conf\"\n+grep -Fq 'interface_branding: Omarchy Bootloader' \"$esp/limine.conf\" ||\n+  fail \"ESP limine.conf keeps the Omarchy branding template\"\n+cmp -s \"$boot/vmlinuz-linux-t2\" \"$esp/vmlinuz-linux-t2\" ||\n+  fail \"overlay T2 migration copies vmlinuz-linux-t2 onto the ESP\"\n+cmp -s \"$boot/initramfs-linux-t2.img\" \"$esp/initramfs-linux-t2.img\" ||\n+  fail \"overlay T2 migration copies initramfs-linux-t2.img onto the ESP\"\n+[[ -e ${reset_enroll}.disabled ]] || fail \"overlay T2 migration disables the Limine enroll reset hook\"\n+[[ ! -e $reset_enroll ]] || fail \"the enroll reset hook is renamed, not left in place\"\n+pass \"T2 overlay ESP at /boot/efi gets /Omarchy, //linux-t2, and ESP_PATH\"\n+\n+: >\"$calls\"\n+T2_HARDWARE=1 run_migration\n+\n+[[ ! -s $calls ]] || fail \"an already repaired T2 overlay is left unchanged\" \"$(cat \"$calls\")\"\n+(( $(grep -c '^/Omarchy$' \"$esp/limine.conf\") == 1 )) ||\n+  fail \"a second run does not duplicate /Omarchy\"\n+(( $(grep -c '^//linux-t2$' \"$esp/limine.conf\") == 1 )) ||\n+  fail \"a second run does not duplicate //linux-t2\"\n+(( $(grep -c 'path: boot():/vmlinuz-linux-t2' \"$esp/limine.conf\") == 1 )) ||\n+  fail \"a second run does not duplicate the linux-t2 path\"\n+pass \"T2 overlay ESP migration is idempotent\"\n+\n+# The old grep -qx pair treated these leftover strings as a finished entry.\n+write_scattered_limine_conf() {\n+  {\n+    cat \"$ROOT/default/limine/limine.conf\"\n+    cat <<'EOF'\n+\n+/Other\n+//linux-t2\n+    protocol: efi\n+    path: boot():/EFI/BOOT/BOOTX64.EFI\n+\n+/Omarchy\n+    protocol: efi\n+    path: boot():/EFI/Linux/omarchy_linux.efi\n+EOF\n+  } >\"$1\"\n+}\n+\n+write_scattered_limine_conf \"$esp/limine.conf\"\n+write_scattered_limine_conf \"$esp/EFI/BOOT/limine.conf\"\n+write_scattered_limine_conf \"$esp/EFI/limine/limine.conf\"\n+has_contiguous_linux_t2_entry \"$esp/limine.conf\" &&\n+  fail \"the scattered-stanza fixture must not already look like a linux-t2 entry\"\n+: >\"$calls\"\n+\n+T2_HARDWARE=1 run_migration\n+\n+assert_linux_t2_entry \"$esp/limine.conf\" \"scattered ESP limine.conf\"\n+assert_linux_t2_entry \"$esp/EFI/BOOT/limine.conf\" \"scattered EFI fallback limine.conf\"\n+assert_linux_t2_entry \"$esp/EFI/limine/limine.conf\" \"scattered EFI/limine limine.conf\"\n+(( $(grep -c 'path: boot():/vmlinuz-linux-t2' \"$esp/limine.conf\") == 1 )) ||\n+  fail \"scattered leftover strings still get exactly one linux-t2 path\"\n+pass \"split /Omarchy and //linux-t2 strings still get the real entry\"\n+\n+: >\"$calls\"\n+T2_HARDWARE=1 run_migration\n+\n+[[ ! -s $calls ]] || fail \"a repaired scattered config is left unchanged\" \"$(cat \"$calls\")\"\n+(( $(grep -c 'path: boot():/vmlinuz-linux-t2' \"$esp/limine.conf\") == 1 )) ||\n+  fail \"a second run does not duplicate the linux-t2 path on a scattered config\"\n+(( $(grep -c '^/Omarchy$' \"$esp/limine.conf\") == 2 )) ||\n+  fail \"the leftover /Omarchy stanza is kept and not rewritten\"\n+pass \"scattered-stanza repair is idempotent\"\n+\n+rm -f \"$esp/EFI/limine/limine.conf\"\n+: >\"$calls\"\n+SET_OMARCHY_PATH=0 T2_HARDWARE=1 run_migration\n+\n+assert_linux_t2_entry \"$esp/EFI/limine/limine.conf\" \"unset OMARCHY_PATH ESP limine.conf\"\n+pass \"unset OMARCHY_PATH does not abort the template copy\"\n+\n+cp \"$ROOT/default/limine/default.conf\" \"$limine_default\"\n+cp \"$ROOT/default/limine/limine.conf\" \"$boot/limine.conf\"\n+printf 'limine-reset-enroll\\n' >\"$reset_enroll\"\n+rm -f \"${reset_enroll}.disabled\"\n+: >\"$calls\"\n+\n+boot_fstype=vfat\n+esp_fstype=vfat\n+T2_HARDWARE=1 run_migration\n+\n+grep -Eq '^ESP_PATH=[\"'\\'']?/boot[\"'\\'']?$' \"$limine_default\" ||\n+  fail \"official /boot-as-ESP keeps ESP_PATH=/boot\"\n+! grep -q '^/Omarchy$' \"$boot/limine.conf\" ||\n+  fail \"official /boot-as-ESP does not write /Omarchy\"\n+! grep -q '^//linux-t2$' \"$boot/limine.conf\" ||\n+  fail \"official /boot-as-ESP does not write //linux-t2\"\n+[[ -e $reset_enroll ]] || fail \"official /boot-as-ESP leaves the enroll reset hook enabled\"\n+[[ ! -e ${reset_enroll}.disabled ]] || fail \"official /boot-as-ESP does not disable the enroll reset hook\"\n+[[ ! -s $calls ]] || fail \"official /boot-as-ESP is a no-op\" \"$(cat \"$calls\")\"\n+pass \"official /boot-as-ESP path is a no-op\"\n+\n+cp \"$ROOT/default/limine/default.conf\" \"$limine_default\"\n+cp \"$ROOT/default/limine/limine.conf\" \"$esp/limine.conf\"\n+printf 'limine-reset-enroll\\n' >\"$reset_enroll\"\n+rm -f \"${reset_enroll}.disabled\" \"$esp/vmlinuz-linux-t2\" \"$esp/initramfs-linux-t2.img\"\n+: >\"$calls\"\n+\n+boot_fstype=btrfs\n+esp_fstype=vfat\n+T2_HARDWARE=0 run_migration\n+\n+grep -Eq '^ESP_PATH=[\"'\\'']?/boot[\"'\\'']?$' \"$limine_default\" ||\n+  fail \"non-T2 Limine configuration is unchanged\"\n+! grep -q '^//linux-t2$' \"$esp/limine.conf\" || fail \"non-T2 ESP limine.conf is unchanged\"\n+[[ -e $reset_enroll ]] || fail \"non-T2 enroll reset hook is unchanged\"\n+[[ ! -s $calls ]] || fail \"non-T2 systems skip the ESP repair\" \"$(cat \"$calls\")\"\n+pass \"T2 ESP migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5381274425",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#issuecomment-5381274425",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7410",
+      "id": 5381274425,
+      "node_id": "IC_kwDOO0Cobs8AAAABQL-7OQ",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-22T15:54:07Z",
+      "updated_at": "2026-08-22T15:54:07Z",
+      "body": "I'd hold off merging this. I traced a suspend and hibernate regression on my own machine back to exactly what this migration writes, so the approach here is the defect rather than the fix.\n\nThree problems, worst first.\n\n**1. `cmdline: $cmdline` is seeded from `/proc/cmdline`.** That freezes whatever the machine happened to boot with. If the running cmdline is already truncated \u2014 which is precisely the state this migration exists to repair \u2014 the migration makes the truncation permanent and permanently divergent from `/etc/default/limine`. Measured cost of that divergence on a MacBookPro16,3: losing `pm_async=off` aborted **843 of ~1687 suspends** (`brcmf_pcie_pm_enter_D3` timeout, then `PM: failed to suspend async: error -110`), and losing `resume=`/`resume_offset=` left a configured 7.6G swapfile that hibernate could never resume from.\n\n**2. `protocol: linux` + `path: boot():/vmlinuz-linux-t2` bypasses the UKI.** `limine-mkinitcpio` already builds `EFI/Linux/omarchy_linux-t2.efi` with the full cmdline baked in. Writing a raw-kernel entry means that UKI gets rebuilt on every kernel upgrade and never booted.\n\n**3. `has_linux_t2_entry()` keys on `protocol:[[:space:]]*linux`.** A correct, already-generated UKI entry uses `protocol: efi`, so the check reports \"absent\" and `write_linux_t2_entry` appends a *duplicate* stub beside it. On an already-healthy system this migration degrades the config, and it does so on every run instead of being idempotent.\n\nWhat I'd propose instead needs no entry-writing at all \u2014 set the preconditions and let the generator run:\n\n```sh\n# 1. Apple firmware boots the vfat ESP at /boot/efi, not /boot on btrfs.\nESP_PATH=\"/boot/efi\"\n\n# 2. t2archinstall leaves root as the generic \"Linux filesystem\" GPT type\n#    (0fc63daf-...), not the discoverable root GUID (4f68bce3-...), so nothing\n#    can infer root: not GPT auto-discovery, not the UKI, not limine-entry-tool.\nKERNEL_CMDLINE[default]+=\" root=UUID=<root> rw rootflags=subvol=/@\"\n\n# 3. limine-update now emits a correct protocol:efi UKI entry on its own,\n#    with the whole KERNEL_CMDLINE[default] applied.\nlimine-update\n\n# 4. limine-update also deploys limine.conf beside the bootloader binaries, and\n#    Limine's search order prefers those over the ESP root. Keep\n#    EFI/BOOT/limine.conf and EFI/limine/limine.conf byte-identical to\n#    /boot/efi/limine.conf, or a stale shadow copy silently wins at boot.\n```\n\nThat's idempotent, keeps `/etc/default/limine` authoritative, and survives kernel upgrades. Use `subvol=/@` with the leading slash \u2014 `limine-snapper-sync` matches that literally and warns on `subvol=@`.\n\nI'm happy to rework this PR along those lines if the shape sounds right. The gating tests would need rewriting too, since they currently assert the stub-writing behaviour.\n\nThe Copilot review points about the unconditional `echo`, the `tee -a` parent directory, and the CRLF trimming are all still valid, but moot if the entry-writing goes away.\n\nMore detail and the full journal evidence in #7347.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5381274425/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5386025288",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#issuecomment-5386025288",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7410",
+      "id": 5386025288,
+      "node_id": "IC_kwDOO0Cobs8AAAABQQg5SA",
+      "user": {
+        "login": "omarchybot",
+        "id": 317366263,
+        "node_id": "U_kgDOEuqf9w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/317366263?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/omarchybot",
+        "html_url": "https://github.com/omarchybot",
+        "followers_url": "https://api.github.com/users/omarchybot/followers",
+        "following_url": "https://api.github.com/users/omarchybot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/omarchybot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/omarchybot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/omarchybot/subscriptions",
+        "organizations_url": "https://api.github.com/users/omarchybot/orgs",
+        "repos_url": "https://api.github.com/users/omarchybot/repos",
+        "events_url": "https://api.github.com/users/omarchybot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/omarchybot/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-23T12:35:12Z",
+      "updated_at": "2026-08-23T12:35:12Z",
+      "body": "Answering your comment rather than re-reviewing the diff \u2014 the head has not moved from 917a19cd. All three of your points hold. I checked each against the installed `limine-mkinitcpio-hook` 1.37.1 rather than taking them on the description.\n\n**Point 1 (frozen `/proc/cmdline`)** \u2014 confirmed, and it was the second of the four findings in the earlier review, so we agree. Worth adding the mechanism from the tool's own docs: `/usr/share/doc/limine-entry-tool/README.md`, under Kernel Command Line Configuration, says `+=` in a drop-in \"Ignores /etc/kernel/cmdline and /proc/cmdline\". Since `etc/limine-entry-tool.d/omarchy-defaults.conf:3` already uses `+=`, the drop-in layer is the only authority for the cmdline, and a hand-written `cmdline:` sidesteps it. The ordering case is worse than the truncation case you describe: `bin/omarchy-hibernation-setup:103` writes `resume=`/`resume_offset=` into `/etc/limine-entry-tool.d/resume.conf` and `:115` writes `rtc_cmos.use_acpi_alarm=1` into `rtc-alarm.conf`, so a user who enables hibernation *after* this migration gets a drop-in that never reaches the boot entry, however correct the snapshot was when taken. `pm_async=off` is confirmed at `install/hardware/apple/fix-t2.sh:32`. I have no way to check the 843/1687 suspend figure from here \u2014 not disputing it, just not claiming it.\n\n**Point 2 (bypasses the UKI)** \u2014 confirmed. `etc/limine-entry-tool.d/omarchy-uki.conf:1` sets `ENABLE_UKI=yes` and `omarchy-defaults.conf:12` sets `CUSTOM_UKI_NAME=\"omarchy\"`; `/usr/share/libalpm/scripts/limine-mkinitcpio-install:96` builds `${BOOT_PATH}/EFI/Linux/${UKI_PREFIX}_${KERNEL_NAME}.efi`, i.e. `omarchy_linux-t2.efi`, and registers it through `limine-entry-tool --add-uki` at `:147`. One qualification that does not change your conclusion: \"full cmdline baked in\" is not universal \u2014 `resolve_cmdline_file()` at `:101-105` leaves the embedded cmdline empty when Secure Boot and Snapper are both installed, and the generated entry carries it instead.\n\n**Point 3 (`has_linux_t2_entry` keys on `protocol: linux`)** \u2014 confirmed at `migrations/1787076745.sh:85`. A UKI entry is an EFI application, so it is `protocol: efi`, the check reports absent, and `write_linux_t2_entry` appends a second stanza beside a healthy one.\n\nTwo earlier findings your comment does not cover. Your proposal removes both, so these are only worth stating so nothing is lost in the rewrite:\n\n- `copy_kernel_to_esp` returns 0 on a missing source (`:51-53`), entry generation is gated only on the kernel (`:121`), and the entry names the initramfs unconditionally (`:117`). Concrete state: `/boot/vmlinuz-linux-t2` present, `/boot/initramfs-linux-t2.img` absent. A hard-failing mkinitcpio leaves exactly that, and `migrations/1785273276.sh` exists because it happened on this hardware. The migration then writes an entry whose `module_path` names a file that is not there, which cannot boot. A stale ESP kernel from an earlier run passes the same gate even when both sources are gone.\n- The comment at `:133-134` gives the wrong reason for renaming `10-limine-reset-enroll`. `reset_enroll_config()` in `/usr/lib/limine/limine-common-functions` only calls `restore_limine_binary` and `limine enroll-config --reset` against the Limine EFI binary; it never reads or writes `limine.conf`. The hook is also a package-owned symlink to `/usr/bin/limine-reset-enroll` and is not in the package's backup set \u2014 `pacman -Qii limine-mkinitcpio-hook` lists only `/etc/limine-entry-tool.conf` \u2014 so a `limine-mkinitcpio-hook` upgrade puts it back.\n\nOn the proposal: the shape sounds right and steps 1\u20133 are what the repo already expects. Three things to fold in.\n\n- **Step 4 goes the wrong way.** The README, under Installation, says the tool \"generates boot entries only at `$ESP_PATH/limine.conf` and does not touch any other Limine config locations\", and then: \"remove any alternative Limine config files to prevent them from overriding the boot entries\". So `EFI/BOOT/limine.conf` and `EFI/limine/limine.conf` want removing, not keeping byte-identical \u2014 a copy stays identical only until the next kernel upgrade rewrites `$ESP_PATH/limine.conf` and nothing rewrites the shadows. That applies to the current PR too, which writes the entry into all three.\n- **`root=UUID=<root> rw rootflags=subvol=/@` is not enough on an encrypted root.** `bin/omarchy-upgrade-to-quattro` already solves this: it asks `limine-entry-tool --get-cmdline default` whether `root=` already survives, copies the boot-critical parameters verbatim (`cryptdevice`, `cryptkey`, `rd.luks.*`, `dm-mod.create`, `rd.lvm.*`, `rd.md.uuid`, `resume`, `resume_offset`), and refuses to write a partial cmdline when root sits on dm-crypt with no unlock parameters. Reuse that rather than a bare `root=`.\n- **Check ESP free space before switching to UKIs.** The README's Requirements ask for at least 1 GiB free on the FAT32 ESP. A `t2archinstall` ESP may be smaller, and UKIs cost more than a split kernel and initramfs.\n\nNothing was pushed to your branch: this is an approach change, which is yours and the maintainer's call rather than something to patch in. Nothing was executed either \u2014 this is a T2 Mac boot path and there is no T2 hardware here to run it on, so all of the above is read out of the source and out of the installed `limine-mkinitcpio-hook` 1.37.1 on an x86-64 Arch machine. `test/shell.d/t2-esp-migration-test.sh` was not re-run, since it asserts the stub-writing behaviour you are proposing to delete.\n\nReviewed by Claude Opus 5, with Codex at xhigh reasoning as a second opinion. Codex agreed with all three of your points and with all four earlier findings; its independence is not currently guaranteed, so read that as agreement rather than as confirmation. The three items on the proposal are its contribution, each verified against the installed package before being repeated here. I rejected its citations to limine-entry-tool's Java source, which it could not have read in a sandbox with no network, and with them its argument that a later `limine-update` might overwrite the hand-written entry \u2014 I cannot confirm that from here either way.\n\nWaiting on you for the rework, and on the maintainer for whether the drop-in approach is the one they want.\n",
+      "author_association": "COLLABORATOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5386025288/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4964364608,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ-YxQA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds a migration to fix Limine ESP layout on T2 overlay installs (ESP at `/boot/efi`) and introduces a shell test to validate gating, idempotence, and resulting Limine config/kernel placement.\n\n**Changes:**\n- Add `1787076745.sh` migration to retarget `ESP_PATH` to `/boot/efi`, copy linux-t2 kernel/initramfs to the ESP, and append a `linux-t2` Limine entry on T2 systems.\n- Add a shell-based integration test that stubs `lspci`/`sudo` and validates behavior across T2 overlay, official `/boot`-as-ESP, and non-T2 scenarios.\n\n### Reviewed changes\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated 7 comments.\n\n| File | Description |\n| ---- | ----------- |\n| test/shell.d/t2-esp-migration-test.sh | Adds an end-to-end shell test harness validating the new migration\u2019s gating and outputs. |\n| migrations/1787076745.sh | Introduces the migration that repairs ESP_PATH, writes Limine linux-t2 entries, and disables a reset hook for affected machines. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964364608",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964364608"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "submitted_at": "2026-08-18T18:17:29Z",
+      "commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4"
+    },
+    {
+      "id": 4964431948,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ-c4TA",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964431948",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964431948"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "submitted_at": "2026-08-18T18:25:30Z",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10"
+    },
+    {
+      "id": 4964432187,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ-c5Ow",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964432187",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964432187"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "submitted_at": "2026-08-18T18:25:32Z",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10"
+    },
+    {
+      "id": 4964432359,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ-c55w",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964432359",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964432359"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "submitted_at": "2026-08-18T18:25:33Z",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10"
+    },
+    {
+      "id": 4964448584,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ-d5SA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (5)</summary>\n\n**migrations/1787076745.sh:1**\n* The migration prints its \u201cPoint T2 overlay\u2026\u201d message unconditionally, even on non\u2011T2 hardware where it exits immediately. This can mislead logs/automation into thinking a T2-specific migration ran; move the `echo` to after the T2 + fstype gating (or print only when a change is actually performed).\n```\necho \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n```\n**migrations/1787076745.sh:11**\n* The migration prints its \u201cPoint T2 overlay\u2026\u201d message unconditionally, even on non\u2011T2 hardware where it exits immediately. This can mislead logs/automation into thinking a T2-specific migration ran; move the `echo` to after the T2 + fstype gating (or print only when a change is actually performed).\n```\nif ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n  exit 0\nfi\n```\n**migrations/1787076745.sh:42**\n* When `$limine_default` does not exist, the `tee -a \"$limine_default\"` path assumes the parent directory exists. If it doesn\u2019t, the migration will fail; create the parent directory (or create the file via `install -D`) before appending.\n```\nif [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n  else\n    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n  fi\nfi\n```\n**migrations/1787076745.sh:135**\n* `mv` will overwrite `${reset_enroll}.disabled` if it already exists. To avoid clobbering an existing disabled hook (e.g., left by prior tooling or manual intervention), add an explicit guard (skip if the target exists, or move aside with a unique suffix).\n```\nif [[ -e $reset_enroll ]]; then\n  sudo mv \"$reset_enroll\" \"${reset_enroll}.disabled\"\nfi\n```\n**migrations/1787076745.sh:11**\n* This avoids the `grep -q`/SIGPIPE+`pipefail` issue, but it forces `grep` to read the full `lspci` output even after a match. If this is a concern, consider a pattern that allows early-exit while preventing `pipefail` from turning SIGPIPE into a false negative (e.g., temporarily disabling `pipefail` around this pipeline). This is optional, since the current approach is correct.\n```\nif ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n  exit 0\nfi\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964448584",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964448584"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "submitted_at": "2026-08-18T18:27:39Z",
+      "commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4"
+    },
+    {
+      "id": 4964464040,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ-e1qA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 2 out of 2 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (3)</summary>\n\n**migrations/1787076745.sh:68**\n* The newline trimming only removes a single trailing LF. If `$cmdline_file` ever contains multiple trailing newlines (or CRLF), the resulting `cmdline:` line written into `limine.conf` can contain embedded newline/CR characters and corrupt the stanza. Strip all trailing `\\\\r`/`\\\\n` (or coerce to a single line) before writing the entry.\n```\ncmdline=\"\"\nif [[ -r $cmdline_file ]]; then\n  cmdline=$(<\"$cmdline_file\")\n  cmdline=${cmdline%%$'\\n'}\nfi\n```\n**migrations/1787076745.sh:91**\n* The detection logic requires `//linux-t2` to be the immediate next line after `/Omarchy`. If a valid config contains a blank line or comment between them, `has_linux_t2_entry` will miss the existing entry and append a duplicate. Consider allowing intervening empty/comment lines after `/Omarchy` while still ensuring `//linux-t2` belongs to the `/Omarchy` section (i.e., stop scanning when the next top-level stanza `/...` begins).\n```\n  awk '\n    $0 == \"/Omarchy\" { expect_kernel = 1; next }\n    expect_kernel {\n      expect_kernel = 0\n      if ($0 == \"//linux-t2\") {\n        in_kernel = 1\n        next\n      }\n    }\n    in_kernel && /^[[:space:]]*protocol:[[:space:]]*linux[[:space:]]*$/ {\n      found = 1\n      exit\n    }\n    in_kernel && /^\\// { in_kernel = 0 }\n    END { exit !found }\n  ' \"$conf\"\n```\n**test/shell.d/t2-esp-migration-test.sh:15**\n* This test asserts behavior by grepping the migration source with a fairly broad regex, and it will also match comments or unrelated `grep -q` usage elsewhere in the script. To make the test less brittle, tighten the pattern to specifically match the `lspci ... | grep -q` pipeline (and ideally ignore commented lines), so future legitimate uses of `grep -q` don\u2019t cause false failures.\n```\n! grep -E 'lspci[^[:space:]]*[[:space:]].*grep -q' \"$migration\" >/dev/null ||\n  fail \"T2 ESP migration does not grep -q a chatty lspci\"\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964464040",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#pullrequestreview-4964464040"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "submitted_at": "2026-08-18T18:29:38Z",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747844",
+      "pull_request_review_id": 4964364608,
+      "id": 3806747844,
+      "node_id": "PRRC_kwDOO0Cobs7i5lzE",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This idempotence check can produce false positives because it only verifies that the two marker lines exist somewhere in the file, not that a `//linux-t2` entry is actually present/complete (or paired with the correct `/Omarchy` context). This can cause the migration to skip writing the intended entry if those lines appear in unrelated stanzas. Consider checking for the actual contiguous block (e.g., `'/Omarchy'` immediately followed by `'//linux-t2'`, plus a `protocol: linux` line) via an anchored multi-line match or a small `awk` state machine.",
+      "created_at": "2026-08-18T18:17:28Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747844",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747844"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747844"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747844/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 74,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 74,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747891",
+      "pull_request_review_id": 4964364608,
+      "id": 3806747891,
+      "node_id": "PRRC_kwDOO0Cobs7i5lzz",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then\n+    return 0\n+  fi\n+\n+  if [[ ! -f $conf ]]; then\n+    local template=\"$OMARCHY_PATH/default/limine/limine.conf\"",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This relies on `OMARCHY_PATH` being set by the runner. If migrations are executed with `bash -u` (as in the test harness), an unset `OMARCHY_PATH` would terminate the migration even though the rest of the script has sensible defaults. Make this robust by using a default (e.g., `${OMARCHY_PATH:-...}`) or by resolving the template path relative to a known location (such as the migrations directory) before building `template`.",
+      "created_at": "2026-08-18T18:17:28Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747891",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747891"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747891"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747891/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 79,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 79,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747918",
+      "pull_request_review_id": 4964364608,
+      "id": 3806747918,
+      "node_id": "PRRC_kwDOO0Cobs7i5l0O",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration hard-depends on `sudo` even though migrations may already run as root, and some minimal environments may not have `sudo` installed/configured. This can turn a safe repair into an unexpected failure. Consider routing privileged operations through a small helper (e.g., run directly when `EUID==0`, otherwise use `sudo`), and fail with a clear message only when privilege escalation is actually required.",
+      "created_at": "2026-08-18T18:17:28Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747918",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747918"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747918"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747918/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 41,
+      "original_start_line": 41,
+      "start_side": "RIGHT",
+      "line": 43,
+      "original_line": 43,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 43,
+      "position": 43,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747945",
+      "pull_request_review_id": 4964364608,
+      "id": 3806747945,
+      "node_id": "PRRC_kwDOO0Cobs7i5l0p",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration hard-depends on `sudo` even though migrations may already run as root, and some minimal environments may not have `sudo` installed/configured. This can turn a safe repair into an unexpected failure. Consider routing privileged operations through a small helper (e.g., run directly when `EUID==0`, otherwise use `sudo`), and fail with a clear message only when privilege escalation is actually required.",
+      "created_at": "2026-08-18T18:17:28Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747945",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747945"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747945"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747945/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 59,
+      "original_line": 59,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 59,
+      "position": 59,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747980",
+      "pull_request_review_id": 4964364608,
+      "id": 3806747980,
+      "node_id": "PRRC_kwDOO0Cobs7i5l1M",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then\n+    return 0\n+  fi\n+\n+  if [[ ! -f $conf ]]; then\n+    local template=\"$OMARCHY_PATH/default/limine/limine.conf\"\n+    if [[ -f $template ]]; then\n+      sudo install -Dm644 \"$template\" \"$conf\"\n+    else\n+      sudo install -Dm644 /dev/null \"$conf\"",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration hard-depends on `sudo` even though migrations may already run as root, and some minimal environments may not have `sudo` installed/configured. This can turn a safe repair into an unexpected failure. Consider routing privileged operations through a small helper (e.g., run directly when `EUID==0`, otherwise use `sudo`), and fail with a clear message only when privilege escalation is actually required.",
+      "created_at": "2026-08-18T18:17:29Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747980",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747980"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806747980"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806747980/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 104,
+      "original_start_line": 81,
+      "start_side": "RIGHT",
+      "line": 106,
+      "original_line": 83,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 83,
+      "position": 106,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806748011",
+      "pull_request_review_id": 4964364608,
+      "id": 3806748011,
+      "node_id": "PRRC_kwDOO0Cobs7i5l1r",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then\n+    return 0\n+  fi\n+\n+  if [[ ! -f $conf ]]; then\n+    local template=\"$OMARCHY_PATH/default/limine/limine.conf\"\n+    if [[ -f $template ]]; then\n+      sudo install -Dm644 \"$template\" \"$conf\"\n+    else\n+      sudo install -Dm644 /dev/null \"$conf\"\n+    fi\n+  fi\n+\n+  sudo tee -a \"$conf\" >/dev/null <<EOF",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration hard-depends on `sudo` even though migrations may already run as root, and some minimal environments may not have `sudo` installed/configured. This can turn a safe repair into an unexpected failure. Consider routing privileged operations through a small helper (e.g., run directly when `EUID==0`, otherwise use `sudo`), and fail with a clear message only when privilege escalation is actually required.",
+      "created_at": "2026-08-18T18:17:29Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806748011",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806748011"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806748011"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806748011/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 110,
+      "original_line": 87,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 87,
+      "position": 110,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806748036",
+      "pull_request_review_id": 4964364608,
+      "id": 3806748036,
+      "node_id": "PRRC_kwDOO0Cobs7i5l2E",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then\n+    return 0\n+  fi\n+\n+  if [[ ! -f $conf ]]; then\n+    local template=\"$OMARCHY_PATH/default/limine/limine.conf\"\n+    if [[ -f $template ]]; then\n+      sudo install -Dm644 \"$template\" \"$conf\"\n+    else\n+      sudo install -Dm644 /dev/null \"$conf\"\n+    fi\n+  fi\n+\n+  sudo tee -a \"$conf\" >/dev/null <<EOF\n+\n+/Omarchy\n+//linux-t2\n+    protocol: linux\n+    path: boot():/vmlinuz-linux-t2\n+    cmdline: $cmdline\n+    module_path: boot():/initramfs-linux-t2.img\n+EOF\n+}\n+\n+if [[ -f $esp_mount/vmlinuz-linux-t2 ]]; then\n+  write_linux_t2_entry \"$esp_mount/limine.conf\"\n+\n+  if [[ -d $esp_mount/EFI/BOOT ]]; then\n+    write_linux_t2_entry \"$esp_mount/EFI/BOOT/limine.conf\"\n+  fi\n+\n+  if [[ -d $esp_mount/EFI/limine ]]; then\n+    write_linux_t2_entry \"$esp_mount/EFI/limine/limine.conf\"\n+  fi\n+fi\n+\n+# The reset hook rewrites the enrolled Limine config and can put branding-only\n+# back on this ESP. Disable it the way limine-entry-tool documents.\n+if [[ -e $reset_enroll ]]; then\n+  sudo mv \"$reset_enroll\" \"${reset_enroll}.disabled\"",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The migration hard-depends on `sudo` even though migrations may already run as root, and some minimal environments may not have `sudo` installed/configured. This can turn a safe repair into an unexpected failure. Consider routing privileged operations through a small helper (e.g., run directly when `EUID==0`, otherwise use `sudo`), and fail with a clear message only when privilege escalation is actually required.",
+      "created_at": "2026-08-18T18:17:29Z",
+      "updated_at": "2026-08-18T18:17:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806748036",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806748036"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806748036"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806748036/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 136,
+      "original_line": 113,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 113,
+      "position": 136,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804445",
+      "pull_request_review_id": 4964431948,
+      "id": 3806804445,
+      "node_id": "PRRC_kwDOO0Cobs7i5znd",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Agree. The two greps can false-positive if those lines sit in unrelated stanzas. `write_linux_t2_entry` now requires `/Omarchy` immediately followed by `//linux-t2`, then `protocol: linux` in that kernel stanza. The test covers a split-stanza file still getting the real entry, and a second run not duplicating it.",
+      "created_at": "2026-08-18T18:25:30Z",
+      "updated_at": "2026-08-18T18:25:30Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806804445",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804445"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806804445"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804445/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 74,
+      "side": "RIGHT",
+      "in_reply_to_id": 3806747844,
+      "author_association": "NONE",
+      "original_position": 74,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804627",
+      "pull_request_review_id": 4964432187,
+      "id": 3806804627,
+      "node_id": "PRRC_kwDOO0Cobs7i5zqT",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null\n+  fi\n+fi\n+\n+copy_kernel_to_esp() {\n+  local src=$1\n+  local dest=$2\n+\n+  if [[ ! -f $src ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -f $dest ]] && cmp -s \"$src\" \"$dest\"; then\n+    return 0\n+  fi\n+\n+  sudo install -Dm644 \"$src\" \"$dest\"\n+}\n+\n+copy_kernel_to_esp \"$boot_mount/vmlinuz-linux-t2\" \"$esp_mount/vmlinuz-linux-t2\"\n+copy_kernel_to_esp \"$boot_mount/initramfs-linux-t2.img\" \"$esp_mount/initramfs-linux-t2.img\"\n+\n+cmdline=\"\"\n+if [[ -r $cmdline_file ]]; then\n+  cmdline=$(<\"$cmdline_file\")\n+  cmdline=${cmdline%%$'\\n'}\n+fi\n+\n+write_linux_t2_entry() {\n+  local conf=$1\n+\n+  if [[ -f $conf ]] && grep -qx '/Omarchy' \"$conf\" && grep -qx '//linux-t2' \"$conf\"; then\n+    return 0\n+  fi\n+\n+  if [[ ! -f $conf ]]; then\n+    local template=\"$OMARCHY_PATH/default/limine/limine.conf\"",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Unset `OMARCHY_PATH` under `bash -u` would abort on the template path. Default is `${OMARCHY_PATH:-/usr/share/omarchy}`, same as `migrations/1784809451.sh` and `1781984677.sh`.",
+      "created_at": "2026-08-18T18:25:32Z",
+      "updated_at": "2026-08-18T18:25:32Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806804627",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804627"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806804627"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804627/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 79,
+      "side": "RIGHT",
+      "in_reply_to_id": 3806747891,
+      "author_association": "NONE",
+      "original_position": 79,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804797",
+      "pull_request_review_id": 4964432359,
+      "id": 3806804797,
+      "node_id": "PRRC_kwDOO0Cobs7i5zs9",
+      "diff_hunk": "@@ -0,0 +1,114 @@\n+echo \"Point T2 overlay Limine at /boot/efi and write a linux-t2 entry\"\n+\n+# Overlay installs from t2archinstall keep the ESP at /boot/efi and leave /boot\n+# as a directory on btrfs. Omarchy Limine still has ESP_PATH=/boot, so\n+# limine-update writes the branding-only template where Apple firmware never\n+# looks and toasts \"Target OS name 'Omarchy' not found\" (#7347 sections 1\u20132).\n+# Official installs already use /boot as the ESP and are left alone.\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+boot_mount=\"${OMARCHY_T2_BOOT:-/boot}\"\n+esp_mount=\"${OMARCHY_T2_ESP:-/boot/efi}\"\n+limine_default=\"${OMARCHY_T2_LIMINE_DEFAULT:-/etc/default/limine}\"\n+reset_enroll=\"${OMARCHY_T2_RESET_ENROLL:-/etc/boot/hooks/pre.d/10-limine-reset-enroll}\"\n+cmdline_file=\"${OMARCHY_T2_RUNNING_CMDLINE:-/proc/cmdline}\"\n+\n+if [[ ${OMARCHY_T2_BOOT_FSTYPE+set} == set ]]; then\n+  boot_fstype=$OMARCHY_T2_BOOT_FSTYPE\n+else\n+  boot_fstype=$(findmnt -no FSTYPE \"$boot_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ ${OMARCHY_T2_ESP_FSTYPE+set} == set ]]; then\n+  esp_fstype=$OMARCHY_T2_ESP_FSTYPE\n+else\n+  esp_fstype=$(findmnt -no FSTYPE \"$esp_mount\" 2>/dev/null || true)\n+fi\n+\n+if [[ $boot_fstype == \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ $esp_fstype != \"vfat\" ]]; then\n+  exit 0\n+fi\n+\n+if [[ ! -f $limine_default ]] || ! grep -Eq '^ESP_PATH=[\"'\\'']?/boot/efi[\"'\\'']?$' \"$limine_default\"; then\n+  if [[ -f $limine_default ]] && grep -q '^ESP_PATH=' \"$limine_default\"; then\n+    sudo sed -i 's|^ESP_PATH=.*|ESP_PATH=\"/boot/efi\"|' \"$limine_default\"\n+  else\n+    printf 'ESP_PATH=\"/boot/efi\"\\n' | sudo tee -a \"$limine_default\" >/dev/null",
+      "path": "migrations/1787076745.sh",
+      "commit_id": "917a19cde4ba573db1c089e910ee87624e3d2e10",
+      "original_commit_id": "f2ec83679b75f47dd547f22c7c7fd1f28ce7e0f4",
+      "user": {
+        "login": "twfyke",
+        "id": 318066044,
+        "node_id": "U_kgDOEvVNfA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/318066044?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/twfyke",
+        "html_url": "https://github.com/twfyke",
+        "followers_url": "https://api.github.com/users/twfyke/followers",
+        "following_url": "https://api.github.com/users/twfyke/following{/other_user}",
+        "gists_url": "https://api.github.com/users/twfyke/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/twfyke/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/twfyke/subscriptions",
+        "organizations_url": "https://api.github.com/users/twfyke/orgs",
+        "repos_url": "https://api.github.com/users/twfyke/repos",
+        "events_url": "https://api.github.com/users/twfyke/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/twfyke/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Quattro migrations already use sudo (see 1785944594, 1786482992, 1786605598). Not adding an EUID helper.",
+      "created_at": "2026-08-18T18:25:33Z",
+      "updated_at": "2026-08-18T18:25:33Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806804797",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7410",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804797"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7410#discussion_r3806804797"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7410"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3806804797/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 41,
+      "original_start_line": 41,
+      "start_side": "RIGHT",
+      "line": 43,
+      "original_line": 43,
+      "side": "RIGHT",
+      "in_reply_to_id": 3806747918,
+      "author_association": "NONE",
+      "original_position": 43,
+      "position": 43,
+      "subject_type": "line"
+    }
+  ]
+}

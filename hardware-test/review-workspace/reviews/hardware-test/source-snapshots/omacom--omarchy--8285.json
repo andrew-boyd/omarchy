@@ -1,0 +1,168 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8285",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+      "state": "open"
+    },
+    {
+      "head_sha": "4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+      "state": "open",
+      "updated_at": "2026-09-12T23:53:29Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8285,
+  "checked_at": "2026-09-21T11:56:20.221139+00:00",
+  "title": "Enable speakers on pre-T2 MacBooks with the Cirrus CS8409 bridge",
+  "author": "jack-lech",
+  "head_sha": "4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T23:53:29Z",
+  "state": "open",
+  "body": "Pre-T2 MacBooks built around the Cirrus CS8409 HDA bridge boot Omarchy with\ncompletely silent speakers. The card enumerates, PipeWire shows a healthy\n`analog-stereo` sink sitting on `analog-output-speaker`, nothing is muted \u2014 and\nno sound comes out, which makes it look like a PipeWire routing problem rather\nthan a driver one.\n\nThe cause is that these machines switch their speaker amplifiers on over\nGPIO/I2C, and the in-tree `snd_hda_codec_cs8409` driver binds the codec without\never enabling those lines. On a MacBookPro14,2 (subsystem `0x106b3600`):\n\n```\n# in-tree driver \u2014 /proc/asound/card0/codec#0\nGPIO: io=8\n  IO[0]: enable=0, dir=0, wake=0, sticky=0, data=0, unsol=0\n  ...all eight at enable=0\n\n$ amixer -c 0 scontrols\n  -> only 'PCM' and mic controls; no Speaker or Headphone jacks at all\n```\n\n`snd-hda-macbookpro-dkms-git` replaces the module with a build that programs the\namps and brings up the CS42L83. Same machine afterwards:\n\n```\nGPIO: io=8\n  IO[0]: enable=1, dir=0, wake=1, sticky=0, data=1, unsol=1\n  IO[1]: enable=1, dir=1, wake=0, sticky=0, data=1, unsol=0\n  IO[2]: enable=1 ... IO[3]: enable=1\n\n$ aplay -l\n  -> device 0: CS8409/CS42L83 Analog     (was \"CS8409 Analog\")\n\n$ amixer -c 0 controls\n  -> 'Speaker Front Phantom Jack', 'Speaker Surround Phantom Jack', 'Headphone Jack'\n```\n\nT2 Macs already get their audio through `apple-t2-audio-config` in `fix-t2.sh`.\nThis is the pre-T2 sibling of that fix, and every model the regex matches\npredates the T2, so the two can't collide.\n\n### On installing `linux-headers` explicitly\n\nThis is the part I'd most like a second opinion on, because it's the reason the\nbug is so easy to misdiagnose. Arch's DKMS pacman hook discovers kernels by\nglobbing `usr/lib/modules/*/build` (`all_kver()` in\n`/usr/share/libalpm/scripts/dkms`). With no headers installed that glob matches\nnothing, so the hook iterates zero kernels, builds nothing, and exits 0. The end\nstate is an installed package, an empty `dkms status`, and silent speakers \u2014\nwith no error anywhere in the pacman output.\n\n`linux-headers` is already in `omarchy-other.packages`, but that only guarantees\nISO availability, not that it's installed on the target. Since the hook is\n`PostTransaction` and also triggers on `usr/lib/modules/*/build/include/`,\ninstalling both in the same `omarchy-pkg-add` call is race-free.\n\n### Packaging note\n\n`snd-hda-macbookpro-dkms-git` is AUR-only today. I've added it to\n`omarchy-other.packages` on the assumption it should be built into the\n`[omarchy]` repo the same way `macbook12-spi-driver-dkms` was, since no script\nunder `install/` uses the AUR helper and `omarchy-pkg-add` goes through pacman.\n\nThat half needs you: it presumably requires a matching PKGBUILD in the\n`omarchy-pkgs` repo, which isn't public, so this PR can't carry it. **Until the\npackage exists in `[omarchy]`, `omarchy-pkg-add` will fail on it** \u2014 so this\nshould probably land alongside (or after) that packaging change rather than\nbefore it. Happy to restructure if you'd rather do the promotion separately, or\nif you'd prefer the script call the AUR helper instead.\n\n### Testing\n\n- Verified on a MacBookPro14,2 (2017 13\" Touch Bar, i5-7267U) on kernel 7.1.8:\n  speakers and headphones both working after the driver builds and the machine\n  reboots. The driver compiled clean against kernel 7.1.8 with gcc 16 with no\n  patching.\n- Confirmed the detection matches this machine and that `dkms status` reports\n  `installed` afterwards.\n- `./test/all`: 202 of 205 test files pass. The three failures are\n  `config-test.sh`, `snapper-test.sh` and `unowned-system-paths-test.sh`, all\n  reporting a missing `omarchy-pkgs` checkout (\"not ok - omarchy-pkgs checkout\n  found for PKGBUILD coverage\" and equivalents). I verified they fail\n  identically on clean `quattro` without this change, so they're environmental\n  rather than caused by it \u2014 but I can't run those three properly, so they're\n  worth a look on your side given this PR touches `omarchy-other.packages`.\n\n### Scope\n\nLimited to `MacBookPro13,x` / `MacBookPro14,x`, matching the regex already used\nby `fix-spi-keyboard.sh`. The same driver also covers iMac18,x and iMac19,1\n(subsystems `0x106b0e00`/`0f00`/`1000`), but I have no way to test those, so I\nleft them out rather than guess at DMI strings. Easy to extend later if someone\nwith the hardware confirms.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "34d1174007e01ea7c88e278b552ef1bf428618a5",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4195c49f112ad135528fe49b564a09cd4fcfb9ee/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4195c49f112ad135528fe49b564a09cd4fcfb9ee/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+      "patch": "@@ -35,6 +35,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs8409-audio.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\""
+    },
+    {
+      "sha": "245a4dadf0b892e313a4a6bb6caf0362ba443581",
+      "filename": "install/hardware/apple/fix-cs8409-audio.sh",
+      "status": "added",
+      "additions": 24,
+      "deletions": 0,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4195c49f112ad135528fe49b564a09cd4fcfb9ee/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4195c49f112ad135528fe49b564a09cd4fcfb9ee/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh?ref=4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+      "patch": "@@ -0,0 +1,24 @@\n+# The 2016-2017 MacBook Pros drive their speakers through a Cirrus CS8409 HDA\n+# bridge paired with a CS42L83 codec and external amplifiers switched on over\n+# GPIO/I2C. The in-tree snd_hda_codec_cs8409 driver binds the codec but never\n+# enables those lines, so the card enumerates and PipeWire reports a healthy\n+# analog-stereo sink sitting on analog-output-speaker while nothing comes out.\n+# The tell is /proc/asound/card0/codec#0 reporting \"GPIO: io=8\" with every IO[n]\n+# at enable=0, and amixer exposing only a PCM control with no Speaker or\n+# Headphone jacks.\n+#\n+# snd-hda-macbookpro-dkms-git replaces the in-tree module with a build that\n+# programs the amplifiers and brings up the CS42L83. T2 Macs take a different\n+# audio path and are handled by fix-t2.sh; every model matched here predates it.\n+#\n+# linux-headers is installed alongside the driver deliberately. Arch's DKMS\n+# pacman hook discovers kernels by globbing usr/lib/modules/*/build, so with no\n+# headers installed it finds nothing to build against, builds nothing and exits\n+# quietly. That leaves an installed package, an empty `dkms status` and silent\n+# speakers, which reads like the driver not supporting the model.\n+product_name=\"$(cat /sys/class/dmi/id/product_name 2>/dev/null)\"\n+if [[ $product_name =~ MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n+  echo \"Detected MacBook with Cirrus CS8409 audio\"\n+\n+  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms-git\n+fi"
+    },
+    {
+      "sha": "869069dd8d63bb8594273d98eef60d8bbe40270e",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/4195c49f112ad135528fe49b564a09cd4fcfb9ee/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/4195c49f112ad135528fe49b564a09cd4fcfb9ee/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=4195c49f112ad135528fe49b564a09cd4fcfb9ee",
+      "patch": "@@ -72,5 +72,8 @@ linux-t2\n linux-t2-headers\n t2fanrd\n \n+# Pre-T2 MacBook audio (Cirrus CS8409 bridge)\n+snd-hda-macbookpro-dkms-git\n+\n # Framework 16\n qmk-hid"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5486733991",
+      "html_url": "https://github.com/omacom/omarchy/pull/8285#issuecomment-5486733991",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8285",
+      "id": 5486733991,
+      "node_id": "IC_kwDOO0Cobs8AAAABRwjqpw",
+      "user": {
+        "login": "j7j7",
+        "id": 31825378,
+        "node_id": "MDQ6VXNlcjMxODI1Mzc4",
+        "avatar_url": "https://avatars.githubusercontent.com/u/31825378?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/j7j7",
+        "html_url": "https://github.com/j7j7",
+        "followers_url": "https://api.github.com/users/j7j7/followers",
+        "following_url": "https://api.github.com/users/j7j7/following{/other_user}",
+        "gists_url": "https://api.github.com/users/j7j7/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/j7j7/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/j7j7/subscriptions",
+        "organizations_url": "https://api.github.com/users/j7j7/orgs",
+        "repos_url": "https://api.github.com/users/j7j7/repos",
+        "events_url": "https://api.github.com/users/j7j7/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/j7j7/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-01T00:32:03Z",
+      "updated_at": "2026-09-01T00:32:03Z",
+      "body": "Draft note about iMac18/19 is covered in https://github.com/omacom/omarchy/pull/9516 (builds on #7140, uses the omarchy-pkgs DKMS package rather than the AUR `-git` name).",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5486733991/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5511696952",
+      "html_url": "https://github.com/omacom/omarchy/pull/8285#issuecomment-5511696952",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8285",
+      "id": 5511696952,
+      "node_id": "IC_kwDOO0Cobs8AAAABSIXSOA",
+      "user": {
+        "login": "ari-ahm",
+        "id": 154451491,
+        "node_id": "U_kgDOCTS-Iw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/154451491?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/ari-ahm",
+        "html_url": "https://github.com/ari-ahm",
+        "followers_url": "https://api.github.com/users/ari-ahm/followers",
+        "following_url": "https://api.github.com/users/ari-ahm/following{/other_user}",
+        "gists_url": "https://api.github.com/users/ari-ahm/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/ari-ahm/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/ari-ahm/subscriptions",
+        "organizations_url": "https://api.github.com/users/ari-ahm/orgs",
+        "repos_url": "https://api.github.com/users/ari-ahm/repos",
+        "events_url": "https://api.github.com/users/ari-ahm/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/ari-ahm/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-02T15:04:40Z",
+      "updated_at": "2026-09-02T15:22:47Z",
+      "body": "Independent confirmation on a second model, plus a packaging problem worth\nknowing about before `snd-hda-macbookpro-dkms-git` gets promoted into\n`[omarchy]`.\n\n### Confirmed on MacBookPro14,1\n\nSame symptom and same fix as your 14,2, on subsystem `0x106b3300` instead of\n`0x106b3600` \u2014 both are handled by the same branch upstream:\n\n```c\nelse if (codec->core.subsystem_id == 0x106b3300 || codec->core.subsystem_id == 0x106b3600) {\n        // macbook pro 14,1?13,1, 14,2\n        fixup_found = 1;\n}\n```\n\nOmarchy 4.0.2, kernel 7.1.9-arch1-2, gcc 16, no patching needed. The two\nupstream diffs apply with offsets and some fuzz but succeed. Useful side\nmarkers, in case they help anyone else confirm the driver is actually live:\nthe sink moves 48000 -> **44100 Hz** (the driver fixes format at 44.1/24-bit),\nan `alsa_input...` source appears, and the headphone port goes from\n`availability unknown` to real jack detection.\n\n### The AUR package downloads 151 MB on every kernel update\n\nThis is the part I'd flag before promoting it. `snd-hda-macbookpro-dkms-git`\nships upstream's `dkms.conf` as-is, which wires the installer in as `PRE_BUILD`:\n\n```\nPRE_BUILD=\"install.cirrus.driver.sh -k $kernelver --dkms\"\n```\n\nThat script fetches a full kernel tarball from `cdn.kernel.org` every time DKMS\nbuilds \u2014 i.e. on every kernel update, for every user:\n\n```\nwget -c https://cdn.kernel.org/pub/linux/kernel/v$major_version.x/linux-$kernel_version.tar.xz -P $build_dir\n```\n\nThe AUR PKGBUILD has `wget` in `depends=()` for exactly this reason. For\nlinux-7.1.9 that is a 158,435,316-byte download, of which it uses **2,490,543** \u2014\nonly `sound/hda`. It also means a kernel update on a metered connection, behind\na proxy, or on a machine with a local pacman mirror but no general internet,\nsilently ends with a failed build and no audio.\n\n### It doesn't need to be that way\n\nAll of the `PRE_BUILD` work \u2014 fetch `sound/hda`, swap in the cut-down Makefiles,\ncopy the Apple headers, apply the two `cs8409` diffs \u2014 is deterministic and can\nhappen once at package build time. Ship the prepared tree in the package, drop\n`PRE_BUILD` entirely, and `dkms.conf` reduces to:\n\n```\nMAKE[0]=\"make KERNELRELEASE=${kernelver}\"\nAUTOINSTALL=\"yes\"\n```\n\nDKMS rebuilds then run `make` and nothing else. I've been running this for a day\non the 14,1; rebuilds verified under `unshare -n` with no network interfaces at\nall, and `makepkg` itself is offline too once the sources are vendored.\n\nIt's up at **https://github.com/ari-ahm/snd-hda-macbookpro-dkms** if it's useful\nfor the `omarchy-pkgs` side \u2014 GPL-2.0-only like upstream, and mostly just moving\nupstream's own steps from `PRE_BUILD` into `prepare()`. Take it, fork it or\nignore it; no attribution needed. Note it vendors its sources, which suits a\ndistro package but isn't AUR-idiomatic \u2014 for AUR you'd fetch the kernel tarball\nin `source=()` at build time and still drop `PRE_BUILD`, which keeps the\noffline rebuilds.\n\nDoing the patching at build time has a second benefit for a distro: a patch\nconflict against a newer kernel surfaces when the package is built, rather than\nsilently breaking users' audio on a kernel update months later.\n\n### On installing `linux-headers`\n\nYour diagnosis matches what I hit \u2014 headers absent, `dkms status` empty, no\nerror anywhere. Worth knowing that installing them has a side effect on exactly\nthe machines this issue targets: it makes `macbook12-spi-driver-dkms`, which\n`fix-spi-keyboard.sh` installs on every MacBookPro13,x/14,x, start failing on\nevery kernel update. That package can no longer build (`applespi` is mainlined;\nit still includes `asm/unaligned.h`, removed in 6.12), it just isn't visible\nwhile the DKMS hook has zero kernels to iterate. Filed separately as #9831, but\nit's coupled to this one: if this lands first, those machines start surfacing a\nfailed build.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5511696952/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

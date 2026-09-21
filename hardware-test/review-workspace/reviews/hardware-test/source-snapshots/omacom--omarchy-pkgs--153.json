@@ -1,0 +1,87 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/153",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "macbook-cs4208"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+      "state": "open"
+    },
+    {
+      "head_sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+      "state": "open",
+      "updated_at": "2026-09-18T19:18:34Z"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 153,
+  "checked_at": "2026-09-21T11:56:47.531421+00:00",
+  "title": "Add MacBook12 CS4208 DKMS package",
+  "author": "doctor",
+  "head_sha": "d9715a74b6be571207c73b94e000750cecaad2b0",
+  "base_sha": "7e448b90313fea4fb78da9a78607287691d3b241",
+  "base_ref": "master",
+  "updated_at": "2026-09-18T19:18:34Z",
+  "state": "open",
+  "body": "## Summary\n\n- add `macbook12-audio-driver-dkms`, the package expected by basecamp/omarchy#6921\n- pin the known-good upstream driver revision and verify every source checksum\n- package the DKMS source under `/usr/src/macbook12-audio-driver-0.1`\n- declare the required DKMS/kernel-header dependencies and the conflicting legacy CS4208 package\n\nThe two small local lifecycle overrides match [upstream driver PR #60](https://github.com/leifliddy/macbook12-audio-driver/pull/60) and can be dropped once that change is released.\n\n## Validation\n\n- `makepkg --verifysource`\n- clean `makepkg` build\n- inspected package metadata and installed file layout\n- extracted the package into an isolated root and completed `dkms add`, `dkms build`, and `dkms install` for `7.1.8-arch1-3`\n- confirmed the installed module path, CS4208 alias, module name, and vermagic\n- `bin/repo build --dry-run --package macbook12-audio-driver-dkms`\n\nHardware validation was performed on a MacBook10,1 running Omarchy; its internal speakers work with the expected stereo profile.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2a9719d3fbb0a9054048dda881eae277703d01e2",
+      "filename": "pkgbuilds/macbook12-audio-driver-dkms/.omarchy/package.json",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2F.omarchy%2Fpackage.json",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2F.omarchy%2Fpackage.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-audio-driver-dkms%2F.omarchy%2Fpackage.json?ref=d9715a74b6be571207c73b94e000750cecaad2b0",
+      "patch": "@@ -0,0 +1,3 @@\n+{\n+  \"source\": \"local\"\n+}"
+    },
+    {
+      "sha": "f00ab6612cd949e0bb17bd72073dc1e68e2fae05",
+      "filename": "pkgbuilds/macbook12-audio-driver-dkms/PKGBUILD",
+      "status": "added",
+      "additions": 32,
+      "deletions": 0,
+      "changes": 32,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-audio-driver-dkms%2FPKGBUILD?ref=d9715a74b6be571207c73b94e000750cecaad2b0",
+      "patch": "@@ -0,0 +1,32 @@\n+_pkgbase=macbook12-audio-driver\n+pkgname=${_pkgbase}-dkms\n+pkgver=0.1\n+pkgrel=1\n+pkgdesc=\"CS4208 audio driver for the 12-inch MacBook (DKMS)\"\n+arch=('x86_64')\n+url=\"https://github.com/leifliddy/macbook12-audio-driver\"\n+license=('GPL-2.0-or-later')\n+depends=('curl' 'dkms' 'linux-headers')\n+makedepends=('git')\n+conflicts=('snd-hda-macbookpro-dkms-git')\n+options=('!debug' '!strip')\n+_commit=04500a120ea685694b651c1b1d46fafcae8cff46\n+source=(\"${_pkgbase}::git+${url}.git#commit=${_commit}\"\n+        'dkms.conf'\n+        'prepare.cirrus.driver.sh')\n+sha256sums=('SKIP'\n+            '248f564d6f4e9cab636b833fd9a90d9159fa852da1b4e319085f4d9a53aa4268'\n+            'a6aa408a3b25a85fa24953996201d911d3f94f582e95511806de984eca7b1bb1')\n+\n+package() {\n+  local target=\"$pkgdir/usr/src/${_pkgbase}-${pkgver}\"\n+\n+  install -dm755 \"$target\"\n+  install -m644 \\\n+    \"$srcdir/$_pkgbase/Makefile_cirrus\" \\\n+    \"$srcdir/$_pkgbase/Makefile_cs420x\" \\\n+    \"$target\"\n+  install -m644 \"$srcdir/dkms.conf\" \"$target\"\n+  install -m755 \"$srcdir/prepare.cirrus.driver.sh\" \"$target\"\n+  cp -r \"$srcdir/$_pkgbase/patch_cirrus\" \"$target\"\n+}"
+    },
+    {
+      "sha": "f1118f7631c6ebfb23a8251a2ec1b5dae12270a1",
+      "filename": "pkgbuilds/macbook12-audio-driver-dkms/dkms.conf",
+      "status": "added",
+      "additions": 22,
+      "deletions": 0,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2Fdkms.conf",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2Fdkms.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-audio-driver-dkms%2Fdkms.conf?ref=d9715a74b6be571207c73b94e000750cecaad2b0",
+      "patch": "@@ -0,0 +1,22 @@\n+PACKAGE_NAME=\"macbook12-audio-driver\"\n+PACKAGE_VERSION=\"0.1\"\n+\n+kernel_release=\"${kernelver:-$(uname -r)}\"\n+kernel_version=\"${kernel_release%%-*}\"\n+major_version=\"${kernel_version%%.*}\"\n+version_tail=\"${kernel_version#*.}\"\n+minor_version=\"${version_tail%%.*}\"\n+\n+PRE_BUILD=\"./prepare.cirrus.driver.sh $kernelver\"\n+MAKE[0]=\"make\"\n+\n+if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then\n+  BUILT_MODULE_NAME[0]=\"snd-hda-codec-cs420x\"\n+  BUILT_MODULE_LOCATION[0]=\"build/hda/codecs/cirrus\"\n+else\n+  BUILT_MODULE_NAME[0]=\"snd-hda-codec-cirrus\"\n+  BUILT_MODULE_LOCATION[0]=\"build/hda\"\n+fi\n+\n+DEST_MODULE_LOCATION[0]=\"/kernel/extra\"\n+AUTOINSTALL=\"yes\""
+    },
+    {
+      "sha": "3709a4a1a0ea564d854756aac093f1b942e46640",
+      "filename": "pkgbuilds/macbook12-audio-driver-dkms/prepare.cirrus.driver.sh",
+      "status": "added",
+      "additions": 157,
+      "deletions": 0,
+      "changes": 157,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2Fprepare.cirrus.driver.sh",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/d9715a74b6be571207c73b94e000750cecaad2b0/pkgbuilds%2Fmacbook12-audio-driver-dkms%2Fprepare.cirrus.driver.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-audio-driver-dkms%2Fprepare.cirrus.driver.sh?ref=d9715a74b6be571207c73b94e000750cecaad2b0",
+      "patch": "@@ -0,0 +1,157 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+kernel_release=\"${1:-$(uname -r)}\"\n+kernel_version=\"${kernel_release%%-*}\"\n+kernel_version=\"${kernel_version%%_*}\"\n+\n+if [[ ! $kernel_version =~ ^[0-9]+\\.[0-9]+(\\.[0-9]+)?([.-]rc[0-9]+)?$ ]]; then\n+  echo \"Unsupported kernel release: $kernel_release\" >&2\n+  exit 2\n+fi\n+\n+major_version=\"${kernel_version%%.*}\"\n+version_tail=\"${kernel_version#*.}\"\n+minor_version=\"${version_tail%%.*}\"\n+kernel_short_version=\"$major_version.$minor_version\"\n+\n+script_dir=\"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)\"\n+cd \"$script_dir\"\n+\n+build_dir=\"$script_dir/build\"\n+patch_dir=\"$script_dir/patch_cirrus\"\n+hda_dir=\"$build_dir/hda\"\n+base_url=\"https://cdn.kernel.org/pub/linux/kernel/v${major_version}.x\"\n+\n+if [[ -n ${MACBOOK12_AUDIO_KERNEL_CACHE:-} ]]; then\n+  cache_dir=\"$MACBOOK12_AUDIO_KERNEL_CACHE\"\n+elif (( EUID == 0 )); then\n+  cache_dir=\"/var/cache/macbook12-audio-driver\"\n+else\n+  cache_dir=\"$build_dir\"\n+fi\n+\n+download() {\n+  local url=\"$1\"\n+  local destination=\"$2\"\n+\n+  if command -v curl >/dev/null; then\n+    curl --fail --location --retry 3 --silent --show-error \\\n+      --output \"$destination\" \"$url\"\n+  elif command -v wget >/dev/null; then\n+    wget --quiet --tries=3 --output-document=\"$destination\" \"$url\"\n+  else\n+    echo \"Install curl or wget to download the matching kernel source.\" >&2\n+    return 127\n+  fi\n+}\n+\n+refresh_checksums() {\n+  local partial=\"$checksums.part\"\n+  rm -f \"$partial\"\n+  download \"$base_url/sha256sums.asc\" \"$partial\"\n+  mv \"$partial\" \"$checksums\"\n+}\n+\n+checksum_for() {\n+  local archive_name=\"$1\"\n+  awk -v filename=\"$archive_name\" '$2 == filename { print $1; exit }' \"$checksums\"\n+}\n+\n+mkdir -p \"$build_dir\" \"$cache_dir\"\n+rm -rf \"$hda_dir\"\n+\n+checksums=\"$cache_dir/sha256sums-v${major_version}.asc\"\n+[[ -f $checksums ]] || refresh_checksums\n+\n+archive=\"\"\n+for candidate_version in \"$kernel_version\" \"$kernel_short_version\"; do\n+  archive_name=\"linux-${candidate_version}.tar.xz\"\n+  expected_sha256=\"$(checksum_for \"$archive_name\")\"\n+\n+  if [[ -z $expected_sha256 ]]; then\n+    refresh_checksums\n+    expected_sha256=\"$(checksum_for \"$archive_name\")\"\n+  fi\n+  [[ -n $expected_sha256 ]] || continue\n+\n+  candidate_archive=\"$cache_dir/$archive_name\"\n+  if [[ -f $candidate_archive ]]; then\n+    actual_sha256=\"$(sha256sum \"$candidate_archive\" | awk '{ print $1 }')\"\n+  else\n+    actual_sha256=\"\"\n+  fi\n+\n+  if [[ $actual_sha256 != \"$expected_sha256\" ]]; then\n+    partial_archive=\"$candidate_archive.part\"\n+    rm -f \"$partial_archive\"\n+    echo \"Downloading $archive_name\"\n+    if ! download \"$base_url/$archive_name\" \"$partial_archive\"; then\n+      rm -f \"$partial_archive\"\n+      continue\n+    fi\n+\n+    actual_sha256=\"$(sha256sum \"$partial_archive\" | awk '{ print $1 }')\"\n+    if [[ $actual_sha256 != \"$expected_sha256\" ]]; then\n+      rm -f \"$partial_archive\"\n+      echo \"SHA-256 verification failed for $archive_name\" >&2\n+      exit 3\n+    fi\n+    mv \"$partial_archive\" \"$candidate_archive\"\n+  fi\n+\n+  archive=\"$candidate_archive\"\n+  kernel_version=\"$candidate_version\"\n+  break\n+done\n+\n+if [[ -z $archive ]]; then\n+  echo \"No verified kernel.org source archive found for $kernel_release\" >&2\n+  exit 4\n+fi\n+\n+if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then\n+  makefile_name=\"Makefile_cs420x\"\n+  tar --strip-components=2 -xf \"$archive\" --directory=\"$build_dir\" \\\n+    \"linux-${kernel_version}/sound/hda\"\n+  mv \"$hda_dir/codecs/cirrus/Makefile\" \"$hda_dir/codecs/cirrus/Makefile.orig\"\n+  mv \"$hda_dir/codecs/cirrus/cs420x.c\" \"$hda_dir/codecs/cirrus/cs420x.c.orig\"\n+  cp \"$patch_dir/cs420x.c\" \\\n+    \"$patch_dir/patch_cirrus_a1534_setup.h\" \\\n+    \"$patch_dir/patch_cirrus_a1534_pcm.h\" \\\n+    \"$hda_dir/codecs/cirrus\"\n+  cp \"$patch_dir/$makefile_name\" \"$hda_dir/codecs/cirrus/Makefile\"\n+else\n+  makefile_name=\"Makefile_cirrus\"\n+  tar --strip-components=3 -xf \"$archive\" --directory=\"$build_dir\" \\\n+    \"linux-${kernel_version}/sound/pci/hda\"\n+  mv \"$hda_dir/Makefile\" \"$hda_dir/Makefile.orig\"\n+  mv \"$hda_dir/patch_cirrus.c\" \"$hda_dir/patch_cirrus.c.orig\"\n+  cp \"$patch_dir/patch_cirrus.c\" \\\n+    \"$patch_dir/patch_cirrus_a1534_setup.h\" \\\n+    \"$patch_dir/patch_cirrus_a1534_pcm.h\" \\\n+    \"$hda_dir\"\n+  cp \"$patch_dir/$makefile_name\" \"$hda_dir/Makefile\"\n+fi\n+\n+if (( major_version > 6 || (major_version == 6 && minor_version >= 17) )); then\n+  sed -i 's/\\.free/.remove/' \"$hda_dir/codecs/cirrus/patch_cirrus_a1534_pcm.h\"\n+fi\n+\n+if (( major_version == 6 && minor_version >= 12 && minor_version < 17 )); then\n+  sed -i 's/snd_pci_quirk/hda_quirk/' \"$hda_dir/patch_cirrus.c\"\n+  sed -i 's/SND_PCI_QUIRK\\b/HDA_CODEC_QUIRK/' \"$hda_dir/patch_cirrus.c\"\n+fi\n+\n+if (( major_version == 6 && minor_version <= 11 )); then\n+  sed -i 's/hda_quirk/snd_pci_quirk/' \"$hda_dir/patch_cirrus.c\"\n+fi\n+\n+if (( major_version < 5 || (major_version == 5 && minor_version < 6) )); then\n+  sed -i 's/timespec64/timespec/' \"$hda_dir/patch_cirrus.c\"\n+  sed -i 's/timespec64/timespec/' \"$hda_dir/patch_cirrus_a1534_pcm.h\"\n+  sed -i 's/ktime_get_real_ts64/getnstimeofday/' \"$hda_dir/patch_cirrus_a1534_pcm.h\"\n+fi\n+\n+cp \"$script_dir/$makefile_name\" \"$script_dir/Makefile\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

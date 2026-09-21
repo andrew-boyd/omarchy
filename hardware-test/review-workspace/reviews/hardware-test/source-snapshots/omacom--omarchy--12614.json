@@ -1,0 +1,114 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12614",
+  "origins": [
+    "published-source-table"
+  ],
+  "groups": [],
+  "prior_snapshots": [
+    {
+      "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+      "state": "closed",
+      "updated_at": "2026-09-20T17:33:08Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12614,
+  "checked_at": "2026-09-21T11:57:57.006855+00:00",
+  "title": "Fix lock password focus after resume",
+  "author": "dexteresc",
+  "head_sha": "77383654bf42273a065e53988ed5eb724bb90af6",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T17:33:08Z",
+  "state": "closed",
+  "body": "## Summary\n\n- Restore keyboard focus to the password input when the lock window becomes active after resume.\n- Reclaim focus if the active lock surface is left without its only interactive input.\n- Recheck the current lock/authentication state before a deferred focus request runs.\n- Add a compositor-backed regression test for focus loss and recovery.\n\n## Root cause\n\nThe lock surface stays mounted while the displays are blanked and the machine suspends. The existing focus requests only run when the component is created or input is enabled, so neither necessarily runs after opening the lid. The resumed window can therefore be active without an active focus item until the user clicks the password box.\n\n## Test plan\n\n- [x] `test/shell.d/lock-focus-test.sh`\n- [x] `test/shell.d/lock-password-overflow-test.sh`\n- [x] `test/shell.d/lock-fingerprint-indicator-test.sh`\n- [x] `test/shell.d/lock-blank-fingerprint-test.sh`\n- [x] `test/shell.d/lock-stranded-recovery-test.sh`\n- [x] `git diff --check`\n\nThe full local suite was also run. It currently has eight unrelated environment/baseline failures, including tests that require a sibling `omarchy-pkgs` checkout and a shell-service responsiveness check; the focused lock tests above pass against the active Wayland compositor.\n",
+  "draft": true,
+  "files": [
+    {
+      "sha": "9c838e09ae1a053233859ef08a964a9573f416da",
+      "filename": "shell/plugins/lock/LockView.qml",
+      "status": "modified",
+      "additions": 28,
+      "deletions": 0,
+      "changes": 28,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77383654bf42273a065e53988ed5eb724bb90af6/shell%2Fplugins%2Flock%2FLockView.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77383654bf42273a065e53988ed5eb724bb90af6/shell%2Fplugins%2Flock%2FLockView.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FLockView.qml?ref=77383654bf42273a065e53988ed5eb724bb90af6",
+      "patch": "@@ -1,5 +1,6 @@\n import QtQuick\n import QtQuick.Effects\n+import QtQuick.Window\n import qs.Commons\n import qs.Ui\n \n@@ -52,6 +53,15 @@ Item {\n     passwordInput.forceActiveFocus()\n   }\n \n+  function ensurePasswordFocus() {\n+    var window = root.Window.window\n+    if (!window || !window.active || !root.inputEnabled || root.authenticatingPassword\n+        || window.activeFocusItem === passwordInput)\n+      return\n+\n+    root.forcePasswordFocus()\n+  }\n+\n   function clearPassword() {\n     passwordTextEdited(\"\")\n   }\n@@ -72,6 +82,24 @@ Item {\n     if (inputEnabled) Qt.callLater(forcePasswordFocus)\n   }\n \n+  // The session-lock surface is the only interactive surface while locked,\n+  // but output teardown during suspend can leave its window active without an\n+  // active focus item. Reclaim focus whenever the window becomes active or\n+  // focus moves away from the enabled password input.\n+  Connections {\n+    id: windowFocus\n+    target: root.Window.window\n+\n+    function onActiveChanged() {\n+      if (windowFocus.target && windowFocus.target.active)\n+        Qt.callLater(root.ensurePasswordFocus)\n+    }\n+\n+    function onActiveFocusItemChanged() {\n+      Qt.callLater(root.ensurePasswordFocus)\n+    }\n+  }\n+\n   // Measures the masked password at full size; passwordDotScale compares this\n   // against the field width to decide how far the dots must shrink to fit.\n   TextMetrics {"
+    },
+    {
+      "sha": "a7543d7fd6dc328bcadfbcae8d9be2bf8675f8cf",
+      "filename": "test/shell.d/fixtures/lock-focus/shell.qml",
+      "status": "added",
+      "additions": 140,
+      "deletions": 0,
+      "changes": 140,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77383654bf42273a065e53988ed5eb724bb90af6/test%2Fshell.d%2Ffixtures%2Flock-focus%2Fshell.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77383654bf42273a065e53988ed5eb724bb90af6/test%2Fshell.d%2Ffixtures%2Flock-focus%2Fshell.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ffixtures%2Flock-focus%2Fshell.qml?ref=77383654bf42273a065e53988ed5eb724bb90af6",
+      "patch": "@@ -0,0 +1,140 @@\n+import QtQuick\n+import QtQuick.Window\n+import Quickshell\n+import Quickshell.Wayland\n+\n+ShellRoot {\n+  id: root\n+\n+  readonly property string resultPath: Quickshell.env(\"OMARCHY_QML_TEST_RESULT\")\n+  readonly property string rootPath: Quickshell.env(\"OMARCHY_PATH\")\n+  property var failures: []\n+  property var lockView: null\n+\n+  function fail(message) {\n+    failures.push(String(message))\n+  }\n+\n+  function shellQuote(value) {\n+    return \"'\" + String(value).replace(/'/g, \"'\\\\''\") + \"'\"\n+  }\n+\n+  function writeResult() {\n+    var payload = JSON.stringify({\n+      ok: failures.length === 0,\n+      failures: failures\n+    })\n+\n+    if (resultPath) {\n+      Quickshell.execDetached([\"bash\", \"-lc\", \"printf '%s' \" + shellQuote(payload) + \" > \" + shellQuote(resultPath)])\n+    }\n+  }\n+\n+  PanelWindow {\n+    id: lockWindow\n+    visible: false\n+    color: \"black\"\n+    exclusionMode: ExclusionMode.Ignore\n+    WlrLayershell.namespace: \"omarchy-lock-focus-test\"\n+    WlrLayershell.layer: WlrLayer.Overlay\n+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive\n+    anchors {\n+      top: true\n+      right: true\n+      bottom: true\n+      left: true\n+    }\n+\n+    TextInput {\n+      id: focusSink\n+      visible: false\n+    }\n+  }\n+\n+  Timer {\n+    interval: 1\n+    running: true\n+    repeat: false\n+    onTriggered: {\n+      try {\n+        var component = Qt.createComponent(\"file://\" + root.rootPath + \"/shell/plugins/lock/LockView.qml\", Component.PreferSynchronous)\n+        if (component.status !== Component.Ready) {\n+          root.fail(\"LockView failed to load: \" + component.errorString())\n+          root.writeResult()\n+          return\n+        }\n+\n+        root.lockView = component.createObject(lockWindow.contentItem, {\n+          width: 800,\n+          height: 600,\n+          inputEnabled: true,\n+          loadBackground: false\n+        })\n+        if (!root.lockView) {\n+          root.fail(\"LockView failed to instantiate: \" + component.errorString())\n+          root.writeResult()\n+          return\n+        }\n+\n+        lockWindow.visible = true\n+        focusCheck.start()\n+      } catch (error) {\n+        root.fail(\"lock focus fixture threw: \" + error)\n+        root.writeResult()\n+      }\n+    }\n+  }\n+\n+  Timer {\n+    id: focusCheck\n+    interval: 50\n+    repeat: true\n+    property int attempts: 0\n+    onTriggered: {\n+      try {\n+        attempts += 1\n+        var window = root.lockView ? root.lockView.Window.window : null\n+        if (!window || !window.active) {\n+          if (attempts < 40) return\n+          stop()\n+          root.fail(\"lock window did not become active\")\n+          root.writeResult()\n+          return\n+        }\n+\n+        stop()\n+        var focused = window.activeFocusItem\n+        if (!focused || focused.echoMode !== TextInput.Password)\n+          root.fail(\"password input was not initially focused after mapping\")\n+\n+        focusSink.forceActiveFocus()\n+        if (!focusSink.activeFocus)\n+          root.fail(\"focus sink could not take focus from the password input\")\n+        focusRecoveryCheck.start()\n+      } catch (error) {\n+        root.fail(\"lock focus check threw: \" + error)\n+        root.writeResult()\n+      }\n+    }\n+  }\n+\n+  Timer {\n+    id: focusRecoveryCheck\n+    interval: 250\n+    repeat: false\n+    onTriggered: {\n+      try {\n+        var window = root.lockView ? root.lockView.Window.window : null\n+        var focused = window ? window.activeFocusItem : null\n+        if (!focused || focused.echoMode !== TextInput.Password)\n+          root.fail(\"password input did not reclaim focus\")\n+      } catch (error) {\n+        root.fail(\"lock focus recovery check threw: \" + error)\n+      } finally {\n+        lockWindow.visible = false\n+        if (root.lockView) root.lockView.destroy()\n+        root.writeResult()\n+      }\n+    }\n+  }\n+}"
+    },
+    {
+      "sha": "d5b6762c60a394cdc57405c62b1602ff0eb54f68",
+      "filename": "test/shell.d/lock-focus-test.sh",
+      "status": "added",
+      "additions": 73,
+      "deletions": 0,
+      "changes": 73,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77383654bf42273a065e53988ed5eb724bb90af6/test%2Fshell.d%2Flock-focus-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77383654bf42273a065e53988ed5eb724bb90af6/test%2Fshell.d%2Flock-focus-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Flock-focus-test.sh?ref=77383654bf42273a065e53988ed5eb724bb90af6",
+      "patch": "@@ -0,0 +1,73 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+TMPDIR=\"\"\n+QS_PID=\"\"\n+\n+cleanup() {\n+  if [[ -n $QS_PID ]] && kill -0 \"$QS_PID\" 2>/dev/null; then\n+    kill \"$QS_PID\" 2>/dev/null || true\n+    wait \"$QS_PID\" 2>/dev/null || true\n+  fi\n+  if [[ -n $TMPDIR && -d $TMPDIR ]]; then\n+    rm -rf \"$TMPDIR\"\n+  fi\n+}\n+trap cleanup EXIT\n+\n+require_compositor \"lock focus test\"\n+\n+if ! command -v quickshell >/dev/null 2>&1; then\n+  pass \"quickshell not installed; skipping lock focus test\"\n+  exit 0\n+fi\n+\n+require_command jq\n+\n+TMPDIR=$(mktemp -d)\n+result=\"$TMPDIR/result.json\"\n+log=\"$TMPDIR/quickshell.log\"\n+config_dir=\"$TMPDIR/lock-focus\"\n+mkdir -p \"$config_dir\" \"$TMPDIR/home\"\n+cp \"$SHELL_TEST_DIR/fixtures/lock-focus/shell.qml\" \"$config_dir/shell.qml\"\n+ln -s \"$ROOT/shell/Ui\" \"$config_dir/Ui\"\n+ln -s \"$ROOT/shell/Commons\" \"$config_dir/Commons\"\n+\n+OMARCHY_PATH=\"$ROOT\" \\\n+OMARCHY_QML_TEST_RESULT=\"$result\" \\\n+HOME=\"$TMPDIR/home\" \\\n+XDG_CONFIG_HOME=\"$TMPDIR/home/.config\" \\\n+XDG_CACHE_HOME=\"$TMPDIR/home/.cache\" \\\n+XDG_STATE_HOME=\"$TMPDIR/home/.local/state\" \\\n+QML2_IMPORT_PATH=\"$ROOT/shell${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}\" \\\n+QML_IMPORT_PATH=\"$ROOT/shell${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}\" \\\n+PATH=\"$ROOT/bin:$PATH\" \\\n+  quickshell -p \"$config_dir\" --no-color >\"$log\" 2>&1 &\n+QS_PID=$!\n+\n+for _ in {1..80}; do\n+  [[ -s $result ]] && break\n+  if ! kill -0 \"$QS_PID\" 2>/dev/null; then\n+    sed -n '1,220p' \"$log\" >&2\n+    fail \"lock focus quickshell exited before writing result\"\n+  fi\n+  sleep 0.1\n+done\n+\n+[[ -s $result ]] || {\n+  sed -n '1,220p' \"$log\" >&2\n+  fail \"lock focus test timed out\"\n+}\n+\n+if ! jq -e '.ok == true' \"$result\" >/dev/null; then\n+  printf 'Lock focus result:\\n' >&2\n+  jq . \"$result\" >&2\n+  printf 'Lock focus log:\\n' >&2\n+  sed -n '1,220p' \"$log\" >&2\n+  fail \"lock password input reclaims focus without a pointer click\"\n+fi\n+\n+pass \"lock password input reclaims focus without a pointer click\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5751447174",
+      "html_url": "https://github.com/omacom/omarchy/pull/12614#issuecomment-5751447174",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/12614",
+      "id": 5751447174,
+      "node_id": "IC_kwDOO0Cobs8AAAABVtAehg",
+      "user": {
+        "login": "dexteresc",
+        "id": 63741680,
+        "node_id": "MDQ6VXNlcjYzNzQxNjgw",
+        "avatar_url": "https://avatars.githubusercontent.com/u/63741680?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/dexteresc",
+        "html_url": "https://github.com/dexteresc",
+        "followers_url": "https://api.github.com/users/dexteresc/followers",
+        "following_url": "https://api.github.com/users/dexteresc/following{/other_user}",
+        "gists_url": "https://api.github.com/users/dexteresc/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/dexteresc/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/dexteresc/subscriptions",
+        "organizations_url": "https://api.github.com/users/dexteresc/orgs",
+        "repos_url": "https://api.github.com/users/dexteresc/repos",
+        "events_url": "https://api.github.com/users/dexteresc/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/dexteresc/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-20T17:33:07Z",
+      "updated_at": "2026-09-20T17:33:07Z",
+      "body": "Superseded by #12652. The code is identical; the replacement corrects the Git commit author identity.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5751447174/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

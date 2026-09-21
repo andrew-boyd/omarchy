@@ -1,0 +1,505 @@
+{
+  "queries": [
+    {
+      "query": "repo:omacom/omarchy is:pr updated:>=2026-09-20 mac",
+      "total_count": 35,
+      "incomplete_results": false
+    },
+    {
+      "query": "repo:omacom/omarchy-pkgs is:pr updated:>=2026-09-20 mac",
+      "total_count": 8,
+      "incomplete_results": false
+    },
+    {
+      "query": "repo:omacom/omarchy-iso is:pr updated:>=2026-09-20 mac",
+      "total_count": 0,
+      "incomplete_results": false
+    },
+    {
+      "query": "repo:omacom/omarchy is:pr updated:>=2026-09-20 broadcom",
+      "total_count": 11,
+      "incomplete_results": false
+    },
+    {
+      "query": "repo:omacom/omarchy is:pr updated:>=2026-09-20 T2",
+      "total_count": 14,
+      "incomplete_results": false
+    },
+    {
+      "query": "repo:omacom/omarchy-pkgs is:pr updated:>=2026-09-20 apple",
+      "total_count": 9,
+      "incomplete_results": false
+    }
+  ],
+  "qualification": "Dated bounded search; not an exhaustive GitHub inventory. Adjacent shared software remains upstream work unless Intel hardware requirements are established.",
+  "results": [
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/186",
+      "title": "omamorph: add local media converter and compressor",
+      "state": "open",
+      "updated_at": "2026-09-21T06:35:30Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "General media application; no Intel Mac compatibility requirement established.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/298",
+      "title": "Package freeze-safe Apple T1 Touch Bar driver",
+      "state": "open",
+      "updated_at": "2026-09-21T04:01:57Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/299",
+      "title": "Add VibeCAD Preview binary package",
+      "state": "open",
+      "updated_at": "2026-09-20T17:51:46Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Application packaging and generic AMD GLX startup behavior; retained outside this hardware consolidation.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/385",
+      "title": "Add malus-cursors: Apple-style cursors in XCursor and hyprcursor formats",
+      "state": "open",
+      "updated_at": "2026-09-21T06:36:57Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Apple-style cursor artwork, not Apple hardware support.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/470",
+      "title": "Add omarchy-steam-fex for Apple Silicon (aarch64)",
+      "state": "closed",
+      "updated_at": "2026-09-20T18:45:06Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Explicit aarch64/Apple Silicon package, outside x86_64 Intel scope.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/476",
+      "title": "Add afanctl: applesmc fan supervisor for pre-T2 Intel Macs (A1708)",
+      "state": "open",
+      "updated_at": "2026-09-21T06:37:05Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/478",
+      "title": "Build hyprland-preview-share-picker with stable Rust",
+      "state": "closed",
+      "updated_at": "2026-09-20T17:47:11Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Generic Rust build-toolchain change; ARM and x86 builds reported, no Intel Mac hardware requirement.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/506",
+      "title": "Package Apple Silicon Wi-Fi defaults as a settings add-on",
+      "state": "open",
+      "updated_at": "2026-09-21T06:37:10Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Explicit aarch64/Asahi Wi-Fi add-on, outside Intel scope.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/544",
+      "title": "linux-omarchy: carry ACPICA PCI bus fix for resume delays",
+      "state": "open",
+      "updated_at": "2026-09-20T06:06:23Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/556",
+      "title": "[Intel Mac P08/packages] Consolidate FaceTime PCIe camera packages",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:44Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/557",
+      "title": "[Intel Mac P11/packages] Consolidate model-specific Cirrus audio packages",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:03Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy-pkgs/pull/558",
+      "title": "[Intel Mac P12/packages] Package the existing T1Bridge stack",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:17Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10141",
+      "title": "Stabilize MacBookPro13,3 hardware support",
+      "state": "open",
+      "updated_at": "2026-09-20T17:51:46Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10224",
+      "title": "Exclude the internal Apple T2 Ethernet link from automatic wired profiles",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:41:15Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10468",
+      "title": "Name keycode bindings after the layout the keyboard is using",
+      "state": "open",
+      "updated_at": "2026-09-20T20:43:38Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/10890",
+      "title": "Classify T2 built-in trackpads as internal",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:36:07Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11434",
+      "title": "apple: reload brcmfmac after resume, some Broadcom Wi-Fi parts don't survive S3",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:45:38Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11507",
+      "title": "Skip omarchy-fcitx5.service when fcitx5 is not installed",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:47:16Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Shared optional input-method service availability; no Intel Mac-specific compatibility boundary.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11570",
+      "title": "Suspend on MacBookPro14,2: keep Wi-Fi and USB-C working across S3 (two systemd-sleep hooks)",
+      "state": "open",
+      "updated_at": "2026-09-21T00:12:02Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11795",
+      "title": "Show the command being authorized at the top of the polkit prompt",
+      "state": "open",
+      "updated_at": "2026-09-20T17:31:58Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Shared polkit prompt UI with Apple Silicon evidence; not an Intel hardware integration requirement.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/11846",
+      "title": "Detect the Latitude 9440 fingerprint reader without replacing its driver",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:47:51Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Dell Latitude 9440 reader selection; not an Apple device claim.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12067",
+      "title": "Install the FaceTime HD camera driver on Intel Macs that have one",
+      "state": "open",
+      "updated_at": "2026-09-20T03:43:12Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12314",
+      "title": "apple: rebind brcmfmac across suspend",
+      "state": "open",
+      "updated_at": "2026-09-20T12:13:22Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12488",
+      "title": "Add Omarchy Kids theme collection",
+      "state": "open",
+      "updated_at": "2026-09-20T05:47:46Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Theme artwork collection, not Mac hardware support.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12590",
+      "title": "Restore t2fanrd fan control after suspend/resume on T2 Macs",
+      "state": "open",
+      "updated_at": "2026-09-20T02:32:03Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12679",
+      "title": "[Intel Mac P01] Keep keyboard layout tracking on typing devices",
+      "state": "open",
+      "updated_at": "2026-09-21T06:02:29Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12680",
+      "title": "[Intel Mac P02] Repair headers for retained stock kernels",
+      "state": "open",
+      "updated_at": "2026-09-21T06:02:32Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12681",
+      "title": "[Intel Mac P03] Consolidate Apple hardware detection",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:18Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12682",
+      "title": "[Intel Mac P04] Consolidate lid handling and display classification",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:20Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12683",
+      "title": "[Intel Mac P05] Handle ghost internal displays",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:27Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12684",
+      "title": "[Intel Mac P06] Retire the legacy SPI package alongside T1Bridge",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:35Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12685",
+      "title": "[Intel Mac P07] Preserve the MacBook8,1 SPI PIO workaround",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:42Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12686",
+      "title": "[Intel Mac P08] Consolidate FaceTime PCIe camera support",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:47Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12687",
+      "title": "[Intel Mac P09] Consolidate NVMe suspend applicability",
+      "state": "open",
+      "updated_at": "2026-09-21T06:03:54Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12688",
+      "title": "[Intel Mac P10] Consolidate Broadcom calibration and sleep recovery",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:01Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12689",
+      "title": "[Intel Mac P11] Consolidate model-specific Cirrus audio support",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:10Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12690",
+      "title": "[Intel Mac P12] Consolidate T1Bridge support and fingerprint UI",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:20Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12691",
+      "title": "[Intel Mac P13] Consolidate the Intel Mac kernel migration policy",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:27Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/12692",
+      "title": "[Intel Mac P14] Consolidate suspend diagnostics",
+      "state": "open",
+      "updated_at": "2026-09-21T06:04:34Z",
+      "treatment": "coordination-target",
+      "rationale": "Existing roll-up/companion PR; not counted again as an input source.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7137",
+      "title": "Add inline calculator to Omarchy menu",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:47:45Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "General menu calculator feature, not Mac hardware support.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7140",
+      "title": "Install CS8409 speaker driver on 2016-2017 MacBook Pros",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:30:28Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7146",
+      "title": "Disable the panel by overlay alone in clamshell recovery",
+      "state": "open",
+      "updated_at": "2026-09-20T17:05:29Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7589",
+      "title": "Fix Mac suspend loop after the first resume from sleep",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:38:57Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7664",
+      "title": "Feat: Bluetooth device aliases ",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:39:14Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "General Bluetooth alias UI, distinct from Apple controller/transport compatibility.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7671",
+      "title": "Install BCM43602 NVRAM so 2017 Touch Bar Macs see 5 GHz Wi-Fi",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:38:20Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7828",
+      "title": "Add \"Join hidden network\" to the Wi-Fi panel",
+      "state": "open",
+      "updated_at": "2026-09-20T00:10:15Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "General hidden-network UI, distinct from Broadcom driver/firmware support.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/7948",
+      "title": "Stop the DMI chassis fallback in omarchy-hw-laptop reading an empty string",
+      "state": "open",
+      "updated_at": "2026-09-20T20:59:23Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Shared DMI fallback defect, demonstrated on an M2 Asahi host without ACPI. Retain as adjacent upstream detector context; no Intel model reproducer established by this screening.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/8572",
+      "title": "Keep the Bluetooth pairing agent from skipping late USB adapters",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:48:38Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/8838",
+      "title": "Dismiss the low battery warning when charging resumes",
+      "state": "closed",
+      "updated_at": "2026-09-21T06:52:28Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "General low-battery notification lifecycle, not an Apple battery driver/threshold proposal.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9354",
+      "title": "Add battery charge limit picker to the power panel",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:43:53Z",
+      "treatment": "excluded-from-intake",
+      "rationale": "Generic charge-limit picker for exposed sysfs capability; separate from the inventoried Apple SMC kernel support and state parsing.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9516",
+      "title": "Install CS8409 speaker driver on pre-T2 MacBook Pros and iMacs",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:30:35Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    },
+    {
+      "url": "https://github.com/omacom/omarchy/pull/9910",
+      "title": "Persist apple-gmux panel brightness across reboots",
+      "state": "closed",
+      "updated_at": "2026-09-21T09:41:38Z",
+      "treatment": "inventoried",
+      "rationale": "Present in full source registry.",
+      "review_depth": "search title/body screening, not a full patch review"
+    }
+  ]
+}

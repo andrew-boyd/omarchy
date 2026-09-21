@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10910",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-legacy"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "ad56c45a9cb2f0956619cdc44f27ef48de1928a3",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10910,
+  "checked_at": "2026-09-21T11:57:35.418113+00:00",
+  "title": "fix(bcm43xx): add BCM43224 detection and blacklist conflicting drivers",
+  "author": "andyholst",
+  "head_sha": "ad56c45a9cb2f0956619cdc44f27ef48de1928a3",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T20:03:37Z",
+  "state": "open",
+  "body": "## Summary\n- Add BCM43224 (14e4:4353) WiFi chip detection to fix-bcm43xx.sh\n- Blacklist open-source drivers (b43, brcmsmac, bcma) that conflict with broadcom-wl-dkms\n\n## Changes\n1. **install/hardware/fix-bcm43xx.sh** \u2014 Add BCM43224 (14e4:4353) detection and blacklist\n2. **test/shell.d/bcm43xx-wifi-fix-test.sh** \u2014 10 tests covering detection, blacklist, and non-Broadcom skip\n\n## Why the blacklist is needed\nWhen b43/brcmsmac/bcma load before wl, they claim the BCM43224 device and prevent the proprietary wl driver from attaching. This leaves the interface down or unstable. Blacklisting ensures broadcom-wl-dkms works out of the box.\n\n## Why this only affects Broadcom hardware\nThe blacklist is only written when a Broadcom WiFi chip is detected (14e4:43a0, 14e4:4331, or 14e4:4353). Systems with Intel, Qualcomm, or other WiFi chips never trigger this code path.\n\n## Testing\n- All 10 new tests pass\n- **Verified on physical MacBook Air 5,2** with BCM43224 WiFi\n\n### Real-World WiFi Verification\n| Metric | Before (brcmsmac) | After (broadcom-wl-dkms) |\n|--------|-------------------|--------------------------|\n| Driver | brcmsmac (open-source) | wl (proprietary) |\n| Link speed | 144.4 Mbps | **1170 Mbit/s** |\n| Signal | -41 dBm | **100%** |\n\n**7.8x faster link speed** with broadcom-wl-dkms. Clean boot, no conflicts.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e89700c9f6c9851eeaaaeb966cc2baa8cfceb3d6",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 15,
+      "deletions": 3,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy/blob/ad56c45a9cb2f0956619cdc44f27ef48de1928a3/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/ad56c45a9cb2f0956619cdc44f27ef48de1928a3/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=ad56c45a9cb2f0956619cdc44f27ef48de1928a3",
+      "patch": "@@ -1,10 +1,22 @@\n # Install Wi-Fi drivers for Broadcom chips found in some MacBooks, as well as other systems:\n # - BCM4360 (2013\u20132015 MacBooks)\n # - BCM4331 (2012, early 2013 MacBooks)\n+# - BCM43224 (2012 MacBook Air 5,2)\n \n pci_info=$(lspci -nn)\n \n-if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n-  echo \"BCM4360 / BCM4331 detected\"\n-  omarchy-pkg-add broadcom-wl-dkms\n+if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\" || echo \"$pci_info\" | grep -q \"14e4:4353\"); then\n+  echo \"BCM4360 / BCM4331 / BCM43224 detected\"\n+  omarchy-pkg-add broadcom-wl-dkms linux-headers\n+\n+  # Blacklist open-source drivers that conflict with wl. When b43/brcmsmac/bcma\n+  # load first, they claim the device and prevent wl from attaching, leaving the\n+  # interface down or unstable.\n+  mkdir -p /etc/modprobe.d\n+  cat > /etc/modprobe.d/broadcom-wl.conf <<'EOF'\n+# Blacklist open-source Broadcom drivers to prevent conflict with broadcom-wl-dkms (wl)\n+blacklist b43\n+blacklist brcmsmac\n+blacklist bcma\n+EOF\n fi"
+    },
+    {
+      "sha": "c0cc799abf5fc04c832db249068aec511c4ff093",
+      "filename": "test/shell.d/bcm43xx-wifi-fix-test.sh",
+      "status": "added",
+      "additions": 116,
+      "deletions": 0,
+      "changes": 116,
+      "blob_url": "https://github.com/omacom/omarchy/blob/ad56c45a9cb2f0956619cdc44f27ef48de1928a3/test%2Fshell.d%2Fbcm43xx-wifi-fix-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/ad56c45a9cb2f0956619cdc44f27ef48de1928a3/test%2Fshell.d%2Fbcm43xx-wifi-fix-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbcm43xx-wifi-fix-test.sh?ref=ad56c45a9cb2f0956619cdc44f27ef48de1928a3",
+      "patch": "@@ -0,0 +1,116 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+fix_script=\"$ROOT/install/hardware/fix-bcm43xx.sh\"\n+\n+# === Static analysis ===\n+\n+grep -q '14e4:43a0' \"$fix_script\" || \\\n+  fail \"fix-bcm43xx.sh still detects BCM4360 (14e4:43a0)\"\n+pass \"fix-bcm43xx.sh still detects BCM4360 (14e4:43a0)\"\n+\n+grep -q '14e4:4331' \"$fix_script\" || \\\n+  fail \"fix-bcm43xx.sh still detects BCM4331 (14e4:4331)\"\n+pass \"fix-bcm43xx.sh still detects BCM4331 (14e4:4331)\"\n+\n+grep -q '14e4:4353' \"$fix_script\" || \\\n+  fail \"fix-bcm43xx.sh detects BCM43224 (14e4:4353) in MacBook Air 5,2\"\n+pass \"fix-bcm43xx.sh detects BCM43224 (14e4:4353) in MacBook Air 5,2\"\n+\n+# === Test 1: BCM43224 detection ===\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+echo '02:00.0 Network controller [0280]: Broadcom Inc. and subsidiaries BCM43224 802.11a/b/g/n [14e4:4353] (rev 01)'\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add\\t%s\\n' \"$*\" >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+# Redirect /etc/modprobe.d to sandbox so the test runs without root\n+script=\"$test_tmp/fix-bcm43xx.sh\"\n+sed -e \"s|/etc/modprobe.d|$test_tmp/etc/modprobe.d|g\" \\\n+    \"$fix_script\" >\"$script\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -euo pipefail \"$script\" >/dev/null\n+\n+# Verify package install was called (tab-separated)\n+grep -q 'broadcom-wl-dkms linux-headers' \"$calls\" || \\\n+  fail \"BCM43224 triggers broadcom-wl-dkms installation\"\n+pass \"BCM43224 triggers broadcom-wl-dkms installation\"\n+\n+# Verify blacklist was written\n+blacklist_conf=\"$test_tmp/etc/modprobe.d/broadcom-wl.conf\"\n+[[ -f $blacklist_conf ]] || fail \"broadcom-wl blacklist config created\"\n+pass \"broadcom-wl blacklist config created\"\n+\n+grep -Fq 'blacklist b43' \"$blacklist_conf\" || \\\n+  fail \"blacklist contains b43\"\n+pass \"blacklist contains b43\"\n+\n+grep -Fq 'blacklist brcmsmac' \"$blacklist_conf\" || \\\n+  fail \"blacklist contains brcmsmac\"\n+pass \"blacklist contains brcmsmac\"\n+\n+grep -Fq 'blacklist bcma' \"$blacklist_conf\" || \\\n+  fail \"blacklist contains bcma\"\n+pass \"blacklist contains bcma\"\n+\n+# === Test 2: Non-Broadcom hardware is skipped ===\n+\n+test_tmp2=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\" \"$test_tmp2\"' EXIT\n+\n+stub_bin2=\"$test_tmp2/bin\"\n+calls2=\"$test_tmp2/calls.log\"\n+mkdir -p \"$stub_bin2\"\n+: >\"$calls2\"\n+\n+cat >\"$stub_bin2/lspci\" <<'SH'\n+#!/bin/bash\n+\n+echo '02:00.0 Network controller [0280]: Intel Corporation Wi-Fi 6 AX201 [8086:06f0] (rev 01)'\n+SH\n+\n+cat >\"$stub_bin2/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add\\t%s\\n' \"$*\" >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin2\"/*\n+\n+script2=\"$test_tmp2/fix-bcm43xx.sh\"\n+sed -e \"s|/etc/modprobe.d|$test_tmp2/etc/modprobe.d|g\" \\\n+    \"$fix_script\" >\"$script2\"\n+\n+PATH=\"$stub_bin2:$PATH\" \\\n+  TEST_LOG=\"$calls2\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -euo pipefail \"$script2\" >/dev/null\n+\n+[[ ! -s $calls2 ]] || fail \"non-Broadcom hardware skips driver installation\"\n+pass \"non-Broadcom hardware skips driver installation\"\n+\n+[[ ! -d \"$test_tmp2/etc/modprobe.d\" ]] || fail \"non-Broadcom hardware skips blacklist creation\"\n+pass \"non-Broadcom hardware skips blacklist creation\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

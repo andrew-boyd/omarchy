@@ -1,0 +1,24 @@
+Nothing pending - no wake sources were left disabled by this tool.
+PASS: actual privileged state directory and lock are root-owned/private
+PASS: actual lock rejects a concurrent test
+Another suspend diagnosis is active.
+Unsafe recovery directory: /run/omarchy-diagnose-suspend-wake
+PASS: unsafe directory permissions are rejected
+  re-enabled: GOOD
+  could not restore: RETRY; keeping recovery state
+Recovery is pending. Run restore before starting another diagnosis.
+  re-enabled: RETRY
+Restored.
+PASS: actual installed restore retains only failed device records and retries them
+Suspending for 10s via RTC alarm...
+rtcwake failed - can't tell whether this held sleep or not
+PASS: failed RTC command returns failure without a false success report
+Suspending for 10s via RTC alarm...
+elapsed: 11s (requested 10s, threshold 8s)
+Held the full duration - suspend is behaving normally.
+Sep 21 14:07:26 omarchy-test kernel: PM: suspend entry (deep)
+Sep 21 14:07:37 omarchy-test kernel: ACPI: PM: Low-level resume complete
+Sep 21 14:07:37 omarchy-test kernel: PM: suspend exit
+PASS: actual guest RTC sleep/resume and recovery-state cleanup
+brcmfmac: could not restore 0000:ff:00.0; retry state retained
+PASS: installed Broadcom hook preserves pending state across pre and a real failed bind

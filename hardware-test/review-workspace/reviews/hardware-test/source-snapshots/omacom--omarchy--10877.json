@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10877",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "nvme-target"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+      "state": "open"
+    },
+    {
+      "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+      "state": "open",
+      "updated_at": "2026-09-15T16:08:24Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10877,
+  "checked_at": "2026-09-21T11:56:55.194199+00:00",
+  "title": "Target the actual NVMe controller in Apple suspend fix",
+  "author": "Drecullith",
+  "head_sha": "ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+  "base_sha": "6ea3215542fbb269dfe5c2be928e6144f9cb6466",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T16:08:24Z",
+  "state": "open",
+  "body": "## Summary\r\n\r\nFix the Apple NVMe suspend workaround so it targets the actual NVMe PCI controller instead of assuming it is always `0000:01:00.0`.\r\n\r\nOn MacBook models with discrete graphics, including MacBookPro13,3, PCI `01:00.0` can be the dGPU while the NVMe controller is at another address such as `02:00.0`.\r\n\r\nThe previous guard only checked whether `01:00.0` exposed `d3cold_allowed`. Since that attribute is available on other PCI devices too, the installer could successfully disable D3cold on the GPU while leaving the NVMe untouched.\r\n\r\nThis change:\r\n\r\n- resolves the installed NVMe controller through `/sys/class/nvme`;\r\n- validates the resolved device name as a PCI BDF before using it;\r\n- requires the resolved PCI device to expose `d3cold_allowed`;\r\n- writes the discovered NVMe path into `omarchy-nvme-suspend-fix.service`;\r\n- reloads systemd after updating the unit;\r\n- detects the previous Omarchy unit before undoing its legacy `01:00.0` setting;\r\n- restores D3cold on that legacy target only when the actual NVMe is elsewhere and the existing Omarchy service proves it contained the old hard-coded path.\r\n\r\nFixes #10826.\r\n\r\n## Tests\r\n\r\nAdded `test/shell.d/apple-nvme-suspend-test.sh` covering:\r\n\r\n- an NVMe controller at `0000:02:00.0` is discovered correctly;\r\n- non-PCI controller paths are rejected;\r\n- a controller without `d3cold_allowed` is rejected;\r\n- the generated systemd unit uses the discovered NVMe device;\r\n- legacy D3cold restoration is gated on both a different actual NVMe address and the old Omarchy unit.\r\n\r\nThe focused regression tests pass locally.\r\n\r\nAlso verified:\r\n\r\n- `bash -n install/hardware/apple/fix-suspend-nvme.sh`\r\n- `bash -n test/shell.d/apple-nvme-suspend-test.sh`\r\n- the generated systemd unit passes `systemd-analyze verify`\r\n\r\nNo physical MacBook hardware test was available in this environment.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "084bfe1d617e7ba82561b14ba9ba01c607406b45",
+      "filename": "install/hardware/apple/fix-suspend-nvme.sh",
+      "status": "modified",
+      "additions": 44,
+      "deletions": 6,
+      "changes": 50,
+      "blob_url": "https://github.com/omacom/omarchy/blob/ebba9c316ee2c727eb9b267b5caa5e90438a67b7/install%2Fhardware%2Fapple%2Ffix-suspend-nvme.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/ebba9c316ee2c727eb9b267b5caa5e90438a67b7/install%2Fhardware%2Fapple%2Ffix-suspend-nvme.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-suspend-nvme.sh?ref=ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+      "patch": "@@ -2,29 +2,67 @@\n # This prevents NVMe drives from failing to wake from sleep properly\n MACBOOK_MODEL=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)\n \n+find_nvme_pci_device() {\n+  local sys_root=\"${1:-/sys}\"\n+  local controller=\"\"\n+  local device_path=\"\"\n+  local pci_device=\"\"\n+\n+  for controller in \"$sys_root\"/class/nvme/nvme*; do\n+    [[ -e $controller/device ]] || continue\n+\n+    device_path=$(readlink -f \"$controller/device\" 2>/dev/null) || continue\n+    pci_device=${device_path##*/}\n+\n+    [[ $pci_device =~ ^[0-9A-Fa-f]{4}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}\\.[0-7]$ ]] || continue\n+    [[ -f $sys_root/bus/pci/devices/$pci_device/d3cold_allowed ]] || continue\n+\n+    printf '%s\\n' \"$pci_device\"\n+    return 0\n+  done\n+\n+  return 1\n+}\n+\n if [[ $MACBOOK_MODEL =~ MacBook(8,1|9,1|10,1)|MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n   echo \"Detected MacBook model: $MACBOOK_MODEL\"\n \n-  NVME_DEVICE=\"/sys/bus/pci/devices/0000:01:00.0/d3cold_allowed\"\n+  NVME_PCI=$(find_nvme_pci_device || true)\n+\n+  if [[ -n $NVME_PCI ]]; then\n+    NVME_DEVICE=\"/sys/bus/pci/devices/$NVME_PCI/d3cold_allowed\"\n+    SERVICE_FILE=\"/etc/systemd/system/omarchy-nvme-suspend-fix.service\"\n+    LEGACY_PCI=\"0000:01:00.0\"\n+    LEGACY_DEVICE=\"/sys/bus/pci/devices/$LEGACY_PCI/d3cold_allowed\"\n+\n+    echo \"Applying NVMe suspend fix to $NVME_PCI...\"\n \n-  if [[ -f $NVME_DEVICE ]]; then\n-    echo \"Applying NVMe suspend fix...\"\n+    # Older Omarchy installs always targeted 01:00.0. On dGPU MacBooks that can\n+    # be the graphics controller instead of the NVMe. Only undo that setting\n+    # when the existing Omarchy unit proves it contains the legacy target.\n+    if [[ $NVME_PCI != \"$LEGACY_PCI\" && -f $LEGACY_DEVICE && -f $SERVICE_FILE ]] &&\n+      { grep -Fq '0000\\:01\\:00.0/d3cold_allowed' \"$SERVICE_FILE\" ||\n+        grep -Fq '0000:01:00.0/d3cold_allowed' \"$SERVICE_FILE\"; }; then\n+      echo \"Restoring D3cold on legacy non-NVMe PCI target $LEGACY_PCI...\"\n+      echo 1 | sudo tee \"$LEGACY_DEVICE\" >/dev/null\n+    fi\n \n     sudo mkdir -p /etc/systemd/system\n-    sudo tee /etc/systemd/system/omarchy-nvme-suspend-fix.service >/dev/null <<'EOF'\n+    sudo tee \"$SERVICE_FILE\" >/dev/null <<EOF\n [Unit]\n Description=Omarchy NVMe Suspend Fix for MacBook\n \n [Service]\n-ExecStart=/bin/bash -c 'echo 0 > /sys/bus/pci/devices/0000\\:01\\:00.0/d3cold_allowed'\n+ExecStart=/bin/bash -c 'echo 0 > $NVME_DEVICE'\n \n [Install]\n WantedBy=multi-user.target\n EOF\n \n+    sudo systemctl daemon-reload\n     sudo systemctl enable omarchy-nvme-suspend-fix.service\n   else\n-    echo \"Warning: NVMe device not found at expected PCI address (0000:01:00.0)\"\n+    echo \"Warning: No PCI NVMe controller with d3cold_allowed was found\"\n     echo \"This fix may not be needed for this MacBook model\"\n   fi\n fi"
+    },
+    {
+      "sha": "3d438c95dc57d0766370a4517ba1671dad5b8d63",
+      "filename": "test/shell.d/apple-nvme-suspend-test.sh",
+      "status": "added",
+      "additions": 57,
+      "deletions": 0,
+      "changes": 57,
+      "blob_url": "https://github.com/omacom/omarchy/blob/ebba9c316ee2c727eb9b267b5caa5e90438a67b7/test%2Fshell.d%2Fapple-nvme-suspend-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/ebba9c316ee2c727eb9b267b5caa5e90438a67b7/test%2Fshell.d%2Fapple-nvme-suspend-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-nvme-suspend-test.sh?ref=ebba9c316ee2c727eb9b267b5caa5e90438a67b7",
+      "patch": "@@ -0,0 +1,57 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+script=\"$ROOT/install/hardware/apple/fix-suspend-nvme.sh\"\n+\n+finder=$(awk '\n+  $0 == \"find_nvme_pci_device() {\" { inside = 1 }\n+  inside { print }\n+  inside && $0 == \"}\" { exit }\n+' \"$script\")\n+[[ -n $finder ]] || fail \"Apple NVMe suspend fix exposes a controller discovery helper\"\n+eval \"$finder\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+fake_sys=\"$test_tmp/sys\"\n+mkdir -p \"$fake_sys/class/nvme/nvme0\" \\\n+  \"$fake_sys/bus/pci/devices/0000:02:00.0\"\n+touch \"$fake_sys/bus/pci/devices/0000:02:00.0/d3cold_allowed\"\n+ln -s ../../../bus/pci/devices/0000:02:00.0 \"$fake_sys/class/nvme/nvme0/device\"\n+\n+[[ $(find_nvme_pci_device \"$fake_sys\") == 0000:02:00.0 ]] ||\n+  fail \"Apple NVMe suspend fix follows the actual NVMe controller PCI address\"\n+pass \"Apple NVMe suspend fix follows the actual NVMe controller PCI address\"\n+\n+rm \"$fake_sys/class/nvme/nvme0/device\"\n+mkdir -p \"$fake_sys/devices/platform/not-a-pci-device\" \\\n+  \"$fake_sys/class/nvme/nvme1\" \\\n+  \"$fake_sys/bus/pci/devices/0000:03:00.0\"\n+ln -s ../../../devices/platform/not-a-pci-device \"$fake_sys/class/nvme/nvme0/device\"\n+touch \"$fake_sys/bus/pci/devices/0000:03:00.0/d3cold_allowed\"\n+ln -s ../../../bus/pci/devices/0000:03:00.0 \"$fake_sys/class/nvme/nvme1/device\"\n+\n+[[ $(find_nvme_pci_device \"$fake_sys\") == 0000:03:00.0 ]] ||\n+  fail \"Apple NVMe suspend fix rejects non-PCI controller paths\"\n+pass \"Apple NVMe suspend fix rejects non-PCI controller paths\"\n+\n+rm \"$fake_sys/bus/pci/devices/0000:03:00.0/d3cold_allowed\"\n+if find_nvme_pci_device \"$fake_sys\" >/dev/null; then\n+  fail \"Apple NVMe suspend fix requires a d3cold_allowed target\"\n+fi\n+pass \"Apple NVMe suspend fix requires a d3cold_allowed target\"\n+\n+grep -Fq 'NVME_PCI=$(find_nvme_pci_device || true)' \"$script\" ||\n+  fail \"Apple NVMe suspend fix uses discovered controller at install time\"\n+grep -Fq \"ExecStart=/bin/bash -c 'echo 0 > \\$NVME_DEVICE'\" \"$script\" ||\n+  fail \"Apple NVMe suspend unit targets the discovered controller\"\n+pass \"Apple NVMe suspend unit targets the discovered controller\"\n+\n+grep -Fq 'NVME_PCI != \"$LEGACY_PCI\"' \"$script\" ||\n+  fail \"Apple NVMe suspend fix only restores a distinct legacy target\"\n+grep -Fq \"grep -Fq '0000\\\\:01\\\\:00.0/d3cold_allowed' \\\"\\$SERVICE_FILE\\\"\" \"$script\" ||\n+  fail \"Apple NVMe suspend fix verifies the old Omarchy unit before restoring D3cold\"\n+pass \"Apple NVMe suspend fix gates legacy D3cold restoration on the old unit\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

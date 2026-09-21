@@ -1,0 +1,110 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10807",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "pci-detection"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+      "state": "closed"
+    },
+    {
+      "head_sha": "eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+      "state": "closed",
+      "updated_at": "2026-09-16T08:24:43Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10807,
+  "checked_at": "2026-09-21T11:56:58.596295+00:00",
+  "title": "Pick Vulkan ICDs from sysfs instead of three lspci greps",
+  "author": "Chessing234",
+  "head_sha": "eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T08:24:43Z",
+  "state": "closed",
+  "body": "## Summary\n- `vulkan.sh` ran `lspci` once per vendor (Intel/AMD/Apple). That reads PCI config space and can resume a runtime-suspended GPU.\n- One sysfs walk over display-class devices now, same override `OMARCHY_PCI_DEVICES_PATH` as `omarchy-hw-nvidia`. NVIDIA Vulkan stays with `nvidia.sh`.\n\n## Test plan\n- [x] `test/shell.d/vulkan-sysfs-test.sh`\n- [ ] Intel-only machine still gets vulkan-intel\n- [ ] Hybrid AMD+NVIDIA does not add nvidia-utils here\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "245cd56cf578203380d3df73375bc65db67ea734",
+      "filename": "install/hardware/vulkan.sh",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 9,
+      "changes": 31,
+      "blob_url": "https://github.com/omacom/omarchy/blob/eabb82af3e0b875a7f0f60d81428b8056d16c93c/install%2Fhardware%2Fvulkan.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/eabb82af3e0b875a7f0f60d81428b8056d16c93c/install%2Fhardware%2Fvulkan.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fvulkan.sh?ref=eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+      "patch": "@@ -1,18 +1,31 @@\n # Install Vulkan drivers matching detected GPU hardware\n # (NVIDIA Vulkan is handled by nvidia.sh via nvidia-utils)\n+#\n+# Walk sysfs the way omarchy-hw-nvidia does. lspci reads PCI config space and\n+# resumes runtime-suspended GPUs; three greps used to do that once per vendor.\n \n-declare -A VULKAN_DRIVERS=(\n-  [Intel]=vulkan-intel\n-  [AMD]=vulkan-radeon\n-  [Apple]=vulkan-asahi\n-)\n+pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n \n PACKAGES=()\n \n-for vendor in \"${!VULKAN_DRIVERS[@]}\"; do\n-  if lspci | grep -iE \"(VGA|Display).*$vendor\" > /dev/null; then\n-    PACKAGES+=(\"${VULKAN_DRIVERS[$vendor]}\")\n-  fi\n+add_vulkan_pkg() {\n+  local pkg=$1\n+  local existing\n+  for existing in \"${PACKAGES[@]+\"${PACKAGES[@]}\"}\"; do\n+    [[ $existing == \"$pkg\" ]] && return\n+  done\n+  PACKAGES+=(\"$pkg\")\n+}\n+\n+shopt -s nullglob\n+for device in \"$pci_devices_path\"/*; do\n+  [[ -r $device/vendor && -r $device/class ]] || continue\n+  [[ $(<\"$device/class\") == 0x03* ]] || continue\n+  case $(<\"$device/vendor\") in\n+    0x8086) add_vulkan_pkg vulkan-intel ;;\n+    0x1002) add_vulkan_pkg vulkan-radeon ;;\n+    0x106b) add_vulkan_pkg vulkan-asahi ;;\n+  esac\n done\n \n if (( ${#PACKAGES[@]} > 0 )); then"
+    },
+    {
+      "sha": "2152e66a78f3c4712bad2e2b44ffcbe9b653f47a",
+      "filename": "test/shell.d/vulkan-sysfs-test.sh",
+      "status": "added",
+      "additions": 59,
+      "deletions": 0,
+      "changes": 59,
+      "blob_url": "https://github.com/omacom/omarchy/blob/eabb82af3e0b875a7f0f60d81428b8056d16c93c/test%2Fshell.d%2Fvulkan-sysfs-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/eabb82af3e0b875a7f0f60d81428b8056d16c93c/test%2Fshell.d%2Fvulkan-sysfs-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fvulkan-sysfs-test.sh?ref=eabb82af3e0b875a7f0f60d81428b8056d16c93c",
+      "patch": "@@ -0,0 +1,59 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+tmp=$(mktemp -d)\n+trap 'rm -rf \"$tmp\"' EXIT\n+\n+write_pci() {\n+  rm -rf \"$tmp/devices\"\n+  mkdir -p \"$tmp/devices\"\n+  local index=0 spec slot\n+  for spec in \"$@\"; do\n+    slot=$(printf '0000:%02x:00.0' \"$index\")\n+    mkdir -p \"$tmp/devices/$slot\"\n+    printf '%s\\n' \"${spec%%:*}\" >\"$tmp/devices/$slot/vendor\"\n+    printf '%s\\n' \"${spec##*:}\" >\"$tmp/devices/$slot/class\"\n+    index=$((index + 1))\n+  done\n+}\n+\n+stub_bin=\"$tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$@\" >>\"$OMARCHY_TEST_VULKAN_PKGS\"\n+SH\n+chmod +x \"$stub_bin/omarchy-pkg-add\"\n+\n+run_vulkan() {\n+  : >\"$tmp/pkgs\"\n+  OMARCHY_PCI_DEVICES_PATH=\"$tmp/devices\" \\\n+    OMARCHY_TEST_VULKAN_PKGS=\"$tmp/pkgs\" \\\n+    PATH=\"$stub_bin:$PATH\" \\\n+    bash \"$ROOT/install/hardware/vulkan.sh\"\n+}\n+\n+write_pci 0x8086:0x030000\n+run_vulkan\n+grep -Fxq 'vulkan-intel' \"$tmp/pkgs\" || fail \"Intel display gets vulkan-intel\" \"$(cat \"$tmp/pkgs\")\"\n+pass \"Intel display installs vulkan-intel from sysfs\"\n+\n+write_pci 0x1002:0x030000 0x10de:0x030200\n+run_vulkan\n+grep -Fxq 'vulkan-radeon' \"$tmp/pkgs\" || fail \"AMD iGPU gets vulkan-radeon on a hybrid machine\"\n+! grep -q nvidia \"$tmp/pkgs\" || fail \"NVIDIA Vulkan stays with nvidia.sh\"\n+pass \"hybrid AMD+NVIDIA only adds vulkan-radeon here\"\n+\n+write_pci 0x8086:0x040300\n+run_vulkan\n+[[ ! -s $tmp/pkgs ]] || fail \"an Intel audio function is not a GPU\" \"$(cat \"$tmp/pkgs\")\"\n+pass \"non-display PCI functions do not pull Vulkan drivers\"\n+\n+grep -Fq 'OMARCHY_PCI_DEVICES_PATH' \"$ROOT/install/hardware/vulkan.sh\" ||\n+  fail \"Vulkan install reads the same sysfs override as omarchy-hw-nvidia\"\n+! grep -E '^[^#]*lspci' \"$ROOT/install/hardware/vulkan.sh\" ||\n+  fail \"Vulkan install no longer shells out to lspci\"\n+pass \"Vulkan install does not wake GPUs via lspci\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5694413741",
+      "html_url": "https://github.com/omacom/omarchy/pull/10807#issuecomment-5694413741",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10807",
+      "id": 5694413741,
+      "node_id": "IC_kwDOO0Cobs8AAAABU2nbrQ",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-16T08:24:42Z",
+      "updated_at": "2026-09-16T08:24:42Z",
+      "body": "folded into #12076 \u2014 same sysfs hardware detect work, easier as one review.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5694413741/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,67 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12667",
+  "origins": [
+    "published-source-table"
+  ],
+  "groups": [],
+  "prior_snapshots": [
+    {
+      "head_sha": "828ac78883f5ec1c53f695422af21b9d34a6d20a",
+      "state": "open",
+      "updated_at": "2026-09-20T20:01:02Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12667,
+  "checked_at": "2026-09-21T11:57:59.584693+00:00",
+  "title": "Accept keypad digits on the lock screen while NumLock is desynced",
+  "author": "prabhchintan",
+  "head_sha": "828ac78883f5ec1c53f695422af21b9d34a6d20a",
+  "base_sha": "45748a2812f42e32f915b053caf4074e150e2048",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T20:01:02Z",
+  "state": "open",
+  "body": "## Problem\n\nTyping a digit on the numeric keypad does nothing in the lock screen's password field. The same digit on the number row types fine. Anyone whose password has digits typed on the keypad has to toggle NumLock off and on at every lock (#8552).\n\n## Cause\n\nQt never reads the compositor's NumLock state at startup (QTBUG-32687). Even with NumLock on, the keypad reaches the field as Home, Up, PageUp and the rest with `Qt.KeypadModifier` set and no text, and `TextInput` treats them as cursor movement.\n\n## Fix\n\nMap those keys back to their digits in the field's key handler when `KeypadModifier` is set. Digits that already carry text, the top row and plain cursor keys are untouched, and nothing is inserted while the field is read-only during authentication.\n\nSame approach as #10530 takes for the polkit dialog. The lock keeps its own model so the two can land independently; if both land, the two helpers can fold into one.\n\n## Test plan\n\n- [x] `test/shell.d/lock-keypad-test.sh` covers the mapping and the keys that must stay untouched\n- [x] A Quickshell harness driving the real `LockView` field: keypad Home, End and Delete type `71.`, plain Home stays cursor movement, `Key_7` with text is left to the field, nothing is inserted while authenticating\n- [x] Neighbouring `polkit`, `lock-*` and `menu` shell tests pass\n- [x] Live on Omarchy 4.0.4 (Apple Magic Keyboard with Numeric Keypad, NumLock on in Hyprland): digits type on the lock screen, the number row still works\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "b649ec743b2182f05262eac6d99277150747a93a",
+      "filename": "shell/plugins/lock/LockModel.js",
+      "status": "added",
+      "additions": 25,
+      "deletions": 0,
+      "changes": 25,
+      "blob_url": "https://github.com/omacom/omarchy/blob/828ac78883f5ec1c53f695422af21b9d34a6d20a/shell%2Fplugins%2Flock%2FLockModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/828ac78883f5ec1c53f695422af21b9d34a6d20a/shell%2Fplugins%2Flock%2FLockModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FLockModel.js?ref=828ac78883f5ec1c53f695422af21b9d34a6d20a",
+      "patch": "@@ -0,0 +1,25 @@\n+// Qt never reads the compositor's NumLock state at startup (QTBUG-32687), so\n+// keypad digits reach the password field as cursor keys carrying no text.\n+// Values are Qt::Key_* from qnamespace.h; QML enums are not visible here.\n+function keypadDigit(key) {\n+  switch (key) {\n+    case 0x01000006: return \"0\" // Key_Insert\n+    case 0x01000011: return \"1\" // Key_End\n+    case 0x01000015: return \"2\" // Key_Down\n+    case 0x01000017: return \"3\" // Key_PageDown\n+    case 0x01000012: return \"4\" // Key_Left\n+    case 0x0100000b: return \"5\" // Key_Clear\n+    case 0x01000014: return \"6\" // Key_Right\n+    case 0x01000010: return \"7\" // Key_Home\n+    case 0x01000013: return \"8\" // Key_Up\n+    case 0x01000016: return \"9\" // Key_PageUp\n+    case 0x01000007: return \".\" // Key_Delete\n+  }\n+  return \"\"\n+}\n+\n+if (typeof module !== \"undefined\") {\n+  module.exports = {\n+    keypadDigit: keypadDigit\n+  }\n+}"
+    },
+    {
+      "sha": "d5d7d11bf327d2dcd58d9999033da1d45abc0d2a",
+      "filename": "shell/plugins/lock/LockView.qml",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 0,
+      "changes": 14,
+      "blob_url": "https://github.com/omacom/omarchy/blob/828ac78883f5ec1c53f695422af21b9d34a6d20a/shell%2Fplugins%2Flock%2FLockView.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/828ac78883f5ec1c53f695422af21b9d34a6d20a/shell%2Fplugins%2Flock%2FLockView.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Flock%2FLockView.qml?ref=828ac78883f5ec1c53f695422af21b9d34a6d20a",
+      "patch": "@@ -2,6 +2,7 @@ import QtQuick\n import QtQuick.Effects\n import qs.Commons\n import qs.Ui\n+import \"LockModel.js\" as LockModel\n \n Item {\n   id: root\n@@ -52,6 +53,17 @@ Item {\n     passwordInput.forceActiveFocus()\n   }\n \n+  // With NumLock desynced the keypad sends Home, Up, PageUp and so on with\n+  // KeypadModifier set and no text, which the field would otherwise treat as\n+  // cursor movement. The top row never carries the modifier, so it is untouched.\n+  function insertKeypadDigit(event) {\n+    if (passwordInput.readOnly || !(event.modifiers & Qt.KeypadModifier)) return false\n+    var digit = LockModel.keypadDigit(event.key)\n+    if (digit === \"\") return false\n+    passwordInput.insert(passwordInput.cursorPosition, digit)\n+    return true\n+  }\n+\n   function clearPassword() {\n     passwordTextEdited(\"\")\n   }\n@@ -181,6 +193,8 @@ Item {\n           if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {\n             root.passwordTextEdited(\"\")\n             event.accepted = true\n+          } else if (root.insertKeypadDigit(event)) {\n+            event.accepted = true\n           }\n         }\n       }"
+    },
+    {
+      "sha": "1157930992957a096c4fdcb65da76466fc835fbb",
+      "filename": "test/shell.d/lock-keypad-test.sh",
+      "status": "added",
+      "additions": 30,
+      "deletions": 0,
+      "changes": 30,
+      "blob_url": "https://github.com/omacom/omarchy/blob/828ac78883f5ec1c53f695422af21b9d34a6d20a/test%2Fshell.d%2Flock-keypad-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/828ac78883f5ec1c53f695422af21b9d34a6d20a/test%2Fshell.d%2Flock-keypad-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Flock-keypad-test.sh?ref=828ac78883f5ec1c53f695422af21b9d34a6d20a",
+      "patch": "@@ -0,0 +1,30 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+run_node_test <<'JS'\n+const lock = requireFromRoot('shell/plugins/lock/LockModel.js')\n+\n+const desynced = [\n+  [0x01000006, \"0\", \"Insert\"],\n+  [0x01000011, \"1\", \"End\"],\n+  [0x01000015, \"2\", \"Down\"],\n+  [0x01000017, \"3\", \"PageDown\"],\n+  [0x01000012, \"4\", \"Left\"],\n+  [0x0100000b, \"5\", \"Clear\"],\n+  [0x01000014, \"6\", \"Right\"],\n+  [0x01000010, \"7\", \"Home\"],\n+  [0x01000013, \"8\", \"Up\"],\n+  [0x01000016, \"9\", \"PageUp\"],\n+  [0x01000007, \".\", \"Delete\"]\n+]\n+for (const [key, digit, name] of desynced) {\n+  assertEqual(lock.keypadDigit(key), digit, `keypad ${digit} arrives as ${name} when NumLock is desynced`)\n+}\n+\n+assertEqual(lock.keypadDigit(0x34), \"\", \"a digit that already carries text is not remapped\")\n+assertEqual(lock.keypadDigit(0x01000004), \"\", \"Return is not a keypad digit\")\n+assertEqual(lock.keypadDigit(0x01000000), \"\", \"Escape is not a keypad digit\")\n+JS"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

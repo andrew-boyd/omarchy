@@ -1,0 +1,43 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12634",
+  "origins": [
+    "published-source-table"
+  ],
+  "groups": [],
+  "prior_snapshots": [
+    {
+      "head_sha": "5b76c3a9778ee6b400db252acef12823b175439b",
+      "state": "open",
+      "updated_at": "2026-09-20T13:44:12Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12634,
+  "checked_at": "2026-09-21T11:57:58.498933+00:00",
+  "title": "Wake displays before restoring keyboard and clamshell state",
+  "author": "RenanBezerraGuima",
+  "head_sha": "5b76c3a9778ee6b400db252acef12823b175439b",
+  "base_sha": "e38c1d1289252d2adb96372eeac48d02e489c5b7",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T13:44:12Z",
+  "state": "open",
+  "body": "## What\n\n`omarchy-system-wake` ran three steps sequentially on every wake (idle activity and post-unlock):\n\n1. `omarchy-brightness-display on` \u2014 lights the panels (user-visible)\n2. `omarchy-brightness-keyboard restore`\n3. `omarchy-hyprland-monitor-clamshell` \u2014 can take seconds on docked setups when it triggers `hyprctl reload`\n\nOnly step 1 is on the critical path. Steps 2 and 3 now run in the background, so the session is responsive as soon as the displays are lit. Ordering is preserved: DPMS enable still runs first.\n\n## Side-effect fix\n\nBoth QML callers (`idle/Service.qml` `cancelIdleCycle`, `lock/Service.qml` `runWake`) skip a wake while a previous one is still `running`. A slow clamshell (with reload) used to hold the process open, so a second wake event during that window was dropped entirely \u2014 including its DPMS enable. With the script returning fast, every wake lights the display.\n\n## Numbers (this machine: single eDP-1, no kbd backlight)\n\n5 runs each, `omarchy-system-wake` wall time:\n\n| | run1 | run2 | run3 | run4 | run5 | median |\n|---|---|---|---|---|---|---|\n| Before (sequential) | 171ms | 153ms | 151ms | 151ms | 151ms | ~151ms |\n| After (display foreground, rest background) | 38ms | 30ms | 33ms | 31ms | 31ms | ~31ms |\n\n~5x faster here; on docked multi-monitor setups where clamshell reloads Hyprland config, the win is seconds, not milliseconds.\n\n## Testing\n\n- `bash -n bin/omarchy-system-wake` \u2014 clean\n- `test/shell.d/monitor-recovery-test.sh` \u2014 all 18 checks pass (before and after), including \"system wake resyncs clamshell display state\"\n- `test/cli` \u2014 passes (command metadata untouched)\n- Manual: `omarchy system lock` \u2192 unlock lights the panel immediately; background jobs finish cleanly (`pgrep` shows nothing left behind); `hyprctl monitors -j` reports `dpmsStatus: true`; clamshell toggle state unchanged\n\n## Out of scope (possible follow-up)\n\nThe synchronous `sleep 4` + `supergfxctl` transitions in the `force-igpu` system-sleep `post` hook also stall resume for Integrated-mode users, but changing it would break the synchronous expectations in `system-sleep-ownership-migration-test.sh`. Left for a separate PR.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "c163729fb2db95ccecdebd07dc69f0109be1fd61",
+      "filename": "bin/omarchy-system-wake",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 2,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5b76c3a9778ee6b400db252acef12823b175439b/bin%2Fomarchy-system-wake",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5b76c3a9778ee6b400db252acef12823b175439b/bin%2Fomarchy-system-wake",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-system-wake?ref=5b76c3a9778ee6b400db252acef12823b175439b",
+      "patch": "@@ -5,6 +5,10 @@\n # omarchy:name=wake\n # omarchy:examples=omarchy system wake\n \n+# Restore display brightness immediately in foreground to light up panels fast\n omarchy-brightness-display on\n-omarchy-brightness-keyboard restore\n-omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true\n+\n+# Keyboard brightness restoration and clamshell monitor detection are secondary\n+# and can run asynchronously so they don't delay session responsiveness.\n+omarchy-brightness-keyboard restore >/dev/null 2>&1 &\n+omarchy-hyprland-monitor-clamshell >/dev/null 2>&1 || true &"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

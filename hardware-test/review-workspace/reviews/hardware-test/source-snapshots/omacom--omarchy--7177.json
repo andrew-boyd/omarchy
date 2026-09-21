@@ -1,0 +1,174 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7177",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-trackpad"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "af35858f16c25e54c826eca8a10f7469fe4060fe",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7177,
+  "checked_at": "2026-09-21T11:57:30.603097+00:00",
+  "title": "Mark the T2 Mac internal trackpad as internal",
+  "author": "georgehenderson",
+  "head_sha": "af35858f16c25e54c826eca8a10f7469fe4060fe",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:41Z",
+  "state": "open",
+  "body": "On a T2 MacBook, palms resting on the trackpad move the cursor while typing. `input:touchpad:disable_while_typing` is set and reads back as enabled, and it has never done anything.\n\n## Why\n\nThe T2 bridge exposes the built-in keyboard and trackpad over a virtual USB host controller (`t2bce_vhci`), so the trackpad carries `ID_BUS=usb` and `/usr/lib/udev/rules.d/65-integration.rules` classifies it as an external touchpad. libinput makes disable-while-typing unavailable on external touchpads, so there is nothing under the compositor option to act on:\n\n```\n$ hyprctl getoption input:touchpad:disable_while_typing\nint: 1\n$ libinput list-devices | grep -A20 Trackpad | grep Disable-w-typing\nDisable-w-typing:  n/a\n```\n\nBoth are true at once, which is what makes this hard to find. Nothing reports an error; the setting simply has no effect.\n\n## Fix\n\nAn hwdb entry correcting the classification. `70-touchpad.rules` runs after `65-integration.rules` precisely so hwdb entries can override the bus-based guess, so this is the supported correction rather than a workaround.\n\nThis is the same class of bug as `install/hardware/asus/fix-z13-touchpad.sh`, where a detachable keyboard's touchpad is also detected as external.\n\nA migration carries the fix to installs that predate it, since the install leaf only reaches machines set up after it ships. It is a machine-wide repair, so a second user on the same laptop finds it already done.\n\n## Scope\n\nMatched on the USB ID the bridged keyboard/trackpad enumerates with (`05ac:0340`), verified on a MacBookPro16,1. Other T2 models may enumerate a different product ID, so the match is deliberately narrow rather than a guessed range; widening it as models are reported is one line.\n\nI also tested a udev rule matching on `ATTRS{phys}==\"usb-t2bce_vhci*\"`, which would cover every T2 Mac regardless of product ID. It sets `ID_INPUT_TOUCHPAD_INTEGRATION` correctly and tags no keyboard node, but leaves `ID_INTEGRATION=external` where the hwdb path flips both. I did not confirm that libinput then offers disable-while-typing, so I have not proposed it here. Happy to pursue it if you would prefer the broader match.\n\n## Testing\n\n`test/shell.d/t2-touchpad-test.sh` covers the leaf and the migration with stubbed `lspci`/`systemd-hwdb`, including that the hwdb property keeps its leading space (an unindented line becomes a match that never fires, so the file would silently stop working).\n\n```\n$ bash test/shell.d/t2-touchpad-test.sh\nok - the trackpad fix is orchestrated and its hwdb entry is well formed\nok - a T2 Mac gets the trackpad hwdb entry\nok - non-T2 hardware is left alone\nok - the migration fixes a T2 install that never got the entry\nok - the migration is machine-idempotent across users\nok - a match with no property is rewritten\nok - the migration skips unrelated hardware\n```\n\n`t2-hardware-test.sh`, `brcmfmac-supplicant-test.sh` and `./test/cli` still pass.\n\nVerified on the machine itself: with the entry installed and after a fresh login, `Disable-w-typing` reports `enabled` and palms resting on the pad no longer move the cursor.\n\n## Not included\n\nLowering `AttrPalmSizeThreshold` also helps, but the value I measured is specific to this trackpad's geometry and could cause false rejections on models nobody has measured, so it is left out.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "efe0b7793ef1786aa86a6de40d6fecd58d9b4e2f",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/af35858f16c25e54c826eca8a10f7469fe4060fe/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/af35858f16c25e54c826eca8a10f7469fe4060fe/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=af35858f16c25e54c826eca8a10f7469fe4060fe",
+      "patch": "@@ -35,6 +35,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2-touchpad.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\""
+    },
+    {
+      "sha": "43a5577985e3dfe3bcbab0c3daa5d6426834878f",
+      "filename": "install/hardware/apple/fix-t2-touchpad.sh",
+      "status": "added",
+      "additions": 39,
+      "deletions": 0,
+      "changes": 39,
+      "blob_url": "https://github.com/omacom/omarchy/blob/af35858f16c25e54c826eca8a10f7469fe4060fe/install%2Fhardware%2Fapple%2Ffix-t2-touchpad.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/af35858f16c25e54c826eca8a10f7469fe4060fe/install%2Fhardware%2Fapple%2Ffix-t2-touchpad.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2-touchpad.sh?ref=af35858f16c25e54c826eca8a10f7469fe4060fe",
+      "patch": "@@ -0,0 +1,39 @@\n+# Mark the internal trackpad on T2 Macs as internal.\n+#\n+# The T2 bridge exposes the built-in keyboard and trackpad over a virtual USB\n+# host controller (t2bce_vhci), so the trackpad carries ID_BUS=usb and\n+# /usr/lib/udev/rules.d/65-integration.rules classifies it as external. libinput\n+# makes disable-while-typing unavailable on external touchpads, so a palm\n+# resting on the pad moves the cursor while typing.\n+#\n+# Nothing reports this as broken, which is what makes it hard to find. The\n+# compositor option is set and reads back as enabled, while libinput has no such\n+# setting to apply:\n+#\n+#   $ hyprctl getoption input:touchpad:disable_while_typing\n+#   int: 1\n+#   $ libinput list-devices | grep -A20 Trackpad | grep Disable-w-typing\n+#   Disable-w-typing:  n/a\n+#\n+# 70-touchpad.rules runs after 65-integration.rules precisely so hwdb entries can\n+# override the bus-based guess, so this is the supported correction rather than a\n+# workaround. Same class of bug as install/hardware/asus/fix-z13-touchpad.sh,\n+# where a detachable keyboard's touchpad is also detected as external.\n+#\n+# Matched on the USB ID the bridged keyboard/trackpad enumerates with, verified\n+# on a MacBookPro16,1. Other T2 models may report a different product ID; widen\n+# the match as they are reported rather than guessing at the range here.\n+\n+if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  echo \"Detected a T2 Mac; marking its internal trackpad as internal\"\n+\n+  mkdir -p /etc/udev/hwdb.d\n+  cat > /etc/udev/hwdb.d/70-omarchy-t2-touchpad.hwdb <<'EOF'\n+# Apple internal keyboard/trackpad, bridged over the T2's virtual USB HCI.\n+touchpad:usb:v05acp0340:*\n+ ID_INPUT_TOUCHPAD_INTEGRATION=internal\n+EOF\n+\n+  # Compiles the text entry into the binary database udev actually reads.\n+  systemd-hwdb update\n+fi"
+    },
+    {
+      "sha": "ad1f2e0828bfaf696d3128938114cef81a6e86cb",
+      "filename": "migrations/1786910195.sh",
+      "status": "added",
+      "additions": 31,
+      "deletions": 0,
+      "changes": 31,
+      "blob_url": "https://github.com/omacom/omarchy/blob/af35858f16c25e54c826eca8a10f7469fe4060fe/migrations%2F1786910195.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/af35858f16c25e54c826eca8a10f7469fe4060fe/migrations%2F1786910195.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786910195.sh?ref=af35858f16c25e54c826eca8a10f7469fe4060fe",
+      "patch": "@@ -0,0 +1,31 @@\n+echo \"Mark the internal trackpad on T2 Macs as internal so disable-while-typing works\"\n+\n+# The install-time fix only reaches machines set up after it shipped, so an\n+# existing T2 install still has palms moving the cursor while typing. See\n+# install/hardware/apple/fix-t2-touchpad.sh for the failure and why the hwdb is\n+# the right place to correct it.\n+hwdb=\"${OMARCHY_T2_TOUCHPAD_HWDB:-/etc/udev/hwdb.d/70-omarchy-t2-touchpad.hwdb}\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+# Machine-wide repair, so the second user on a T2 Mac finds it already done.\n+if [[ -f $hwdb ]] && grep -q '^ ID_INPUT_TOUCHPAD_INTEGRATION=internal$' \"$hwdb\"; then\n+  exit 0\n+fi\n+\n+sudo mkdir -p \"$(dirname \"$hwdb\")\"\n+sudo tee \"$hwdb\" >/dev/null <<'EOF'\n+# Apple internal keyboard/trackpad, bridged over the T2's virtual USB HCI.\n+touchpad:usb:v05acp0340:*\n+ ID_INPUT_TOUCHPAD_INTEGRATION=internal\n+EOF\n+\n+sudo systemd-hwdb update\n+\n+# libinput builds a device's configuration when udev adds the device, so the\n+# running session keeps the object it created at login, when the trackpad was\n+# still tagged external. Logging out and back in is enough; a reboot is the\n+# signal Omarchy has, and it also works.\n+omarchy-state set reboot-required"
+    },
+    {
+      "sha": "a8451cea4aeb55a9c4b387673a0183b592737da2",
+      "filename": "test/shell.d/t2-touchpad-test.sh",
+      "status": "added",
+      "additions": 131,
+      "deletions": 0,
+      "changes": 131,
+      "blob_url": "https://github.com/omacom/omarchy/blob/af35858f16c25e54c826eca8a10f7469fe4060fe/test%2Fshell.d%2Ft2-touchpad-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/af35858f16c25e54c826eca8a10f7469fe4060fe/test%2Fshell.d%2Ft2-touchpad-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-touchpad-test.sh?ref=af35858f16c25e54c826eca8a10f7469fe4060fe",
+      "patch": "@@ -0,0 +1,131 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-t2-touchpad.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1786910195.sh\"\n+\n+grep -q 'apple/fix-t2-touchpad.sh' \"$all\" ||\n+  fail \"the trackpad fix runs during hardware setup\"\n+\n+# The property line must keep its leading space: hwdb treats an unindented line\n+# as a new match, so losing it turns the property into a match that never fires\n+# and the file stops doing anything without failing.\n+grep -q '^ ID_INPUT_TOUCHPAD_INTEGRATION=internal$' \"$leaf\" ||\n+  fail \"the hwdb property stays indented under its match\"\n+pass \"the trackpad fix is orchestrated and its hwdb entry is well formed\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+hwdb=\"$test_tmp/etc/udev/hwdb.d/70-omarchy-t2-touchpad.hwdb\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+# Chatty like real lspci: keep writing well past the pipe buffer after the\n+# match, so a grep -q consumer would kill this stub with SIGPIPE and pipefail\n+# would read that as \"no T2 hardware\" (#6608).\n+if (( ${T2_HARDWARE:-0} == 1 )); then\n+  echo '01:00.0 Bridge [0680]: Apple Inc. T2 Security Chip [106b:1801]'\n+fi\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+\n+cat >\"$stub_bin/systemd-hwdb\" <<'SH'\n+#!/bin/bash\n+\n+printf 'systemd-hwdb' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+\"$@\"\n+SH\n+\n+# Stubbed rather than run: the real one would write the running user's state.\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+# The leaf writes to an absolute path, so redirect it into the sandbox. pipefail\n+# is on, the context the SIGPIPE gate in #6608 was about.\n+run_leaf() {\n+  local t2=\"${1:-0}\"\n+  rm -rf \"$test_tmp/etc\"\n+  : >\"$calls\"\n+\n+  local script=\"$test_tmp/leaf.sh\"\n+  sed -e \"s|/etc/udev/hwdb.d|$test_tmp/etc/udev/hwdb.d|g\" \"$leaf\" >\"$script\"\n+\n+  T2_HARDWARE=\"$t2\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$script\" </dev/null\n+}\n+\n+run_leaf 1 >/dev/null\n+grep -q '^touchpad:usb:v05acp0340:\\*$' \"$hwdb\" 2>/dev/null ||\n+  fail \"a T2 Mac gets the trackpad hwdb entry\" \"$(ls -R \"$test_tmp/etc\" 2>&1)\"\n+grep -Fq $'systemd-hwdb\\tupdate' \"$calls\" ||\n+  fail \"the hwdb text entry is compiled into the binary database\" \"$(cat \"$calls\")\"\n+pass \"a T2 Mac gets the trackpad hwdb entry\"\n+\n+run_leaf 0 >/dev/null\n+[[ ! -e $hwdb ]] || fail \"non-T2 hardware is left alone\" \"$(cat \"$hwdb\")\"\n+[[ ! -s $calls ]] || fail \"non-T2 hardware compiles nothing\" \"$(cat \"$calls\")\"\n+pass \"non-T2 hardware is left alone\"\n+\n+# Installs that predate the fix never ran the leaf, so the migration has to\n+# reach them.\n+run_migration() {\n+  local t2=\"${1:-1}\"\n+  : >\"$calls\"\n+\n+  T2_HARDWARE=\"$t2\" PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    OMARCHY_T2_TOUCHPAD_HWDB=\"$hwdb\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+rm -rf \"$test_tmp/etc\"\n+run_migration 1\n+grep -q '^ ID_INPUT_TOUCHPAD_INTEGRATION=internal$' \"$hwdb\" 2>/dev/null ||\n+  fail \"the migration fixes a T2 install that never got the entry\" \"$(ls -R \"$test_tmp/etc\" 2>&1)\"\n+# libinput only rebuilds the device on a udev add, which the running session\n+# will not see.\n+grep -Fq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"the migration asks for the session restart that applies it\" \"$(cat \"$calls\")\"\n+pass \"the migration fixes a T2 install that never got the entry\"\n+\n+run_migration 1\n+[[ ! -s $calls ]] || fail \"a repaired install is left untouched\" \"$(cat \"$calls\")\"\n+pass \"the migration is machine-idempotent across users\"\n+\n+# A half-written file from an interrupted run is not a repaired install.\n+printf 'touchpad:usb:v05acp0340:*\\n' >\"$hwdb\"\n+run_migration 1\n+grep -q '^ ID_INPUT_TOUCHPAD_INTEGRATION=internal$' \"$hwdb\" ||\n+  fail \"a match with no property is rewritten\" \"$(cat \"$hwdb\")\"\n+pass \"a match with no property is rewritten\"\n+\n+rm -rf \"$test_tmp/etc\"\n+run_migration 0\n+[[ ! -e $hwdb ]] || fail \"the migration skips unrelated hardware\" \"$(cat \"$hwdb\")\"\n+[[ ! -s $calls ]] || fail \"the migration escalates nothing on unrelated hardware\" \"$(cat \"$calls\")\"\n+pass \"the migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5382880773",
+      "html_url": "https://github.com/omacom/omarchy/pull/7177#issuecomment-5382880773",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7177",
+      "id": 5382880773,
+      "node_id": "IC_kwDOO0Cobs8AAAABQNg-BQ",
+      "user": {
+        "login": "thooams",
+        "id": 1183066,
+        "node_id": "MDQ6VXNlcjExODMwNjY=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1183066?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/thooams",
+        "html_url": "https://github.com/thooams",
+        "followers_url": "https://api.github.com/users/thooams/followers",
+        "following_url": "https://api.github.com/users/thooams/following{/other_user}",
+        "gists_url": "https://api.github.com/users/thooams/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/thooams/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/thooams/subscriptions",
+        "organizations_url": "https://api.github.com/users/thooams/orgs",
+        "repos_url": "https://api.github.com/users/thooams/repos",
+        "events_url": "https://api.github.com/users/thooams/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/thooams/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-22T22:15:25Z",
+      "updated_at": "2026-08-22T22:15:25Z",
+      "body": "On a MacBookPro16,2 (13\" 2020, T2) running `linux-lts-t2`, the built-in trackpad enumerates as `05ac:027e`, not `05ac:0340`. Widening the match (or matching on `ATTRS{phys}==\"usb-t2bce_vhci*\"` as you tested) would be needed to cover this model too.\n\nFor reference, I hand-fixed this locally with:\n```\nSUBSYSTEM==\"input\", KERNEL==\"event*\", ATTRS{idVendor}==\"05ac\", ATTRS{idProduct}==\"027e\", ENV{ID_INPUT_TOUCHPAD}==\"1\", ENV{ID_INPUT_TOUCHPAD_INTEGRATION}=\"internal\"\n```\nwhich confirmed `Disable-w-typing` flips to `enabled` afterward \u2014 same effect as this PR's hwdb entry.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5382880773/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5448411829",
+      "html_url": "https://github.com/omacom/omarchy/pull/7177#issuecomment-5448411829",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/7177",
+      "id": 5448411829,
+      "node_id": "IC_kwDOO0Cobs8AAAABRMAqtQ",
+      "user": {
+        "login": "spuder",
+        "id": 242382,
+        "node_id": "MDQ6VXNlcjI0MjM4Mg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/242382?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/spuder",
+        "html_url": "https://github.com/spuder",
+        "followers_url": "https://api.github.com/users/spuder/followers",
+        "following_url": "https://api.github.com/users/spuder/following{/other_user}",
+        "gists_url": "https://api.github.com/users/spuder/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/spuder/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/spuder/subscriptions",
+        "organizations_url": "https://api.github.com/users/spuder/orgs",
+        "repos_url": "https://api.github.com/users/spuder/repos",
+        "events_url": "https://api.github.com/users/spuder/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/spuder/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-28T04:23:38Z",
+      "updated_at": "2026-08-28T04:23:38Z",
+      "body": "Thank you so much for finding this. The fact that my thumbs keep moving the cursor while typing has been a significant annoyance. So glad to see a PR to fix it. ",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5448411829/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

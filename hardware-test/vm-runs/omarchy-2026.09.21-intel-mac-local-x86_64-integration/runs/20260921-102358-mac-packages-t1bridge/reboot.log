@@ -1,0 +1,4 @@
+Linux omarchy-test 7.2.5-4-omarchy #1 SMP PREEMPT_DYNAMIC Wed, 16 Sep 2026 04:45:18 +0000 x86_64 GNU/Linux
+linux-omarchy 7.2.5-4
+linux-omarchy-headers 7.2.5-4
+t1bridge-dkms/0.1.9, 7.2.5-4-omarchy, x86_64: installed (Original modules exist)

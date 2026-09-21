@@ -1,0 +1,162 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10502",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "battery-limits"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "6e18debd4a2d222c95d6b47d57e9d184cdf2c45c",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10502,
+  "checked_at": "2026-09-21T11:56:03.585552+00:00",
+  "title": "Decide the charge limit from the threshold, not the charge level",
+  "author": "brightwalker25",
+  "head_sha": "6e18debd4a2d222c95d6b47d57e9d184cdf2c45c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:49:01Z",
+  "state": "closed",
+  "body": "Fixes #10344 (the panel half), #7803 (the panel half), #10193.\n\n## The problem\n\n`Model.chargeThresholdActive()` decides whether a charge limit is holding the battery back, and it drives the `Charge limit` / `Holding` pair in `Panel.qml`, the `Threshold` mode label, and the battery icon. It never reads a threshold. It infers one from the state of charge:\n\n```js\nif (d.state === s.PendingCharge) return true\nif (d.state === s.FullyCharged && fraction < 0.99) return true\nif (d.state !== s.Charging || fraction >= 0.99) return false\nreturn Number(d.changeRate || 0) <= 0.2 || Number(d.timeToFull || 0) >= 8 * 60 * 60\n```\n\nIt infers because there is nothing to read: `Quickshell.Services.UPower` publishes no charge-threshold property at all. But inference cannot separate a configured limit from the other reasons a battery sits on AC without charging, and it gets three distinct cases wrong. None of them are edge cases.\n\n**A cap below a nearly full battery reads as no cap** (#10344). Lowering a cap stops the charge but does not discharge the pack, so the state is `FullyCharged` at 99% while the firmware holds at 60. Line 61 returns false and the panel shows FULLY CHARGED with no charge limit row. This is the ordinary state for days on a machine that stays on mains.\n\n**A dead battery reads as a cap** (#7803). `PendingCharge` only means AC is present and the EC is not charging, for any reason: a threshold hold, a battery fault, an insufficient supply, `charge_behaviour=inhibit-charge`. Returning true on it unconditionally reports a hold for a pack at 0% that the EC has given up on.\n\n**Hardware with no charge control reads as a cap** (#10193). Apple's SMC leaves a battery alone until it falls to roughly 93%, which arrives as `FullyCharged` below 0.99 and renders a charge-limit row on a machine with no `charge_control_end_threshold` to show.\n\n## The fix\n\n`bin/omarchy-battery-status` already reads the threshold from the hardware, already emits it as `threshold`, and already gates its own `charge_holding` block on that value existing. `Panel.qml` already displays that value on line 445. The panel simply dropped the guard half and re-derived the answer instead, which is why the CLI and the panel disagree on the same machine, as #10193 sets out.\n\nSo take the value the CLI already provides and decide from it:\n\n```js\nfunction chargeThresholdActive(device, onBattery, thresholdEnd) {\n  var d = device || {}\n  if (!(d && d.isPresent && !onBattery)) return false\n\n  var limit = Number(thresholdEnd)\n  if (!isFinite(limit) || limit <= 0 || limit >= 100) return false\n\n  return Math.round(batteryFraction(d) * 100) >= limit\n}\n```\n\nA limit is in force when the hardware exposes one, it is set below full, and the charge has reached it. `parseThresholdEnd()` takes the end value out of the `threshold` field, which is `80%` for a single value and `75-80%` for a start-end pair, and returns `NaN` when the battery exposes no charge-control interface, since that is a meaningful answer rather than a missing one. A limit of 100 is the sysfs way of saying charge to full, so it is not a limit either.\n\nEvery state-based branch goes away. `states` is no longer a parameter of the predicate; `batteryIcon()` and `modeLabel()` still take it and now also forward the limit.\n\n## Scope\n\n**This does not change where the threshold value comes from.** On hardware whose UPower hwdb `CHARGE_LIMIT` default masks the real sysfs value, the number displayed is still UPower's. #9612 fixes that half by preferring sysfs in `omarchy-battery-status`, and the two changes compose without touching the same code: this PR makes the panel ask the right question, #9612 makes the CLI give the right answer. On the ASUS machine in #10344 the panel goes from showing no limit at all to showing `75-80%`, and lands on the true `60%` once #9612 is in.\n\nIt also leaves `omarchy-battery-status`'s own `pending-charge` branch alone, which is the CLI half of #7803 and is covered by #7915/#7895.\n\nOne behavioural note: the bar icon reads the same predicate, and the full refresh only runs while the panel is open, so the battery status is now also read once on startup. Without it the icon would sit on an unset limit until the panel was first opened.\n\n## Tests\n\n`test/shell.d/power-test.sh` covers the three reported cases directly, plus the threshold parsing, a limit the battery is still charging toward, a limit of 100, and the icon while a limit is holding. The two assertions that encoded the old heuristic are replaced by ones that supply a real limit.\n\n223 of the 230 tests in `test/shell.d/` pass. The 5 failures (`base`, `bin-style`, `config`, `snapper`, `unowned-system-paths`) fail identically on an untouched `quattro`.\n\nI do not have the ThinkPad from #7803 or the MacBook from #10193, so those two are covered by the unit tests and by the reported readings rather than on the hardware. #10344 is my own machine.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01VADsy8CLE8n9hpfWUKt3vM",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a7c383dccd3b54f7655842f1720895131ff4caa9",
+      "filename": "shell/plugins/panels/power/Model.js",
+      "status": "modified",
+      "additions": 44,
+      "deletions": 12,
+      "changes": 56,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6e18debd4a2d222c95d6b47d57e9d184cdf2c45c/shell%2Fplugins%2Fpanels%2Fpower%2FModel.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6e18debd4a2d222c95d6b47d57e9d184cdf2c45c/shell%2Fplugins%2Fpanels%2Fpower%2FModel.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fpanels%2Fpower%2FModel.js?ref=6e18debd4a2d222c95d6b47d57e9d184cdf2c45c",
+      "patch": "@@ -49,41 +49,72 @@ function batteryFraction(device) {\n   return device && device.isPresent ? Math.max(0, Math.min(1, device.percentage)) : 0\n }\n \n-function chargeThresholdActive(device, onBattery, states) {\n+// The end threshold out of the `threshold` field omarchy-battery-status emits,\n+// which is \"80%\" for a single value and \"75-80%\" for a start-end pair. Absent\n+// when the battery exposes no charge-control interface, which is a meaningful\n+// answer rather than a missing one, so it comes back as NaN and not 0.\n+function parseThresholdEnd(text) {\n+  var digits = String(text || \"\").match(/\\d+/g)\n+  if (!digits || digits.length === 0) return NaN\n+  return Number(digits[digits.length - 1])\n+}\n+\n+// Whether a charge limit is actually holding the battery back.\n+//\n+// This has to be answered from the limit itself. UPower exposes no\n+// charge-threshold property at all, so the panel used to infer one from the\n+// state of charge, and inference cannot tell a real limit apart from the\n+// several other reasons a battery sits on AC without charging. It got three\n+// distinct cases wrong, and none of them are edge cases:\n+//\n+//   A cap on a nearly full battery read as no cap. Lowering a cap stops the\n+//   charge but does not discharge the pack, so the state is FullyCharged at\n+//   99% and the old `fraction >= 0.99` line returned false while the firmware\n+//   was holding at 60.\n+//\n+//   A dead battery read as a cap. `Not charging` (PendingCharge) only means AC\n+//   is present and the EC is not charging, for any reason. Returning true on it\n+//   unconditionally reported \"Holding at 75-80%\" for a pack at 0% that the EC\n+//   had given up on.\n+//\n+//   Hardware with no charge control at all read as a cap. Apple's SMC leaves a\n+//   battery alone until it falls to roughly 93%, which arrives as FullyCharged\n+//   below 0.99 and rendered a charge-limit row on a machine that has no\n+//   charge_control_end_threshold to show.\n+function chargeThresholdActive(device, onBattery, thresholdEnd) {\n   var d = device || {}\n-  var s = states || {}\n   if (!(d && d.isPresent && !onBattery)) return false\n \n-  var fraction = batteryFraction(d)\n-  if (d.state === s.Discharging) return false\n-  if (d.state === s.PendingCharge) return true\n-  if (d.state === s.FullyCharged && fraction < 0.99) return true\n-  if (d.state !== s.Charging || fraction >= 0.99) return false\n+  // No charge-control interface, or a limit of 100, which is the sysfs way of\n+  // saying charge to full. Neither is a limit, whatever the charge level looks\n+  // like.\n+  var limit = Number(thresholdEnd)\n+  if (!isFinite(limit) || limit <= 0 || limit >= 100) return false\n \n-  return Number(d.changeRate || 0) <= 0.2 || Number(d.timeToFull || 0) >= 8 * 60 * 60\n+  return Math.round(batteryFraction(d) * 100) >= limit\n }\n \n-function batteryIcon(device, onBattery, states) {\n+function batteryIcon(device, onBattery, states, thresholdEnd) {\n   var d = device || {}\n   if (!d.isPresent) return \"\"\n \n   var chargingIcons = [\"\udb82\udc9c\", \"\udb80\udc86\", \"\udb80\udc87\", \"\udb80\udc88\", \"\udb82\udc9d\", \"\udb80\udc89\", \"\udb82\udc9e\", \"\udb80\udc8a\", \"\udb80\udc8b\", \"\udb80\udc85\"]\n   var defaultIcons = [\"\udb80\udc7a\", \"\udb80\udc7b\", \"\udb80\udc7c\", \"\udb80\udc7d\", \"\udb80\udc7e\", \"\udb80\udc7f\", \"\udb80\udc80\", \"\udb80\udc81\", \"\udb80\udc82\", \"\udb80\udc79\"]\n   var index = Math.max(0, Math.min(9, Math.floor(d.percentage * 10)))\n-  var threshold = chargeThresholdActive(d, onBattery, states)\n+  var threshold = chargeThresholdActive(d, onBattery, thresholdEnd)\n \n   if (threshold) return defaultIcons[index]\n   if (d.state === states.FullyCharged) return \"\udb80\udc85\"\n   if (!onBattery) return chargingIcons[index]\n   return defaultIcons[index]\n }\n \n-function modeLabel(device, onBattery, states) {\n+function modeLabel(device, onBattery, states, thresholdEnd) {\n   var d = device || {}\n   if (!d.isPresent) return \"\"\n \n   var percentage = d.isPresent ? d.percentage : 0\n-  if (chargeThresholdActive(d, onBattery, states)) return \"Threshold\"\n+  if (chargeThresholdActive(d, onBattery, thresholdEnd)) return \"Threshold\"\n   if (onBattery) return \"On battery\"\n   if (!onBattery && percentage >= 1) return \"Fully charged\"\n   return \"Charging\"\n@@ -97,6 +128,7 @@ if (typeof module !== \"undefined\") {\n     parseProfiles: parseProfiles,\n     profileIcon: profileIcon,\n     batteryFraction: batteryFraction,\n+    parseThresholdEnd: parseThresholdEnd,\n     chargeThresholdActive: chargeThresholdActive,\n     batteryIcon: batteryIcon,\n     modeLabel: modeLabel"
+    },
+    {
+      "sha": "946e5dcf18b45ebceda9679f6f7afe647e4a5082",
+      "filename": "shell/plugins/panels/power/Panel.qml",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 5,
+      "changes": 27,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6e18debd4a2d222c95d6b47d57e9d184cdf2c45c/shell%2Fplugins%2Fpanels%2Fpower%2FPanel.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6e18debd4a2d222c95d6b47d57e9d184cdf2c45c/shell%2Fplugins%2Fpanels%2Fpower%2FPanel.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fpanels%2Fpower%2FPanel.qml?ref=6e18debd4a2d222c95d6b47d57e9d184cdf2c45c",
+      "patch": "@@ -49,12 +49,12 @@ Panel {\n \n   function batteryIcon() {\n     var device = UPower.displayDevice\n-    return Model.batteryIcon(device, root.discharging, upowerStates())\n+    return Model.batteryIcon(device, root.discharging, upowerStates(), root.chargeThresholdEnd)\n   }\n \n   function modeLabel() {\n     var device = UPower.displayDevice\n-    return Model.modeLabel(device, root.discharging, upowerStates())\n+    return Model.modeLabel(device, root.discharging, upowerStates(), root.chargeThresholdEnd)\n   }\n \n   function profileIcon(name) {\n@@ -69,9 +69,13 @@ Panel {\n     var device = UPower.displayDevice\n     return !!(device && device.isPresent && UPower.onBattery)\n   }\n+  // UPower publishes no charge-threshold property, so the only source for the\n+  // limit is omarchy-battery-status, which reads it from the hardware. NaN when\n+  // the battery exposes no charge-control interface at all.\n+  readonly property var chargeThresholdEnd: Model.parseThresholdEnd(root.batteryInfo.threshold)\n   readonly property bool chargeThresholdActive: {\n     var device = UPower.displayDevice\n-    return Model.chargeThresholdActive(device, root.discharging, upowerStates())\n+    return Model.chargeThresholdActive(device, root.discharging, root.chargeThresholdEnd)\n   }\n   readonly property bool batteryFull: fullyCharged || (!root.discharging && batteryFraction >= 1)\n   readonly property bool batteryFlowIdle: batteryFull || chargeThresholdActive\n@@ -135,11 +139,19 @@ Panel {\n   function refresh() {\n     if (!batteryPresent) return\n \n-    if (!batteryProc.running) batteryProc.running = true\n+    refreshBattery()\n     if (!profilesProc.running) profilesProc.running = true\n     if (!systemProc.running) systemProc.running = true\n   }\n \n+  // The bar icon reads the charge limit too, and the full refresh only runs\n+  // while the panel is open, so the battery read has to be reachable on its own\n+  // or the icon would sit on an unset limit until the panel is first opened.\n+  function refreshBattery() {\n+    if (!batteryPresent) return\n+    if (!batteryProc.running) batteryProc.running = true\n+  }\n+\n   function updateKeyValue(raw, targetName) {\n     var next = Model.parseKeyValue(raw)\n     // Keep last known good data if a refresh briefly returns nothing \u2014 happens\n@@ -199,7 +211,12 @@ Panel {\n     }\n   }\n \n-  onBatteryPresentChanged: if (!batteryPresent) close()\n+  onBatteryPresentChanged: {\n+    if (batteryPresent) refreshBattery()\n+    else close()\n+  }\n+\n+  Component.onCompleted: refreshBattery()\n \n   visible: batteryPresent\n   implicitWidth: batteryPresent ? button.implicitWidth : 0"
+    },
+    {
+      "sha": "92cc8c45b494645651700728eb3ca9f2d8e6004b",
+      "filename": "test/shell.d/power-test.sh",
+      "status": "modified",
+      "additions": 34,
+      "deletions": 4,
+      "changes": 38,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6e18debd4a2d222c95d6b47d57e9d184cdf2c45c/test%2Fshell.d%2Fpower-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6e18debd4a2d222c95d6b47d57e9d184cdf2c45c/test%2Fshell.d%2Fpower-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fpower-test.sh?ref=6e18debd4a2d222c95d6b47d57e9d184cdf2c45c",
+      "patch": "@@ -23,10 +23,37 @@ assertDeepEqual(\n assert(power.profileIcon('performance').length > 0, 'power maps profile icons')\n assertEqual(power.batteryFraction({ isPresent: true, percentage: 1.5 }), 1, 'power clamps battery fraction')\n \n-assert(power.chargeThresholdActive({ isPresent: true, percentage: 0.8, state: states.PendingCharge }, false, states), 'power detects threshold by pending charge state')\n-assert(power.chargeThresholdActive({ isPresent: true, percentage: 0.8, state: states.Charging, changeRate: 0.1, timeToFull: 120 }, false, states), 'power detects threshold by stalled charging')\n-assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.8, state: states.Charging, changeRate: 1.0, timeToFull: 120 }, false, states), 'power does not flag active charging as threshold')\n-assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.5, state: states.Discharging }, false, states), 'power does not flag discharging as threshold')\n+assertEqual(power.parseThresholdEnd('80%'), 80, 'power reads a single charge threshold')\n+assertEqual(power.parseThresholdEnd('75-80%'), 80, 'power reads the end of a start-end threshold pair')\n+assert(Number.isNaN(power.parseThresholdEnd(undefined)), 'power reports no threshold when the battery exposes none')\n+assert(Number.isNaN(power.parseThresholdEnd('')), 'power reports no threshold for an empty reading')\n+\n+assert(power.chargeThresholdActive({ isPresent: true, percentage: 0.8, state: states.PendingCharge }, false, 80), 'power detects a limit the battery has reached')\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.5, state: states.Charging }, false, 80), 'power does not flag a limit the battery is still charging toward')\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.8, state: states.Charging, changeRate: 0.1, timeToFull: 120 }, false, NaN), 'power does not infer a limit from a stalled charge')\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.8, state: states.Charging, changeRate: 1.0, timeToFull: 120 }, false, NaN), 'power does not flag active charging as threshold')\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.5, state: states.Discharging }, true, 80), 'power does not flag discharging as threshold')\n+\n+// A cap lowered below a nearly full battery stops the charge without discharging\n+// the pack, so this is the ordinary state for days on mains.\n+assert(power.chargeThresholdActive({ isPresent: true, percentage: 0.99, state: states.FullyCharged }, false, 60), 'power reports a cap holding a nearly full battery')\n+assertEqual(power.modeLabel({ isPresent: true, percentage: 0.99, state: states.FullyCharged }, false, states, 60), 'Threshold', 'power labels a held battery as threshold')\n+\n+// \"Not charging\" only means AC is present and the EC is not charging. A pack the\n+// EC has given up on is not a configured limit.\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0, state: states.PendingCharge }, false, 80), 'power does not report a limit for a battery nowhere near one')\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0, state: states.PendingCharge }, false, 100), 'power treats a threshold of 100 as no limit')\n+\n+// Hardware with no charge-control interface: Apple's SMC leaves the pack alone\n+// until it falls to roughly 93%, which arrives as fully-charged below 99%.\n+assert(!power.chargeThresholdActive({ isPresent: true, percentage: 0.947, state: states.FullyCharged }, false, NaN), 'power does not invent a limit on hardware that has none')\n+assert(power.modeLabel({ isPresent: true, percentage: 0.947, state: states.FullyCharged }, false, states, NaN) !== 'Threshold', 'power does not label an SMC-held battery as threshold')\n+\n+assertEqual(\n+  power.batteryIcon({ isPresent: true, percentage: 0.8, state: states.PendingCharge }, false, states, 80),\n+  power.batteryIcon({ isPresent: true, percentage: 0.8, state: states.Discharging }, true, states, NaN),\n+  'power shows a non-charging icon while a limit is holding'\n+)\n assertEqual(power.modeLabel({ isPresent: true, percentage: 1, state: states.FullyCharged }, false, states), 'Fully charged', 'power labels full battery')\n assertEqual(power.modeLabel({ isPresent: true, percentage: 0.5, state: states.Discharging }, true, states), 'On battery', 'power labels battery mode')\n assertEqual(power.modeLabel({ isPresent: true, percentage: 0.5, state: states.Discharging }, false, states), 'Charging', 'power treats external power as newer than stale discharging state')\n@@ -48,4 +75,7 @@ assert(/Math\\.round\\(root\\.batteryFraction \\* 100\\) \\+ \"% \" \\+ root\\.batteryIcon\n assert(/openPanelIndicatorWidth:.*showPercentage.*button\\.glyphPaintedWidth : 0/.test(panelSource), 'power spans the open-panel mark across the painted percentage block')\n assert(/IpcHandler[\\s\\S]*?function togglePercentage\\(\\) \\{ root\\.togglePercentage\\(\\) \\}/.test(panelSource), 'power exposes togglePercentage over IPC')\n assert(/manageIpc: false/.test(panelSource), 'power owns its IPC handler so it can extend the target methods')\n+assert(/parseThresholdEnd\\(root\\.batteryInfo\\.threshold\\)/.test(panelSource), 'power reads the charge limit from the battery status output')\n+assert(/Model\\.chargeThresholdActive\\(device, root\\.discharging, root\\.chargeThresholdEnd\\)/.test(panelSource), 'power decides the charge limit from the threshold rather than the charge level')\n+assert(/Component\\.onCompleted: refreshBattery\\(\\)/.test(panelSource), 'power reads the battery before the panel is first opened so the bar icon has a limit')\n JS"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5573309434",
+      "html_url": "https://github.com/omacom/omarchy/pull/10502#issuecomment-5573309434",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10502",
+      "id": 5573309434,
+      "node_id": "IC_kwDOO0Cobs8AAAABTDHz-g",
+      "user": {
+        "login": "magate",
+        "id": 69254089,
+        "node_id": "MDQ6VXNlcjY5MjU0MDg5",
+        "avatar_url": "https://avatars.githubusercontent.com/u/69254089?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/magate",
+        "html_url": "https://github.com/magate",
+        "followers_url": "https://api.github.com/users/magate/followers",
+        "following_url": "https://api.github.com/users/magate/following{/other_user}",
+        "gists_url": "https://api.github.com/users/magate/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/magate/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/magate/subscriptions",
+        "organizations_url": "https://api.github.com/users/magate/orgs",
+        "repos_url": "https://api.github.com/users/magate/repos",
+        "events_url": "https://api.github.com/users/magate/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/magate/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-07T16:16:52Z",
+      "updated_at": "2026-09-07T16:16:52Z",
+      "body": "Hardware verification of `6e18debd4a2d222c95d6b47d57e9d184cdf2c45c` on a MacBookPro12,1: this fixes the false charge-limit display on this machine.\n\nEnvironment: Omarchy 4.0.2-1, Quickshell 0.3.1-1, UPower 1.91.3-1. AC connected, UPower reports `fully-charged` at approximately 98.6%, neither sysfs charge-control threshold file exists, and `omarchy-battery-status --shell` emits no `threshold` field.\n\nTest method: temporarily loaded the exact, unmodified `Model.js` and `Panel.qml` from this commit through a local clone of the power widget, then restarted the shell. The remaining desktop and battery-status script stayed on the installed version. Restored the previous local widget after testing.\n\n- Before this fix, the stock widget showed `THRESHOLD`, `Charge limit: -`, and `Battery state: Holding`, with the non-charging battery icon.\n- With this PR, the bar showed the full battery/lightning icon before opening the panel. The open panel showed `FULLY CHARGED`, the same icon, and 98%, without the false charge-limit/holding rows. Visually inspected in the running desktop.\n- The commit's `test/shell.d/power-test.sh` passed all 37 assertions. This was a focused test, not `test/all` or the graphical acceptance suite.\n\nTwo follow-up observations from isolated model checks, distinct from the hardware verification above:\n\n1. A `PendingCharge` battery at 77% with a `75-80%` start/stop range returns false from `chargeThresholdActive(..., false, parseThresholdEnd('75-80%'))`. Could this mislabel a battery still holding while it drifts down toward its restart threshold? This machine cannot exercise configured charge limits, so this is a simulated case for review, not a hardware-confirmed failure.\n2. `modeLabel()` still returns `Charging` for `FullyCharged` at 98.6% with no threshold. The visible hero label is correct because `Panel.qml` handles `fullyCharged` separately. An assertion for the exact helper label, rather than merely `!== 'Threshold'`, would expose this inconsistency.\n\nNo live unplug/replug, configured-limit, or failed-battery hardware testing was performed. This report was prepared with AI assistance; no screenshots or diagnostic logs are attached.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5573309434/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758544489",
+      "html_url": "https://github.com/omacom/omarchy/pull/10502#issuecomment-5758544489",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10502",
+      "id": 5758544489,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzxqaQ",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:49:00Z",
+      "updated_at": "2026-09-21T09:49:00Z",
+      "body": "Automated duplication check: this pull request looks similar to #10196, which covers the same charge threshold gate. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758544489/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

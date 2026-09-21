@@ -1,0 +1,83 @@
+{
+  "started_at": 1789999502.9765193,
+  "target": "/mnt",
+  "total_phases": 14,
+  "current_index": 13,
+  "current_phase": "Installation complete",
+  "phases": [
+    {
+      "name": "Preparing live environment",
+      "status": "ok",
+      "elapsed": 0.14185094833374023
+    },
+    {
+      "name": "Preparing install target",
+      "status": "ok",
+      "elapsed": 1.4781951904296875e-05
+    },
+    {
+      "name": "Installing Arch + Omarchy",
+      "status": "ok",
+      "elapsed": 108.90820741653442
+    },
+    {
+      "name": "Configuring hibernation",
+      "status": "ok",
+      "elapsed": 0.401233434677124
+    },
+    {
+      "name": "Configuring system",
+      "status": "ok",
+      "elapsed": 4.157716989517212
+    },
+    {
+      "name": "Staging provisioning",
+      "status": "ok",
+      "elapsed": 0.1731891632080078
+    },
+    {
+      "name": "Finalizing Limine boot",
+      "status": "ok",
+      "elapsed": 14.501293182373047
+    },
+    {
+      "name": "Finalizing user",
+      "status": "ok",
+      "elapsed": 4.528810739517212
+    },
+    {
+      "name": "Configuring login",
+      "status": "ok",
+      "elapsed": 0.07144713401794434
+    },
+    {
+      "name": "Configuring SSH access",
+      "status": "ok",
+      "elapsed": 1.6689300537109375e-06
+    },
+    {
+      "name": "Configuring Tailscale",
+      "status": "ok",
+      "elapsed": 9.5367431640625e-07
+    },
+    {
+      "name": "Configuring DNS resolver",
+      "status": "ok",
+      "elapsed": 0.0001506805419921875
+    },
+    {
+      "name": "Validating boot setup",
+      "status": "ok",
+      "elapsed": 0.013112545013427734
+    },
+    {
+      "name": "Creating factory snapshot",
+      "status": "ok",
+      "elapsed": 0.07223057746887207
+    }
+  ],
+  "phase_started_at": 1789999635.877842,
+  "finished_at": 1789999635.9503782,
+  "installed_packages": 953,
+  "expected_packages": 952
+}

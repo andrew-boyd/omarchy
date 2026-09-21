@@ -1,0 +1,87 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11381",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "facetime-pcie"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "state": "open"
+    },
+    {
+      "head_sha": "24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "state": "open",
+      "updated_at": "2026-09-18T15:04:45Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11381,
+  "checked_at": "2026-09-21T11:56:23.721438+00:00",
+  "title": "Install the pre-T2 FaceTime HD camera driver and firmware",
+  "author": "rand0mdud3",
+  "head_sha": "24760fca3dc9a78ad00c12fadd89c413d937f91b",
+  "base_sha": "d174d4aa279ea7393d4fad4a80fed147866106b9",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-18T15:04:45Z",
+  "state": "open",
+  "body": "Fixes #11373.\n\nPre-T2 Macs' built-in FaceTime HD camera (Broadcom 1570) has no in-tree driver: the PCI function sits driverless, no /dev/video exists, and Omarchy references the stack nowhere. This adds install/hardware/apple/fix-facetimehd.sh (gated on Apple DMI + 14e4:1570), wired into all.sh, plus migration 1789095456.sh sourcing the leaf for existing installs. It installs facetimehd-firmware + facetimehd-dkms-git via omarchy-pkg-aur-add and best-effort modprobes on live sessions (PCI alias binds it at boot). Never fatal, following fix-synaptic-touchpad.sh: failed installs warn, chroot modprobe mismatches stay quiet.\n\nProven on MacBookPro11,5, not just mocked: Apple's firmware CDN served the download (hashes OK), DKMS built clean against 7.2.3-arch1-3, modprobe created /dev/video0 reporting 1280x720@30, and three frames captured (varied sizes, live sensor). live leaf re-run no-ops cleanly with the camera up.\n\nTests: test/shell.d/apple-facetimehd-test.sh 9/9 (gating incl. older Apple vendor string, non-clobber paths, failed-install warning path, migration). ./test/cli green.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "71230e30ef67cf15aacc75dd0eb04b8884de5a72",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/24760fca3dc9a78ad00c12fadd89c413d937f91b/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/24760fca3dc9a78ad00c12fadd89c413d937f91b/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "patch": "@@ -35,6 +35,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-facetimehd.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/lenovo/fix-yoga-pro7-bass-speakers.sh\"\n "
+    },
+    {
+      "sha": "fa883a775e5c33565aff8e8cbbf3c02d5496f631",
+      "filename": "install/hardware/apple/fix-facetimehd.sh",
+      "status": "added",
+      "additions": 23,
+      "deletions": 0,
+      "changes": 23,
+      "blob_url": "https://github.com/omacom/omarchy/blob/24760fca3dc9a78ad00c12fadd89c413d937f91b/install%2Fhardware%2Fapple%2Ffix-facetimehd.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/24760fca3dc9a78ad00c12fadd89c413d937f91b/install%2Fhardware%2Fapple%2Ffix-facetimehd.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-facetimehd.sh?ref=24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "patch": "@@ -0,0 +1,23 @@\n+# Pre-T2 Macs' built-in FaceTime HD camera (Broadcom 1570) has no in-tree\n+# driver: the PCI function sits driverless and no /dev/video exists. The\n+# out-of-tree bcwc_pcie driver (AUR facetimehd-dkms-git) plus Apple's camera\n+# firmware (AUR facetimehd-firmware) bring up /dev/video0 at 1280x720.\n+# Verified on MacBookPro11,5: modprobe facetimehd, three frames captured.\n+dmi_vendor=\"${OMARCHY_DMI_VENDOR:-/sys/class/dmi/id/sys_vendor}\"\n+sys_vendor=\"$(cat \"$dmi_vendor\" 2>/dev/null || true)\"\n+\n+if [[ $sys_vendor == Apple* ]] && lspci -nn | grep -E \"14e4:1570\" >/dev/null; then\n+  echo \"Detected pre-T2 FaceTime HD camera; installing its driver and firmware\"\n+\n+  omarchy-pkg-aur-add facetimehd-firmware facetimehd-dkms-git ||\n+    echo \"Warning: could not install the FaceTime HD camera packages\" >&2\n+\n+  # Best-effort on a live session so the camera works without a reboot. The\n+  # driver's PCI alias binds it automatically on boot. Never fatal, following\n+  # fix-synaptic-touchpad.sh: an optional camera must not halt hardware setup,\n+  # and install chroots cannot load modules for the target kernel anyway.\n+  if modprobe -qn facetimehd 2>/dev/null; then\n+    modprobe facetimehd 2>/dev/null ||\n+      echo \"Warning: could not load facetimehd (takes effect after reboot)\" >&2\n+  fi\n+fi"
+    },
+    {
+      "sha": "e6bf712a1a046c6c200c335cd0360d069c362260",
+      "filename": "migrations/1789743826.sh",
+      "status": "added",
+      "additions": 6,
+      "deletions": 0,
+      "changes": 6,
+      "blob_url": "https://github.com/omacom/omarchy/blob/24760fca3dc9a78ad00c12fadd89c413d937f91b/migrations%2F1789743826.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/24760fca3dc9a78ad00c12fadd89c413d937f91b/migrations%2F1789743826.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789743826.sh?ref=24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "patch": "@@ -0,0 +1,6 @@\n+echo \"Install the pre-T2 FaceTime HD camera driver and firmware\"\n+\n+# Pre-T2 Macs' built-in camera (Broadcom 1570) has no in-tree driver, so it\n+# sits driverless with no /dev/video. See\n+# install/hardware/apple/fix-facetimehd.sh.\n+source \"$OMARCHY_PATH/install/hardware/apple/fix-facetimehd.sh\""
+    },
+    {
+      "sha": "287dccedb6dd7b0a5567cb07494eced1e6406e39",
+      "filename": "test/shell.d/apple-facetimehd-test.sh",
+      "status": "added",
+      "additions": 123,
+      "deletions": 0,
+      "changes": 123,
+      "blob_url": "https://github.com/omacom/omarchy/blob/24760fca3dc9a78ad00c12fadd89c413d937f91b/test%2Fshell.d%2Fapple-facetimehd-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/24760fca3dc9a78ad00c12fadd89c413d937f91b/test%2Fshell.d%2Fapple-facetimehd-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fapple-facetimehd-test.sh?ref=24760fca3dc9a78ad00c12fadd89c413d937f91b",
+      "patch": "@@ -0,0 +1,123 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+leaf=\"$ROOT/install/hardware/apple/fix-facetimehd.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1789743826.sh\"\n+\n+grep -Fq 'apple/fix-facetimehd.sh' \"$all\" ||\n+  fail \"the FaceTime HD quirk runs during hardware setup\"\n+pass \"the FaceTime HD quirk runs during hardware setup\"\n+\n+grep -Fq 'fix-facetimehd.sh' \"$migration\" ||\n+  fail \"the migration applies the FaceTime HD quirk\" \"$migration\"\n+pass \"the migration applies the FaceTime HD quirk\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\" \"$test_tmp/dmi\"\n+\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+\n+if (( ${FACETIMEHD_HARDWARE:-0} == 1 )); then\n+  echo '05:00.0 Multimedia controller [0480]: Broadcom Inc. and subsidiaries 720p FaceTime HD Camera [14e4:1570]'\n+else\n+  echo '00:02.0 VGA compatible controller [0300]: Intel Corporation HD Graphics [8086:0d26]'\n+fi\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-aur-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'pkg-aur-add %s\\n' \"$*\" >>\"$TEST_LOG\"\n+(( ${PKG_FAIL:-0} == 0 ))\n+SH\n+\n+cat >\"$stub_bin/modprobe\" <<'SH'\n+#!/bin/bash\n+\n+printf 'modprobe' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+(( ${MODPROBE_FAIL:-0} == 0 ))\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local vendor=\"$1\" camera=\"${2:-0}\" pkg_fail=\"${3:-0}\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  OMARCHY_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    FACETIMEHD_HARDWARE=\"$camera\" PKG_FAIL=\"$pkg_fail\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\" </dev/null\n+}\n+\n+run_leaf \"Apple Inc.\" 1 >/dev/null\n+grep -Fq 'pkg-aur-add facetimehd-firmware facetimehd-dkms-git' \"$calls\" ||\n+  fail \"a pre-T2 Mac with the camera installs driver and firmware\" \"$(cat \"$calls\")\"\n+grep -Fq $'modprobe\\tfacetimehd' \"$calls\" ||\n+  fail \"a live session loads the driver without a reboot\" \"$(cat \"$calls\")\"\n+pass \"a pre-T2 Mac with the camera installs driver and firmware\"\n+\n+run_leaf \"Apple Inc.\" 0 >/dev/null\n+[[ ! -s $calls ]] || fail \"an Apple machine without the camera is left alone\" \"$(cat \"$calls\")\"\n+pass \"an Apple machine without the camera is left alone\"\n+\n+run_leaf \"LENOVO\" 0 >/dev/null\n+[[ ! -s $calls ]] || fail \"non-Apple hardware is left alone\" \"$(cat \"$calls\")\"\n+pass \"non-Apple hardware is left alone\"\n+\n+run_leaf \"Apple Computer, Inc.\" 1 >/dev/null\n+grep -Fq 'pkg-aur-add facetimehd-firmware facetimehd-dkms-git' \"$calls\" ||\n+  fail \"the older Apple vendor string is recognized\"\n+pass \"the older Apple vendor string is recognized\"\n+\n+# A failed package install warns instead of aborting hardware setup.\n+set +e\n+run_leaf \"Apple Inc.\" 1 1 >/dev/null\n+status=$?\n+set -e\n+(( status == 0 )) || fail \"a failed package install does not abort hardware setup\"\n+grep -Fq $'modprobe\\t-qn\\tfacetimehd' \"$calls\" ||\n+  fail \"a failed install still probes for a live load\" \"$(cat \"$calls\")\"\n+pass \"a failed package install warns instead of aborting\"\n+\n+run_migration() {\n+  local vendor=\"$1\" camera=\"${2:-0}\"\n+  printf '%s' \"$vendor\" >\"$test_tmp/dmi/sys_vendor\"\n+  : >\"$calls\"\n+\n+  OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_DMI_VENDOR=\"$test_tmp/dmi/sys_vendor\" \\\n+    FACETIMEHD_HARDWARE=\"$camera\" \\\n+    PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration \"Apple Inc.\" 1\n+grep -Fq 'pkg-aur-add facetimehd-firmware facetimehd-dkms-git' \"$calls\" ||\n+  fail \"the migration installs driver and firmware on a pre-T2 Mac with the camera\"\n+pass \"the migration installs driver and firmware on a pre-T2 Mac with the camera\"\n+\n+run_migration \"LENOVO\" 0\n+[[ ! -s $calls ]] || fail \"the migration leaves other hardware alone\" \"$(cat \"$calls\")\"\n+pass \"the migration leaves other hardware alone\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,138 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10783",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "model-docs"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "406c754ea399311683c19fa97e547d4f8aea3111",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10783,
+  "checked_at": "2026-09-21T11:56:52.598661+00:00",
+  "title": "docs: add 2020 iMac models to the T2 Mac list",
+  "author": "edschofield",
+  "head_sha": "406c754ea399311683c19fa97e547d4f8aea3111",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-09T06:48:42Z",
+  "state": "open",
+  "body": "The [Mac support page](https://omarchy.org/manual/mac-support/) lists the 2017 iMac Pro but omits the 2020 27-inch Retina 5K iMac from its T2 devices. Add the 2020 model with its A2115 number and both identifiers, `iMac20,1` and `iMac20,2`.\r\n\r\nApple's [T2 model list](https://support.apple.com/en-us/103265) identifies the 2020 27-inch iMac and iMac Pro as the two T2 iMac families. Its [iMac identification guide](https://support.apple.com/en-us/108054) lists both 2020 identifiers, and its [NCC certification table](https://images.apple.com/tw/nccid/) confirms A2115 for the 2020 model. The existing iMac Pro entry already covers `iMacPro1,1`.\r\n\r\nThis patch adds the missing list item to `manual/44-mac-support.md`.\r\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2e9bcff83e884cbb47408c0f6aad2112d4f45475",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/406c754ea399311683c19fa97e547d4f8aea3111/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/406c754ea399311683c19fa97e547d4f8aea3111/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=406c754ea399311683c19fa97e547d4f8aea3111",
+      "patch": "@@ -65,6 +65,7 @@ The Apple T2 Security Chip was introduced in 2017. The T2 chip was discontinued\n - MacBook Pro 13-inch (2019, two Thunderbolt 3 ports) \u2013 Model: A2159\n - MacBook Pro 13-inch (2019, four Thunderbolt 3 ports) \u2013 Model: A2178\n - MacBook Pro 15-inch (2019) \u2013 Model: A1990\n+- iMac (Retina 5K, 27-inch, 2020) \u2013 Model: A2115 (iMac20,1 and iMac20,2)\n - MacBook Pro 13-inch (2020, two Thunderbolt 3 ports) \u2013 Model: A2265\n - MacBook Pro 15-inch (2020) \u2013 Model: A1990\n "
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5595971269",
+      "html_url": "https://github.com/omacom/omarchy/pull/10783#issuecomment-5595971269",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10783",
+      "id": 5595971269,
+      "node_id": "IC_kwDOO0Cobs8AAAABTYu-xQ",
+      "user": {
+        "login": "vivekchauhan",
+        "id": 535505,
+        "node_id": "MDQ6VXNlcjUzNTUwNQ==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/535505?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/vivekchauhan",
+        "html_url": "https://github.com/vivekchauhan",
+        "followers_url": "https://api.github.com/users/vivekchauhan/followers",
+        "following_url": "https://api.github.com/users/vivekchauhan/following{/other_user}",
+        "gists_url": "https://api.github.com/users/vivekchauhan/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/vivekchauhan/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/vivekchauhan/subscriptions",
+        "organizations_url": "https://api.github.com/users/vivekchauhan/orgs",
+        "repos_url": "https://api.github.com/users/vivekchauhan/repos",
+        "events_url": "https://api.github.com/users/vivekchauhan/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/vivekchauhan/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-09T04:47:57Z",
+      "updated_at": "2026-09-09T04:47:57Z",
+      "body": "There is an open issue with 2020 iMac with T20 chip where the screen freezes post login randomly.\r\nhttps://github.com/omacom/omarchy/pull/10169",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5595971269/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5597359286",
+      "html_url": "https://github.com/omacom/omarchy/pull/10783#issuecomment-5597359286",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/10783",
+      "id": 5597359286,
+      "node_id": "IC_kwDOO0Cobs8AAAABTaDstg",
+      "user": {
+        "login": "edschofield",
+        "id": 78314,
+        "node_id": "MDQ6VXNlcjc4MzE0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/78314?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/edschofield",
+        "html_url": "https://github.com/edschofield",
+        "followers_url": "https://api.github.com/users/edschofield/followers",
+        "following_url": "https://api.github.com/users/edschofield/following{/other_user}",
+        "gists_url": "https://api.github.com/users/edschofield/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/edschofield/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/edschofield/subscriptions",
+        "organizations_url": "https://api.github.com/users/edschofield/orgs",
+        "repos_url": "https://api.github.com/users/edschofield/repos",
+        "events_url": "https://api.github.com/users/edschofield/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/edschofield/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-09T06:46:11Z",
+      "updated_at": "2026-09-09T06:48:42Z",
+      "body": "Thanks for the link @vivekchauhan . I have been working on a related SMU initialization fault and yesterday submitted a kernel fix at [t2linux/linux-t2-patches#60](https://github.com/t2linux/linux-t2-patches/pull/60) and an [AMD RFC](https://www.mail-archive.com/amd-gfx@lists.freedesktop.org/msg150947.html). It has passed the recorded GPU tests on my iMac20,1.\r\n\r\nMy patch currently matches Navi14 `7340/0218`, revision `0x41`, whereas PR #10169 targets Navi10 `7319/021b`, and your AMD report identifies Navi14 `7340/0219`. My patch would need adaptation and testing before I could claim it fixes your board.\r\n\r\nThis documentation PR only adds the missing 2020 models to the list, which is accurate given the context (since the heading is just \"Devices with T2 Chip\"). I'm running Omarchy right now on my iMac 2020 with my patched kernel, so it is possible (but not currently with the official Omarchy installer). So the manual probably deserves an iMac 2020 entry with a footnote...",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5597359286/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

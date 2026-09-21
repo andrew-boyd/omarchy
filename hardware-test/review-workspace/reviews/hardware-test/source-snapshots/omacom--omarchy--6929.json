@@ -1,0 +1,613 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/6929",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "t2-gmux"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "3ce189e3138c649f9475d325a6297c8628ebae37",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 6929,
+  "checked_at": "2026-09-21T11:57:18.030526+00:00",
+  "title": "Add low-power Intel rendering mode for hybrid T2 MacBooks",
+  "author": "marashiai",
+  "head_sha": "3ce189e3138c649f9475d325a6297c8628ebae37",
+  "base_sha": "692c02cad5c1ee90fe4188cc2be48e534cbe6e62",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-13T11:57:58Z",
+  "state": "open",
+  "body": "## Summary\n\n- extend `omarchy toggle hybrid gpu` with a T2-specific backend\n- use `apple-gmux.force_igd` to route the internal panel through Intel or Radeon\n- give Aquamarine an explicit single-GPU `AQ_DRM_DEVICES` list in both modes\n- resolve dynamic DRM card numbers from their bound `i915` and `amdgpu` drivers\n- wait for both DRM devices to settle before starting Hyprland, preventing a late GPU from bypassing the explicit list through hotplug\n- keep Radeon at its safe `low` DPM level in integrated mode and restore automatic performance in dedicated mode\n- neutralize the incompatible `supergfxd` state and remove its stale sleep/startup hooks on T2 Macs\n- rebuild the boot image and reboot only after the complete mode change succeeds\n- leave the existing `supergfxd` path unchanged on other hybrid laptops\n\n## Why\n\nHybrid-graphics T2 MacBooks cannot safely use the generic `supergfxd` integrated-mode flow. `supergfxd` and `apple-gmux` can disagree about which GPU owns the display, which reproduced a blank internal panel after toggling.\n\n`apple-gmux.force_igd` controls panel routing but does not by itself select Hyprland's renderer. On the tested MacBookPro16,1, that mismatch previously left the panel on one GPU while rendering happened on the other, causing cross-GPU frame copies, high Radeon activity, extra heat, and poor interactive performance.\n\nThe UWSM policy now waits for both DRM devices to register and then exposes exactly the selected GPU to Aquamarine:\n\n- integrated mode: Intel renders and owns the internal display; AMD-wired external outputs are intentionally unavailable\n- dedicated mode: Radeon renders and owns the internal display and external outputs\n\nWaiting for device discovery matters on this hardware. Without it, Radeon can register after UWSM has applied an Intel-only list and then join Aquamarine through the later hotplug path.\n\nFully cutting Radeon power through `vga_switcheroo` remains unsafe on this machine. A powered-off Radeon leaves upstream PCI bridges inaccessible during ACPI S3 preparation, causing long resume delays and possible Broadcom Wi-Fi and Thunderbolt USB recovery failures. Integrated mode instead keeps Radeon available to the kernel while applying the T2-recommended low DPM policy.\n\n## Validation\n\nAutomated:\n\n- `bash test/shell.d/hybrid-gpu-test.sh`\n- `bash test/shell.d/hw-hybrid-gpu-test.sh`\n- `bash test/shell.d/bin-style-test.sh`\n- `./test/cli`\n- Bash and POSIX shell syntax checks\n- ShellCheck on the changed scripts\n- `git diff --check`\n\nCoverage includes dynamic/nonstandard card numbers, late Radeon initialization in both modes, strict single-GPU renderer selection, switching in both directions, supergfxd cleanup, DPM policy creation/removal, declined confirmation, failed policy writes, failed boot-image rebuilds, and preservation of the generic non-T2 path.\n\nReal hardware verification on MacBookPro16,1 with Intel UHD 630 and Radeon RX 5500M:\n\n- completed and verified integrated \u2192 dedicated \u2192 integrated twice through the real user-facing command and reboot path\n- created a Snapper recovery point before every transition\n- dedicated boot: `AQ_DRM_DEVICES=/dev/dri/card2`, Aquamarine found exactly one GPU, Radeon was the only backend/renderer, the internal panel was active, and DPM control was `auto`\n- integrated boot: `AQ_DRM_DEVICES=/dev/dri/card1`, Aquamarine found exactly one GPU, Intel was the only backend/renderer, the internal panel was active, and Radeon remained kernel-visible at 0% busy with DPM forced to `low`\n- no late secondary GPU backend appeared in either complete Aquamarine startup log\n- `supergfxd` remained disabled/inactive and its incompatible hooks remained absent\n- both reboots returned to the normal Btrfs root rather than a recovery snapshot\n\nThe current machine is left in strict integrated mode.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "cd4654adbf533420f57339f08c8c39880972fc71",
+      "filename": "bin/omarchy-toggle-hybrid-gpu",
+      "status": "modified",
+      "additions": 93,
+      "deletions": 1,
+      "changes": 94,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3ce189e3138c649f9475d325a6297c8628ebae37/bin%2Fomarchy-toggle-hybrid-gpu",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3ce189e3138c649f9475d325a6297c8628ebae37/bin%2Fomarchy-toggle-hybrid-gpu",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-toggle-hybrid-gpu?ref=3ce189e3138c649f9475d325a6297c8628ebae37",
+      "patch": "@@ -1,6 +1,6 @@\n #!/bin/bash\n \n-# omarchy:summary=Toggle dedicated vs integrated GPU mode via supergfxd (for hybrid gpu laptops, like Asus G14).\n+# omarchy:summary=Toggle dedicated vs integrated GPU mode on supported hybrid laptops.\n # omarchy:requires-sudo=true\n \n install_root_file() {\n@@ -32,6 +32,98 @@ safe_stage_path() {\n   [[ $suffix =~ ^[[:alnum:]]{6}$ ]]\n }\n \n+toggle_t2_hybrid_gpu() {\n+  local config_home=\"${XDG_CONFIG_HOME:-$HOME/.config}\"\n+  local gmux_conf=\"${OMARCHY_T2_GMUX_CONF:-/etc/modprobe.d/apple-gmux.conf}\"\n+  local dpm_rule=\"${OMARCHY_T2_DGPU_RULE:-/etc/udev/rules.d/30-omarchy-t2-amdgpu-pm.rules}\"\n+  local dpm_source=\"$OMARCHY_PATH/default/udev/rules.d/30-omarchy-t2-amdgpu-pm.rules\"\n+  local renderer_env=\"${OMARCHY_T2_RENDERER_ENV:-$config_home/uwsm/env-hyprland.d/20-omarchy-t2-gpu}\"\n+  local renderer_source=\"$OMARCHY_PATH/default/uwsm/env-hyprland.d/20-omarchy-t2-gpu\"\n+  local supergfx_conf=\"${OMARCHY_T2_SUPERGFX_CONF:-/etc/supergfxd.conf}\"\n+  local force_igpu=\"${OMARCHY_T2_FORCE_IGPU:-/usr/lib/systemd/system-sleep/force-igpu}\"\n+  local supergfx_delay=\"${OMARCHY_T2_SUPERGFX_DELAY:-/etc/systemd/system/supergfxd.service.d/delay-start.conf}\"\n+  local force_igd prompt\n+  local -a rebuild\n+\n+  if [[ -f $gmux_conf ]] && grep -Eq '^[[:space:]]*options[[:space:]]+apple-gmux[[:space:]].*force_igd=(y|Y|1)([[:space:]]|$)' \"$gmux_conf\"; then\n+    force_igd=n\n+    prompt=\"Enable dedicated GPU and reboot?\"\n+  else\n+    force_igd=y\n+    prompt=\"Use integrated low-power mode and reboot?\"\n+  fi\n+\n+  if gum confirm \"$prompt\"; then\n+    if omarchy-cmd-present supergfxctl; then\n+      if [[ -f $supergfx_conf ]]; then\n+        if ! sudo sed -i -E 's/\"mode\": \"[^\"]*\"/\"mode\": \"Hybrid\"/' \"$supergfx_conf\" ||\n+          ! grep -qF '\"mode\": \"Hybrid\"' \"$supergfx_conf\"; then\n+          echo \"Could not neutralize $supergfx_conf. Graphics mode unchanged.\" >&2\n+          exit 1\n+        fi\n+      fi\n+\n+      if ! sudo systemctl disable --now supergfxd; then\n+        echo \"Could not disable supergfxd. Graphics mode unchanged.\" >&2\n+        exit 1\n+      fi\n+    fi\n+\n+    if ! sudo rm -f \"$force_igpu\" \"$supergfx_delay\"; then\n+      echo \"Could not remove stale supergfxd policies. Graphics mode unchanged.\" >&2\n+      exit 1\n+    fi\n+\n+    sudo mkdir -p \"$(dirname \"$gmux_conf\")\" \"$(dirname \"$dpm_rule\")\"\n+\n+    if ! echo \"options apple-gmux force_igd=$force_igd\" | sudo tee \"$gmux_conf\" >/dev/null; then\n+      echo \"Could not write $gmux_conf. Graphics mode unchanged.\" >&2\n+      exit 1\n+    fi\n+\n+    if [[ $force_igd == \"y\" ]]; then\n+      if ! sudo install -Dm644 \"$dpm_source\" \"$dpm_rule\"; then\n+        echo \"Could not write $dpm_rule. Graphics mode change incomplete.\" >&2\n+        exit 1\n+      fi\n+\n+    elif ! sudo rm -f \"$dpm_rule\"; then\n+      echo \"Could not remove $dpm_rule. Graphics mode change incomplete.\" >&2\n+      exit 1\n+    fi\n+\n+    if ! rm -f \"$renderer_env\" || ! install -Dm644 \"$renderer_source\" \"$renderer_env\"; then\n+      echo \"Could not install $renderer_env. Graphics mode change incomplete.\" >&2\n+      exit 1\n+    fi\n+\n+    # apple-gmux binds an ACPI device every T2 Mac has, so autodetect pulls it\n+    # into the initramfs and udev loads it there, reading the bundled copy of\n+    # /etc/modprobe.d. Without a rebuild the reboot lands in the old mode.\n+    if omarchy-cmd-present limine-mkinitcpio; then\n+      rebuild=(limine-mkinitcpio)\n+    else\n+      rebuild=(mkinitcpio -P)\n+    fi\n+\n+    # Rebooting on a half-written boot image is how a machine stops booting.\n+    if ! sudo \"${rebuild[@]}\"; then\n+      echo \"Boot image rebuild failed. Not rebooting.\" >&2\n+      exit 1\n+    fi\n+\n+    omarchy-system-reboot\n+  fi\n+}\n+\n+pci_devices=\"$(lspci -nn)\"\n+if grep -q '106b:180[12]' <<<\"$pci_devices\" &&\n+  grep -q 'VGA compatible controller.*\\[8086:' <<<\"$pci_devices\" &&\n+  grep -q 'VGA compatible controller.*\\[1002:' <<<\"$pci_devices\"; then\n+  toggle_t2_hybrid_gpu\n+  exit\n+fi\n+\n if omarchy-cmd-missing supergfxctl; then\n   omarchy-pkg-add supergfxctl\n "
+    },
+    {
+      "sha": "a5a9d48a30f05fc5956e755061f31cf44356836f",
+      "filename": "default/udev/rules.d/30-omarchy-t2-amdgpu-pm.rules",
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3ce189e3138c649f9475d325a6297c8628ebae37/default%2Fudev%2Frules.d%2F30-omarchy-t2-amdgpu-pm.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3ce189e3138c649f9475d325a6297c8628ebae37/default%2Fudev%2Frules.d%2F30-omarchy-t2-amdgpu-pm.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Frules.d%2F30-omarchy-t2-amdgpu-pm.rules?ref=3ce189e3138c649f9475d325a6297c8628ebae37",
+      "patch": "@@ -0,0 +1 @@\n+SUBSYSTEM==\"drm\", ENV{DEVTYPE}==\"drm_minor\", KERNEL==\"card[0-9]*\", ATTR{device/vendor}==\"0x1002\", ATTR{device/power_dpm_force_performance_level}=\"low\""
+    },
+    {
+      "sha": "4e3e82aa034881a834fbc12e177908d88e0f060a",
+      "filename": "default/uwsm/env-hyprland.d/20-omarchy-t2-gpu",
+      "status": "added",
+      "additions": 51,
+      "deletions": 0,
+      "changes": 51,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3ce189e3138c649f9475d325a6297c8628ebae37/default%2Fuwsm%2Fenv-hyprland.d%2F20-omarchy-t2-gpu",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3ce189e3138c649f9475d325a6297c8628ebae37/default%2Fuwsm%2Fenv-hyprland.d%2F20-omarchy-t2-gpu",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fuwsm%2Fenv-hyprland.d%2F20-omarchy-t2-gpu?ref=3ce189e3138c649f9475d325a6297c8628ebae37",
+      "patch": "@@ -0,0 +1,51 @@\n+t2_igpu=\n+t2_dgpu=\n+t2_drm_dir=\"${OMARCHY_T2_DRM_DIR:-/sys/class/drm}\"\n+t2_gmux_conf=\"${OMARCHY_T2_GMUX_CONF:-/etc/modprobe.d/apple-gmux.conf}\"\n+t2_primary_driver=i915\n+t2_wait_attempts=\"${OMARCHY_T2_GPU_WAIT_ATTEMPTS:-150}\"\n+t2_attempt=0\n+\n+if [ -f \"$t2_gmux_conf\" ] &&\n+  grep -Eq '^[[:space:]]*options[[:space:]]+apple-gmux[[:space:]].*force_igd=(n|N|0)([[:space:]]|$)' \"$t2_gmux_conf\"; then\n+  t2_primary_driver=amdgpu\n+fi\n+\n+case \"$t2_wait_attempts\" in\n+\"\"|*[!0-9]*) t2_wait_attempts=150 ;;\n+esac\n+\n+# The Radeon can register after UWSM starts on this hardware. Let both DRM\n+# devices settle before applying the explicit single-GPU list, otherwise\n+# Aquamarine can add the late device as an unrestricted hotplugged backend.\n+while [ \"$t2_attempt\" -lt \"$t2_wait_attempts\" ]; do\n+  t2_igpu=\n+  t2_dgpu=\n+\n+  # DRM card numbers can change between boots, so resolve them from their\n+  # drivers each time UWSM prepares the Hyprland environment.\n+  for t2_card in \"$t2_drm_dir\"/card[0-9]*; do\n+    [ -e \"$t2_card/device/driver\" ] || continue\n+\n+    case \"$(basename \"$(readlink -f \"$t2_card/device/driver\")\")\" in\n+    i915) t2_igpu=\"/dev/dri/${t2_card##*/}\" ;;\n+    amdgpu) t2_dgpu=\"/dev/dri/${t2_card##*/}\" ;;\n+    esac\n+  done\n+\n+  if [ -n \"$t2_igpu\" ] && [ -n \"$t2_dgpu\" ]; then\n+    break\n+  fi\n+\n+  t2_attempt=$((t2_attempt + 1))\n+  [ \"$t2_attempt\" -lt \"$t2_wait_attempts\" ] && sleep 0.1\n+done\n+\n+if [ \"$t2_primary_driver\" = amdgpu ] && [ -n \"$t2_dgpu\" ]; then\n+  export AQ_DRM_DEVICES=\"$t2_dgpu\"\n+elif [ -n \"$t2_igpu\" ]; then\n+  export AQ_DRM_DEVICES=\"$t2_igpu\"\n+fi\n+\n+unset t2_igpu t2_dgpu t2_drm_dir t2_gmux_conf t2_primary_driver\n+unset t2_wait_attempts t2_attempt t2_card"
+    },
+    {
+      "sha": "d29998006777b45ebd113669ba2b04f028611f9b",
+      "filename": "test/shell.d/hybrid-gpu-test.sh",
+      "status": "modified",
+      "additions": 249,
+      "deletions": 1,
+      "changes": 250,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3ce189e3138c649f9475d325a6297c8628ebae37/test%2Fshell.d%2Fhybrid-gpu-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3ce189e3138c649f9475d325a6297c8628ebae37/test%2Fshell.d%2Fhybrid-gpu-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhybrid-gpu-test.sh?ref=3ce189e3138c649f9475d325a6297c8628ebae37",
+      "patch": "@@ -20,7 +20,52 @@ STUB\n \n cat >\"$fake_bin/gum\" <<'STUB'\n #!/bin/bash\n-exit 1\n+printf '%s\\n' \"$*\" >>\"$TEST_TMP/prompts\"\n+exit \"${CONFIRM_STATUS:-1}\"\n+STUB\n+\n+cat >\"$fake_bin/lspci\" <<'STUB'\n+#!/bin/bash\n+\n+if [[ ${T2_HARDWARE:-0} == \"1\" ]]; then\n+  echo '00:02.0 VGA compatible controller [0300]: Intel Corporation UHD Graphics [8086:3e9b]'\n+  echo '03:00.0 VGA compatible controller [0300]: AMD Radeon Pro [1002:7340]'\n+  echo '04:00.1 Non-VGA unclassified device [0000]: Apple T2 Bridge [106b:1801]'\n+fi\n+STUB\n+\n+cat >\"$fake_bin/sudo\" <<'STUB'\n+#!/bin/bash\n+\"$@\"\n+STUB\n+\n+cat >\"$fake_bin/omarchy-cmd-present\" <<'STUB'\n+#!/bin/bash\n+command -v \"$1\" >/dev/null\n+STUB\n+\n+# Both names, so the test never reaches a real one whichever branch is taken.\n+cat >\"$fake_bin/limine-mkinitcpio\" <<'STUB'\n+#!/bin/bash\n+echo rebuild >>\"$TEST_TMP/rebuilds\"\n+exit \"${REBUILD_STATUS:-0}\"\n+STUB\n+\n+cat >\"$fake_bin/mkinitcpio\" <<'STUB'\n+#!/bin/bash\n+echo rebuild >>\"$TEST_TMP/rebuilds\"\n+exit \"${REBUILD_STATUS:-0}\"\n+STUB\n+\n+cat >\"$fake_bin/omarchy-system-reboot\" <<'STUB'\n+#!/bin/bash\n+echo reboot >>\"$TEST_TMP/reboots\"\n+STUB\n+\n+cat >\"$fake_bin/systemctl\" <<'STUB'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$TEST_TMP/systemctl\"\n+exit \"${SYSTEMCTL_STATUS:-0}\"\n STUB\n \n cat >\"$fake_bin/supergfxctl\" <<'STUB'\n@@ -40,6 +85,209 @@ STUB\n \n chmod +x \"$fake_bin\"/*\n \n+gmux_conf=\"$test_tmp/modprobe.d/apple-gmux.conf\"\n+dpm_rule=\"$test_tmp/udev/rules.d/30-omarchy-t2-amdgpu-pm.rules\"\n+dpm_source=\"$ROOT/default/udev/rules.d/30-omarchy-t2-amdgpu-pm.rules\"\n+renderer_env=\"$test_tmp/uwsm/env-hyprland.d/20-omarchy-t2-gpu\"\n+renderer_source=\"$ROOT/default/uwsm/env-hyprland.d/20-omarchy-t2-gpu\"\n+supergfx_conf=\"$test_tmp/supergfxd.conf\"\n+force_igpu=\"$test_tmp/system-sleep/force-igpu\"\n+supergfx_delay=\"$test_tmp/supergfxd.service.d/delay-start.conf\"\n+\n+export OMARCHY_T2_SUPERGFX_CONF=\"$supergfx_conf\"\n+export OMARCHY_T2_FORCE_IGPU=\"$force_igpu\"\n+export OMARCHY_T2_SUPERGFX_DELAY=\"$supergfx_delay\"\n+\n+mkdir -p \"$(dirname \"$gmux_conf\")\" \"$(dirname \"$force_igpu\")\" \"$(dirname \"$supergfx_delay\")\"\n+printf '{\\n  \"mode\": \"Integrated\"\\n}\\n' >\"$supergfx_conf\"\n+touch \"$force_igpu\" \"$supergfx_delay\"\n+\n+fake_drm=\"$test_tmp/sys/class/drm\"\n+mkdir -p \"$fake_drm/card4/device\" \"$fake_drm/card7/device\" \\\n+  \"$test_tmp/drivers/amdgpu\" \"$test_tmp/drivers/i915\"\n+ln -s \"$test_tmp/drivers/amdgpu\" \"$fake_drm/card4/device/driver\"\n+ln -s \"$test_tmp/drivers/i915\" \"$fake_drm/card7/device/driver\"\n+\n+printf '%s\\n' 'options apple-gmux force_igd=y' >\"$gmux_conf\"\n+renderer_devices=$(\n+  OMARCHY_T2_DRM_DIR=\"$fake_drm\" OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" \\\n+    sh -c '. \"$1\"; printf \"%s\" \"$AQ_DRM_DEVICES\"' _ \"$renderer_source\"\n+)\n+[[ $renderer_devices == \"/dev/dri/card7\" ]] ||\n+  fail \"T2 integrated renderer policy selects only Intel\" \"$renderer_devices\"\n+pass \"T2 renderer policy discovers dynamic Intel and Radeon card numbers\"\n+\n+rm \"$fake_drm/card4/device/driver\"\n+wait_bin=\"$test_tmp/wait-bin\"\n+mkdir -p \"$wait_bin\"\n+cat >\"$wait_bin/sleep\" <<'STUB'\n+#!/bin/bash\n+echo wait >>\"$TEST_TMP/renderer-waits\"\n+ln -s \"$TEST_TMP/drivers/amdgpu\" \"$TEST_TMP/sys/class/drm/card4/device/driver\"\n+STUB\n+chmod +x \"$wait_bin/sleep\"\n+\n+printf '%s\\n' 'options apple-gmux force_igd=y' >\"$gmux_conf\"\n+renderer_devices=$(\n+  TEST_TMP=\"$test_tmp\" OMARCHY_T2_DRM_DIR=\"$fake_drm\" \\\n+    OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_GPU_WAIT_ATTEMPTS=2 \\\n+    PATH=\"$wait_bin:$PATH\" \\\n+    sh -c '. \"$1\"; printf \"%s\" \"$AQ_DRM_DEVICES\"' _ \"$renderer_source\"\n+)\n+[[ $renderer_devices == \"/dev/dri/card7\" ]] ||\n+  fail \"T2 integrated renderer policy waits for Radeon before selecting only Intel\" \"$renderer_devices\"\n+[[ $(wc -l <\"$test_tmp/renderer-waits\") == \"1\" ]] ||\n+  fail \"T2 integrated renderer policy waits once for the delayed Radeon\"\n+pass \"T2 integrated renderer policy excludes late Radeon initialization\"\n+\n+rm \"$fake_drm/card4/device/driver\" \"$test_tmp/renderer-waits\"\n+printf '%s\\n' 'options apple-gmux force_igd=n' >\"$gmux_conf\"\n+renderer_devices=$(\n+  TEST_TMP=\"$test_tmp\" OMARCHY_T2_DRM_DIR=\"$fake_drm\" \\\n+    OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_GPU_WAIT_ATTEMPTS=2 \\\n+    PATH=\"$wait_bin:$PATH\" \\\n+    sh -c '. \"$1\"; printf \"%s\" \"$AQ_DRM_DEVICES\"' _ \"$renderer_source\"\n+)\n+[[ $renderer_devices == \"/dev/dri/card4\" ]] ||\n+  fail \"T2 dedicated renderer policy waits for and selects only Radeon\" \"$renderer_devices\"\n+[[ $(wc -l <\"$test_tmp/renderer-waits\") == \"1\" ]] ||\n+  fail \"T2 dedicated renderer policy waits once for the delayed Radeon\"\n+pass \"T2 dedicated renderer policy handles late Radeon initialization\"\n+\n+rm -f \"$gmux_conf\"\n+legacy_renderer=\"$test_tmp/legacy/20-omarchy-t2-gpu\"\n+mkdir -p \"$(dirname \"$renderer_env\")\" \"$(dirname \"$legacy_renderer\")\"\n+printf '%s\\n' 'legacy omarchy-t2 renderer' >\"$legacy_renderer\"\n+ln -s \"$legacy_renderer\" \"$renderer_env\"\n+\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_DGPU_RULE=\"$dpm_rule\" \\\n+  OMARCHY_T2_RENDERER_ENV=\"$renderer_env\" OMARCHY_PATH=\"$ROOT\" \\\n+  PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=y' \"$gmux_conf\" ||\n+  fail \"T2 hybrid graphics can switch to integrated graphics\"\n+cmp -s \"$dpm_source\" \"$dpm_rule\" ||\n+  fail \"T2 integrated graphics keeps Radeon in its safe low-power mode\"\n+cmp -s \"$renderer_source\" \"$renderer_env\" ||\n+  fail \"T2 integrated graphics prioritizes Intel rendering through UWSM\"\n+[[ ! -L $renderer_env ]] ||\n+  fail \"T2 graphics replaces a legacy omarchy-t2 renderer symlink\"\n+grep -Fq '\"mode\": \"Hybrid\"' \"$supergfx_conf\" ||\n+  fail \"T2 graphics neutralizes stale supergfxd integrated mode\"\n+[[ ! -e $force_igpu ]] || fail \"T2 graphics removes the supergfxd sleep hook\"\n+[[ ! -e $supergfx_delay ]] || fail \"T2 graphics removes the supergfxd startup delay\"\n+grep -Fxq 'disable --now supergfxd' \"$test_tmp/systemctl\" ||\n+  fail \"T2 graphics disables the incompatible supergfxd service\"\n+grep -Fq 'Use integrated low-power mode and reboot?' \"$test_tmp/prompts\" ||\n+  fail \"T2 Intel mode makes the Radeon performance tradeoff explicit\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"1\" ]] || fail \"T2 Intel mode requests one reboot\"\n+[[ $(wc -l <\"$test_tmp/rebuilds\") == \"1\" ]] ||\n+  fail \"T2 Intel mode rebuilds the boot image so the new module option is read\"\n+pass \"T2 hybrid graphics switches to integrated mode\"\n+\n+: >\"$test_tmp/prompts\"\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_DGPU_RULE=\"$dpm_rule\" \\\n+  OMARCHY_T2_RENDERER_ENV=\"$renderer_env\" OMARCHY_PATH=\"$ROOT\" \\\n+  PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=n' \"$gmux_conf\" ||\n+  fail \"T2 hybrid graphics can switch to dedicated graphics\"\n+[[ ! -e $dpm_rule ]] || fail \"T2 dedicated graphics restores automatic Radeon performance\"\n+cmp -s \"$renderer_source\" \"$renderer_env\" ||\n+  fail \"T2 dedicated graphics keeps explicit renderer selection through UWSM\"\n+renderer_devices=$(\n+  OMARCHY_T2_DRM_DIR=\"$fake_drm\" OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" \\\n+    sh -c '. \"$1\"; printf \"%s\" \"$AQ_DRM_DEVICES\"' _ \"$renderer_env\"\n+)\n+[[ $renderer_devices == \"/dev/dri/card4\" ]] ||\n+  fail \"T2 dedicated graphics configures Radeon as the primary renderer\" \"$renderer_devices\"\n+grep -Fq 'Enable dedicated GPU and reboot?' \"$test_tmp/prompts\" ||\n+  fail \"T2 AMD mode uses the existing dedicated GPU prompt\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] || fail \"T2 AMD mode requests one reboot\"\n+[[ $(wc -l <\"$test_tmp/rebuilds\") == \"2\" ]] ||\n+  fail \"T2 AMD mode rebuilds the boot image so the new module option is read\"\n+pass \"T2 hybrid graphics switches back to dedicated mode\"\n+\n+: >\"$test_tmp/prompts\"\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=1 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_DGPU_RULE=\"$dpm_rule\" \\\n+  OMARCHY_T2_RENDERER_ENV=\"$renderer_env\" OMARCHY_PATH=\"$ROOT\" \\\n+  PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=n' \"$gmux_conf\" ||\n+  fail \"declining a T2 graphics switch preserves the selected mode\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] || fail \"declining a T2 graphics switch skips reboot\"\n+[[ $(wc -l <\"$test_tmp/rebuilds\") == \"2\" ]] ||\n+  fail \"declining a T2 graphics switch skips the boot image rebuild\"\n+pass \"T2 hybrid graphics leaves a declined switch unchanged\"\n+\n+: >\"$test_tmp/prompts\"\n+set +e\n+error=$(\n+  TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+    OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_DGPU_RULE=/dev/full \\\n+    OMARCHY_T2_RENDERER_ENV=\"$renderer_env\" OMARCHY_PATH=\"$ROOT\" \\\n+    PATH=\"$fake_bin:$PATH\" \\\n+    bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" 2>&1 >/dev/null\n+)\n+status=$?\n+set -e\n+\n+(( status != 0 )) || fail \"a failed Radeon power policy fails the T2 graphics switch\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] ||\n+  fail \"a failed Radeon power policy leaves the machine running\"\n+[[ $(wc -l <\"$test_tmp/rebuilds\") == \"2\" ]] ||\n+  fail \"a failed Radeon power policy skips the boot image rebuild\"\n+grep -qF 'Graphics mode change incomplete' <<<\"$error\" ||\n+  fail \"a failed Radeon power policy explains the partial change\" \"$error\"\n+pass \"T2 hybrid graphics does not reboot without its Radeon power policy\"\n+\n+: >\"$test_tmp/prompts\"\n+printf '%s\\n' 'options apple-gmux force_igd=n' >\"$gmux_conf\"\n+set +e\n+error=$(\n+  TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+    OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_DGPU_RULE=\"$dpm_rule\" \\\n+    OMARCHY_T2_RENDERER_ENV=/dev/full OMARCHY_PATH=\"$ROOT\" \\\n+    PATH=\"$fake_bin:$PATH\" \\\n+    bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" 2>&1 >/dev/null\n+)\n+status=$?\n+set -e\n+\n+(( status != 0 )) || fail \"a failed renderer policy fails the T2 graphics switch\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] ||\n+  fail \"a failed renderer policy leaves the machine running\"\n+[[ $(wc -l <\"$test_tmp/rebuilds\") == \"2\" ]] ||\n+  fail \"a failed renderer policy skips the boot image rebuild\"\n+grep -qF 'Graphics mode change incomplete' <<<\"$error\" ||\n+  fail \"a failed renderer policy explains the partial change\" \"$error\"\n+pass \"T2 hybrid graphics does not reboot without its renderer policy\"\n+\n+: >\"$test_tmp/prompts\"\n+set +e\n+error=$(\n+  TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 REBUILD_STATUS=1 \\\n+    OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" OMARCHY_T2_DGPU_RULE=\"$dpm_rule\" \\\n+    OMARCHY_T2_RENDERER_ENV=\"$renderer_env\" OMARCHY_PATH=\"$ROOT\" \\\n+    PATH=\"$fake_bin:$PATH\" \\\n+    bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" 2>&1 >/dev/null\n+)\n+status=$?\n+set -e\n+\n+(( status != 0 )) || fail \"a failed boot image rebuild fails the T2 graphics switch\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] ||\n+  fail \"a failed boot image rebuild leaves the machine running\"\n+grep -qF 'Not rebooting' <<<\"$error\" ||\n+  fail \"a failed boot image rebuild says why nothing happened\" \"$error\"\n+pass \"T2 hybrid graphics does not reboot onto a boot image that failed to build\"\n+\n TEST_TMP=\"$test_tmp\" SUCCEED_ON_ATTEMPT=3 \\\n   PATH=\"$fake_bin:$PATH\" bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n "
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5301255000",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#issuecomment-5301255000",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6929",
+      "id": 5301255000,
+      "node_id": "IC_kwDOO0Cobs8AAAABO_q7WA",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-15T07:54:38Z",
+      "updated_at": "2026-08-15T07:54:38Z",
+      "body": "I have tested this locally with omarchy dev pointing to my branch.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5301255000/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5309305803",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#issuecomment-5309305803",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6929",
+      "id": 5309305803,
+      "node_id": "IC_kwDOO0Cobs8AAAABPHWTyw",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-16T19:39:03Z",
+      "updated_at": "2026-08-16T19:39:03Z",
+      "body": "Updated this PR to absorb the safe part of #7046. Integrated mode now installs the T2-recommended Radeon `low` DPM udev policy; dedicated mode removes it. This keeps Radeon suspendable and avoids the platform-level PCI/Wi-Fi failure reproduced with `vga_switcheroo OFF`. The revised path passed automated tests, a real udev-device event, and a lid-close deep-S3 cycle on MacBookPro16,1.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5309305803/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5309458790",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#issuecomment-5309458790",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6929",
+      "id": 5309458790,
+      "node_id": "IC_kwDOO0Cobs8AAAABPHfpZg",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-16T20:14:36Z",
+      "updated_at": "2026-08-16T20:14:36Z",
+      "body": "Updated the PR with the renderer half of integrated low-power mode. `force_igd=y` alone routed the panel through Intel but still left Hyprland and desktop applications rendering on Radeon, where the tested machine showed 31\u201374% GPU activity and 8\u201310 W Radeon power.\n\nIntegrated mode now installs a managed UWSM fragment that discovers the current `i915` and `amdgpu` DRM nodes from sysfs and exports Intel first in `AQ_DRM_DEVICES`. Dedicated mode removes that fragment. This version uses no persistent DRM aliases and never hardcodes `card0`, `card1`, or `card2`.\n\nThe dynamic resolver, both toggle directions, failure paths, hardware detection, CLI metadata, and the real MacBookPro16,1 card mapping have been verified. The local prototype aliases were also removed from the test laptop; the new fragment is staged for its next login without forcing another reboot.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5309458790/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5415225115",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#issuecomment-5415225115",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6929",
+      "id": 5415225115,
+      "node_id": "IC_kwDOO0Cobs8AAAABQsXHGw",
+      "user": {
+        "login": "hferreira23",
+        "id": 6885730,
+        "node_id": "MDQ6VXNlcjY4ODU3MzA=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6885730?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/hferreira23",
+        "html_url": "https://github.com/hferreira23",
+        "followers_url": "https://api.github.com/users/hferreira23/followers",
+        "following_url": "https://api.github.com/users/hferreira23/following{/other_user}",
+        "gists_url": "https://api.github.com/users/hferreira23/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/hferreira23/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/hferreira23/subscriptions",
+        "organizations_url": "https://api.github.com/users/hferreira23/orgs",
+        "repos_url": "https://api.github.com/users/hferreira23/repos",
+        "events_url": "https://api.github.com/users/hferreira23/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/hferreira23/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-25T18:56:49Z",
+      "updated_at": "2026-08-25T18:56:49Z",
+      "body": "Asked opencode to apply this on my MBP 2019 and it worked. If you need an active tester for any detail on this PR let me know",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5415225115/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5647716339",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#issuecomment-5647716339",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/6929",
+      "id": 5647716339,
+      "node_id": "IC_kwDOO0Cobs8AAAABUKFP8w",
+      "user": {
+        "login": "joshpavlovich",
+        "id": 923509,
+        "node_id": "MDQ6VXNlcjkyMzUwOQ==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/923509?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/joshpavlovich",
+        "html_url": "https://github.com/joshpavlovich",
+        "followers_url": "https://api.github.com/users/joshpavlovich/followers",
+        "following_url": "https://api.github.com/users/joshpavlovich/following{/other_user}",
+        "gists_url": "https://api.github.com/users/joshpavlovich/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/joshpavlovich/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/joshpavlovich/subscriptions",
+        "organizations_url": "https://api.github.com/users/joshpavlovich/orgs",
+        "repos_url": "https://api.github.com/users/joshpavlovich/repos",
+        "events_url": "https://api.github.com/users/joshpavlovich/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/joshpavlovich/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-12T18:06:08Z",
+      "updated_at": "2026-09-12T18:06:08Z",
+      "body": "I also had opencode apply this MR on my MacBookPro16,1 (16\" 2019, T2 \u2014 UHD 630 + Radeon RX 5500M, linux-t2 7.1.8, Omarchy 4.0.3 ad2c778a rebased onto v4-0-3) and it worked.\r\n\r\n- Integrated (force_igd=y, AQ_DRM_DEVICES \u2192 Intel, DPM auto -- I switched from low so my AMD can boost for compute): AMD 4W / 42\u201344\u00b0C vs 14W dedicated -- panel eDP-2 active, no phantom, t2-161 + trackpad internal intact\r\n- I toggled dedicated \u2192 integrated \u2192 dedicated via omarchy toggle hybrid gpu (reboots) \u2014 both directions verified, 0 \u2192 99% gpu_busy on demand then parks to 4W\r\n- I tested 12 plus deep-S3 lid-close cycles (14 min to 9h55m, mix AC/battery) \u2014 all clean resumes, no amdgpu/i915/gmux errors, 4W retained\r\n- I also validated AMD compute on integrated: Whisper base.en on Vulkan1 AMD 0.18s for 3.5s audio, Ollama Qwen2.5 7B/nomic-embed via Vulkan -- bursts to 18\u201350W then parks to 4W, Intel stays eDP-2\r\n\r\nIf you need an active tester for any detail on this PR please let me know.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5647716339/reactions",
+        "total_count": 1,
+        "+1": 1,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 4943304206,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqTWDg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds Apple T2 hybrid GPU support to the hybrid GPU toggle script by detecting T2 hardware and switching via `apple-gmux` configuration, with accompanying shell tests.\n\n**Changes:**\n- Add T2 hardware detection via `lspci` and a new `toggle_t2_hybrid_gpu` flow.\n- Write `force_igd` setting to an `apple-gmux` modprobe config and trigger reboot on confirmation.\n- Extend shell tests with stubs and scenarios for T2 integrated/dedicated toggling and decline behavior.\n\n### Reviewed changes\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated 1 comment.\n\n| File | Description |\n| ---- | ----------- |\n| test/shell.d/hybrid-gpu-test.sh | Adds stubs and test cases validating T2 detection, prompts, config writes, and reboot behavior |\n| bin/omarchy-toggle-hybrid-gpu | Implements T2 detection + toggling by writing `apple-gmux` `force_igd` and rebooting on confirm |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4943304206",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6929",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4943304206"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6929"
+        }
+      },
+      "submitted_at": "2026-08-15T07:55:12Z",
+      "commit_id": "4b9e1d23a4a182f2c913f1508572cc2361d961ad"
+    },
+    {
+      "id": 4943326273,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqUsQQ",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?u=7196d3f3945c10a2af88f2c539688100809cf2da&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4943326273",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6929",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4943326273"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6929"
+        }
+      },
+      "submitted_at": "2026-08-15T08:09:19Z",
+      "commit_id": "4b9e1d23a4a182f2c913f1508572cc2361d961ad"
+    },
+    {
+      "id": 4943635283,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJqnjUw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 1 out of 2 changed files in this pull request and generated no new comments.\n\n\n\n\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4943635283",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6929",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4943635283"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6929"
+        }
+      },
+      "submitted_at": "2026-08-15T10:18:06Z",
+      "commit_id": "4646362c5c4d67e8072775e257d28cf87a073b87"
+    },
+    {
+      "id": 4962265628,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJ8YqHA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 2 out of 3 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (1)</summary>\n\n**test/shell.d/hybrid-gpu-test.sh:128**\n* These test assertions should quote variable expansions to avoid unintended globbing/word-splitting behavior if paths ever contain special characters. Use `[[ ! -e \\\"$dpm_rule\\\" ]]` and `[[ ! -e \\\"$renderer_env\\\" ]]` for robustness.\n```\n[[ ! -e $dpm_rule ]] || fail \"T2 dedicated graphics restores automatic Radeon performance\"\n[[ ! -e $renderer_env ]] || fail \"T2 dedicated graphics restores automatic renderer selection\"\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4962265628",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6929",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6929#pullrequestreview-4962265628"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6929"
+        }
+      },
+      "submitted_at": "2026-08-18T14:35:25Z",
+      "commit_id": "ccdcf4746e5bc20d1e75742e43130fffa976e077"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788907635",
+      "pull_request_review_id": 4943304206,
+      "id": 3788907635,
+      "node_id": "PRRC_kwDOO0Cobs7h1iRz",
+      "diff_hunk": "@@ -40,6 +61,41 @@ STUB\n \n chmod +x \"$fake_bin\"/*\n \n+gmux_conf=\"$test_tmp/modprobe.d/apple-gmux.conf\"\n+\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=y' \"$gmux_conf\" ||\n+  fail \"T2 hybrid graphics can switch to integrated graphics\"\n+grep -Fq 'Use only integrated GPU and reboot?' \"$test_tmp/prompts\" ||\n+  fail \"T2 Intel mode uses the existing integrated GPU prompt\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"1\" ]] || fail \"T2 Intel mode requests one reboot\"\n+pass \"T2 hybrid graphics switches to integrated mode\"\n+\n+: >\"$test_tmp/prompts\"\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=n' \"$gmux_conf\" ||\n+  fail \"T2 hybrid graphics can switch to dedicated graphics\"\n+grep -Fq 'Enable dedicated GPU and reboot?' \"$test_tmp/prompts\" ||\n+  fail \"T2 AMD mode uses the existing dedicated GPU prompt\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] || fail \"T2 AMD mode requests one reboot\"\n+pass \"T2 hybrid graphics switches back to dedicated mode\"\n+\n+: >\"$test_tmp/prompts\"\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=1 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+",
+      "path": "test/shell.d/hybrid-gpu-test.sh",
+      "commit_id": "4646362c5c4d67e8072775e257d28cf87a073b87",
+      "original_commit_id": "4b9e1d23a4a182f2c913f1508572cc2361d961ad",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The new T2 decline path is exercised, but the test doesn\u2019t assert the script\u2019s exit status. Given the current implementation, a decline may exit non-zero (propagating `gum confirm` failure), which is a behavior change worth pinning down. Consider capturing the exit code here and asserting the intended behavior (typically exit `0` on user cancel).",
+      "created_at": "2026-08-15T07:55:12Z",
+      "updated_at": "2026-08-15T07:55:12Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#discussion_r3788907635",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6929",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788907635"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6929#discussion_r3788907635"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6929"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788907635/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 215,
+      "original_start_line": 89,
+      "start_side": "RIGHT",
+      "line": 221,
+      "original_line": 93,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 63,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788929336",
+      "pull_request_review_id": 4943326273,
+      "id": 3788929336,
+      "node_id": "PRRC_kwDOO0Cobs7h1nk4",
+      "diff_hunk": "@@ -40,6 +61,41 @@ STUB\n \n chmod +x \"$fake_bin\"/*\n \n+gmux_conf=\"$test_tmp/modprobe.d/apple-gmux.conf\"\n+\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=y' \"$gmux_conf\" ||\n+  fail \"T2 hybrid graphics can switch to integrated graphics\"\n+grep -Fq 'Use only integrated GPU and reboot?' \"$test_tmp/prompts\" ||\n+  fail \"T2 Intel mode uses the existing integrated GPU prompt\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"1\" ]] || fail \"T2 Intel mode requests one reboot\"\n+pass \"T2 hybrid graphics switches to integrated mode\"\n+\n+: >\"$test_tmp/prompts\"\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=0 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+\n+grep -Fxq 'options apple-gmux force_igd=n' \"$gmux_conf\" ||\n+  fail \"T2 hybrid graphics can switch to dedicated graphics\"\n+grep -Fq 'Enable dedicated GPU and reboot?' \"$test_tmp/prompts\" ||\n+  fail \"T2 AMD mode uses the existing dedicated GPU prompt\"\n+[[ $(wc -l <\"$test_tmp/reboots\") == \"2\" ]] || fail \"T2 AMD mode requests one reboot\"\n+pass \"T2 hybrid graphics switches back to dedicated mode\"\n+\n+: >\"$test_tmp/prompts\"\n+TEST_TMP=\"$test_tmp\" T2_HARDWARE=1 CONFIRM_STATUS=1 \\\n+  OMARCHY_T2_GMUX_CONF=\"$gmux_conf\" PATH=\"$fake_bin:$PATH\" \\\n+  bash \"$ROOT/bin/omarchy-toggle-hybrid-gpu\" >/dev/null\n+",
+      "path": "test/shell.d/hybrid-gpu-test.sh",
+      "commit_id": "4646362c5c4d67e8072775e257d28cf87a073b87",
+      "original_commit_id": "4b9e1d23a4a182f2c913f1508572cc2361d961ad",
+      "user": {
+        "login": "marashiai",
+        "id": 6560964,
+        "node_id": "MDQ6VXNlcjY1NjA5NjQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/6560964?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/marashiai",
+        "html_url": "https://github.com/marashiai",
+        "followers_url": "https://api.github.com/users/marashiai/followers",
+        "following_url": "https://api.github.com/users/marashiai/following{/other_user}",
+        "gists_url": "https://api.github.com/users/marashiai/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/marashiai/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/marashiai/subscriptions",
+        "organizations_url": "https://api.github.com/users/marashiai/orgs",
+        "repos_url": "https://api.github.com/users/marashiai/repos",
+        "events_url": "https://api.github.com/users/marashiai/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/marashiai/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Thanks for flagging this. In Bash, an `if` command with no condition succeeding and no `else` branch returns status 0. Therefore, when `gum confirm` returns nonzero, `toggle_t2_hybrid_gpu` returns 0 and the following `exit` also exits successfully. The test command is already subject to `set -e`, so it would fail if the script returned nonzero. I verified the behavior directly with Bash; no code change is needed here.",
+      "created_at": "2026-08-15T08:09:19Z",
+      "updated_at": "2026-08-15T08:09:19Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/6929#discussion_r3788929336",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/6929",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788929336"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/6929#discussion_r3788929336"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/6929"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3788929336/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 215,
+      "original_start_line": 89,
+      "start_side": "RIGHT",
+      "line": 221,
+      "original_line": 93,
+      "side": "RIGHT",
+      "in_reply_to_id": 3788907635,
+      "author_association": "NONE",
+      "original_position": 63,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

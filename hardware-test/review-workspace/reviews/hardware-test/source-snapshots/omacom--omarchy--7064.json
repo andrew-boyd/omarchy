@@ -1,0 +1,1240 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7064",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "t1-touchbar"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "state": "open"
+    },
+    {
+      "head_sha": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:43Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7064,
+  "checked_at": "2026-09-21T11:57:12.794340+00:00",
+  "title": "Add T1 Touch Bar firmware handoff and apple-ib-tb wiring",
+  "author": "shawnyeager",
+  "head_sha": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:43Z",
+  "state": "open",
+  "body": "## Why\n\nT1 MacBook Pros (2016\u20132017 Touch Bar) leave the bar dark on Omarchy. Apple's EFI memboots `EFI/APPLE/EMBEDDEDOS` from the ESP; that tree is written by macOS, includes machine-specific `FDRData`, and cannot be redistributed. The in-tree `hid-appletb-*` drivers are for T2 (`05ac:8302`). T1 shows up as iBridge `05ac:8600` and needs `apple-ib-tb`.\n\nThe manual currently lists the Touch Bar as non-functional. This replaces that with a USB handoff that we ran end-to-end on a MacBookPro14,3.\n\n**Depends on the package bump:** [omacom-io/omarchy-pkgs#152](https://github.com/omacom-io/omarchy-pkgs/pull/152). Current `macbook12-spi-driver-dkms` (`0+git.315`) fails to build `apple-ib-tb` on kernel 6.11+ / 7.1. That PR switches the package to [Heratiki's fork](https://github.com/Heratiki/macbook12-spi-driver) so the modules this wiring loads actually exist. Firmware + udev without that bump still leaves a dark bar.\n\n## How the two scripts fit\n\nOne stick, two directions. Firmware is never in the package.\n\n1. **On macOS, before the wipe:** `install/hardware/apple/copy-t1-firmware.command` (bash 3.2, double-clickable). It mounts this Mac's EFI slice with `diskutil` and copies `APPLE/EMBEDDEDOS` onto a USB. Documented in `manual/44-mac-support.md` with a curl-from-quattro path; the same file is on the ISO.\n2. **On Omarchy:** `omarchy setup apple touchbar` (also in Setup when `omarchy-hw-apple-t1`). Shared helpers in `install/hardware/apple/t1-touchbar.sh`:\n   - firmware on the USB \u2192 copy to the ESP (`cp -r`, not `-a`; VFAT cannot store Unix ownership)\n   - USB mounted but empty \u2192 write the macOS collector onto it\n   - already on the ESP \u2192 install wiring only\n3. **Installer:** `fix-t1-touchbar.sh` does the silent copy when the stick is already plugged in, otherwise prints the setup command.\n4. **Existing installs:** migration `1786820569`.\n\n## Wiring after the T1 is membooted\n\n`hid-generic` is built in and claims `05ac:8600` before the out-of-tree driver loads. A udev rule on `apple_ib_tb` module add runs `omarchy-hw-apple-t1-bind` (no systemd oneshot, no softdep on a builtin). `modules-load.d` loads `apple-ibridge`, `apple-ib-tb`, `apple-ib-als`. Default `fnmode=1` (icons first, Fn for F1\u2013F12).\n\n## Test plan\n\n- [x] `./test/cli`\n- [x] `test/shell.d/t1-touchbar-test.sh`\n- [x] `test/shell.d/menu-test.sh` and `menu-guards-test.sh`\n- [x] MacBookPro14,3: firmware on ESP \u2192 T1 leaves recovery (`05ac:8600`) \u2192 `apple-ib-tb` draws the icon row",
+  "draft": false,
+  "files": [
+    {
+      "sha": "3b9a694ee6619de2d375ba6a135fa1609f4393d1",
+      "filename": "bin/omarchy-hw-apple-t1",
+      "status": "added",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/bin%2Fomarchy-hw-apple-t1",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/bin%2Fomarchy-hw-apple-t1",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-t1?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,9 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the computer is a T1 Touch Bar MacBook Pro\n+# omarchy:hidden=true\n+\n+# T1 lives only in the first-generation Touch Bar MacBook Pros (2016\u20132017).\n+# 13,1 and 14,1 are the two-port 13\" models and have no Touch Bar.\n+product_name=$(cat \"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\" 2>/dev/null)\n+[[ $product_name =~ MacBookPro13,[23]|MacBookPro14,[23] ]]"
+    },
+    {
+      "sha": "907976652803f800b596831be3619d9243e23e14",
+      "filename": "bin/omarchy-hw-apple-t1-bind",
+      "status": "added",
+      "additions": 20,
+      "deletions": 0,
+      "changes": 20,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/bin%2Fomarchy-hw-apple-t1-bind",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/bin%2Fomarchy-hw-apple-t1-bind",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-t1-bind?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,20 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Rebind T1 iBridge HID interfaces to apple-ibridge\n+# omarchy:hidden=true\n+\n+# hid-generic is built in and claims 05ac:8600 before the out-of-tree\n+# apple-ibridge driver loads. The udev rule runs this once apple_ib_tb appears.\n+hid_root=${OMARCHY_T1_HID_ROOT:-/sys/bus/hid}\n+\n+for d in \"$hid_root\"/devices/0003:05AC:8600.*; do\n+  [[ -d $d ]] || continue\n+  name=$(basename \"$d\")\n+  drv=\"\"\n+  if [[ -e $d/driver ]]; then\n+    drv=$(basename \"$(readlink -f \"$d/driver\")\")\n+  fi\n+  [[ $drv == \"apple-ibridge-hid\" ]] && continue\n+  [[ -n $drv ]] && echo -n \"$name\" >\"$hid_root/drivers/$drv/unbind\"\n+  echo -n \"$name\" >\"$hid_root/drivers/apple-ibridge-hid/bind\"\n+done"
+    },
+    {
+      "sha": "aea7322f62dd3a06b46f5a022ae5f0eb0b27a85a",
+      "filename": "bin/omarchy-setup-apple-touchbar",
+      "status": "added",
+      "additions": 78,
+      "deletions": 0,
+      "changes": 78,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/bin%2Fomarchy-setup-apple-touchbar",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/bin%2Fomarchy-setup-apple-touchbar",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-setup-apple-touchbar?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,78 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Install T1 Touch Bar firmware from a USB stick onto the EFI partition\n+# omarchy:requires-sudo=true\n+\n+set -euo pipefail\n+\n+if (( $(id -u) != 0 )); then\n+  echo \"Need root to write the EFI System Partition and udev rules.\"\n+  exec sudo --preserve-env=OMARCHY_PATH /bin/bash \"$0\" \"$@\"\n+fi\n+\n+OMARCHY_PATH=${OMARCHY_PATH:-/usr/share/omarchy}\n+# shellcheck source=../../install/hardware/apple/t1-touchbar.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n+\n+if ! omarchy-hw-apple-t1; then\n+  echo \"This machine is not a T1 Touch Bar MacBook Pro (MacBookPro13,2/13,3 or 14,2/14,3).\"\n+  exit 1\n+fi\n+\n+echo \"T1 Touch Bar setup\"\n+echo\n+\n+t1_install_wiring\n+echo \"Installed apple-ib-tb udev rule and module load list.\"\n+\n+if t1_firmware_present; then\n+  echo \"EFI already has APPLE/EMBEDDEDOS/combined.memboot.\"\n+  echo \"Reboot if the Touch Bar is still dark so Apple's firmware can memboot the T1.\"\n+  exit 0\n+fi\n+\n+if src=$(t1_find_firmware); then\n+  echo \"Found firmware: $src\"\n+  esp=$(t1_esp_mount) || {\n+    echo \"No mounted VFAT EFI System Partition found (/boot, /boot/efi, or /efi).\"\n+    exit 1\n+  }\n+  echo \"Copying to $esp/EFI/APPLE\"\n+  if ! t1_copy_firmware \"$src\" \"$esp\"; then\n+    echo \"Found T1 firmware but could not copy it to the EFI partition.\"\n+    echo \"Wiring is installed; later run: omarchy setup apple touchbar\"\n+    exit 1\n+  fi\n+  echo\n+  echo \"OK. Reboot so Apple's EFI can memboot the T1:\"\n+  echo \"  sudo reboot\"\n+  exit 0\n+fi\n+\n+# USB is present but has no firmware: drop the macOS collector onto it.\n+wrote=\"\"\n+while IFS= read -r vol; do\n+  t1_write_collector \"$vol\"\n+  wrote=$vol\n+  break\n+done < <(t1_media_roots)\n+\n+if [[ -n $wrote ]]; then\n+  echo \"No APPLE/EMBEDDEDOS on the USB yet.\"\n+  echo \"Wrote copy-t1-firmware.command to:\"\n+  echo \"  $wrote\"\n+  echo\n+  echo \"Boot this Mac into macOS, wait until the Touch Bar lights up,\"\n+  echo \"double-click that script in Finder, then come back here and re-run:\"\n+  echo \"  omarchy setup apple touchbar\"\n+  exit 0\n+fi\n+\n+echo \"Plug in the USB that ran copy-t1-firmware.command on macOS,\"\n+echo \"wait for it to mount, then re-run:\"\n+echo \"  omarchy setup apple touchbar\"\n+echo\n+echo \"To collect firmware on macOS first, copy this file onto a stick and\"\n+echo \"double-click it in Finder after the Touch Bar is on:\"\n+echo \"  $(t1_collector_path)\"\n+exit 1"
+    },
+    {
+      "sha": "2d3c961587bc29b073e2fbd3fc7d091bd5c339da",
+      "filename": "default/omarchy/omarchy-menu.jsonc",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/default%2Fomarchy%2Fomarchy-menu.jsonc",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/default%2Fomarchy%2Fomarchy-menu.jsonc",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fomarchy%2Fomarchy-menu.jsonc?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -182,6 +182,7 @@\n   \"setup.config.hyprsunset\": {\"icon\":\"\uf359\",\"label\":\"Hyprsunset\",\"action\":\"omarchy-launch-config-editor ~/.config/hypr/hyprsunset.conf && omarchy-restart-hyprsunset\"},\n   \"setup.config.xcompose\": {\"icon\":\"\udb81\udf85\",\"label\":\"XCompose\",\"action\":\"omarchy-launch-config-editor ~/.XCompose && omarchy-restart-xcompose\"},\n   \"setup.direct-boot\": {\"icon\":\"\uf03a\",\"label\":\"Direct Boot\",\"action\":\"omarchy-launch-floating-terminal-with-presentation omarchy-setup-direct-boot\"},\n+  \"setup.apple-touchbar\": {\"icon\":\"\udb80\udf0c\",\"label\":\"Touch Bar Firmware\",\"when\":\"omarchy-hw-apple-t1\",\"action\":\"omarchy-launch-floating-terminal-with-presentation omarchy-setup-apple-touchbar\"},\n   \"setup.reset\": {\"icon\":\"\udb81\udc53\",\"label\":\"Reset Computer\",\"when\":\"[[ $(findmnt -no FSTYPE /) == btrfs ]]\",\"action\":\"omarchy-launch-floating-terminal-with-presentation omarchy-system-factory-reset\"},\n \n   // Install"
+    },
+    {
+      "sha": "6bc42a8bc1faeb00cc2eb1ce890bcc4a3b291833",
+      "filename": "default/udev/apple-t1-touchbar.rules",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/default%2Fudev%2Fapple-t1-touchbar.rules",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/default%2Fudev%2Fapple-t1-touchbar.rules",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fudev%2Fapple-t1-touchbar.rules?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,3 @@\n+# apple-ib-tb is out of tree, so hid-generic (builtin) claims 05ac:8600 first.\n+# Rebind once the T1 Touch Bar driver is actually loaded.\n+ACTION==\"add\", SUBSYSTEM==\"module\", KERNEL==\"apple_ib_tb\", RUN+=\"/usr/bin/omarchy-hw-apple-t1-bind\""
+    },
+    {
+      "sha": "3e5d7b9e437fa272b4db9b75ac5071300be80f6b",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -33,6 +33,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t1-touchbar.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\""
+    },
+    {
+      "sha": "4f9b64c8f7b97ce1096e49a03464f36f8acc2a0a",
+      "filename": "install/hardware/apple/copy-t1-firmware.command",
+      "status": "added",
+      "additions": 180,
+      "deletions": 0,
+      "changes": 180,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fapple%2Fcopy-t1-firmware.command",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fapple%2Fcopy-t1-firmware.command",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Fcopy-t1-firmware.command?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,180 @@\n+#!/bin/bash\n+# Copy this Mac's T1 Touch Bar firmware (EFI/APPLE) to an external USB.\n+# Run ON THIS Mac, in macOS, AFTER first boot when the Touch Bar is on.\n+# Double-click in Finder or: bash copy-t1-firmware.command\n+#\n+# Compatible with stock /bin/bash 3.2 (High Sierra through Sequoia).\n+# Do not \"modernize\" this file for bash 5; it has to run on macOS.\n+\n+set -e\n+\n+need_root() {\n+  if [ \"$(id -u)\" -ne 0 ]; then\n+    echo \"This needs admin to mount the EFI partition.\"\n+    exec sudo /bin/bash \"$0\" \"$@\"\n+  fi\n+}\n+\n+is_efi_slice() {\n+  _info=$(diskutil info \"$1\" 2>/dev/null) || return 1\n+  echo \"$_info\" | grep -q \"Partition Type: *EFI\" && return 0\n+  echo \"$_info\" | grep -q \"Content: *EFI\" && return 0\n+  echo \"$_info\" | grep -q \"Volume Name: *EFI\" && return 0\n+  return 1\n+}\n+\n+mount_efi() {\n+  _dev=\"$1\"\n+  _out=$(diskutil mount \"$_dev\" 2>&1) || {\n+    echo \"Could not mount $_dev:\"\n+    echo \"$_out\"\n+    return 1\n+  }\n+  _mp=$(diskutil info \"$_dev\" | awk -F': *' '/Mount Point:/ {print $2; exit}')\n+  if [ -z \"$_mp\" ] || [ \"$_mp\" = \"Not applicable\" ]; then\n+    echo \"$_dev has no mount point\"\n+    return 1\n+  fi\n+  echo \"$_mp\"\n+}\n+\n+is_external_vol() {\n+  _vol=\"$1\"\n+  _info=$(diskutil info \"$_vol\" 2>/dev/null) || return 1\n+  echo \"$_info\" | grep -qi \"Internal: *Yes\" && return 1\n+  echo \"$_info\" | grep -qiE \"Protocol: *USB|Device Location: *External|Removable Media: *Removable|Internal: *No\"\n+}\n+\n+list_efi_devs() {\n+  diskutil list | awk '/disk[0-9]+s[0-9]+$/ {print $NF}' | while read -r _id; do\n+    is_efi_slice \"$_id\" && echo \"$_id\"\n+  done\n+}\n+\n+list_usb_vols() {\n+  for _v in /Volumes/*; do\n+    [ -d \"$_v\" ] || continue\n+    _base=$(basename \"$_v\")\n+    case \"$_base\" in\n+      EFI|Macintosh\\ HD|Macintosh\\ HD\\ -\\ Data|Recovery|com.apple.recovery.boot) continue ;;\n+    esac\n+    is_external_vol \"$_v\" && echo \"$_v\"\n+  done\n+}\n+\n+find_apple_tree() {\n+  _root=\"$1\"\n+  if [ -f \"$_root/EFI/APPLE/EMBEDDEDOS/combined.memboot\" ]; then\n+    echo \"$_root/EFI/APPLE\"\n+    return 0\n+  fi\n+  if [ -f \"$_root/APPLE/EMBEDDEDOS/combined.memboot\" ]; then\n+    echo \"$_root/APPLE\"\n+    return 0\n+  fi\n+  return 1\n+}\n+\n+echo \"T1 Touch Bar firmware copy\"\n+echo \"Only copies firmware THIS Mac already wrote to its EFI partition.\"\n+echo\n+\n+need_root \"$@\"\n+\n+echo \"Looking for EFI/APPLE/EMBEDDEDOS/combined.memboot ...\"\n+echo \"(If macOS just finished installing, wait until the Touch Bar lights up, then re-run.)\"\n+echo\n+\n+SRC=\"\"\n+\n+for dev in $(list_efi_devs); do\n+  echo \"Checking $dev ...\"\n+  mp=$(mount_efi \"$dev\") || continue\n+  apple=$(find_apple_tree \"$mp\" || true)\n+  if [ -n \"$apple\" ]; then\n+    SRC=\"$apple\"\n+    echo \"Found: $SRC\"\n+    ls -la \"$SRC/EMBEDDEDOS\" || ls -la \"$SRC\"\n+    break\n+  fi\n+  echo \"  no EMBEDDEDOS on $dev\"\n+done\n+\n+if [ -z \"$SRC\" ]; then\n+  echo\n+  echo \"No combined.memboot on any EFI partition yet.\"\n+  echo \"Boot this Mac into macOS until the Touch Bar works, stay on Wi-Fi,\"\n+  echo \"wait out any 'critical software update', then run this again.\"\n+  exit 1\n+fi\n+\n+echo\n+echo \"External volumes:\"\n+USB_LIST=$(list_usb_vols || true)\n+if [ -z \"$USB_LIST\" ]; then\n+  echo \"  (none found)\"\n+  echo\n+  echo \"Plug in a USB stick, wait for it to appear in Finder, then re-run.\"\n+  echo \"FAT32, ExFAT, or APFS is fine. Do not pick the EFI partition.\"\n+  exit 1\n+fi\n+\n+OLDIFS=$IFS\n+IFS='\n+'\n+set -- $USB_LIST\n+IFS=$OLDIFS\n+n=$#\n+i=1\n+for vol; do\n+  echo \"  $i) $vol\"\n+  i=$((i + 1))\n+done\n+\n+DEST=\"\"\n+if [ \"$n\" -eq 1 ]; then\n+  DEST=\"$1\"\n+  echo\n+  echo \"Using the only external volume: $DEST\"\n+else\n+  echo\n+  printf \"Number of the USB to copy onto: \"\n+  read -r choice\n+  case \"$choice\" in\n+    ''|*[!0-9]*) echo \"Not a number.\"; exit 1 ;;\n+  esac\n+  if [ \"$choice\" -lt 1 ] || [ \"$choice\" -gt \"$n\" ]; then\n+    echo \"Out of range.\"\n+    exit 1\n+  fi\n+  eval DEST=\\$$choice\n+fi\n+\n+if [ ! -d \"$DEST\" ]; then\n+  echo \"Destination vanished: $DEST\"\n+  exit 1\n+fi\n+\n+TARGET=\"$DEST/APPLE\"\n+echo\n+echo \"Copying:\"\n+echo \"  $SRC\"\n+echo \"  -> $TARGET\"\n+rm -rf \"$TARGET\"\n+mkdir -p \"$DEST\"\n+cp -R \"$SRC\" \"$TARGET\"\n+\n+if [ ! -f \"$TARGET/EMBEDDEDOS/combined.memboot\" ]; then\n+  echo \"Copy finished but combined.memboot is missing. Source was incomplete.\"\n+  exit 1\n+fi\n+\n+echo\n+echo \"OK. On the USB:\"\n+ls -la \"$TARGET/EMBEDDEDOS\"\n+\n+echo\n+echo \"Eject the USB in Finder before unplugging.\"\n+echo \"On Omarchy later:\"\n+echo \"  omarchy setup apple touchbar\"\n+echo \"then reboot so Apple's EFI can memboot the T1.\""
+    },
+    {
+      "sha": "addf5d46b5077cb4532d200abb1e9770984ed9f4",
+      "filename": "install/hardware/apple/fix-t1-touchbar.sh",
+      "status": "added",
+      "additions": 25,
+      "deletions": 0,
+      "changes": 25,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fapple%2Ffix-t1-touchbar.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fapple%2Ffix-t1-touchbar.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t1-touchbar.sh?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,25 @@\n+# Detect first-generation Touch Bar MacBook Pros (T1) and install the\n+# wiring the bar needs. Firmware is machine-specific and is not shipped;\n+# copy it from a USB that ran copy-t1-firmware.command on macOS.\n+\n+if omarchy-hw-apple-t1; then\n+  echo \"Detected MacBook with T1 Touch Bar\"\n+\n+  omarchy-pkg-add linux-headers\n+\n+  # shellcheck source=t1-touchbar.sh\n+  source \"$OMARCHY_INSTALL/hardware/apple/t1-touchbar.sh\"\n+\n+  t1_install_wiring\n+\n+  if src=$(t1_find_firmware); then\n+    if esp=$(t1_esp_mount) && t1_copy_firmware \"$src\" \"$esp\"; then\n+      echo \"Installed T1 Touch Bar firmware on the EFI partition\"\n+    else\n+      echo \"Found T1 firmware on USB but could not copy it to the EFI partition\"\n+    fi\n+  else\n+    echo \"No T1 firmware on a mounted USB. After install, plug in the stick from\"\n+    echo \"macOS and run:  omarchy setup apple touchbar\"\n+  fi\n+fi"
+    },
+    {
+      "sha": "47c857f23b4d94b7627234bf9975a60548ba0d91",
+      "filename": "install/hardware/apple/t1-touchbar.sh",
+      "status": "added",
+      "additions": 106,
+      "deletions": 0,
+      "changes": 106,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fapple%2Ft1-touchbar.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/install%2Fhardware%2Fapple%2Ft1-touchbar.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ft1-touchbar.sh?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,106 @@\n+# Shared T1 Touch Bar helpers. Sourced; no shebang, no work on source.\n+# Firmware is Apple's machine-specific T1 memboot image (EFI/APPLE/EMBEDDEDOS).\n+# It cannot be redistributed; a USB stick is the handoff from macOS.\n+\n+t1_marker=EMBEDDEDOS/combined.memboot\n+\n+t1_collector_path() {\n+  printf '%s\\n' \"${OMARCHY_T1_COLLECTOR:-$OMARCHY_PATH/install/hardware/apple/copy-t1-firmware.command}\"\n+}\n+\n+t1_udev_rule_src() {\n+  printf '%s\\n' \"${OMARCHY_T1_UDEV_SRC:-$OMARCHY_PATH/default/udev/apple-t1-touchbar.rules}\"\n+}\n+\n+t1_udev_rule_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_UDEV_DEST:-/etc/udev/rules.d/90-apple-t1-touchbar.rules}\"\n+}\n+\n+t1_modules_load_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_MODULES_LOAD:-/etc/modules-load.d/apple-t1-touchbar.conf}\"\n+}\n+\n+t1_media_roots() {\n+  local dir\n+  if [[ -n ${OMARCHY_T1_MEDIA_ROOTS:-} ]]; then\n+    local IFS=$'\\n'\n+    for dir in $OMARCHY_T1_MEDIA_ROOTS; do\n+      [[ -d $dir ]] && printf '%s\\n' \"$dir\"\n+    done\n+    return\n+  fi\n+  for dir in /run/media/*/* /media/*/* /mnt/*; do\n+    [[ -d $dir ]] && printf '%s\\n' \"$dir\"\n+  done\n+}\n+\n+t1_find_firmware() {\n+  local dir\n+  while IFS= read -r dir; do\n+    if [[ -f $dir/APPLE/$t1_marker ]]; then\n+      printf '%s\\n' \"$dir/APPLE\"\n+      return 0\n+    fi\n+    if [[ -f $dir/$t1_marker ]]; then\n+      printf '%s\\n' \"$dir\"\n+      return 0\n+    fi\n+  done < <(t1_media_roots)\n+  return 1\n+}\n+\n+t1_esp_mount() {\n+  local mp fstype\n+  if [[ -n ${OMARCHY_T1_ESP:-} ]]; then\n+    printf '%s\\n' \"$OMARCHY_T1_ESP\"\n+    return 0\n+  fi\n+  for mp in /boot /boot/efi /efi; do\n+    findmnt -n \"$mp\" >/dev/null 2>&1 || continue\n+    fstype=$(findmnt -n -o FSTYPE \"$mp\")\n+    case \"$fstype\" in\n+      vfat|fat|msdos)\n+        printf '%s\\n' \"$mp\"\n+        return 0\n+        ;;\n+    esac\n+  done\n+  return 1\n+}\n+\n+t1_firmware_present() {\n+  local esp\n+  esp=$(t1_esp_mount) || return 1\n+  [[ -s $esp/EFI/APPLE/$t1_marker ]]\n+}\n+\n+t1_copy_firmware() {\n+  local src=$1 dest_root=$2 dest\n+  dest=\"$dest_root/EFI/APPLE\"\n+  mkdir -p \"$dest_root/EFI\" || return 1\n+  rm -rf \"$dest\" || return 1\n+  # VFAT cannot store Unix ownership; -r not -a so a failed chown does not abort.\n+  cp -r \"$src\" \"$dest\" || return 1\n+  sync || true\n+  [[ -s $dest/$t1_marker ]]\n+}\n+\n+t1_write_collector() {\n+  local dest=$1\n+  cp \"$(t1_collector_path)\" \"$dest/copy-t1-firmware.command\"\n+  chmod +x \"$dest/copy-t1-firmware.command\"\n+}\n+\n+t1_install_wiring() {\n+  local dest\n+  dest=$(t1_udev_rule_dest)\n+  mkdir -p \"$(dirname \"$dest\")\"\n+  cp -f \"$(t1_udev_rule_src)\" \"$dest\"\n+  dest=$(t1_modules_load_dest)\n+  mkdir -p \"$(dirname \"$dest\")\"\n+  cat >\"$dest\" <<'EOF'\n+apple-ibridge\n+apple-ib-tb\n+apple-ib-als\n+EOF\n+}"
+    },
+    {
+      "sha": "0158b73fdc7961a82354982d754c8a4a3002beaa",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 28,
+      "deletions": 5,
+      "changes": 33,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -35,23 +35,46 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, T1 Touch Bar wiring when the firmware is already on the USB, and an NVMe suspend fix for those same models.\n+\n+#### T1 Touch Bar firmware (do this before wiping macOS)\n+\n+The T1 coprocessor loads `EFI/APPLE/EMBEDDEDOS` from the EFI System Partition at boot. That tree is written by macOS, is unique to this machine (`FDRData`), and cannot be shipped in Omarchy. Collect it while macOS still works, then let Omarchy copy it back after the install.\n+\n+1. On macOS, wait until the Touch Bar lights up (and any \"critical software update\" finishes).\n+2. Copy the collector off the Omarchy ISO at `install/hardware/apple/copy-t1-firmware.command` onto a USB stick. If you do not have the ISO handy, download the same file:\n+\n+```bash\n+curl -fsSL https://github.com/basecamp/omarchy/raw/HEAD/install/hardware/apple/copy-t1-firmware.command -o copy-t1-firmware.command\n+chmod +x copy-t1-firmware.command\n+```\n+\n+   Double-click it in Finder, or run `bash copy-t1-firmware.command`. It copies `APPLE/EMBEDDEDOS` onto a USB stick.\n+3. Leave that USB plugged in during the Omarchy install. The installer copies the firmware onto the EFI partition when it sees it.\n+4. If you install first and copy firmware later: plug the stick in and run `omarchy setup apple touchbar`, then reboot.\n+\n+Without that reboot, the T1 stays in recovery mode and the bar stays dark. After Apple's EFI memboots it, `apple-ib-tb` draws the icon row (Fn for F1\u2013F12).\n \n ### Known Limitations\n \n Members of the community are constantly working on solutions to these challenges so if these are problematic for you, join #omarchy-on-other in our [Discord](https://discord.gg/tXFUdasqhY) and see if there's any up-to-date methods for resolving these.\n \n #### Devices with T1 Chip\n \n-The Apple T1 chip was introduced in late 2016 and used exclusively in the first-generation MacBook Pro models with Touch Bar.\n-- MacBook Pro 13-inch (2016, two Thunderbolt 3 ports) \u2013 Model: A1706\n-- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) \u2013 Model: A1708\n+The Apple T1 chip was introduced in late 2016 and used exclusively in the first-generation MacBook Pro models with Touch Bar (DMI `MacBookPro13,2` / `13,3` / `14,2` / `14,3`):\n+- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) \u2013 Model: A1706\n - MacBook Pro 15-inch (2016) \u2013 Model: A1707\n+- MacBook Pro 13-inch (2017, four Thunderbolt 3 ports) \u2013 Model: A1706\n+- MacBook Pro 15-inch (2017) \u2013 Model: A1707\n+\n+The two-port 13-inch models (`MacBookPro13,1` / `14,1`, A1708) have no Touch Bar and no T1.\n+\n+Collect the Touch Bar firmware on macOS before installing \u2014 see above. After that, `omarchy setup apple touchbar` is the post-install command.\n \n #### Known Issues\n \n-- Touch Bar is non-functional\n - Sound is not functioning\n+- The Touch Bar needs the firmware USB step above; it will not light up from a clean wipe alone\n \n #### Devices with T2 Chip\n "
+    },
+    {
+      "sha": "3dd2a2e8527511f06259d8623475bf3cb55b4b2a",
+      "filename": "migrations/1786820569.sh",
+      "status": "added",
+      "additions": 30,
+      "deletions": 0,
+      "changes": 30,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/migrations%2F1786820569.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/migrations%2F1786820569.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786820569.sh?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,30 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0\n+fi\n+\n+# shellcheck source=../install/hardware/apple/t1-touchbar.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n+\n+# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a\n+# writable tmp tree and skip the privilege hop.\n+if (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then\n+  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \\\n+    /bin/bash -euo pipefail \"$OMARCHY_PATH/migrations/1786820569.sh\"\n+fi\n+\n+omarchy-pkg-add linux-headers\n+\n+t1_install_wiring\n+\n+if src=$(t1_find_firmware); then\n+  if esp=$(t1_esp_mount); then\n+    if ! t1_copy_firmware \"$src\" \"$esp\"; then\n+      echo \"Found T1 firmware on USB but could not copy it to the EFI partition.\"\n+      echo \"Wiring is installed; later run: omarchy setup apple touchbar\"\n+    fi\n+  fi\n+fi"
+    },
+    {
+      "sha": "fd328e551472dc4d5fd9ad4347603e8bdc6660c6",
+      "filename": "test/shell.d/t1-touchbar-test.sh",
+      "status": "added",
+      "additions": 218,
+      "deletions": 0,
+      "changes": 218,
+      "blob_url": "https://github.com/omacom/omarchy/blob/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/test%2Fshell.d%2Ft1-touchbar-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d/test%2Fshell.d%2Ft1-touchbar-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft1-touchbar-test.sh?ref=68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "patch": "@@ -0,0 +1,218 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw=\"$ROOT/bin/omarchy-hw-apple-t1\"\n+helpers=\"$ROOT/install/hardware/apple/t1-touchbar.sh\"\n+fix=\"$ROOT/install/hardware/apple/fix-t1-touchbar.sh\"\n+collector=\"$ROOT/install/hardware/apple/copy-t1-firmware.command\"\n+udev_src=\"$ROOT/default/udev/apple-t1-touchbar.rules\"\n+setup=\"$ROOT/bin/omarchy-setup-apple-touchbar\"\n+migration=\"$ROOT/migrations/1786820569.sh\"\n+menu=\"$ROOT/default/omarchy/omarchy-menu.jsonc\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+\n+assert_hw() {\n+  local model=$1 expect=$2 description=$3\n+  local tmp\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$model\" >\"$tmp\"\n+  if OMARCHY_DMI_PRODUCT_NAME=\"$tmp\" \"$hw\"; then\n+    [[ $expect == yes ]] || fail \"$description\"\n+  else\n+    [[ $expect == no ]] || fail \"$description\"\n+  fi\n+  rm -f \"$tmp\"\n+  pass \"$description\"\n+}\n+\n+assert_hw MacBookPro14,3 yes \"MacBookPro14,3 is a T1 Touch Bar\"\n+assert_hw MacBookPro13,2 yes \"MacBookPro13,2 is a T1 Touch Bar\"\n+assert_hw MacBookPro13,3 yes \"MacBookPro13,3 is a T1 Touch Bar\"\n+assert_hw MacBookPro14,2 yes \"MacBookPro14,2 is a T1 Touch Bar\"\n+assert_hw MacBookPro13,1 no \"MacBookPro13,1 has no Touch Bar\"\n+assert_hw MacBookPro14,1 no \"MacBookPro14,1 has no Touch Bar\"\n+assert_hw MacBookPro15,1 no \"MacBookPro15,1 is T2, not T1\"\n+assert_hw MacBook8,1 no \"MacBook8,1 is SPI-only\"\n+\n+[[ -f $collector ]] || fail \"macOS collector is in the tree\"\n+head -1 \"$collector\" | grep -qx '#!/bin/bash' || fail \"macOS collector uses /bin/bash\"\n+! grep -qE 'mapfile|declare -A|\\[\\[.*-v |&\\>' \"$collector\" ||\n+  fail \"macOS collector stays on bash 3.2\"\n+grep -Fq 'omarchy setup apple touchbar' \"$collector\" ||\n+  fail \"macOS collector points at the Linux setup command\"\n+pass \"macOS collector is Finder-runnable and bash 3.2 safe\"\n+\n+grep -Fq 'omarchy-hw-apple-t1-bind' \"$udev_src\" ||\n+  fail \"udev rule runs the packaged bind command\"\n+pass \"udev rule rebinds when apple_ib_tb loads\"\n+\n+grep -Fq 'fix-t1-touchbar.sh' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"hardware install runs the T1 hook after the SPI keyboard hook\"\n+pass \"T1 install hook is wired\"\n+\n+grep -Fq 'omarchy-setup-apple-touchbar' \"$menu\" ||\n+  fail \"Setup menu offers Touch Bar firmware on T1 hardware\"\n+grep -Fq 'omarchy-hw-apple-t1' \"$menu\" ||\n+  fail \"Touch Bar menu row is gated on T1 detection\"\n+pass \"Setup menu exposes the firmware wizard on T1 machines\"\n+\n+grep -Fq 'omarchy setup apple touchbar' \"$manual\" ||\n+  fail \"Mac support chapter documents the setup command\"\n+! grep -q 'Touch Bar is non-functional' \"$manual\" ||\n+  fail \"Mac support chapter no longer lists the bar as unsupported\"\n+grep -Fq 'install/hardware/apple/copy-t1-firmware.command' \"$manual\" ||\n+  fail \"Mac support chapter names the ISO collector path\"\n+! grep -q '/raw/quattro/' \"$manual\" ||\n+  fail \"Mac support chapter does not pin the collector to the quattro branch\"\n+grep -Fq 'https://github.com/basecamp/omarchy/raw/HEAD/install/hardware/apple/copy-t1-firmware.command' \"$manual\" ||\n+  fail \"Mac support chapter uses a durable GitHub HEAD URL\"\n+pass \"Mac support chapter documents the USB handoff\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+# shellcheck source=../../install/hardware/apple/t1-touchbar.sh\n+OMARCHY_PATH=\"$ROOT\" source \"$helpers\"\n+\n+usb=\"$test_tmp/usb\"\n+esp=\"$test_tmp/esp\"\n+etc=\"$test_tmp/etc\"\n+mkdir -p \"$usb/APPLE/EMBEDDEDOS\" \"$esp\" \"$etc/udev/rules.d\" \"$etc/modules-load.d\"\n+printf 'memboot\\n' >\"$usb/APPLE/EMBEDDEDOS/combined.memboot\"\n+printf 'fdr\\n' >\"$usb/APPLE/EMBEDDEDOS/FDRData\"\n+printf 'plist\\n' >\"$usb/APPLE/EMBEDDEDOS/version.plist\"\n+\n+OMARCHY_PATH=\"$ROOT\"\n+OMARCHY_T1_MEDIA_ROOTS=\"$usb\"\n+OMARCHY_T1_ESP=\"$esp\"\n+OMARCHY_T1_UDEV_SRC=\"$udev_src\"\n+OMARCHY_T1_UDEV_DEST=\"$etc/udev/rules.d/90-apple-t1-touchbar.rules\"\n+OMARCHY_T1_MODULES_LOAD=\"$etc/modules-load.d/apple-t1-touchbar.conf\"\n+OMARCHY_T1_COLLECTOR=\"$collector\"\n+\n+src=$(t1_find_firmware) || fail \"firmware is found on a mounted USB\"\n+[[ $src == \"$usb/APPLE\" ]] || fail \"firmware path is the APPLE tree\"\n+pass \"firmware lookup finds APPLE/EMBEDDEDOS on USB\"\n+\n+t1_copy_firmware \"$src\" \"$esp\" || fail \"firmware copy succeeds\"\n+[[ -s $esp/EFI/APPLE/EMBEDDEDOS/combined.memboot ]] || fail \"combined.memboot landed on the ESP\"\n+[[ $(cat \"$esp/EFI/APPLE/EMBEDDEDOS/FDRData\") == fdr ]] || fail \"FDRData is copied with the tree\"\n+t1_firmware_present || fail \"firmware presence check sees the ESP copy\"\n+pass \"firmware copy lands on the ESP without preserving Unix ownership\"\n+\n+empty_usb=\"$test_tmp/empty\"\n+mkdir -p \"$empty_usb\"\n+OMARCHY_T1_MEDIA_ROOTS=\"$empty_usb\"\n+t1_write_collector \"$empty_usb\"\n+[[ -x $empty_usb/copy-t1-firmware.command ]] || fail \"collector is executable on the USB\"\n+grep -Fq 'diskutil' \"$empty_usb/copy-t1-firmware.command\" ||\n+  fail \"collector written to USB is the macOS script\"\n+pass \"a firmware-less USB receives the macOS collector\"\n+\n+t1_install_wiring\n+grep -Fq 'omarchy-hw-apple-t1-bind' \"$OMARCHY_T1_UDEV_DEST\" ||\n+  fail \"wiring installs the udev rule\"\n+grep -Fxq 'apple-ib-tb' \"$OMARCHY_T1_MODULES_LOAD\" ||\n+  fail \"wiring loads apple-ib-tb\"\n+pass \"wiring installs the udev rule and module list\"\n+\n+dmi=\"$test_tmp/dmi\"\n+printf 'MacBookPro14,1\\n' >\"$dmi\"\n+PATH=\"$ROOT/bin:$PATH\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+pass \"install hook no-ops on non-T1 hardware\"\n+\n+stub_bin=\"$test_tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+cat >\"$stub_bin/omarchy-hw-apple-t1\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+chmod +x \"$stub_bin\"/*\n+\n+printf 'MacBookPro14,3\\n' >\"$dmi\"\n+install_etc=\"$test_tmp/install-etc\"\n+mkdir -p \"$install_etc/udev/rules.d\" \"$install_etc/modules-load.d\"\n+calls=\"$test_tmp/calls.log\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  OMARCHY_T1_UDEV_SRC=\"$udev_src\" \\\n+  OMARCHY_T1_UDEV_DEST=\"$install_etc/udev/rules.d/90-apple-t1-touchbar.rules\" \\\n+  OMARCHY_T1_MODULES_LOAD=\"$install_etc/modules-load.d/apple-t1-touchbar.conf\" \\\n+  OMARCHY_T1_ESP=\"$esp\" \\\n+  OMARCHY_T1_MEDIA_ROOTS=\"$usb\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers' \"$calls\" ||\n+  fail \"T1 install hook installs linux-headers\"\n+[[ -f $install_etc/udev/rules.d/90-apple-t1-touchbar.rules ]] ||\n+  fail \"T1 install hook writes udev wiring\"\n+[[ -s $esp/EFI/APPLE/EMBEDDEDOS/combined.memboot ]] ||\n+  fail \"T1 install hook copies firmware when the USB is mounted\"\n+pass \"install hook copies firmware and wiring on T1 hardware\"\n+\n+calls=\"$test_tmp/calls.log\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_UDEV_SRC=\"$udev_src\" \\\n+  OMARCHY_T1_UDEV_DEST=\"$etc/udev/rules.d/90-apple-t1-touchbar.rules\" \\\n+  OMARCHY_T1_MODULES_LOAD=\"$etc/modules-load.d/apple-t1-touchbar.conf\" \\\n+  OMARCHY_T1_ESP=\"$esp\" \\\n+  OMARCHY_T1_MEDIA_ROOTS=\"$empty_usb\" \\\n+  bash -euo pipefail \"$migration\"\n+\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers' \"$calls\" ||\n+  fail \"T1 migration installs linux-headers\"\n+[[ -f $OMARCHY_T1_UDEV_DEST ]] || fail \"T1 migration writes the udev rule\"\n+pass \"T1 migration installs wiring on T1 hardware\"\n+\n+fail_esp=\"$test_tmp/fail-esp\"\n+printf 'not-a-dir\\n' >\"$fail_esp\"\n+copy_log=\"$test_tmp/copy-fail.log\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_T1_UDEV_SRC=\"$udev_src\" \\\n+  OMARCHY_T1_UDEV_DEST=\"$etc/udev/rules.d/90-apple-t1-touchbar.rules\" \\\n+  OMARCHY_T1_MODULES_LOAD=\"$etc/modules-load.d/apple-t1-touchbar.conf\" \\\n+  OMARCHY_T1_ESP=\"$fail_esp\" \\\n+  OMARCHY_T1_MEDIA_ROOTS=\"$usb\" \\\n+  bash -euo pipefail \"$migration\" >\"$copy_log\" 2>&1\n+[[ -f $OMARCHY_T1_UDEV_DEST ]] || fail \"T1 migration keeps wiring after a firmware copy failure\"\n+grep -Fq 'could not copy it to the EFI partition' \"$copy_log\" ||\n+  fail \"T1 migration reports a firmware copy failure\" \"$(cat \"$copy_log\")\"\n+grep -Fq 'omarchy setup apple touchbar' \"$copy_log\" ||\n+  fail \"T1 migration points at the setup command after a copy failure\" \"$(cat \"$copy_log\")\"\n+pass \"T1 migration reports a firmware copy failure without aborting\"\n+\n+cat >\"$stub_bin/omarchy-hw-apple-t1\" <<'SH'\n+#!/bin/bash\n+exit 1\n+SH\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  bash -euo pipefail \"$migration\"\n+[[ ! -s $calls ]] || fail \"non-T1 migration is a no-op\" \"$(cat \"$calls\")\"\n+pass \"T1 migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4945278822,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsL3Zg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\n> [!NOTE]\n> Copilot was unable to run its full agentic suite in this review.\n\nAdds end-to-end support for first-generation (T1) MacBook Pro Touch Bar firmware handoff and Linux-side wiring, including a macOS collector script, installer hook, migration, udev rebind helper, and documentation.\n\n**Changes:**\n- Add T1 detection + udev/module wiring + firmware copy helpers for Linux.\n- Add macOS `copy-t1-firmware.command` to collect machine-specific firmware onto a USB for handoff.\n- Add migration + setup command + docs + tests to integrate and validate the workflow.\n\n### Reviewed changes\n\nCopilot reviewed 9 out of 12 changed files in this pull request and generated 3 comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| test/shell.d/t1-touchbar-test.sh | Adds shell-level regression tests covering detection, wiring, migration, and firmware copy paths. |\r\n| migrations/1786820569.sh | Introduces a migration to install T1 wiring and optionally copy firmware from USB. |\r\n| manual/44-mac-support.md | Documents the T1 firmware collection/handoff process and updates known limitations. |\r\n| install/hardware/apple/t1-touchbar.sh | Adds shared helper functions for locating media, ESP, installing wiring, and copying firmware. |\r\n| install/hardware/apple/fix-t1-touchbar.sh | Adds installer-time hook to set up wiring and copy firmware if a prepared USB is present. |\r\n| install/hardware/apple/copy-t1-firmware.command | Adds macOS-compatible collector script to copy EFI/APPLE firmware to external USB media. |\r\n| install/hardware/all.sh | Wires the new T1 hook into the general hardware install flow. |\r\n| default/udev/apple-t1-touchbar.rules | Adds udev rule to rebind HID once the Touch Bar module loads. |\r\n| default/omarchy/omarchy-menu.jsonc | Adds a setup menu entry to run the Touch Bar firmware wizard on T1 machines. |\r\n| bin/omarchy-setup-apple-touchbar | Adds a user-facing command to install wiring and copy firmware from USB to the ESP. |\r\n| bin/omarchy-hw-apple-t1-bind | Adds sysfs rebind helper to move 05ac:8600 from hid-generic to apple-ibridge-hid. |\r\n| bin/omarchy-hw-apple-t1 | Adds hardware detection helper for identifying T1 Touch Bar MacBook Pros. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945278822",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945278822"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:15:10Z",
+      "commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba"
+    },
+    {
+      "id": 4945296099,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsM64w",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945296099",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945296099"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:23:29Z",
+      "commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba"
+    },
+    {
+      "id": 4945296568,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsM8uA",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945296568",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945296568"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:23:53Z",
+      "commit_id": "6e7b27b41da86b96eb7360301abadf6d14b958b0"
+    },
+    {
+      "id": 4945296602,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsM82g",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945296602",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945296602"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:23:55Z",
+      "commit_id": "6e7b27b41da86b96eb7360301abadf6d14b958b0"
+    },
+    {
+      "id": 4945298038,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsNCdg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 9 out of 12 changed files in this pull request and generated 1 comment.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**migrations/1786820569.sh:4**\n* This migration lacks a shebang and doesn\u2019t set strict modes itself. If it\u2019s ever run directly (e.g., by an external runner using `./migrations/...`), it may execute under `/bin/sh` and behave incorrectly. Add `#!/bin/bash` and `set -euo pipefail` (or align with the project\u2019s migration conventions) to ensure consistent execution.\n```\necho \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n\n# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n```\n**install/hardware/apple/copy-t1-firmware.command:151**\n* Avoid `eval` for selecting the destination volume. Even with numeric validation, `eval` is an unnecessary code-execution primitive and is fragile. Prefer a non-eval selection method (e.g., derive the Nth line from `USB_LIST`, or iterate with a counter until `choice` is reached).\n```\nDEST=\"\"\nif [ \"$n\" -eq 1 ]; then\n  DEST=\"$1\"\n  echo\n  echo \"Using the only external volume: $DEST\"\nelse\n  echo\n  printf \"Number of the USB to copy onto: \"\n  read -r choice\n  case \"$choice\" in\n    ''|*[!0-9]*) echo \"Not a number.\"; exit 1 ;;\n  esac\n  if [ \"$choice\" -lt 1 ] || [ \"$choice\" -gt \"$n\" ]; then\n    echo \"Out of range.\"\n    exit 1\n  fi\n  eval DEST=\\$$choice\nfi\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945298038",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945298038"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:25:12Z",
+      "commit_id": "6e7b27b41da86b96eb7360301abadf6d14b958b0"
+    },
+    {
+      "id": 4945308006,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsNpZg",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945308006",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945308006"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:33:33Z",
+      "commit_id": "873e527e1a0352c277e6962b6e808793bb70bf6c"
+    },
+    {
+      "id": 4945309668,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsNv5A",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 9 out of 12 changed files in this pull request and generated 1 comment.\n\n\n\n\n<details>\n<summary>Suppressed comments (2)</summary>\n\n**migrations/1786820569.sh:28**\n* This control flow is silent when firmware is found but `t1_esp_mount` fails (no VFAT ESP mounted at `/boot`, `/boot/efi`, or `/efi`). That makes it hard to understand why the firmware wasn\u2019t copied. Add an `else` branch for the `t1_esp_mount` check that prints a short, actionable message (e.g., no ESP mounted + suggest running `omarchy setup apple touchbar` after mounting the ESP) while still keeping wiring installed.\n```\nif src=$(t1_find_firmware); then\n  if esp=$(t1_esp_mount); then\n    if ! t1_copy_firmware \"$src\" \"$esp\"; then\n      echo \"Found T1 firmware on USB but could not copy it to the EFI partition.\"\n      echo \"Wiring is installed; later run: omarchy setup apple touchbar\"\n    fi\n  fi\nfi\n```\n**install/hardware/apple/copy-t1-firmware.command:151**\n* `eval` is avoidable here and is risky in a script that may run as root (via `sudo`). Even though `choice` is validated as numeric, using `eval` increases the blast radius of any future edits. Prefer a non-eval selection approach (e.g., iterate through the listed volumes with an index and pick the matching one, or store volumes in a bash array and select via index) while keeping bash 3.2 compatibility.\n```\n  if [ \"$choice\" -lt 1 ] || [ \"$choice\" -gt \"$n\" ]; then\n    echo \"Out of range.\"\n    exit 1\n  fi\n  eval DEST=\\$$choice\nfi\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945309668",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945309668"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:34:54Z",
+      "commit_id": "873e527e1a0352c277e6962b6e808793bb70bf6c"
+    },
+    {
+      "id": 4945320166,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsOY5g",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?u=41b74a6d36a40fdd69188af270aba54f69b91427&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945320166",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945320166"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:42:05Z",
+      "commit_id": "6af10be5d812eb3286a15aa7ce34bfea3138471f"
+    },
+    {
+      "id": 4945321788,
+      "node_id": "PRR_kwDOO0Cobs8AAAABJsOfPA",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nCopilot reviewed 9 out of 12 changed files in this pull request and generated no new comments.\n\n\n\n\n<details>\n<summary>Suppressed comments (3)</summary>\n\n**migrations/1786820569.sh:4**\n* This migration script has no shebang and doesn\u2019t enable strict mode itself. If it\u2019s ever executed directly (or by a runner that doesn\u2019t consistently invoke `bash -euo pipefail`), behavior becomes fragile (e.g., silent `source` failures). Add a `#!/bin/bash` header and `set -euo pipefail` near the top to make the migration self-contained and reliably fail-fast.\n```\necho \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n\n# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n```\n**migrations/1786820569.sh:17**\n* This script assumes `OMARCHY_PATH` is set before sourcing helpers and before re-execing itself under sudo. If `OMARCHY_PATH` is unset (common for one-off script execution), `source \\\"$OMARCHY_PATH/...\\\"` will fail, and the sudo re-exec path also won\u2019t resolve. Consider setting a default early (consistent with `bin/omarchy-setup-apple-touchbar`), e.g., defaulting to `/usr/share/omarchy`, then using that variable for both `source` and the sudo exec target.\n```\n# shellcheck source=../install/hardware/apple/t1-touchbar.sh\nsource \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n\n# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a\n# writable tmp tree and skip the privilege hop.\nif (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then\n  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \\\n    /bin/bash -euo pipefail \"$OMARCHY_PATH/migrations/1786820569.sh\"\nfi\n```\n**install/hardware/apple/copy-t1-firmware.command:151**\n* Using `eval` to select `DEST` is avoidable and increases risk if validation ever regresses or the selection logic changes. You can pick the Nth entry without `eval` by iterating over the positional parameters (e.g., loop with an index until it equals `choice`) after `set -- $USB_LIST`.\n```\n  printf \"Number of the USB to copy onto: \"\n  read -r choice\n  case \"$choice\" in\n    ''|*[!0-9]*) echo \"Not a number.\"; exit 1 ;;\n  esac\n  if [ \"$choice\" -lt 1 ] || [ \"$choice\" -gt \"$n\" ]; then\n    echo \"Out of range.\"\n    exit 1\n  fi\n  eval DEST=\\$$choice\nfi\n```\n</details>\n\n",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945321788",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#pullrequestreview-4945321788"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "submitted_at": "2026-08-16T03:43:34Z",
+      "commit_id": "6af10be5d812eb3286a15aa7ce34bfea3138471f"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828527",
+      "pull_request_review_id": 4945278822,
+      "id": 3790828527,
+      "node_id": "PRRC_kwDOO0Cobs7h83Pv",
+      "diff_hunk": "@@ -0,0 +1,27 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0",
+      "path": "migrations/1786820569.sh",
+      "commit_id": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "original_commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This migration has no shebang and doesn\u2019t set strict mode, so its behavior depends on how it\u2019s invoked (some runners execute migrations directly, others via `bash`). Add `#!/bin/bash` and `set -euo pipefail` (or match the repo\u2019s established migration template) to ensure consistent execution and avoid silent partial failures.",
+      "created_at": "2026-08-16T03:15:09Z",
+      "updated_at": "2026-08-16T03:15:10Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790828527",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828527"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790828527"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828527/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 6,
+      "original_line": 6,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 6,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828537",
+      "pull_request_review_id": 4945278822,
+      "id": 3790828537,
+      "node_id": "PRRC_kwDOO0Cobs7h83P5",
+      "diff_hunk": "@@ -0,0 +1,27 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers\n+\n+# shellcheck source=../install/hardware/apple/t1-touchbar.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n+\n+# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a\n+# writable tmp tree and skip the privilege hop.\n+if (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then\n+  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \\\n+    /bin/bash -euo pipefail \"$OMARCHY_PATH/migrations/1786820569.sh\"\n+fi\n+\n+t1_install_wiring\n+\n+if src=$(t1_find_firmware); then\n+  if esp=$(t1_esp_mount); then\n+    t1_copy_firmware \"$src\" \"$esp\" || true",
+      "path": "migrations/1786820569.sh",
+      "commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "original_commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "`t1_copy_firmware ... || true` suppresses failures without logging, so the migration can report success while leaving the system unconfigured. Prefer emitting a clear message (or exiting non-zero) when the copy fails, at least when firmware was found and an ESP was detected, so users aren\u2019t left with a dark Touch Bar and no actionable feedback.",
+      "created_at": "2026-08-16T03:15:10Z",
+      "updated_at": "2026-08-16T03:15:10Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790828537",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828537"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790828537"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828537/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 25,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 25,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828546",
+      "pull_request_review_id": 4945278822,
+      "id": 3790828546,
+      "node_id": "PRRC_kwDOO0Cobs7h83QC",
+      "diff_hunk": "@@ -35,23 +35,46 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, T1 Touch Bar wiring when the firmware is already on the USB, and an NVMe suspend fix for those same models.\n+\n+#### T1 Touch Bar firmware (do this before wiping macOS)\n+\n+The T1 coprocessor loads `EFI/APPLE/EMBEDDEDOS` from the EFI System Partition at boot. That tree is written by macOS, is unique to this machine (`FDRData`), and cannot be shipped in Omarchy. Collect it while macOS still works, then let Omarchy copy it back after the install.\n+\n+1. On macOS, wait until the Touch Bar lights up (and any \"critical software update\" finishes).\n+2. Download the collector and run it (double-click in Finder, or `bash copy-t1-firmware.command`). It copies `APPLE/EMBEDDEDOS` onto a USB stick:\n+\n+```bash\n+curl -fsSL https://github.com/basecamp/omarchy/raw/quattro/install/hardware/apple/copy-t1-firmware.command -o copy-t1-firmware.command",
+      "path": "manual/44-mac-support.md",
+      "commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "original_commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The download URL is pinned to a branch name (`quattro`), which can break over time or across releases. Prefer linking to a stable ref (e.g., a tagged release asset, a commit SHA, or the default branch) to keep the instructions durable.",
+      "created_at": "2026-08-16T03:15:10Z",
+      "updated_at": "2026-08-16T03:15:10Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790828546",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828546"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790828546"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790828546/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 48,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 15,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790839665",
+      "pull_request_review_id": 4945296099,
+      "id": 3790839665,
+      "node_id": "PRRC_kwDOO0Cobs7h859x",
+      "diff_hunk": "@@ -0,0 +1,27 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0",
+      "path": "migrations/1786820569.sh",
+      "commit_id": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "original_commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Leaving this without a shebang on purpose \u2014 adding `#!/bin/bash` (or an in-file `set -euo pipefail`) would break the established migration template.\n\nOmarchy migrations are 0644, not executable, and start with an `echo`. They are never invoked as `./migrations/<ts>.sh`. `omarchy-migrate` (and this file's own sudo re-exec) runs them as `bash -euo pipefail migrations/<ts>.sh`, so `-euo pipefail` is already applied by the runner. See `agents/skills/migrations.md`:\n\n> File permissions must be `0644` (`-rw-r--r--`). Migration runners execute them with `bash -euo pipefail`, not through executable bits.\n> No shebang line.\n> Start with an `echo` describing what the migration does.\n\nAGENTS.md matches that: scripts under `install/` and `migrations/` may be sourced and intentionally omit shebangs.",
+      "created_at": "2026-08-16T03:23:29Z",
+      "updated_at": "2026-08-16T03:23:29Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790839665",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790839665"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790839665"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790839665/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 1,
+      "original_start_line": 1,
+      "start_side": "RIGHT",
+      "line": 6,
+      "original_line": 6,
+      "side": "RIGHT",
+      "in_reply_to_id": 3790828527,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 6,
+      "position": 6,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790840162",
+      "pull_request_review_id": 4945296568,
+      "id": 3790840162,
+      "node_id": "PRRC_kwDOO0Cobs7h86Fi",
+      "diff_hunk": "@@ -0,0 +1,27 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers\n+\n+# shellcheck source=../install/hardware/apple/t1-touchbar.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n+\n+# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a\n+# writable tmp tree and skip the privilege hop.\n+if (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then\n+  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \\\n+    /bin/bash -euo pipefail \"$OMARCHY_PATH/migrations/1786820569.sh\"\n+fi\n+\n+t1_install_wiring\n+\n+if src=$(t1_find_firmware); then\n+  if esp=$(t1_esp_mount); then\n+    t1_copy_firmware \"$src\" \"$esp\" || true",
+      "path": "migrations/1786820569.sh",
+      "commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "original_commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Fixed in 6e7b27b41da86b96eb7360301abadf6d14b958b0.\n\nThe migration still continues after a copy failure so udev/module wiring lands (`omarchy setup apple touchbar` remains the retry path). When firmware was found and an ESP was detected, a failed `t1_copy_firmware` now prints:\n\n```\nFound T1 firmware on USB but could not copy it to the EFI partition.\nWiring is installed; later run: omarchy setup apple touchbar\n```\n\nThe T1 shell test covers that path (ESP override is a regular file so `mkdir`/`cp` fail).",
+      "created_at": "2026-08-16T03:23:53Z",
+      "updated_at": "2026-08-16T03:23:53Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790840162",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790840162"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790840162"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790840162/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 25,
+      "side": "RIGHT",
+      "in_reply_to_id": 3790828537,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 25,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790840216",
+      "pull_request_review_id": 4945296602,
+      "id": 3790840216,
+      "node_id": "PRRC_kwDOO0Cobs7h86GY",
+      "diff_hunk": "@@ -35,23 +35,46 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, T1 Touch Bar wiring when the firmware is already on the USB, and an NVMe suspend fix for those same models.\n+\n+#### T1 Touch Bar firmware (do this before wiping macOS)\n+\n+The T1 coprocessor loads `EFI/APPLE/EMBEDDEDOS` from the EFI System Partition at boot. That tree is written by macOS, is unique to this machine (`FDRData`), and cannot be shipped in Omarchy. Collect it while macOS still works, then let Omarchy copy it back after the install.\n+\n+1. On macOS, wait until the Touch Bar lights up (and any \"critical software update\" finishes).\n+2. Download the collector and run it (double-click in Finder, or `bash copy-t1-firmware.command`). It copies `APPLE/EMBEDDEDOS` onto a USB stick:\n+\n+```bash\n+curl -fsSL https://github.com/basecamp/omarchy/raw/quattro/install/hardware/apple/copy-t1-firmware.command -o copy-t1-firmware.command",
+      "path": "manual/44-mac-support.md",
+      "commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "original_commit_id": "ca5a32def1ab8dc68689feb68e2b4c2e1cf5b4ba",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Fixed in 6e7b27b41da86b96eb7360301abadf6d14b958b0.\n\nThe pre-install step now leads with the ISO path (`install/hardware/apple/copy-t1-firmware.command`), which does not rot with branch names. The optional download URL is `https://github.com/basecamp/omarchy/raw/HEAD/install/hardware/apple/copy-t1-firmware.command` instead of pinning `quattro`.",
+      "created_at": "2026-08-16T03:23:55Z",
+      "updated_at": "2026-08-16T03:23:55Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790840216",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790840216"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790840216"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790840216/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 48,
+      "side": "RIGHT",
+      "in_reply_to_id": 3790828546,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 15,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790841823",
+      "pull_request_review_id": 4945298038,
+      "id": 3790841823,
+      "node_id": "PRRC_kwDOO0Cobs7h86ff",
+      "diff_hunk": "@@ -0,0 +1,30 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers\n+\n+# shellcheck source=../install/hardware/apple/t1-touchbar.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n+\n+# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a\n+# writable tmp tree and skip the privilege hop.\n+if (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then\n+  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \\\n+    /bin/bash -euo pipefail \"$OMARCHY_PATH/migrations/1786820569.sh\"\n+fi",
+      "path": "migrations/1786820569.sh",
+      "commit_id": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "original_commit_id": "6e7b27b41da86b96eb7360301abadf6d14b958b0",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "`omarchy-pkg-add linux-headers` runs before the script\u2019s own non-root sudo re-exec path. If this migration is invoked as a regular user (which the sudo logic implies is supported), it can fail before privilege escalation. Move the package install (and any privileged operations) to after the sudo/exec block, keeping only the minimal `source` needed to compute `t1_udev_rule_dest()` before deciding to re-exec.",
+      "created_at": "2026-08-16T03:25:12Z",
+      "updated_at": "2026-08-16T03:25:12Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790841823",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790841823"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790841823"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790841823/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 5,
+      "original_start_line": 5,
+      "start_side": "RIGHT",
+      "line": 17,
+      "original_line": 19,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 19,
+      "position": 17,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790852673",
+      "pull_request_review_id": 4945308006,
+      "id": 3790852673,
+      "node_id": "PRRC_kwDOO0Cobs7h89JB",
+      "diff_hunk": "@@ -0,0 +1,30 @@\n+echo \"Install T1 Touch Bar wiring and copy firmware from a USB stick if present\"\n+\n+# First-generation Touch Bar MacBook Pros only. Other Apple hardware is\n+# unchanged. See install/hardware/apple/t1-touchbar.sh for the USB handoff.\n+if ! omarchy-hw-apple-t1; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers\n+\n+# shellcheck source=../install/hardware/apple/t1-touchbar.sh\n+source \"$OMARCHY_PATH/install/hardware/apple/t1-touchbar.sh\"\n+\n+# Real dests live under /etc and /boot. Tests override OMARCHY_T1_* to a\n+# writable tmp tree and skip the privilege hop.\n+if (( $(id -u) != 0 )) && [[ $(t1_udev_rule_dest) == /etc/* ]]; then\n+  exec sudo --preserve-env=OMARCHY_PATH,OMARCHY_T1_UDEV_DEST,OMARCHY_T1_UDEV_SRC,OMARCHY_T1_MODULES_LOAD,OMARCHY_T1_ESP,OMARCHY_T1_MEDIA_ROOTS,OMARCHY_T1_COLLECTOR,OMARCHY_DMI_PRODUCT_NAME \\\n+    /bin/bash -euo pipefail \"$OMARCHY_PATH/migrations/1786820569.sh\"\n+fi",
+      "path": "migrations/1786820569.sh",
+      "commit_id": "68ac8443a1b77dd8fd2e7cb988fbc0f82d25099d",
+      "original_commit_id": "6e7b27b41da86b96eb7360301abadf6d14b958b0",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Addressed in 873e527e1a0352c277e6962b6e808793bb70bf6c: moved `omarchy-pkg-add linux-headers` (and the rest of the privileged work) to after the sudo re-exec. The migration still sources t1-touchbar.sh first so `t1_udev_rule_dest` can decide whether to escalate; tests continue to assert linux-headers is installed.",
+      "created_at": "2026-08-16T03:33:33Z",
+      "updated_at": "2026-08-16T03:33:33Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790852673",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790852673"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790852673"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790852673/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": 5,
+      "original_start_line": 5,
+      "start_side": "RIGHT",
+      "line": 17,
+      "original_line": 19,
+      "side": "RIGHT",
+      "in_reply_to_id": 3790841823,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 19,
+      "position": 17,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790854424",
+      "pull_request_review_id": 4945309668,
+      "id": 3790854424,
+      "node_id": "PRRC_kwDOO0Cobs7h89kY",
+      "diff_hunk": "@@ -0,0 +1,106 @@\n+# Shared T1 Touch Bar helpers. Sourced; no shebang, no work on source.\n+# Firmware is Apple's machine-specific T1 memboot image (EFI/APPLE/EMBEDDEDOS).\n+# It cannot be redistributed; a USB stick is the handoff from macOS.\n+\n+t1_marker=EMBEDDEDOS/combined.memboot\n+\n+t1_collector_path() {\n+  printf '%s\\n' \"${OMARCHY_T1_COLLECTOR:-$OMARCHY_PATH/install/hardware/apple/copy-t1-firmware.command}\"\n+}\n+\n+t1_udev_rule_src() {\n+  printf '%s\\n' \"${OMARCHY_T1_UDEV_SRC:-$OMARCHY_PATH/default/udev/apple-t1-touchbar.rules}\"\n+}\n+\n+t1_udev_rule_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_UDEV_DEST:-/etc/udev/rules.d/90-apple-t1-touchbar.rules}\"\n+}\n+\n+t1_modules_load_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_MODULES_LOAD:-/etc/modules-load.d/apple-t1-touchbar.conf}\"\n+}\n+\n+t1_media_roots() {\n+  local dir\n+  if [[ -n ${OMARCHY_T1_MEDIA_ROOTS:-} ]]; then\n+    local IFS=$'\\n'\n+    for dir in $OMARCHY_T1_MEDIA_ROOTS; do\n+      [[ -d $dir ]] && printf '%s\\n' \"$dir\"\n+    done\n+    return\n+  fi\n+  for dir in /run/media/*/* /media/*/* /mnt/*; do\n+    [[ -d $dir ]] && printf '%s\\n' \"$dir\"\n+  done\n+}\n+\n+t1_find_firmware() {\n+  local dir\n+  while IFS= read -r dir; do\n+    if [[ -f $dir/APPLE/$t1_marker ]]; then\n+      printf '%s\\n' \"$dir/APPLE\"\n+      return 0\n+    fi\n+    if [[ -f $dir/$t1_marker ]]; then\n+      printf '%s\\n' \"$dir\"\n+      return 0\n+    fi\n+  done < <(t1_media_roots)\n+  return 1\n+}\n+\n+t1_esp_mount() {\n+  local mp fstype\n+  if [[ -n ${OMARCHY_T1_ESP:-} ]]; then\n+    printf '%s\\n' \"$OMARCHY_T1_ESP\"\n+    return 0\n+  fi\n+  for mp in /boot /boot/efi /efi; do\n+    findmnt -n \"$mp\" >/dev/null 2>&1 || continue\n+    fstype=$(findmnt -n -o FSTYPE \"$mp\")\n+    case \"$fstype\" in\n+      vfat|fat|msdos)\n+        printf '%s\\n' \"$mp\"\n+        return 0\n+        ;;\n+    esac\n+  done\n+  return 1\n+}\n+\n+t1_firmware_present() {\n+  local esp\n+  esp=$(t1_esp_mount) || return 1\n+  [[ -s $esp/EFI/APPLE/$t1_marker ]]\n+}\n+\n+t1_copy_firmware() {\n+  local src=$1 dest_root=$2 dest\n+  dest=\"$dest_root/EFI/APPLE\"\n+  mkdir -p \"$dest_root/EFI\"\n+  rm -rf \"$dest\"\n+  # VFAT cannot store Unix ownership; -r not -a so a failed chown does not abort.\n+  cp -r \"$src\" \"$dest\"\n+  sync",
+      "path": "install/hardware/apple/t1-touchbar.sh",
+      "commit_id": "873e527e1a0352c277e6962b6e808793bb70bf6c",
+      "original_commit_id": "873e527e1a0352c277e6962b6e808793bb70bf6c",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "With callers running under `set -e` (e.g., migration and setup paths), any failing command inside `t1_copy_firmware` (like `mkdir`, `rm`, `cp`, or `sync`) can terminate the whole script before the function returns non-zero, which prevents the caller\u2019s `if ! t1_copy_firmware ...; then ...` error handling from executing. Make `t1_copy_firmware` explicitly return failures (e.g., guard each command with `|| return 1`, and avoid `sync` being fatal) so the migration/setup can reliably print the intended recovery instructions and continue after a copy failure.",
+      "created_at": "2026-08-16T03:34:54Z",
+      "updated_at": "2026-08-16T03:34:55Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790854424",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790854424"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790854424"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790854424/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 80,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 84,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 84,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790866061",
+      "pull_request_review_id": 4945320166,
+      "id": 3790866061,
+      "node_id": "PRRC_kwDOO0Cobs7h9AaN",
+      "diff_hunk": "@@ -0,0 +1,106 @@\n+# Shared T1 Touch Bar helpers. Sourced; no shebang, no work on source.\n+# Firmware is Apple's machine-specific T1 memboot image (EFI/APPLE/EMBEDDEDOS).\n+# It cannot be redistributed; a USB stick is the handoff from macOS.\n+\n+t1_marker=EMBEDDEDOS/combined.memboot\n+\n+t1_collector_path() {\n+  printf '%s\\n' \"${OMARCHY_T1_COLLECTOR:-$OMARCHY_PATH/install/hardware/apple/copy-t1-firmware.command}\"\n+}\n+\n+t1_udev_rule_src() {\n+  printf '%s\\n' \"${OMARCHY_T1_UDEV_SRC:-$OMARCHY_PATH/default/udev/apple-t1-touchbar.rules}\"\n+}\n+\n+t1_udev_rule_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_UDEV_DEST:-/etc/udev/rules.d/90-apple-t1-touchbar.rules}\"\n+}\n+\n+t1_modules_load_dest() {\n+  printf '%s\\n' \"${OMARCHY_T1_MODULES_LOAD:-/etc/modules-load.d/apple-t1-touchbar.conf}\"\n+}\n+\n+t1_media_roots() {\n+  local dir\n+  if [[ -n ${OMARCHY_T1_MEDIA_ROOTS:-} ]]; then\n+    local IFS=$'\\n'\n+    for dir in $OMARCHY_T1_MEDIA_ROOTS; do\n+      [[ -d $dir ]] && printf '%s\\n' \"$dir\"\n+    done\n+    return\n+  fi\n+  for dir in /run/media/*/* /media/*/* /mnt/*; do\n+    [[ -d $dir ]] && printf '%s\\n' \"$dir\"\n+  done\n+}\n+\n+t1_find_firmware() {\n+  local dir\n+  while IFS= read -r dir; do\n+    if [[ -f $dir/APPLE/$t1_marker ]]; then\n+      printf '%s\\n' \"$dir/APPLE\"\n+      return 0\n+    fi\n+    if [[ -f $dir/$t1_marker ]]; then\n+      printf '%s\\n' \"$dir\"\n+      return 0\n+    fi\n+  done < <(t1_media_roots)\n+  return 1\n+}\n+\n+t1_esp_mount() {\n+  local mp fstype\n+  if [[ -n ${OMARCHY_T1_ESP:-} ]]; then\n+    printf '%s\\n' \"$OMARCHY_T1_ESP\"\n+    return 0\n+  fi\n+  for mp in /boot /boot/efi /efi; do\n+    findmnt -n \"$mp\" >/dev/null 2>&1 || continue\n+    fstype=$(findmnt -n -o FSTYPE \"$mp\")\n+    case \"$fstype\" in\n+      vfat|fat|msdos)\n+        printf '%s\\n' \"$mp\"\n+        return 0\n+        ;;\n+    esac\n+  done\n+  return 1\n+}\n+\n+t1_firmware_present() {\n+  local esp\n+  esp=$(t1_esp_mount) || return 1\n+  [[ -s $esp/EFI/APPLE/$t1_marker ]]\n+}\n+\n+t1_copy_firmware() {\n+  local src=$1 dest_root=$2 dest\n+  dest=\"$dest_root/EFI/APPLE\"\n+  mkdir -p \"$dest_root/EFI\"\n+  rm -rf \"$dest\"\n+  # VFAT cannot store Unix ownership; -r not -a so a failed chown does not abort.\n+  cp -r \"$src\" \"$dest\"\n+  sync",
+      "path": "install/hardware/apple/t1-touchbar.sh",
+      "commit_id": "873e527e1a0352c277e6962b6e808793bb70bf6c",
+      "original_commit_id": "873e527e1a0352c277e6962b6e808793bb70bf6c",
+      "user": {
+        "login": "shawnyeager",
+        "id": 980297,
+        "node_id": "MDQ6VXNlcjk4MDI5Nw==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/980297?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/shawnyeager",
+        "html_url": "https://github.com/shawnyeager",
+        "followers_url": "https://api.github.com/users/shawnyeager/followers",
+        "following_url": "https://api.github.com/users/shawnyeager/following{/other_user}",
+        "gists_url": "https://api.github.com/users/shawnyeager/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/shawnyeager/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/shawnyeager/subscriptions",
+        "organizations_url": "https://api.github.com/users/shawnyeager/orgs",
+        "repos_url": "https://api.github.com/users/shawnyeager/repos",
+        "events_url": "https://api.github.com/users/shawnyeager/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/shawnyeager/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Addressed in 6af10be5d812eb3286a15aa7ce34bfea3138471f: `t1_copy_firmware` now returns 1 from mkdir/rm/cp instead of aborting under `set -e`, and `sync` is non-fatal. Setup wraps the copy so a failure prints the wiring-already-installed recovery path.",
+      "created_at": "2026-08-16T03:42:05Z",
+      "updated_at": "2026-08-16T03:42:05Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790866061",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7064",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790866061"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7064#discussion_r3790866061"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7064"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3790866061/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 80,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 84,
+      "side": "RIGHT",
+      "in_reply_to_id": 3790854424,
+      "author_association": "CONTRIBUTOR",
+      "original_position": 84,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

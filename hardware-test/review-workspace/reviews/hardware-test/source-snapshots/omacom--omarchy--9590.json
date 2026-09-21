@@ -1,0 +1,69 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9590",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "session-start"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "fcd4a5a12baea84da027d2b087c50b87cf4930bc",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9590,
+  "checked_at": "2026-09-21T11:57:03.877191+00:00",
+  "title": "Clear stale graphical-session before uwsm so SDDM autologin is not a blank screen",
+  "author": "pib-nbsmedia",
+  "head_sha": "fcd4a5a12baea84da027d2b087c50b87cf4930bc",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:20Z",
+  "state": "open",
+  "body": "Fixes https://github.com/omacom/omarchy/issues/9589\n\n## Problem\n\nSDDM autologin starts the packaged Omarchy session (`uwsm start -g -1 ... hyprland.desktop`) after the Wayland greeter compositor (`start-hyprland` + `hyprland.lua`). On slower Intel Apple iGPUs \u2014 reproduced on **Mac mini Macmini7,1** (i7-4578U, Haswell Iris 5100 / i915) \u2014 `graphical-session.target` is already active with **no user Hyprland**. uwsm then exits:\n\n```\nA compositor or graphical-session* target is already active!\n```\n\nSDDM's helper exits 1 and the screen stays blank. `omarchy-settings` restores the packaged desktop file on update, so a local `Exec=/usr/bin/start-hyprland` workaround does not last.\n\nNot #8200 (logout with a non-uwsm session). This is the inverse: uwsm never owns the session. Not #8152 (PAM/install crash loop).\n\n## Approach\n\nKeep uwsm (logout via `uwsm stop` still works):\n\n- `default/wayland-sessions/omarchy.desktop` now `Exec=/usr/bin/omarchy-hyprland-session-start`\n- Wrapper stops leftover `graphical-session.target` / `graphical-session-pre.target` **only when Hyprland is not running**, then `exec uwsm start -e -D Hyprland hyprland.desktop` (no `-g -1`)\n\n## Tests\n\n`test/shell.d/hyprland-session-start-test.sh`:\n\n- idle target \u2192 uwsm, no stop\n- active target, no compositor \u2192 stop, then uwsm\n- live compositor \u2192 no stop\n- sabotage: removing the stop fails the stale-target case\n\n## Risk\n\n- Session still uwsm-managed; should not regress #8200.\n- If Hyprland is already up, the wrapper does not tear the session down.\n- Hardware note: confirmed on Macmini7,1; likely a greeter/session race that faster GPUs win.\n\n## Exclusions\n\nNo SDDM greeter compositor rewrite, no autologin ISO changes.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "43ac77c1170cb99be0813d2391762ca1d53e1f67",
+      "filename": "bin/omarchy-hyprland-session-start",
+      "status": "added",
+      "additions": 32,
+      "deletions": 0,
+      "changes": 32,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fcd4a5a12baea84da027d2b087c50b87cf4930bc/bin%2Fomarchy-hyprland-session-start",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fcd4a5a12baea84da027d2b087c50b87cf4930bc/bin%2Fomarchy-hyprland-session-start",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hyprland-session-start?ref=fcd4a5a12baea84da027d2b087c50b87cf4930bc",
+      "patch": "@@ -0,0 +1,32 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Start the Hyprland session via uwsm after clearing a stale graphical-session target\n+# omarchy:hidden=true\n+\n+set -euo pipefail\n+\n+# SDDM starts a Wayland greeter compositor (start-hyprland) before autologin.\n+# On slower iGPUs \u2014 notably Apple Intel Haswell (Macmini7,1 / Iris 5100) \u2014 that\n+# greeter can leave graphical-session.target active with no user compositor.\n+# uwsm then refuses: \"A compositor or graphical-session* target is already active!\"\n+# and SDDM's helper exits 1 (blank screen). Recurs when omarchy-settings restores\n+# the packaged session file.\n+#\n+# Clear the leftover target only when Hyprland is not actually running, then\n+# hand off to uwsm so logout (uwsm stop) still works.\n+\n+systemctl_user() {\n+  systemctl --user \"$@\"\n+}\n+\n+compositor_running() {\n+  pgrep -u \"$UID\" -x Hyprland >/dev/null 2>&1 || pgrep -u \"$UID\" -x hyprland >/dev/null 2>&1\n+}\n+\n+if systemctl_user is-active --quiet graphical-session.target; then\n+  if ! compositor_running; then\n+    systemctl_user stop graphical-session.target graphical-session-pre.target || true\n+  fi\n+fi\n+\n+exec uwsm start -e -D Hyprland hyprland.desktop"
+    },
+    {
+      "sha": "b4ccb1c07e3d5862cea3372c5bbe5b9e182693b5",
+      "filename": "default/wayland-sessions/omarchy.desktop",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 1,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fcd4a5a12baea84da027d2b087c50b87cf4930bc/default%2Fwayland-sessions%2Fomarchy.desktop",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fcd4a5a12baea84da027d2b087c50b87cf4930bc/default%2Fwayland-sessions%2Fomarchy.desktop",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fwayland-sessions%2Fomarchy.desktop?ref=fcd4a5a12baea84da027d2b087c50b87cf4930bc",
+      "patch": "@@ -1,6 +1,7 @@\n [Desktop Entry]\n Name=Omarchy (Hyprland uwsm)\n Comment=Omarchy Hyprland session managed by uwsm\n-Exec=uwsm start -g -1 -e -D Hyprland hyprland.desktop\n+Exec=/usr/bin/omarchy-hyprland-session-start\n TryExec=uwsm\n Type=Application\n+DesktopNames=Hyprland"
+    },
+    {
+      "sha": "113e2260a7bf740814eabe402d87d32df3840d28",
+      "filename": "test/shell.d/hyprland-session-start-test.sh",
+      "status": "added",
+      "additions": 82,
+      "deletions": 0,
+      "changes": 82,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fcd4a5a12baea84da027d2b087c50b87cf4930bc/test%2Fshell.d%2Fhyprland-session-start-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fcd4a5a12baea84da027d2b087c50b87cf4930bc/test%2Fshell.d%2Fhyprland-session-start-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fhyprland-session-start-test.sh?ref=fcd4a5a12baea84da027d2b087c50b87cf4930bc",
+      "patch": "@@ -0,0 +1,82 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(dirname \"$0\")/base-test.sh\"\n+\n+desktop=\"$ROOT/default/wayland-sessions/omarchy.desktop\"\n+starter=\"$ROOT/bin/omarchy-hyprland-session-start\"\n+\n+grep -Fx 'Exec=/usr/bin/omarchy-hyprland-session-start' \"$desktop\" >/dev/null ||\n+  fail \"session desktop starts through omarchy-hyprland-session-start\"\n+grep -F 'uwsm start -g -1' \"$desktop\" >/dev/null &&\n+  fail \"session desktop must not call uwsm -g -1 (races the SDDM greeter)\"\n+pass \"session desktop uses the uwsm session wrapper\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+fake_bin=\"$test_tmp/bin\"\n+mkdir -p \"$fake_bin\"\n+\n+cat >\"$fake_bin/uwsm\" <<'BASH'\n+#!/bin/bash\n+printf 'UWSM:%s\\n' \"$*\" >\"${FAKE_LOG_DIR}/uwsm\"\n+exit 0\n+BASH\n+\n+cat >\"$fake_bin/systemctl\" <<'BASH'\n+#!/bin/bash\n+printf 'SYSTEMCTL:%s\\n' \"$*\" >>\"${FAKE_LOG_DIR}/systemctl\"\n+\n+if [[ $1 == --user && $2 == is-active && $4 == graphical-session.target ]]; then\n+  if [[ ${FAKE_GRAPHICAL_ACTIVE:-0} == 1 ]]; then\n+    exit 0\n+  fi\n+  exit 3\n+fi\n+\n+exit 0\n+BASH\n+\n+cat >\"$fake_bin/pgrep\" <<'BASH'\n+#!/bin/bash\n+if [[ ${FAKE_COMPOSITOR_RUNNING:-0} == 1 ]]; then\n+  exit 0\n+fi\n+exit 1\n+BASH\n+\n+chmod 0755 \"$fake_bin/uwsm\" \"$fake_bin/systemctl\" \"$fake_bin/pgrep\"\n+\n+run_starter() {\n+  FAKE_LOG_DIR=\"$test_tmp\" PATH=\"$fake_bin:$PATH\" \"$starter\"\n+}\n+\n+: >\"$test_tmp/systemctl\"\n+FAKE_GRAPHICAL_ACTIVE=0 FAKE_COMPOSITOR_RUNNING=0 run_starter\n+grep -Fx 'UWSM:start -e -D Hyprland hyprland.desktop' \"$test_tmp/uwsm\" >/dev/null ||\n+  fail \"wrapper execs uwsm without -g when graphical-session is idle\"\n+grep -F 'stop graphical-session.target' \"$test_tmp/systemctl\" >/dev/null &&\n+  fail \"wrapper must not stop an inactive graphical-session target\"\n+pass \"idle graphical-session starts uwsm without a stop\"\n+\n+: >\"$test_tmp/systemctl\"\n+FAKE_GRAPHICAL_ACTIVE=1 FAKE_COMPOSITOR_RUNNING=0 run_starter\n+grep -F 'stop graphical-session.target graphical-session-pre.target' \"$test_tmp/systemctl\" >/dev/null ||\n+  fail \"wrapper stops a leftover graphical-session target when Hyprland is not running\"\n+grep -Fx 'UWSM:start -e -D Hyprland hyprland.desktop' \"$test_tmp/uwsm\" >/dev/null ||\n+  fail \"wrapper still execs uwsm after clearing a stale target\"\n+pass \"stale graphical-session without compositor is cleared before uwsm\"\n+\n+: >\"$test_tmp/systemctl\"\n+FAKE_GRAPHICAL_ACTIVE=1 FAKE_COMPOSITOR_RUNNING=1 run_starter\n+grep -F 'stop graphical-session.target' \"$test_tmp/systemctl\" >/dev/null &&\n+  fail \"wrapper must not stop graphical-session while Hyprland is running\"\n+pass \"live compositor is left alone\"\n+\n+# Sabotage: the stale-target stop is the actual fix. If it disappears, this fails.\n+if ! grep -F 'systemctl_user stop graphical-session.target graphical-session-pre.target' \"$starter\" >/dev/null; then\n+  fail \"wrapper still contains the stale graphical-session stop\"\n+fi\n+pass \"stale-target stop is present in the wrapper\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

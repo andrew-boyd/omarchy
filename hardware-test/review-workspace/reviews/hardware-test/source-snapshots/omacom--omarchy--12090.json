@@ -1,0 +1,75 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/12090",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+      "state": "open"
+    },
+    {
+      "head_sha": "40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+      "state": "open",
+      "updated_at": "2026-09-16T10:28:25Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 12090,
+  "checked_at": "2026-09-21T11:56:36.822272+00:00",
+  "title": "Install matching kernel headers before broadcom-wl-dkms",
+  "author": "paulogeyer",
+  "head_sha": "40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+  "base_sha": "2fbac0c8e88eca704af1650ce721a494bd11a3d0",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-16T10:28:25Z",
+  "state": "open",
+  "body": "Closes https://github.com/omacom/omarchy/issues/10975\n\n## Summary\n\nThe 4.0.3 upgrade swapped `broadcom-wl` for `broadcom-wl-dkms` without headers on stock `linux` (older MacBooks). The module never built, so Wi-Fi died after reboot.\n\nInstall matching headers in `fix-bcm43xx.sh`, and repair existing DKMS installs with a migration that covers `linux` / `linux-lts` as well as Omarchy/T2 kernels.\n\n## Test plan\n\n```bash\nbash test/shell.d/bcm43xx-headers-test.sh\n```",
+  "draft": false,
+  "files": [
+    {
+      "sha": "773970a5dc0137067a3fcb62b04c38b98ab8adaf",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+      "patch": "@@ -6,5 +6,10 @@ pci_info=$(lspci -nn)\n \n if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n   echo \"BCM4360 / BCM4331 detected\"\n+  for kernel in linux linux-lts linux-omarchy linux-t2; do\n+    if omarchy-pkg-present \"$kernel\"; then\n+      omarchy-pkg-add \"$kernel-headers\"\n+    fi\n+  done\n   omarchy-pkg-add broadcom-wl-dkms\n fi"
+    },
+    {
+      "sha": "0e66097e13f235450d154e65ad43bba143071582",
+      "filename": "migrations/1789532833.sh",
+      "status": "added",
+      "additions": 12,
+      "deletions": 0,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4/migrations%2F1789532833.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4/migrations%2F1789532833.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789532833.sh?ref=40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+      "patch": "@@ -0,0 +1,12 @@\n+echo \"Install kernel headers needed to build broadcom-wl-dkms\"\n+\n+# 4.0.3 replaced broadcom-wl with broadcom-wl-dkms without matching headers, so\n+# the module never built and Wi-Fi died after reboot. 1789444024.sh only covers\n+# linux-omarchy/linux-t2; older MacBooks still run linux.\n+if omarchy-pkg-present broadcom-wl-dkms; then\n+  for kernel in linux linux-lts linux-omarchy linux-t2; do\n+    if omarchy-pkg-present \"$kernel\"; then\n+      omarchy-pkg-add \"$kernel-headers\"\n+    fi\n+  done\n+fi"
+    },
+    {
+      "sha": "46270dcae5ae4f18b70c968ae5c5299abeaae7ec",
+      "filename": "test/shell.d/bcm43xx-headers-test.sh",
+      "status": "added",
+      "additions": 60,
+      "deletions": 0,
+      "changes": 60,
+      "blob_url": "https://github.com/omacom/omarchy/blob/40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4/test%2Fshell.d%2Fbcm43xx-headers-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4/test%2Fshell.d%2Fbcm43xx-headers-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbcm43xx-headers-test.sh?ref=40fc412e5e7fd6b9a5c883e7b4ac361b8b4544b4",
+      "patch": "@@ -0,0 +1,60 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+fix=\"$ROOT/install/hardware/fix-bcm43xx.sh\"\n+migration=\"$ROOT/migrations/1789532833.sh\"\n+\n+rg -q 'omarchy-pkg-add \"\\$kernel-headers\"' \"$fix\" ||\n+  fail \"Broadcom installer installs matching kernel headers before DKMS\"\n+rg -q 'omarchy-pkg-add broadcom-wl-dkms' \"$fix\" ||\n+  fail \"Broadcom installer still installs the DKMS driver\"\n+pass \"Broadcom installer builds DKMS against matching headers\"\n+\n+rg -q 'omarchy-pkg-present broadcom-wl-dkms' \"$migration\" ||\n+  fail \"Broadcom header repair only runs when the DKMS driver is installed\"\n+rg -q 'linux linux-lts linux-omarchy linux-t2' \"$migration\" ||\n+  fail \"Broadcom header repair covers stock linux as well as Omarchy/T2 kernels\"\n+pass \"Broadcom DKMS header migration covers stock linux\"\n+\n+tmp_dir=$(mktemp -d)\n+trap 'rm -rf \"$tmp_dir\"' EXIT\n+mkdir -p \"$tmp_dir/bin\"\n+export INSTALLED_PACKAGES=\"$tmp_dir/installed\" CALL_LOG=\"$tmp_dir/calls\"\n+export PATH=\"$tmp_dir/bin:$ROOT/bin:$PATH\"\n+\n+cat > \"$tmp_dir/bin/pacman\" <<'SH'\n+#!/bin/bash\n+case \"$1\" in\n+  -Q) grep -Fxq -- \"$2\" \"$INSTALLED_PACKAGES\" ;;\n+  -S)\n+    shift 3\n+    printf '%s\\n' \"$@\" >> \"$INSTALLED_PACKAGES\"\n+    printf '%s\\n' \"$@\" >> \"$CALL_LOG\"\n+    ;;\n+  *) exit 1 ;;\n+esac\n+SH\n+cat > \"$tmp_dir/bin/sudo\" <<'SH'\n+#!/bin/bash\n+[[ $1 == \"pacman\" ]] || exit 1\n+\"$@\"\n+SH\n+chmod +x \"$tmp_dir/bin/\"*\n+\n+printf '%s\\n' linux broadcom-wl-dkms > \"$INSTALLED_PACKAGES\"\n+: > \"$CALL_LOG\"\n+bash -euo pipefail \"$migration\" >/dev/null\n+grep -Fxq linux-headers \"$INSTALLED_PACKAGES\" || fail \"linux gets headers when broadcom-wl-dkms is present\"\n+: > \"$CALL_LOG\"\n+bash -euo pipefail \"$migration\" >/dev/null\n+[[ ! -s $CALL_LOG ]] || fail \"Broadcom header repair is idempotent\"\n+pass \"missing linux-headers are repaired for broadcom-wl-dkms\"\n+\n+printf '%s\\n' linux > \"$INSTALLED_PACKAGES\"\n+: > \"$CALL_LOG\"\n+bash -euo pipefail \"$migration\" >/dev/null\n+[[ ! -s $CALL_LOG ]] || fail \"header repair skips machines without broadcom-wl-dkms\"\n+pass \"Broadcom header repair is a no-op without the DKMS driver\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

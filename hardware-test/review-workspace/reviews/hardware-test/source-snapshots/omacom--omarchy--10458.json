@@ -1,0 +1,123 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10458",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "imac-cs4208"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "state": "open"
+    },
+    {
+      "head_sha": "5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:11Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10458,
+  "checked_at": "2026-09-21T11:56:29.190599+00:00",
+  "title": "Enable speakers on Late 2015 21.5-inch iMacs",
+  "author": "inspiretelapps",
+  "head_sha": "5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:11Z",
+  "state": "open",
+  "body": "## Summary\n\nLate 2015 21.5-inch iMacs (`iMac16,1` / `iMac16,2`) drive four digital CS4208 speaker channels. Analog Stereo is the headphone DAC and HDMI is the internal display, so both look like valid outputs while the speakers stay silent. Master hardware volume also does not change speaker loudness, so the Omarchy output slider moves with no audible change.\n\nThis installs a DMI-gated WirePlumber drop-in that:\n- selects Analog Surround 4.0 on the CS4208 card\n- uses software volume (`api.alsa.soft-mixer`)\n- deprioritizes HDMI so it does not steal the default sink\n\nSame shape as the ASUS ROG audio mixer quirk. Does not overlap with the CS8409 DKMS work for 2016\u20132019 Macs.\n\n## Hardware\n\nVerified on **iMac16,2** (Cirrus Logic CS4208, codec subsystem `0x106b8100`) on linux 7.1.9 / Omarchy 4.0.2: YouTube silent on Analog Stereo and HDMI, plays on Analog Surround 4.0; system volume slider works after software volume.\n\n## Test plan\n\n- `bash test/shell.d/imac-cs4208-speakers-test.sh`\n- `./test/cli`\n- On iMac16,1 or iMac16,2: install / migrate \u2192 `omarchy restart audio` \u2192 speakers play, output slider changes loudness\n- Other hardware: hook and migration no-op",
+  "draft": false,
+  "files": [
+    {
+      "sha": "cc7779b595157bafd25e158a6f0fc79b3f52d131",
+      "filename": "bin/omarchy-hw-imac-cs4208",
+      "status": "added",
+      "additions": 7,
+      "deletions": 0,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/bin%2Fomarchy-hw-imac-cs4208",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/bin%2Fomarchy-hw-imac-cs4208",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-imac-cs4208?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -0,0 +1,7 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect Late 2015 21.5-inch iMacs whose CS4208 speakers need Analog Surround 4.0.\n+\n+product_name=\"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\"\n+\n+grep -Eqix 'iMac16,[12]' \"$product_name\" 2>/dev/null"
+    },
+    {
+      "sha": "8afe924c1e787a9a057cb7e0967d08dfca56eff2",
+      "filename": "default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf",
+      "status": "added",
+      "additions": 54,
+      "deletions": 0,
+      "changes": 54,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/default%2Fwireplumber%2Fwireplumber.conf.d%2Fimac-cs4208-speakers.conf",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/default%2Fwireplumber%2Fwireplumber.conf.d%2Fimac-cs4208-speakers.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fwireplumber%2Fwireplumber.conf.d%2Fimac-cs4208-speakers.conf?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -0,0 +1,54 @@\n+# Late 2015 21.5-inch iMac (iMac16,1 / iMac16,2): the built-in speakers are\n+# four digital CS4208 channels (left/right tweeter + woofer). Analog Stereo\n+# is the headphone DAC and is silent on those speakers. Master hardware\n+# volume also does not affect the digital path, so the output slider would\n+# move with no audible change unless software volume is used.\n+#\n+# HDMI on these machines is the internal display audio device and shows as\n+# available even though it does not drive the speakers.\n+\n+monitor.alsa.rules = [\n+  {\n+    matches = [\n+      {\n+        alsa.mixer_name = \"Cirrus Logic CS4208\"\n+      }\n+    ]\n+    actions = {\n+      update-props = {\n+        device.profile = \"output:analog-surround-40+input:analog-stereo\"\n+        api.alsa.soft-mixer = true\n+      }\n+    }\n+  }\n+  {\n+    matches = [\n+      {\n+        node.name = \"~alsa_output.*hdmi.*\"\n+      }\n+    ]\n+    actions = {\n+      update-props = {\n+        priority.session = 200\n+      }\n+    }\n+  }\n+]\n+\n+device.profile.priority.rules = [\n+  {\n+    matches = [\n+      {\n+        alsa.mixer_name = \"Cirrus Logic CS4208\"\n+      }\n+    ]\n+    actions = {\n+      update-props = {\n+        priorities = [\n+          \"output:analog-surround-40+input:analog-stereo\"\n+          \"output:analog-surround-40\"\n+        ]\n+      }\n+    }\n+  }\n+]"
+    },
+    {
+      "sha": "f3bb39c35cd08a60b50cdb05d74bc39df8aa4bc7",
+      "filename": "install/user/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/install%2Fuser%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/install%2Fuser%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fuser%2Fall.sh?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -6,6 +6,7 @@ run_logged \"$OMARCHY_INSTALL/user/mise-work.sh\"\n \n run_logged \"$OMARCHY_INSTALL/user/hardware/asus/fix-audio-mixer.sh\"\n run_logged \"$OMARCHY_INSTALL/user/hardware/asus/fix-mic.sh\"\n+run_logged \"$OMARCHY_INSTALL/user/hardware/apple/fix-imac-cs4208-speakers.sh\"\n run_logged \"$OMARCHY_INSTALL/user/hardware/framework/fix-f13-amd-audio-input.sh\"\n run_logged \"$OMARCHY_INSTALL/user/hardware/dell/xps13-text-scaling.sh\"\n run_logged \"$OMARCHY_INSTALL/user/hardware/fix-nouveau-cursor.sh\""
+    },
+    {
+      "sha": "0c56f56404888d74b0d75b2f67334d85d89f7cb3",
+      "filename": "install/user/hardware/apple/fix-imac-cs4208-speakers.sh",
+      "status": "added",
+      "additions": 17,
+      "deletions": 0,
+      "changes": 17,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/install%2Fuser%2Fhardware%2Fapple%2Ffix-imac-cs4208-speakers.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/install%2Fuser%2Fhardware%2Fapple%2Ffix-imac-cs4208-speakers.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fuser%2Fhardware%2Fapple%2Ffix-imac-cs4208-speakers.sh?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -0,0 +1,17 @@\n+# Late 2015 21.5-inch iMacs (iMac16,1 / iMac16,2) drive the built-in speakers\n+# as four digital CS4208 channels. Analog Stereo is the headphone DAC and is\n+# silent on those speakers, and Master hardware volume does not affect them.\n+\n+if omarchy-hw-imac-cs4208; then\n+  mkdir -p ~/.config/wireplumber/wireplumber.conf.d/\n+  cp \"$OMARCHY_PATH/default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf\" \\\n+    ~/.config/wireplumber/wireplumber.conf.d/\n+  rm -rf ~/.local/state/wireplumber/default-routes\n+\n+  # Leave the hardware mixer wide open so software volume is the only attenuation.\n+  card=$(aplay -l 2>/dev/null | grep -i \"CS4208 Analog\" | head -1 | sed 's/card \\([0-9]*\\).*/\\1/')\n+  if [[ -n $card ]]; then\n+    amixer -c \"$card\" set Master 100% unmute 2>/dev/null || true\n+    amixer -c \"$card\" set PCM 100% 2>/dev/null || true\n+  fi\n+fi"
+    },
+    {
+      "sha": "a4a733f4f75be19e1c8b8839904178ae223dd473",
+      "filename": "manual/45-troubleshooting.md",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/manual%2F45-troubleshooting.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/manual%2F45-troubleshooting.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F45-troubleshooting.md?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -30,6 +30,10 @@ Before you reboot, try restarting the offending subsystem on its own. _Update >\n \n Probably because they're not set as the primary output. Click on the speaker icon on the right side of the bar, and it'll open the volume popup where you can pick the output device (and mix per-app volumes too).\n \n+### No sound from the built-in speakers on a Late 2015 21.5-inch iMac\n+\n+Those machines (iMac16,1 and iMac16,2) drive four digital speaker channels on the CS4208 codec. Analog Stereo is the headphone DAC, and HDMI is the internal display \u2014 both look like valid outputs but stay silent. Omarchy selects Analog Surround 4.0 and software volume automatically. If you still hear nothing, pick Analog Surround 4.0 in the volume popup rather than Analog Stereo or HDMI.\n+\n ### My laptop speakers sound off\n \n On some laptops, Omarchy automatically applies a speaker tuning that corrects the built-in speakers' frequency response. `omarchy audio tuning status` tells you whether one is active on your machine, and `omarchy audio tuning off` turns it off if you'd rather hear the speakers raw."
+    },
+    {
+      "sha": "66ea2610fa37e47e125612e518cddbbdeda6e5e7",
+      "filename": "migrations/1788673159.sh",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/migrations%2F1788673159.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/migrations%2F1788673159.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788673159.sh?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -0,0 +1,4 @@\n+echo \"Select Analog Surround 4.0 and software volume on Late 2015 21.5-inch iMacs\"\n+\n+# The install-time quirk only reaches machines set up after it shipped.\n+source \"$OMARCHY_PATH/install/user/hardware/apple/fix-imac-cs4208-speakers.sh\""
+    },
+    {
+      "sha": "1a0030d24d85655f3a25f754e67268b7bd9daef6",
+      "filename": "test/shell.d/imac-cs4208-speakers-test.sh",
+      "status": "added",
+      "additions": 139,
+      "deletions": 0,
+      "changes": 139,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/test%2Fshell.d%2Fimac-cs4208-speakers-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5cf2638796937bfad1c3eb1aeec3c21a57d4154c/test%2Fshell.d%2Fimac-cs4208-speakers-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fimac-cs4208-speakers-test.sh?ref=5cf2638796937bfad1c3eb1aeec3c21a57d4154c",
+      "patch": "@@ -0,0 +1,139 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+detector=\"$ROOT/bin/omarchy-hw-imac-cs4208\"\n+leaf=\"$ROOT/install/user/hardware/apple/fix-imac-cs4208-speakers.sh\"\n+all=\"$ROOT/install/user/all.sh\"\n+conf=\"$ROOT/default/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf\"\n+migration=$(grep -l \"fix-imac-cs4208-speakers\" \"$ROOT\"/migrations/*.sh | head -1)\n+\n+[[ -x $detector ]] || fail \"the detector is executable\"\n+pass \"the detector is executable\"\n+\n+grep -q 'run_logged .*hardware/apple/fix-imac-cs4208-speakers.sh' \"$all\" ||\n+  fail \"the CS4208 speaker workaround runs during user setup\"\n+pass \"the CS4208 speaker workaround runs during user setup\"\n+\n+[[ -n $migration ]] || fail \"a migration enables the workaround on existing installs\"\n+pass \"a migration enables the workaround on existing installs\"\n+\n+grep -q 'output:analog-surround-40+input:analog-stereo' \"$conf\" ||\n+  fail \"the WirePlumber drop-in selects Analog Surround 4.0\"\n+grep -q 'api.alsa.soft-mixer = true' \"$conf\" ||\n+  fail \"the WirePlumber drop-in uses software volume\"\n+grep -q 'alsa.mixer_name = \"Cirrus Logic CS4208\"' \"$conf\" ||\n+  fail \"the WirePlumber drop-in matches the CS4208 mixer, not a PCI path\"\n+! grep -q '0000_00_1b.0' \"$conf\" ||\n+  fail \"the WirePlumber drop-in does not hard-code a PCI device path\"\n+pass \"the WirePlumber drop-in selects 4.0 output and software volume on CS4208\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+run_detector() {\n+  local name_file=\"$test_tmp/product_name\"\n+  printf '%s\\n' \"$1\" >\"$name_file\"\n+  OMARCHY_DMI_PRODUCT_NAME=\"$name_file\" bash \"$detector\"\n+}\n+\n+run_detector \"iMac16,2\" || fail \"the detector matches iMac16,2\"\n+pass \"the detector matches iMac16,2\"\n+\n+run_detector \"iMac16,1\" || fail \"the detector matches iMac16,1\"\n+pass \"the detector matches iMac16,1\"\n+\n+run_detector \"imac16,2\" || fail \"the detector matches iMac16,2 case-insensitively\"\n+pass \"the detector matches iMac16,2 case-insensitively\"\n+\n+run_detector \"iMac17,1\" && fail \"the detector rejects iMac17,1\"\n+pass \"the detector rejects iMac17,1\"\n+\n+run_detector \"iMac18,3\" && fail \"the detector rejects later CS8409 iMacs\"\n+pass \"the detector rejects later CS8409 iMacs\"\n+\n+run_detector \"MacBookPro12,1\" && fail \"the detector rejects other Apple machines\"\n+pass \"the detector rejects other Apple machines\"\n+\n+run_detector \"iMac16,20\" && fail \"the detector rejects a longer product name\"\n+pass \"the detector rejects a longer product name\"\n+\n+run_detector \"\" && fail \"the detector fails closed on an empty product name\"\n+pass \"the detector fails closed on an empty product name\"\n+\n+OMARCHY_DMI_PRODUCT_NAME=\"$test_tmp/absent\" bash \"$detector\" &&\n+  fail \"the detector fails closed when the DMI attribute is missing\"\n+pass \"the detector fails closed when the DMI attribute is missing\"\n+\n+stub_bin=\"$test_tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+\n+cat >\"$stub_bin/omarchy-hw-imac-cs4208\" <<'SH'\n+#!/bin/bash\n+[[ ${TEST_PRODUCT_NAME:-} == iMac16,1 || ${TEST_PRODUCT_NAME:-} == iMac16,2 ]]\n+SH\n+\n+cat >\"$stub_bin/aplay\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' 'card 1: PCH [HDA Intel PCH], device 0: CS4208 Analog [CS4208 Analog]'\n+SH\n+\n+cat >\"$stub_bin/amixer\" <<'SH'\n+#!/bin/bash\n+printf 'amixer' >>\"$CALL_LOG\"\n+printf '\\t%s' \"$@\" >>\"$CALL_LOG\"\n+printf '\\n' >>\"$CALL_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_leaf() {\n+  local home=\"$test_tmp/home\"\n+  rm -rf \"$home\"\n+  mkdir -p \"$home\"\n+  : >\"$test_tmp/calls.log\"\n+  HOME=\"$home\" \\\n+    PATH=\"$stub_bin:$PATH\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    CALL_LOG=\"$test_tmp/calls.log\" \\\n+    TEST_PRODUCT_NAME=\"${1-iMac16,2}\" \\\n+    bash -c 'source \"$1\"' bash \"$leaf\"\n+}\n+\n+run_leaf || fail \"the leaf installs the WirePlumber drop-in on the target machine\"\n+[[ -f $test_tmp/home/.config/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf ]] ||\n+  fail \"the leaf installs the WirePlumber drop-in on the target machine\"\n+grep -q $'amixer\\t-c\\t1\\tset\\tMaster\\t100%\\tunmute' \"$test_tmp/calls.log\" ||\n+  fail \"the leaf opens the CS4208 Master mixer\"\n+pass \"the leaf installs the WirePlumber drop-in on the target machine\"\n+\n+run_leaf \"ThinkPad X1\" || fail \"the leaf no-ops on other hardware\"\n+[[ -e $test_tmp/home/.config/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf ]] &&\n+  fail \"the leaf no-ops on other hardware\"\n+[[ -s $test_tmp/calls.log ]] && fail \"the leaf no-ops on other hardware\"\n+pass \"the leaf no-ops on other hardware\"\n+\n+run_migration() {\n+  local home=\"$test_tmp/home\"\n+  rm -rf \"$home\"\n+  mkdir -p \"$home\"\n+  : >\"$test_tmp/calls.log\"\n+  HOME=\"$home\" \\\n+    PATH=\"$stub_bin:$PATH\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    CALL_LOG=\"$test_tmp/calls.log\" \\\n+    TEST_PRODUCT_NAME=\"${1-iMac16,2}\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_migration || fail \"the migration installs the workaround on the target machine\"\n+[[ -f $test_tmp/home/.config/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf ]] ||\n+  fail \"the migration installs the workaround on the target machine\"\n+pass \"the migration installs the workaround on the target machine\"\n+\n+run_migration \"ThinkPad X1\" || fail \"the migration no-ops on other hardware\"\n+[[ -e $test_tmp/home/.config/wireplumber/wireplumber.conf.d/imac-cs4208-speakers.conf ]] &&\n+  fail \"the migration no-ops on other hardware\"\n+pass \"the migration no-ops on other hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

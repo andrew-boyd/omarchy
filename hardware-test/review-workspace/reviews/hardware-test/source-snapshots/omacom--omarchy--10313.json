@@ -1,0 +1,105 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10313",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cpu-power"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10313,
+  "checked_at": "2026-09-21T11:56:14.891941+00:00",
+  "title": "Cap MacBook10,1 RAPL at 4.5W/7W and CPU turbo at 3GHz",
+  "author": "Skeptomenos",
+  "head_sha": "a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:12Z",
+  "state": "open",
+  "body": "## Summary\n- Guarded on DMI `MacBook10,1` (2017 12-inch, fanless). Apple leaves RAPL unlocked, so Linux programs a 49W package cap on a 4.5W Y-series part and the i7-7Y75 turbos to 3.6GHz until the 100\u00b0C trip.\n- Cap PL1 at Intel's 4.5W TDP, PL2 at 7W (cTDP-up), and `scaling_max_freq` at 3.0GHz (the m3-7Y32 turbo both SKUs share). Re-apply after S3 via a system-sleep hook.\n- Existing installs pick this up through a migration. No-op on every other machine.\n\n## Test plan\n- [x] `bash test/shell.d/macbook10-power-envelope-test.sh` (pass)\n- [x] Live on MacBook10,1 i7-7Y75: after apply, `constraint_0_power_limit_uw=4500000`, `constraint_1_power_limit_uw=7000000`, `cpu0 scaling_max_freq=3000000`\n- [x] Envelope still held after a later force reboot\n- [ ] Confirm the leaf is a no-op on a non-MacBook10,1 (guard)\n- [ ] `omarchy update` on an existing MacBook10,1 runs the migration and enables the oneshot",
+  "draft": false,
+  "files": [
+    {
+      "sha": "f5fbcfa3db61631f7202992147a654beb0ec2aff",
+      "filename": "bin/omarchy-hw-macbook10",
+      "status": "added",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/bin%2Fomarchy-hw-macbook10",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/bin%2Fomarchy-hw-macbook10",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-macbook10?ref=a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "patch": "@@ -0,0 +1,5 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect the 2017 12-inch MacBook (MacBook10,1).\n+\n+omarchy-hw-match \"MacBook10,1\""
+    },
+    {
+      "sha": "780cdcf0e5bd0d4375d8a8c737ee5213974c0723",
+      "filename": "bin/omarchy-hw-macbook10-power-envelope",
+      "status": "added",
+      "additions": 116,
+      "deletions": 0,
+      "changes": 116,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/bin%2Fomarchy-hw-macbook10-power-envelope",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/bin%2Fomarchy-hw-macbook10-power-envelope",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-macbook10-power-envelope?ref=a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "patch": "@@ -0,0 +1,116 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Apply the MacBook10,1 RAPL and 3GHz CPU envelope\n+# omarchy:args=[status]\n+# omarchy:hidden=true\n+# omarchy:requires-sudo=true\n+\n+set -euo pipefail\n+\n+PL1_UW=4500000\n+PL2_UW=7000000\n+PL1_WINDOW_US=28000000\n+PL2_WINDOW_US=2000000\n+CPU_MAX_KHZ=3000000\n+\n+sysfs_root=${OMARCHY_SYSFS_ROOT:-}\n+\n+sysfs() {\n+  printf '%s%s' \"$sysfs_root\" \"$1\"\n+}\n+\n+product_name() {\n+  cat \"$(sysfs /sys/class/dmi/id/product_name)\" 2>/dev/null || true\n+}\n+\n+write_sysfs() {\n+  local path=$1\n+  local value=$2\n+\n+  [[ -f $path ]] || return 0\n+  printf '%s\\n' \"$value\" >\"$path\"\n+}\n+\n+print_status() {\n+  local rapl cpu0_max cpu0_cur pct temp\n+\n+  rapl=$(sysfs /sys/class/powercap/intel-rapl:0)\n+  cpu0_max=$(sysfs /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq)\n+  cpu0_cur=$(sysfs /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq)\n+  pct=$(sysfs /sys/devices/system/cpu/intel_pstate/max_perf_pct)\n+  temp=$(sysfs /sys/class/thermal/thermal_zone0/temp)\n+\n+  printf 'product=%s\\n' \"$(product_name)\"\n+  printf 'target_pl1_uw=%s\\n' \"$PL1_UW\"\n+  printf 'target_pl2_uw=%s\\n' \"$PL2_UW\"\n+  printf 'target_cpu_max_khz=%s\\n' \"$CPU_MAX_KHZ\"\n+  printf 'pl1_uw=%s\\n' \"$(cat \"$rapl/constraint_0_power_limit_uw\" 2>/dev/null || echo missing)\"\n+  printf 'pl2_uw=%s\\n' \"$(cat \"$rapl/constraint_1_power_limit_uw\" 2>/dev/null || echo missing)\"\n+  printf 'pl1_window_us=%s\\n' \"$(cat \"$rapl/constraint_0_time_window_us\" 2>/dev/null || echo missing)\"\n+  printf 'pl2_window_us=%s\\n' \"$(cat \"$rapl/constraint_1_time_window_us\" 2>/dev/null || echo missing)\"\n+  printf 'cpu0_scaling_max_khz=%s\\n' \"$(cat \"$cpu0_max\" 2>/dev/null || echo missing)\"\n+  printf 'cpu0_scaling_cur_khz=%s\\n' \"$(cat \"$cpu0_cur\" 2>/dev/null || echo missing)\"\n+  printf 'max_perf_pct=%s\\n' \"$(cat \"$pct\" 2>/dev/null || echo missing)\"\n+  printf 'pkg_temp_mc=%s\\n' \"$(cat \"$temp\" 2>/dev/null || echo missing)\"\n+}\n+\n+apply_envelope() {\n+  local rapl cpuinfo_max want pct scaling_max_files path\n+\n+  if [[ $(product_name) != \"MacBook10,1\" ]]; then\n+    return 0\n+  fi\n+\n+  if [[ -z $sysfs_root ]] && ((EUID != 0)); then\n+    echo \"omarchy-hw-macbook10-power-envelope must run as root\" >&2\n+    exit 1\n+  fi\n+\n+  rapl=$(sysfs /sys/class/powercap/intel-rapl:0)\n+  if [[ ! -d $rapl ]]; then\n+    echo \"intel-rapl sysfs is missing\" >&2\n+    exit 1\n+  fi\n+\n+  printf '%s\\n' \"$PL1_UW\" >\"$rapl/constraint_0_power_limit_uw\"\n+  printf '%s\\n' \"$PL2_UW\" >\"$rapl/constraint_1_power_limit_uw\"\n+  write_sysfs \"$rapl/constraint_0_time_window_us\" \"$PL1_WINDOW_US\"\n+  write_sysfs \"$rapl/constraint_1_time_window_us\" \"$PL2_WINDOW_US\"\n+  write_sysfs \"$rapl/enabled\" \"1\"\n+\n+  cpuinfo_max=$(cat \"$(sysfs /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)\")\n+  want=$CPU_MAX_KHZ\n+  if ((want > cpuinfo_max)); then\n+    want=$cpuinfo_max\n+  fi\n+\n+  shopt -s nullglob\n+  scaling_max_files=(\"$(sysfs /sys/devices/system/cpu)\"/cpu*/cpufreq/scaling_max_freq)\n+  shopt -u nullglob\n+  ((${#scaling_max_files[@]} > 0)) || {\n+    echo \"cpufreq scaling_max_freq is missing\" >&2\n+    exit 1\n+  }\n+\n+  for path in \"${scaling_max_files[@]}\"; do\n+    printf '%s\\n' \"$want\" >\"$path\"\n+  done\n+\n+  if ((cpuinfo_max > 0)); then\n+    pct=$((want * 100 / cpuinfo_max))\n+    write_sysfs \"$(sysfs /sys/devices/system/cpu/intel_pstate/max_perf_pct)\" \"$pct\"\n+  fi\n+}\n+\n+case \"${1:-apply}\" in\n+  status)\n+    print_status\n+    ;;\n+  apply | \"\")\n+    apply_envelope\n+    ;;\n+  *)\n+    echo \"Usage: omarchy-hw-macbook10-power-envelope [status]\" >&2\n+    exit 1\n+    ;;\n+esac"
+    },
+    {
+      "sha": "39039f584a91307745da7d441e4959fd360122a9",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "patch": "@@ -37,6 +37,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-macbook10-power-envelope.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\"\n "
+    },
+    {
+      "sha": "69eb275e71a8f221461eadbf6777c9c58fb5b87b",
+      "filename": "install/hardware/apple/fix-macbook10-power-envelope.sh",
+      "status": "added",
+      "additions": 37,
+      "deletions": 0,
+      "changes": 37,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/install%2Fhardware%2Fapple%2Ffix-macbook10-power-envelope.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/install%2Fhardware%2Fapple%2Ffix-macbook10-power-envelope.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-macbook10-power-envelope.sh?ref=a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "patch": "@@ -0,0 +1,37 @@\n+# The 2017 12-inch MacBook (MacBook10,1) is fanless. Apple leaves RAPL unlocked,\n+# so Linux programs a 49W package cap on a 4.5W Y-series part and the i7-7Y75\n+# turbos to 3.6GHz until the 100\u00b0C trip. Cap PL1/PL2 to Intel's TDP / cTDP-up\n+# and CPU turbo to the m3-7Y32's 3.0GHz so the chassis stays in the envelope\n+# both SKUs were rated for.\n+\n+if omarchy-hw-macbook10; then\n+  echo \"Detected MacBook10,1; capping RAPL at 4.5W/7W and CPU turbo at 3GHz\"\n+\n+  unit_path=${OMARCHY_MACBOOK10_ENVELOPE_UNIT:-/etc/systemd/system/omarchy-macbook10-power-envelope.service}\n+  sleep_hook=${OMARCHY_MACBOOK10_ENVELOPE_SLEEP_HOOK:-/usr/lib/systemd/system-sleep/omarchy-macbook10-power-envelope}\n+  envelope_bin=${OMARCHY_MACBOOK10_ENVELOPE_BIN:-${OMARCHY_PATH:-/usr/share/omarchy}/bin/omarchy-hw-macbook10-power-envelope}\n+\n+  sudo mkdir -p \"$(dirname \"$unit_path\")\" \"$(dirname \"$sleep_hook\")\"\n+\n+  sudo tee \"$unit_path\" >/dev/null <<EOF\n+[Unit]\n+Description=Omarchy MacBook10,1 RAPL and CPU frequency envelope\n+\n+[Service]\n+Type=oneshot\n+ExecStart=$envelope_bin\n+\n+[Install]\n+WantedBy=multi-user.target\n+EOF\n+\n+  sudo tee \"$sleep_hook\" >/dev/null <<EOF\n+#!/bin/bash\n+[[ \\$1 == post ]] || exit 0\n+exec \"$envelope_bin\"\n+EOF\n+  sudo chmod 755 \"$sleep_hook\"\n+\n+  sudo systemctl daemon-reload\n+  sudo systemctl enable --now omarchy-macbook10-power-envelope.service\n+fi"
+    },
+    {
+      "sha": "e6d6da1d92cb61f54e4ce8173813bf9a12c85cdf",
+      "filename": "migrations/1788380505.sh",
+      "status": "added",
+      "additions": 3,
+      "deletions": 0,
+      "changes": 3,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/migrations%2F1788380505.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/migrations%2F1788380505.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788380505.sh?ref=a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "patch": "@@ -0,0 +1,3 @@\n+echo \"Cap MacBook10,1 package power at 4.5W/7W and CPU turbo at 3GHz\"\n+\n+source \"$OMARCHY_PATH/install/hardware/apple/fix-macbook10-power-envelope.sh\""
+    },
+    {
+      "sha": "f53df6ea32d416328279e01cd2e03f30426a90a8",
+      "filename": "test/shell.d/macbook10-power-envelope-test.sh",
+      "status": "added",
+      "additions": 171,
+      "deletions": 0,
+      "changes": 171,
+      "blob_url": "https://github.com/omacom/omarchy/blob/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/test%2Fshell.d%2Fmacbook10-power-envelope-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/a91d3250fb9bc0528c74d2c31d76e1793b1c0630/test%2Fshell.d%2Fmacbook10-power-envelope-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmacbook10-power-envelope-test.sh?ref=a91d3250fb9bc0528c74d2c31d76e1793b1c0630",
+      "patch": "@@ -0,0 +1,171 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+detector=\"$ROOT/bin/omarchy-hw-macbook10\"\n+apply=\"$ROOT/bin/omarchy-hw-macbook10-power-envelope\"\n+leaf=\"$ROOT/install/hardware/apple/fix-macbook10-power-envelope.sh\"\n+all=\"$ROOT/install/hardware/all.sh\"\n+migration=\"$ROOT/migrations/1788380505.sh\"\n+\n+grep -q 'apple/fix-macbook10-power-envelope.sh' \"$all\" ||\n+  fail \"the MacBook10,1 power envelope runs during hardware setup\"\n+pass \"the MacBook10,1 power envelope runs during hardware setup\"\n+\n+grep -q 'fix-macbook10-power-envelope.sh' \"$migration\" ||\n+  fail \"a migration applies the envelope on existing installs\"\n+pass \"a migration applies the envelope on existing installs\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-hw-match\" <<'SH'\n+#!/bin/bash\n+[[ ${TEST_PRODUCT_NAME:-} == *\"$1\"* ]]\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/systemctl\" <<'SH'\n+#!/bin/bash\n+printf 'systemctl' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_detector() {\n+  PATH=\"$stub_bin:$PATH\" TEST_PRODUCT_NAME=\"$1\" bash \"$detector\"\n+}\n+\n+run_detector \"MacBook10,1\" || fail \"the detector matches MacBook10,1\"\n+pass \"the detector matches MacBook10,1\"\n+\n+run_detector \"MacBookPro14,1\" && fail \"the detector rejects a MacBook Pro\"\n+pass \"the detector rejects a MacBook Pro\"\n+\n+run_detector \"MacBook9,1\" && fail \"the detector rejects the 2016 12-inch\"\n+pass \"the detector rejects the 2016 12-inch\"\n+\n+fake_sysfs() {\n+  local root=$1 product=${2:-MacBook10,1}\n+  mkdir -p \"$root/sys/class/dmi/id\" \\\n+    \"$root/sys/class/powercap/intel-rapl:0\" \\\n+    \"$root/sys/devices/system/cpu/cpu0/cpufreq\" \\\n+    \"$root/sys/devices/system/cpu/cpu1/cpufreq\" \\\n+    \"$root/sys/devices/system/cpu/intel_pstate\" \\\n+    \"$root/sys/class/thermal/thermal_zone0\"\n+  printf '%s\\n' \"$product\" >\"$root/sys/class/dmi/id/product_name\"\n+  printf '49000000\\n' >\"$root/sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw\"\n+  printf '49000000\\n' >\"$root/sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw\"\n+  printf '27983872\\n' >\"$root/sys/class/powercap/intel-rapl:0/constraint_0_time_window_us\"\n+  printf '2440\\n' >\"$root/sys/class/powercap/intel-rapl:0/constraint_1_time_window_us\"\n+  printf '1\\n' >\"$root/sys/class/powercap/intel-rapl:0/enabled\"\n+  printf '3600000\\n' >\"$root/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq\"\n+  printf '3600000\\n' >\"$root/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq\"\n+  printf '1300000\\n' >\"$root/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq\"\n+  printf '3600000\\n' >\"$root/sys/devices/system/cpu/cpu1/cpufreq/cpuinfo_max_freq\"\n+  printf '3600000\\n' >\"$root/sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq\"\n+  printf '100\\n' >\"$root/sys/devices/system/cpu/intel_pstate/max_perf_pct\"\n+  printf '63000\\n' >\"$root/sys/class/thermal/thermal_zone0/temp\"\n+}\n+\n+sys=\"$test_tmp/sysfs\"\n+fake_sysfs \"$sys\"\n+\n+OMARCHY_SYSFS_ROOT=\"$sys\" bash \"$apply\"\n+[[ $(cat \"$sys/sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw\") == 4500000 ]] ||\n+  fail \"apply writes PL1 4.5W\"\n+[[ $(cat \"$sys/sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw\") == 7000000 ]] ||\n+  fail \"apply writes PL2 7W\"\n+[[ $(cat \"$sys/sys/class/powercap/intel-rapl:0/constraint_1_time_window_us\") == 2000000 ]] ||\n+  fail \"apply sets a multi-second PL2 window\"\n+[[ $(cat \"$sys/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq\") == 3000000 ]] ||\n+  fail \"apply caps CPU0 at 3GHz\"\n+[[ $(cat \"$sys/sys/devices/system/cpu/cpu1/cpufreq/scaling_max_freq\") == 3000000 ]] ||\n+  fail \"apply caps CPU1 at 3GHz\"\n+[[ $(cat \"$sys/sys/devices/system/cpu/intel_pstate/max_perf_pct\") == 83 ]] ||\n+  fail \"apply sets max_perf_pct to 83\"\n+pass \"apply writes the 4.5W/7W RAPL cap and 3GHz CPU ceiling\"\n+\n+other=\"$test_tmp/other\"\n+fake_sysfs \"$other\" \"MacBookPro14,1\"\n+OMARCHY_SYSFS_ROOT=\"$other\" bash \"$apply\"\n+[[ $(cat \"$other/sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw\") == 49000000 ]] ||\n+  fail \"apply leaves unrelated hardware RAPL unchanged\"\n+[[ $(cat \"$other/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq\") == 3600000 ]] ||\n+  fail \"apply leaves unrelated hardware frequency unchanged\"\n+pass \"apply is a no-op off MacBook10,1\"\n+\n+status=$(OMARCHY_SYSFS_ROOT=\"$sys\" bash \"$apply\" status)\n+[[ $status == *pl1_uw=4500000* ]] || fail \"status reports the applied PL1\" \"$status\"\n+[[ $status == *cpu0_scaling_max_khz=3000000* ]] || fail \"status reports the applied CPU cap\" \"$status\"\n+pass \"status reports the applied envelope\"\n+\n+unit=\"$test_tmp/omarchy-macbook10-power-envelope.service\"\n+hook=\"$test_tmp/sleep-hook\"\n+envelope_copy=\"$test_tmp/omarchy-hw-macbook10-power-envelope\"\n+cp \"$apply\" \"$envelope_copy\"\n+chmod +x \"$envelope_copy\"\n+\n+run_leaf() {\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+    TEST_PRODUCT_NAME=\"$1\" \\\n+    TEST_LOG=\"$calls\" \\\n+    OMARCHY_PATH=\"$ROOT\" \\\n+    OMARCHY_MACBOOK10_ENVELOPE_UNIT=\"$unit\" \\\n+    OMARCHY_MACBOOK10_ENVELOPE_SLEEP_HOOK=\"$hook\" \\\n+    OMARCHY_MACBOOK10_ENVELOPE_BIN=\"$envelope_copy\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$leaf\"\n+}\n+\n+rm -f \"$unit\" \"$hook\"\n+run_leaf \"MacBookPro14,1\"\n+[[ ! -f $unit ]] || fail \"setup skips unrelated hardware\"\n+[[ ! -s $calls ]] || fail \"setup escalates nothing on unrelated hardware\" \"$(cat \"$calls\")\"\n+pass \"setup skips unrelated hardware\"\n+\n+run_leaf \"MacBook10,1\"\n+[[ -f $unit ]] || fail \"setup writes the systemd unit\"\n+grep -Fq \"ExecStart=$envelope_copy\" \"$unit\" ||\n+  fail \"the unit runs the envelope command\" \"$(cat \"$unit\")\"\n+[[ -x $hook ]] || fail \"setup installs an executable resume hook\"\n+grep -Fq \"exec \\\"$envelope_copy\\\"\" \"$hook\" ||\n+  fail \"the resume hook re-applies the envelope\" \"$(cat \"$hook\")\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-macbook10-power-envelope.service' \"$calls\" ||\n+  fail \"setup enables the envelope service\" \"$(cat \"$calls\")\"\n+pass \"setup installs the boot unit and resume hook\"\n+\n+: >\"$calls\"\n+run_leaf \"MacBook10,1\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-macbook10-power-envelope.service' \"$calls\" ||\n+  fail \"setup remains idempotent\" \"$(cat \"$calls\")\"\n+pass \"setup remains idempotent\"\n+\n+: >\"$calls\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_PRODUCT_NAME=\"MacBook10,1\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_MACBOOK10_ENVELOPE_UNIT=\"$unit\" \\\n+  OMARCHY_MACBOOK10_ENVELOPE_SLEEP_HOOK=\"$hook\" \\\n+  OMARCHY_MACBOOK10_ENVELOPE_BIN=\"$envelope_copy\" \\\n+  bash -euo pipefail \"$migration\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-macbook10-power-envelope.service' \"$calls\" ||\n+  fail \"the migration runs hardware setup\" \"$(cat \"$calls\")\"\n+pass \"the migration runs hardware setup\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

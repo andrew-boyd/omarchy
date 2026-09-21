@@ -1,0 +1,141 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10936",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "older-macs"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10936,
+  "checked_at": "2026-09-21T11:56:55.969469+00:00",
+  "title": "Support pre-GCN AMD GPUs and BCM4321 wireless",
+  "author": "alkevintan",
+  "head_sha": "6ef21ac1251daf08e50f17f575122ec23488f39b",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-09T05:32:08Z",
+  "state": "open",
+  "body": "Three hardware fixes found while bringing Omarchy up on a 2007 iMac (iMac7,1 \u2014 Core 2 Duo, Radeon HD 2400 XT / RV610, BCM4321). All three affect any pre-GCN AMD machine, not just Apple hardware.\n\nVerified on the machine itself against the stock Arch packages \u2014 `hyprland 0.56.2-2`, `aquamarine 0.15.0-2`, `mesa 26.2.2`. Hyprland does run on this GPU: it falls back to a GLES 3.0 context and to the legacy DRM interface, and holds 60 Hz at 1680x1050 with blur and shadows on. These three fixes are what stood between that and a clean install.\n\n## 1. `broadcom-wl-dkms` for BCM4321\n\n`fix-bcm43xx.sh` matched only `14e4:43a0` and `14e4:4331`. The 2007\u20132008 iMacs and MacBooks ship a BCM4321 (`14e4:4328`, also `4329`/`432a`), which the `wl` driver covers alongside the two already listed. Without it the machine installs with no wireless at all.\n\nFolded the id checks into a single `grep -qE` so the list stays readable at five ids.\n\n## 2. Skip `vulkan-radeon` on pre-GCN AMD GPUs\n\nRADV only drives GPUs bound to `amdgpu`. On a `radeon`-driven card `vulkan-radeon` still installs `radeon_icd.json`, and enumeration then fails:\n\n```\nWARNING: radv_physical_device.c:2564: Device '/dev/dri/renderD128' is not using\n         the AMDGPU kernel driver: Invalid argument (VK_ERROR_INCOMPATIBLE_DRIVER)\nERROR:   setup_loader_term_phys_devs: Failed to detect any valid GPUs in the current config\n```\n\nThat stray ICD is all `omarchy-hw-vulkan` looks for, so it answered **yes** on a machine with no working Vulkan \u2014 and `omarchy-voxtype-install` runs `voxtype setup gpu --enable` off the back of that check. Not installing the ICD on hardware RADV cannot drive makes the probe honest again.\n\n## 3. Hide nightlight where the GPU cannot apply a CTM\n\n`hyprsunset` sends its temperature to Hyprland as a colour transform matrix over `hyprland-ctm-control-v1`, and aquamarine submits a CTM only on the DRM atomic path \u2014 `impl/Legacy.cpp` never does. On `radeon`, Hyprland logs:\n\n```\ndrm: failed to set DRM_CLIENT_CAP_ATOMIC, falling back to legacy\ndrm: connector LVDS-1 crtc doesn't support CTM\n```\n\nThe request is accepted and dropped, so `hyprctl hyprsunset temperature 4000` returns `ok`, the value reads back as `4000`, the shell's nightlight state flips to \"on\" \u2014 and the panel never changes. Screenshots taken at 6500K and 4000K were identical. It is a silent no-op rather than an error, which is the part worth fixing.\n\n`omarchy-hw-nightlight` answers no only when *every* DRM card is on `radeon`, so a machine that also has an atomic-capable GPU keeps the feature. The menu drops the row, and `omarchy-toggle-nightlight` refuses up front rather than running its retry loop and reporting a success nobody can see.\n\n**This is the most opinionated of the three.** It hides a UI element based on driver-name inference, because there is no shell-visible way to ask whether a CRTC exposes a CTM property. Happy to drop this commit and land only 1 and 2 if you would rather handle it differently.\n\n## Testing\n\nNew test files:\n\n- `test/shell.d/broadcom-wifi-test.sh` \u2014 3 assertions, including a regression guard for BCM4360/BCM4331\n- `test/shell.d/vulkan-hardware-test.sh` \u2014 4 assertions (radeon skips, amdgpu still installs, unbound driver skips, Intel unaffected)\n- `test/shell.d/nightlight-hardware-test.sh` \u2014 5 assertions, including the mixed-GPU and empty-tree cases\n\n`test/shell.d/nightlight-test.sh` gains a stub for the new capability probe plus 2 assertions for the unsupported path; its existing 14 assertions still pass.\n\nFull `./test/shell` on Linux / bash 5.2: **20 failures before and after**, against a clean clone of `quattro` (the 20 are missing `magick` and `lua` in my environment, not related to these changes). `./test/cli` is unchanged.\n\nOne note for anyone running these on a Mac: `install/hardware/vulkan.sh` needs bash 5, since `declare -A` silently drops the AMD entry under the bash 3.2 that ships with macOS. The test invokes `\"$BASH\"` rather than `bash` for that reason.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nhttps://claude.ai/code/session_01AUboE7GBC75XXqJC1pYUSk\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "9748e1bb7ec8a7ba946d71c8b5a224ee1009a766",
+      "filename": "bin/omarchy-hw-nightlight",
+      "status": "added",
+      "additions": 35,
+      "deletions": 0,
+      "changes": 35,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/bin%2Fomarchy-hw-nightlight",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/bin%2Fomarchy-hw-nightlight",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-nightlight?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -0,0 +1,35 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the GPU can apply a nightlight color temperature.\n+\n+# hyprsunset sends its color temperature to Hyprland as a colour transform\n+# matrix over hyprland-ctm-control-v1, and aquamarine only submits a CTM on the\n+# DRM atomic path. A driver without atomic modesetting accepts the request and\n+# drops it, so hyprctl answers \"ok\", the temperature reads back, and the panel\n+# never changes \u2014 a silent no-op rather than an error.\n+#\n+# radeon is the one such driver still in use: it drives pre-GCN AMD cards\n+# (TeraScale and older, e.g. the Radeon HD 2400 in a 2007 iMac) and reports\n+# \"crtc doesn't support CTM\". Everything newer is on amdgpu and is atomic.\n+#\n+# Only answer no when every DRM card is on radeon. A machine that also has a\n+# non-radeon GPU may well be driving its display from that one, and hiding a\n+# working feature is worse than leaving a broken one visible.\n+drm_path=\"${OMARCHY_DRM_PATH:-/sys/class/drm}\"\n+\n+cards=0\n+\n+for card in \"$drm_path\"/card[0-9]*; do\n+  name=${card##*/}\n+\n+  # Connectors are exposed as card0-LVDS-1 alongside the card itself.\n+  [[ $name == *-* ]] && continue\n+  [[ -e $card/device/driver ]] || continue\n+\n+  (( ++cards ))\n+  [[ $(readlink -f \"$card/device/driver\") == */radeon ]] || exit 0\n+done\n+\n+(( cards > 0 )) && exit 1\n+\n+exit 0"
+    },
+    {
+      "sha": "38d030017b19f92e4b39c8691b9e96052df499e4",
+      "filename": "bin/omarchy-toggle-nightlight",
+      "status": "modified",
+      "additions": 16,
+      "deletions": 0,
+      "changes": 16,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/bin%2Fomarchy-toggle-nightlight",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/bin%2Fomarchy-toggle-nightlight",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-toggle-nightlight?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -29,6 +29,22 @@ status_json() {\n     '{enabled:$enabled, temperature:(($temp | tonumber?) // null)}'\n }\n \n+# Without a CTM-capable display pipeline hyprsunset still answers \"ok\" and\n+# reports the temperature back, so the retry loop below would run to completion\n+# and this command would claim success over a panel that never changed. Say so\n+# instead. The menu hides this row on such hardware; this covers the keybind,\n+# the CLI, and anything reading --status.\n+if ! omarchy-hw-nightlight; then\n+  if [[ ${1:-} == \"--status\" ]]; then\n+    jq -cn '{enabled:false, temperature:null}'\n+    exit 0\n+  fi\n+\n+  omarchy-notification-send -u normal \"Nightlight unavailable\" \\\n+    \"This GPU's display driver cannot apply a color temperature.\"\n+  exit 1\n+fi\n+\n if [[ ${1:-} == \"--status\" ]]; then\n   status_json\n   exit 0"
+    },
+    {
+      "sha": "39aaf726c4442657f8db6e90e3860ceb670d5982",
+      "filename": "default/omarchy/omarchy-menu.jsonc",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/default%2Fomarchy%2Fomarchy-menu.jsonc",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/default%2Fomarchy%2Fomarchy-menu.jsonc",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fomarchy%2Fomarchy-menu.jsonc?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -91,7 +91,7 @@\n   \"trigger.toggle.notifications\": {\"icon\":\"\udb80\udc9b\",\"label\":\"Notifications\",\"action\":\"omarchy-toggle-notification-silencing\"},\n   \"trigger.toggle.crash-capture\": {\"icon\":\"\udb85\udea1\",\"label\":\"Crash Capture\",\"action\":\"omarchy-toggle-crash-capture\"},\n   \"trigger.toggle.screensaver\": {\"icon\":\"\udb84\udd04\",\"label\":\"Screensaver\",\"action\":\"omarchy-toggle-screensaver\"},\n-  \"trigger.toggle.nightlight\": {\"icon\":\"\udb81\udd0e\",\"label\":\"Nightlight\",\"action\":\"omarchy-toggle-nightlight\"},\n+  \"trigger.toggle.nightlight\": {\"icon\":\"\udb81\udd0e\",\"label\":\"Nightlight\",\"when\":\"omarchy-hw-nightlight\",\"action\":\"omarchy-toggle-nightlight\"},\n   \"trigger.toggle.top-bar\": {\"icon\":\"\udb80\udf5c\",\"label\":\"Menu Bar\",\"action\":\"omarchy-toggle-bar\"},\n   \"trigger.toggle.battery-percentage\": {\"icon\":\"\udb80\udc79\",\"label\":\"Battery Percentage\",\"when\":\"omarchy-hw-laptop\",\"action\":\"omarchy-shell omarchy.power togglePercentage\"},\n   \"trigger.toggle.workspace-layout\": {\"icon\":\"\udb84\udcac\",\"label\":\"Workspace Layout\",\"action\":\"omarchy-hyprland-workspace-layout-toggle\"},"
+    },
+    {
+      "sha": "bc2da881ae13aaa69d00fa15c5559b4a43fb8c59",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 2,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -1,10 +1,11 @@\n # Install Wi-Fi drivers for Broadcom chips found in some MacBooks, as well as other systems:\n # - BCM4360 (2013\u20132015 MacBooks)\n # - BCM4331 (2012, early 2013 MacBooks)\n+# - BCM4321 (2007\u20132008 iMacs and MacBooks; 4329 and 432a are the same chip)\n \n pci_info=$(lspci -nn)\n \n-if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n-  echo \"BCM4360 / BCM4331 detected\"\n+if echo \"$pci_info\" | grep -qE \"14e4:(43a0|4331|4328|4329|432a)\"; then\n+  echo \"Broadcom BCM4360 / BCM4331 / BCM4321 detected\"\n   omarchy-pkg-add broadcom-wl-dkms linux-headers\n fi"
+    },
+    {
+      "sha": "38ff7f1871349b9adf847514a51abd3c2c139c18",
+      "filename": "install/hardware/vulkan.sh",
+      "status": "modified",
+      "additions": 24,
+      "deletions": 0,
+      "changes": 24,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/install%2Fhardware%2Fvulkan.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/install%2Fhardware%2Fvulkan.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fvulkan.sh?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -9,8 +9,32 @@ declare -A VULKAN_DRIVERS=(\n \n PACKAGES=()\n \n+# RADV only drives GPUs bound to amdgpu. Pre-GCN cards (TeraScale and older,\n+# e.g. the Radeon HD 2400 in a 2007 iMac) stay on the radeon driver, where\n+# vulkan-radeon still installs radeon_icd.json but every device enumeration\n+# fails with VK_ERROR_INCOMPATIBLE_DRIVER. That stray ICD makes\n+# omarchy-hw-vulkan answer yes on a machine with no working Vulkan.\n+amd_gpu_on_amdgpu() {\n+  local device\n+  local pci_devices_path=\"${OMARCHY_PCI_DEVICES_PATH:-/sys/bus/pci/devices}\"\n+\n+  for device in \"$pci_devices_path\"/*; do\n+    [[ -e $device/vendor ]] || continue\n+    [[ $(< \"$device/vendor\") == \"0x1002\" ]] || continue\n+    [[ $(< \"$device/class\") == 0x03* ]] || continue\n+    [[ $(readlink -f \"$device/driver\") == */amdgpu ]] && return 0\n+  done\n+\n+  return 1\n+}\n+\n for vendor in \"${!VULKAN_DRIVERS[@]}\"; do\n   if lspci | grep -iE \"(VGA|Display).*$vendor\" > /dev/null; then\n+    if [[ $vendor == \"AMD\" ]] && ! amd_gpu_on_amdgpu; then\n+      echo \"Skipping vulkan-radeon: AMD GPU is not on amdgpu (pre-GCN), RADV cannot drive it\"\n+      continue\n+    fi\n+\n     PACKAGES+=(\"${VULKAN_DRIVERS[$vendor]}\")\n   fi\n done"
+    },
+    {
+      "sha": "5b14755450e93d17d0b72eb7c04b0b685fc8a2d1",
+      "filename": "test/shell.d/broadcom-wifi-test.sh",
+      "status": "added",
+      "additions": 60,
+      "deletions": 0,
+      "changes": 60,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fbroadcom-wifi-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fbroadcom-wifi-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbroadcom-wifi-test.sh?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -0,0 +1,60 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+fix_bcm=\"$ROOT/install/hardware/fix-bcm43xx.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+\n+# Real lspci keeps printing well past any match, so a grep -q consumer can be\n+# killed by SIGPIPE; keep the stub chatty for the same reason as the T2 test.\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+[[ -n ${STUB_WIFI_ID:-} ]] &&\n+  echo \"04:00.0 Network controller [0280]: Broadcom Inc. and subsidiaries Wireless [$STUB_WIFI_ID] (rev 03)\"\n+for _ in {1..4096}; do\n+  echo '02:00.0 Host bridge [0600]: Filler Device [ffff:0000]'\n+done\n+SH\n+chmod +x \"$stub_bin/lspci\"\n+\n+installs_driver_for() {\n+  local wifi_id=${1:-}\n+  local calls=\"$test_tmp/calls-$RANDOM\"\n+\n+  PATH=\"$stub_bin:$PATH\" \\\n+  STUB_WIFI_ID=\"$wifi_id\" \\\n+  OMARCHY_TEST_CALLS=\"$calls\" \\\n+    \"$BASH\" -c '\n+      omarchy-pkg-add() { printf \"%s\\n\" \"$@\" >>\"$OMARCHY_TEST_CALLS\"; }\n+      source \"$1\"\n+    ' _ \"$fix_bcm\" >/dev/null 2>&1\n+\n+  [[ -f $calls ]] && grep -qx 'broadcom-wl-dkms' \"$calls\"\n+}\n+\n+# BCM4321 is the 2007-2008 iMac/MacBook card. b43 can drive it, but Omarchy\n+# standardized on the wl driver, which covers it too.\n+for id in 14e4:4328 14e4:4329 14e4:432a; do\n+  installs_driver_for \"$id\" ||\n+    fail \"BCM4321 ($id) gets broadcom-wl-dkms\"\n+done\n+pass \"BCM4321 device ids pull in broadcom-wl-dkms\"\n+\n+# Regression guard: the ids that already worked must keep working.\n+installs_driver_for 14e4:43a0 || fail \"BCM4360 still gets broadcom-wl-dkms\"\n+installs_driver_for 14e4:4331 || fail \"BCM4331 still gets broadcom-wl-dkms\"\n+pass \"BCM4360 and BCM4331 keep their driver\"\n+\n+# A Broadcom wireless card the wl driver does not claim must not drag it in.\n+! installs_driver_for 14e4:4353 ||\n+  fail \"an unsupported Broadcom id does not install broadcom-wl-dkms\"\n+! installs_driver_for ||\n+  fail \"a machine with no Broadcom wireless installs nothing\"\n+pass \"non-matching hardware installs no Broadcom driver\""
+    },
+    {
+      "sha": "88f7a0d319ca5167ccc6af591d8ceb3faec9cc1d",
+      "filename": "test/shell.d/nightlight-hardware-test.sh",
+      "status": "added",
+      "additions": 67,
+      "deletions": 0,
+      "changes": 67,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fnightlight-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fnightlight-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fnightlight-hardware-test.sh?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -0,0 +1,67 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw_nightlight=\"$ROOT/bin/omarchy-hw-nightlight\"\n+toggle=\"$ROOT/bin/omarchy-toggle-nightlight\"\n+menu=\"$ROOT/default/omarchy/omarchy-menu.jsonc\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+# A /sys/class/drm shaped tree: one directory per card bound to the named\n+# driver, plus the connector directories the real thing interleaves with them.\n+make_drm_tree() {\n+  local tree=\"$test_tmp/drm-$RANDOM\"\n+  local index=0\n+  local driver\n+\n+  mkdir -p \"$tree/drivers\"\n+\n+  for driver in \"$@\"; do\n+    mkdir -p \"$tree/card$index/device\" \"$tree/drivers/$driver\"\n+    ln -s \"../../drivers/$driver\" \"$tree/card$index/device/driver\"\n+    # Connectors hang off the same directory and must not be counted as cards.\n+    mkdir -p \"$tree/card$index-LVDS-1\" \"$tree/card$index-DVI-I-1\"\n+    (( ++index ))\n+  done\n+\n+  echo \"$tree\"\n+}\n+\n+supports_nightlight() {\n+  OMARCHY_DRM_PATH=\"$1\" \"$BASH\" \"$hw_nightlight\"\n+}\n+\n+# Pre-GCN AMD: aquamarine's legacy DRM path never submits a CTM, so hyprsunset\n+# is a silent no-op here.\n+! supports_nightlight \"$(make_drm_tree radeon)\" ||\n+  fail \"a radeon-only machine reports no nightlight support\"\n+pass \"radeon-only hardware reports no nightlight support\"\n+\n+# Everything atomic must keep the feature.\n+supports_nightlight \"$(make_drm_tree amdgpu)\" ||\n+  fail \"an amdgpu machine still supports nightlight\"\n+supports_nightlight \"$(make_drm_tree i915)\" ||\n+  fail \"an Intel machine still supports nightlight\"\n+pass \"atomic drivers keep nightlight\"\n+\n+# Conservative on mixed hardware: the display may be driven by the other GPU,\n+# and hiding a working feature is worse than leaving a broken one visible.\n+supports_nightlight \"$(make_drm_tree radeon i915)\" ||\n+  fail \"a machine with both radeon and an atomic GPU keeps nightlight\"\n+pass \"mixed radeon plus atomic hardware keeps nightlight\"\n+\n+# Nothing to go on is not evidence of breakage.\n+supports_nightlight \"$(make_drm_tree)\" ||\n+  fail \"a tree with no DRM cards does not claim nightlight is broken\"\n+pass \"an empty DRM tree keeps nightlight\"\n+\n+# The guard has to be wired up in both places, or the silent no-op comes back.\n+grep -Fq '\"when\":\"omarchy-hw-nightlight\"' \"$menu\" ||\n+  fail \"the menu hides the Nightlight row on hardware that cannot do it\"\n+grep -Fq 'if ! omarchy-hw-nightlight; then' \"$toggle\" ||\n+  fail \"omarchy-toggle-nightlight refuses instead of reporting a false success\"\n+pass \"the nightlight guard is wired into the menu and the toggle\""
+    },
+    {
+      "sha": "7c61bd496938fb33be39493718ee6b5b393b6f4f",
+      "filename": "test/shell.d/nightlight-test.sh",
+      "status": "modified",
+      "additions": 35,
+      "deletions": 1,
+      "changes": 36,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fnightlight-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fnightlight-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fnightlight-test.sh?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -47,12 +47,28 @@ cat >\"$TMPDIR/bin/omarchy-shell\" <<'SH'\n printf '%s\\n' \"$*\" >>\"$OMARCHY_SHELL_LOG\"\n SH\n \n-chmod +x \"$TMPDIR/bin/hyprctl\" \"$TMPDIR/bin/pgrep\" \"$TMPDIR/bin/omarchy-shell\"\n+# Hardware that cannot apply a CTM is the interesting second case, so make the\n+# capability probe switchable rather than assuming it always answers yes.\n+cat >\"$TMPDIR/bin/omarchy-hw-nightlight\" <<'SH'\n+#!/bin/bash\n+exit \"${NIGHTLIGHT_SUPPORTED:-0}\"\n+SH\n+\n+cat >\"$TMPDIR/bin/omarchy-notification-send\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$NOTIFICATION_LOG\"\n+SH\n+\n+NOTIFICATIONS=\"$TMPDIR/notifications\"\n+\n+chmod +x \"$TMPDIR/bin/hyprctl\" \"$TMPDIR/bin/pgrep\" \"$TMPDIR/bin/omarchy-shell\" \\\n+  \"$TMPDIR/bin/omarchy-hw-nightlight\" \"$TMPDIR/bin/omarchy-notification-send\"\n \n nightlight_cli() {\n   PATH=\"$TMPDIR/bin:$PATH\" \\\n   HYPRSUNSET_STATE=\"$STATE\" \\\n   OMARCHY_SHELL_LOG=\"$SHELL_LOG\" \\\n+  NOTIFICATION_LOG=\"$NOTIFICATIONS\" \\\n     \"$ROOT/bin/omarchy-toggle-nightlight\" \"$@\"\n }\n \n@@ -90,3 +106,21 @@ if rg -q 'omarchy.indicators' \"$ROOT/bin/omarchy-toggle-nightlight\"; then\n   fail \"nightlight toggle leaves indicator refresh to the nightlight service\"\n fi\n pass \"nightlight toggle leaves indicator refresh to the nightlight service\"\n+\n+# On a display pipeline with no CTM support hyprsunset still answers \"ok\" and\n+# echoes the temperature back, so the toggle has to refuse up front rather than\n+# run its retry loop and claim a success the panel never showed.\n+printf '6500\\n' >\"$STATE\"\n+: >\"$NOTIFICATIONS\"\n+\n+NIGHTLIGHT_SUPPORTED=1 nightlight_cli >/dev/null 2>&1 &&\n+  fail \"nightlight toggle exits non-zero on hardware that cannot apply a temperature\"\n+[[ $(<\"$STATE\") == 6500 ]] ||\n+  fail \"nightlight toggle leaves the temperature alone on unsupported hardware\"\n+grep -Fq 'Nightlight unavailable' \"$NOTIFICATIONS\" ||\n+  fail \"nightlight toggle tells the user why it did nothing\"\n+pass \"nightlight toggle refuses on hardware that cannot apply a temperature\"\n+\n+[[ $(NIGHTLIGHT_SUPPORTED=1 nightlight_status 4000 | jq -r .enabled) == \"false\" ]] ||\n+  fail \"nightlight status reports disabled on unsupported hardware\"\n+pass \"nightlight status reports disabled on unsupported hardware\""
+    },
+    {
+      "sha": "3d3b8fbdcb120af0b496f264e51bcfd46cee9a08",
+      "filename": "test/shell.d/vulkan-hardware-test.sh",
+      "status": "added",
+      "additions": 86,
+      "deletions": 0,
+      "changes": 86,
+      "blob_url": "https://github.com/omacom/omarchy/blob/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fvulkan-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/6ef21ac1251daf08e50f17f575122ec23488f39b/test%2Fshell.d%2Fvulkan-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fvulkan-hardware-test.sh?ref=6ef21ac1251daf08e50f17f575122ec23488f39b",
+      "patch": "@@ -0,0 +1,86 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+vulkan=\"$ROOT/install/hardware/vulkan.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+mkdir -p \"$stub_bin\"\n+\n+# lspci only has to name the vendor on a VGA line; the driver question is\n+# answered from sysfs, which is what this script actually gates on.\n+cat >\"$stub_bin/lspci\" <<'SH'\n+#!/bin/bash\n+echo \"01:00.0 VGA compatible controller: ${STUB_GPU_VENDOR:-Advanced Micro Devices, Inc. [AMD/ATI]} RV610\"\n+SH\n+chmod +x \"$stub_bin/lspci\"\n+\n+# A GPU claimed by $1 (\"radeon\" or \"amdgpu\"), shaped like /sys/bus/pci/devices.\n+make_pci_tree() {\n+  local driver=$1\n+  local vendor=${2:-0x1002}\n+  local tree=\"$test_tmp/pci-$driver-$RANDOM\"\n+\n+  mkdir -p \"$tree/0000:01:00.0\" \"$tree/drivers/$driver\"\n+  echo \"$vendor\" >\"$tree/0000:01:00.0/vendor\"\n+  echo \"0x030000\" >\"$tree/0000:01:00.0/class\"\n+  ln -s \"../drivers/$driver\" \"$tree/0000:01:00.0/driver\"\n+\n+  echo \"$tree\"\n+}\n+\n+# Sourcing vulkan.sh with omarchy-pkg-add stubbed records what it would install.\n+# The packages go to a file rather than stdout: the script also explains itself\n+# on stdout, and those messages name the very packages being asserted on.\n+installed_packages() {\n+  local pci_path=$1\n+  local calls=\"$test_tmp/calls-$RANDOM\"\n+\n+  # \"$BASH\", not \"bash\": vulkan.sh needs an associative array, and a stray\n+  # bash 3.2 earlier in PATH would silently drop the AMD entry instead.\n+  PATH=\"$stub_bin:$PATH\" \\\n+  OMARCHY_PCI_DEVICES_PATH=\"$pci_path\" \\\n+  OMARCHY_TEST_CALLS=\"$calls\" \\\n+    \"$BASH\" -c '\n+      omarchy-pkg-add() { printf \"%s\\n\" \"$@\" >>\"$OMARCHY_TEST_CALLS\"; }\n+      source \"$1\"\n+    ' _ \"$vulkan\" >/dev/null 2>&1\n+\n+  [[ -f $calls ]] && cat \"$calls\" || true\n+}\n+\n+# Pre-GCN: radeon-driven AMD GPUs cannot be used by RADV, and the ICD that\n+# vulkan-radeon drops in would otherwise make omarchy-hw-vulkan answer yes.\n+pre_gcn=$(make_pci_tree radeon)\n+result=$(installed_packages \"$pre_gcn\")\n+[[ $result != *vulkan-radeon* ]] ||\n+  fail \"vulkan-radeon is skipped on a pre-GCN AMD GPU bound to radeon (got: $result)\"\n+pass \"pre-GCN AMD GPUs on the radeon driver do not get vulkan-radeon\"\n+\n+# GCN and newer still must, or every supported AMD machine loses Vulkan.\n+gcn=$(make_pci_tree amdgpu)\n+result=$(installed_packages \"$gcn\")\n+[[ $result == *vulkan-radeon* ]] ||\n+  fail \"vulkan-radeon is still installed for an amdgpu-bound GPU (got: $result)\"\n+pass \"AMD GPUs on the amdgpu driver still get vulkan-radeon\"\n+\n+# A GPU with no bound driver at all is not a working Vulkan target either.\n+unbound=\"$test_tmp/pci-unbound\"\n+mkdir -p \"$unbound/0000:01:00.0\"\n+echo \"0x1002\" >\"$unbound/0000:01:00.0/vendor\"\n+echo \"0x030000\" >\"$unbound/0000:01:00.0/class\"\n+result=$(installed_packages \"$unbound\")\n+[[ $result != *vulkan-radeon* ]] ||\n+  fail \"vulkan-radeon is skipped when no driver is bound to the AMD GPU (got: $result)\"\n+pass \"an AMD GPU with no bound driver does not get vulkan-radeon\"\n+\n+# The AMD guard must not touch the other vendors' drivers.\n+result=$(STUB_GPU_VENDOR=\"Intel Corporation\" installed_packages \"$pre_gcn\")\n+[[ $result == *vulkan-intel* ]] ||\n+  fail \"Intel GPUs still get vulkan-intel regardless of the AMD guard (got: $result)\"\n+pass \"the AMD guard leaves vulkan-intel selection alone\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

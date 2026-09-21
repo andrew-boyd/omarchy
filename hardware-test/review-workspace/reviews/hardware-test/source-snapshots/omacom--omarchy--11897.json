@@ -1,0 +1,69 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11897",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "kernel-headers"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "f464b6087dd4550ed153d940fccd38531a83425b",
+      "state": "merged"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11897,
+  "checked_at": "2026-09-21T11:56:34.204494+00:00",
+  "title": "Use Omarchy kernel headers for hardware DKMS drivers",
+  "author": "ryanrhughes",
+  "head_sha": "f464b6087dd4550ed153d940fccd38531a83425b",
+  "base_sha": "86a2e5830eae4d660a66df8cf37f0a35bf4fe8a2",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-15T03:47:04Z",
+  "state": "merged",
+  "body": "Fresh installs using `linux-omarchy` still request stock `linux-headers` when Broadcom BCM4360/BCM4331, Tuxedo/Slimbook, or Motorcomm YT6801 hardware is detected. Install `linux-omarchy-headers` alongside those DKMS drivers so they can build for the selected kernel.\n\nValidated Bash syntax and nine package-selection scenarios with hardware probes and package installation stubbed: both Broadcom IDs, both laptop vendors, both Ethernet detection strings, and non-matching hardware for each installer. All passed.\n\nThe published 4.0.4rc1 ISO already contains the matching headers, but its bundled runtime has the old installer scripts. The release needs an updated runtime package and rebuilt ISO to include this fix.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "94fd16e6e56040085bf1d54fb4f2ce33c7709954",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f464b6087dd4550ed153d940fccd38531a83425b/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f464b6087dd4550ed153d940fccd38531a83425b/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=f464b6087dd4550ed153d940fccd38531a83425b",
+      "patch": "@@ -6,5 +6,5 @@ pci_info=$(lspci -nn)\n \n if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n   echo \"BCM4360 / BCM4331 detected\"\n-  omarchy-pkg-add broadcom-wl-dkms linux-headers\n+  omarchy-pkg-add broadcom-wl-dkms linux-omarchy-headers\n fi"
+    },
+    {
+      "sha": "a2d3b8c6145dd8fba95a46a4be36ba8422190d8e",
+      "filename": "install/hardware/fix-tuxedo-backlight.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f464b6087dd4550ed153d940fccd38531a83425b/install%2Fhardware%2Ffix-tuxedo-backlight.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f464b6087dd4550ed153d940fccd38531a83425b/install%2Fhardware%2Ffix-tuxedo-backlight.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-tuxedo-backlight.sh?ref=f464b6087dd4550ed153d940fccd38531a83425b",
+      "patch": "@@ -1,7 +1,7 @@\n # Install Tuxedo drivers for keyboard backlighting on Tuxedo laptops and\n # compatible devices like the Slimbook Executive (Clevo/Tuxedo chassis).\n if cat /sys/class/dmi/id/sys_vendor 2>/dev/null | grep -qi \"TUXEDO\\|Slimbook\"; then\n-  omarchy-pkg-add linux-headers tuxedo-drivers-nocompatcheck-dkms\n+  omarchy-pkg-add linux-omarchy-headers tuxedo-drivers-nocompatcheck-dkms\n \n   # Blacklist the legacy clevo_xsm_wmi module which conflicts with the tuxedo-drivers\n   # clevo_wmi module. When clevo_xsm_wmi loads first, it grabs the Clevo WMI GUIDs,"
+    },
+    {
+      "sha": "7c0360e6bac8f1f8f926ac4b3a19a5b9319a625a",
+      "filename": "install/hardware/fix-yt6801-ethernet-adapter.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/f464b6087dd4550ed153d940fccd38531a83425b/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/f464b6087dd4550ed153d940fccd38531a83425b/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-yt6801-ethernet-adapter.sh?ref=f464b6087dd4550ed153d940fccd38531a83425b",
+      "patch": "@@ -1,4 +1,4 @@\n # Install drivers for Motorcomm YT6801 ethernet adapter used by the Slimbook Executive\n if lspci | grep -i \"YT6801\\|Motorcomm.*Ethernet\"; then\n-  omarchy-pkg-add linux-headers yt6801-dkms\n+  omarchy-pkg-add linux-omarchy-headers yt6801-dkms\n fi"
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

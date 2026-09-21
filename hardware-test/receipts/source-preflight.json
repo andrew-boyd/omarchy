@@ -1,0 +1,12 @@
+{
+  "scope": "Revised source inside a disposable guest installed from B7; not new-ISO validation",
+  "run": ".state/vm-install/2026-09-20/builds/build-20260921T043945Z-Fj2O1V/sources/omarchy-iso/test-runs/omarchy-2026.09.21-intel-mac-local-x86_64-integration/runs/20260921-081608-hardware-source-preflight",
+  "broadcom_exit": 0,
+  "apple_efi_exit": 0,
+  "scenario_exit": 0,
+  "commits": {
+    "omarchy": "6096d649643d0d0e0bae65c7949e5043bf2cc338",
+    "omarchy-pkgs": "8b922451bdb2815b705688b3c77bfd1a50409a17",
+    "omarchy-iso": "13d7d5259fb7225248420c3fc26fc831b08cd44a"
+  }
+}

@@ -1,0 +1,62 @@
+Sep 21 14:06:32 omarchy-test sddm-helper[636]: pam_unix(sddm-greeter:session): session opened for user sddm(uid=961) by (uid=0)
+Sep 21 14:06:32 omarchy-test (systemd)[653]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[sddm] ruser=[<unknown>] rhost=[<unknown>]
+Sep 21 14:06:32 omarchy-test (systemd)[653]: pam_unix(systemd-user:session): session opened for user sddm(uid=961) by sddm(uid=0)
+Sep 21 14:06:33 omarchy-test sshd-session[690]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:33 omarchy-test (systemd)[706]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[omarchy] ruser=[<unknown>] rhost=[<unknown>]
+Sep 21 14:06:33 omarchy-test (systemd)[706]: pam_unix(systemd-user:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:33 omarchy-test sshd-session[690]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:34 omarchy-test sshd-session[728]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:34 omarchy-test sshd-session[728]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:39 omarchy-test sshd-session[796]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:39 omarchy-test sshd-session[796]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:41 omarchy-test sddm-helper[808]: pam_unix(sddm:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:41 omarchy-test sddm-helper[636]: pam_unix(sddm-greeter:session): session closed for user sddm
+Sep 21 14:06:51 omarchy-test sshd-session[2279]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:51 omarchy-test sshd-session[2279]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:51 omarchy-test (sd-pam)[655]: pam_unix(systemd-user:session): session closed for user sddm
+Sep 21 14:06:53 omarchy-test sshd-session[2302]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:53 omarchy-test sshd-session[2302]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:53 omarchy-test sshd-session[2309]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:53 omarchy-test sudo[2316]:  omarchy : PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c 'true; journalctl -b --no-pager | grep -E "pam_|faillock|sudo" || true'
+Sep 21 14:06:53 omarchy-test sudo[2316]: pam_unix(sudo:session): session opened for user root(uid=0) by omarchy(uid=1000)
+Sep 21 14:06:53 omarchy-test sudo[2316]: pam_unix(sudo:session): session closed for user root
+Sep 21 14:06:53 omarchy-test sshd-session[2309]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:53 omarchy-test sshd-session[2324]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:53 omarchy-test sshd-session[2324]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:53 omarchy-test sshd-session[2330]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:54 omarchy-test sshd-session[2330]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:54 omarchy-test sshd-session[2337]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:54 omarchy-test sshd-session[2337]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:54 omarchy-test sshd-session[2398]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:54 omarchy-test sshd-session[2398]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:54 omarchy-test sshd-session[2469]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:54 omarchy-test sshd-session[2469]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:54 omarchy-test sshd-session[2520]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:55 omarchy-test sshd-session[2520]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:55 omarchy-test sshd-session[2594]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:55 omarchy-test sshd-session[2594]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:55 omarchy-test sshd-session[2666]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:55 omarchy-test sshd-session[2666]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:56 omarchy-test sshd-session[2756]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:06:56 omarchy-test sshd-session[2756]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:06:59 omarchy-test quickshell[3002]: pam_unix(omarchy-lock-password:auth): authentication failure; logname=omarchy uid=1000 euid=1000 tty= ruser= rhost=  user=omarchy
+Sep 21 14:07:04 omarchy-test sshd-session[3091]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:04 omarchy-test sshd-session[3091]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:05 omarchy-test sshd-session[3530]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:06 omarchy-test sshd-session[3530]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:07 omarchy-test sshd-session[3663]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:07 omarchy-test sshd-session[3663]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:09 omarchy-test sshd-session[3679]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:25 omarchy-test sshd-session[3679]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:25 omarchy-test sshd-session[4182]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:25 omarchy-test sshd-session[4182]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:26 omarchy-test sshd-session[4210]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:26 omarchy-test sudo[4216]:  omarchy : PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c 'bash /home/omarchy/guest-runtime-recovery.sh'
+Sep 21 14:07:26 omarchy-test sudo[4216]: pam_unix(sudo:session): session opened for user root(uid=0) by omarchy(uid=1000)
+Sep 21 14:07:37 omarchy-test sudo[4216]: pam_unix(sudo:session): session closed for user root
+Sep 21 14:07:37 omarchy-test sshd-session[4210]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:37 omarchy-test sshd-session[4334]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:37 omarchy-test sshd-session[4334]: pam_unix(sshd:session): session closed for user omarchy
+Sep 21 14:07:38 omarchy-test sshd-session[4342]: pam_unix(sshd:session): session opened for user omarchy(uid=1000) by omarchy(uid=0)
+Sep 21 14:07:38 omarchy-test sudo[4348]:  omarchy : PWD=/home/omarchy ; USER=root ; COMMAND=/usr/bin/bash -c 'journalctl -b --no-pager | grep -E "pam_|faillock|sudo" || true'
+Sep 21 14:07:38 omarchy-test sudo[4348]: pam_unix(sudo:session): session opened for user root(uid=0) by omarchy(uid=1000)

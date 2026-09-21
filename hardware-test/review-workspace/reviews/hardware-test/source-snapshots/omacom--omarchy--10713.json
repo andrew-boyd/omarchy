@@ -1,0 +1,63 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/10713",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "touchbar-lid-lock"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+      "state": "open"
+    },
+    {
+      "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+      "state": "open",
+      "updated_at": "2026-09-12T14:04:51Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 10713,
+  "checked_at": "2026-09-21T11:57:31.384747+00:00",
+  "title": "Use active external displays for the lid-close lock decision",
+  "author": "yashranaway",
+  "head_sha": "da181d16abdacac62b8a67fb7f1944ed892586b7",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T14:04:51Z",
+  "state": "open",
+  "body": "## What changed\n\nUse Hyprland's active external-monitor check when deciding whether a lid close should lock the session. Keep the physical connector detector unchanged for callers that need it.\n\nOn T2 Macs, tiny-dfr exposes a permanently connected Touch Bar DRM connector that Hyprland does not manage. The physical connector check treats it as an external monitor and skips the lock even when the laptop has no usable external display. This also makes the lock decision match the active-display check used by clamshell reconciliation.\n\nFixes #10618.\n\n## Testing\n\n- `bash test/shell.d/lid-close-test.sh`, including the real monitor-query helper with the reporter's internal-only monitor list and a positive physical connector check\n- `bash -n bin/omarchy-system-lid-close`\n- `git diff --check`\n\nNo T2 hardware or graphical session was available; physical lid-close verification is still needed.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "64711dbe5eb58a3760c1c53b9d93a9528bfc8485",
+      "filename": "bin/omarchy-system-lid-close",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 4,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/da181d16abdacac62b8a67fb7f1944ed892586b7/bin%2Fomarchy-system-lid-close",
+      "raw_url": "https://github.com/omacom/omarchy/raw/da181d16abdacac62b8a67fb7f1944ed892586b7/bin%2Fomarchy-system-lid-close",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-system-lid-close?ref=da181d16abdacac62b8a67fb7f1944ed892586b7",
+      "patch": "@@ -10,10 +10,10 @@\n # closes gives Quickshell a head start before logind even decides to suspend.\n # omarchy-system-sleep-lock then usually finds the session already secure.\n #\n-# A docked lid close does not suspend (HandleLidSwitchDocked defaults to\n-# ignore), so it must not lock either: that is clamshell mode, still in use on\n-# the external display.\n-if omarchy-hw-laptop-closed && ! omarchy-hw-external-monitors; then\n+# Keep an active external display usable in clamshell mode. Raw DRM connectors\n+# also include devices Hyprland does not use, such as the T2 Mac Touch Bar;\n+# those must not prevent locking when the laptop display is closed.\n+if omarchy-hw-laptop-closed && ! omarchy-hyprland-monitor-external-active; then\n   omarchy-system-lock >/dev/null 2>&1 || true\n fi\n "
+    },
+    {
+      "sha": "a622bd076354c0ed90221b87c07626d21693db74",
+      "filename": "test/shell.d/lid-close-test.sh",
+      "status": "modified",
+      "additions": 19,
+      "deletions": 3,
+      "changes": 22,
+      "blob_url": "https://github.com/omacom/omarchy/blob/da181d16abdacac62b8a67fb7f1944ed892586b7/test%2Fshell.d%2Flid-close-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/da181d16abdacac62b8a67fb7f1944ed892586b7/test%2Fshell.d%2Flid-close-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Flid-close-test.sh?ref=da181d16abdacac62b8a67fb7f1944ed892586b7",
+      "patch": "@@ -8,8 +8,7 @@ lid_close=\"$ROOT/bin/omarchy-system-lid-close\"\n tmpdir=$(mktemp -d)\n trap 'rm -rf \"$tmpdir\"' EXIT\n \n-# closed/docked are the two facts logind uses to decide whether a lid close\n-# suspends, so each scenario pins them and records what the lid handler did.\n+# Pin the lid state and whether Hyprland has an active external display.\n setup_scenario() {\n   scenario_dir=\"$tmpdir/$1\"\n   mock_bin=\"$scenario_dir/bin\"\n@@ -23,7 +22,7 @@ setup_scenario() {\n #!/bin/bash\n exit $closed\n SH\n-  cat >\"$mock_bin/omarchy-hw-external-monitors\" <<SH\n+  cat >\"$mock_bin/omarchy-hyprland-monitor-external-active\" <<SH\n #!/bin/bash\n exit $docked\n SH\n@@ -91,3 +90,20 @@ run_lid_close\n [[ ${calls[1]} == \"omarchy-hyprland-monitor-clamshell\" ]] ||\n   fail \"a failing lock still reconciles displays\" \"calls: ${calls[*]}\"\n pass \"a failing lock still reconciles displays\"\n+\n+# A Touch Bar may report a connected DRM connector without appearing in\n+# Hyprland's monitor list. Exercise the real active-monitor helper here.\n+setup_scenario touch_bar 0 1\n+cp \"$ROOT/bin/omarchy-hyprland-monitor-external-active\" \"$mock_bin/omarchy-hyprland-monitor-external-active\"\n+cat >\"$mock_bin/hyprctl\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' '[{\"name\":\"eDP-1\",\"disabled\":false}]'\n+SH\n+cat >\"$mock_bin/omarchy-hw-external-monitors\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+chmod +x \"$mock_bin/hyprctl\" \"$mock_bin/omarchy-hw-external-monitors\"\n+run_lid_close\n+[[ ${calls[0]} == \"omarchy-system-lock\" ]] || fail \"a Touch Bar does not suppress locking\"\n+pass \"a connected DRM device outside Hyprland does not suppress locking\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

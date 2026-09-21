@@ -1,0 +1,320 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8572",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "bluetooth-discovery"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8572,
+  "checked_at": "2026-09-21T11:56:06.895196+00:00",
+  "title": "Keep the Bluetooth pairing agent from skipping late USB adapters",
+  "author": "MrBazzieB",
+  "head_sha": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:48:38Z",
+  "state": "closed",
+  "body": "## What\n\nThe session `bt-agent` no longer skips forever when `/sys/class/bluetooth` is missing at login. It waits for bluetoothd and the adapter sysfs node, then registers as the default pairing agent. If nothing appears, it exits 0 so machines without Bluetooth do not restart-loop.\n\n## Why\n\nOmarchy's Bluetooth panel pairs with `bluetoothctl pair`. That needs a registered BlueZ agent. The user unit used `ConditionPathIsDirectory=/sys/class/bluetooth` plus `ExecCondition=` on `bluetooth.service`. A failed Condition/ExecCondition **skips** the unit; `Restart=` does not apply.\n\nOn a MacBookPro12,1 (Broadcom USB adapter) that looks like:\n\n```\nbt-agent.service: skipped, unmet condition check ConditionPathIsDirectory=/sys/class/bluetooth\n```\n\nThen pairing from Super+Ctrl+B logs:\n\n```\nsrc/device.c:new_auth() No agent available for request type 2\ndevice_confirm_passkey: Operation not permitted\n```\n\nReproduced pairing Logitech MX Anywhere 3S and Pebble Keys 2 K380s. They advertised fine; the GUI could not confirm the passkey because no agent was running. `bluetoothctl --agent NoInputNoOutput pair \u2026` succeeded immediately.\n\n## Related\n\nThis is separate from the trusted-but-unpaired state machine (#7879 / #7880) and from showing keyboard passkeys (#8485 / #6877). Those still matter. Even with them, this skip leaves the panel with no agent on late USB adapters.\n\n#6877 keeps `ConditionPathIsDirectory=/sys/class/bluetooth`, so it would still skip on this hardware.\n\n## Test\n\n- `bash test/shell.d/bluetooth-test.sh`\n- `bash test/shell.d/systemd-test.sh`\n- `./test/cli`\n\n`./test/all`: bluetooth/systemd tests pass. Remaining failures (`config`, `launch-about`, `snapper`, `unowned-system-paths`, plus flaky `theme-install-guards` / `runtime-smoke`) also fail on `quattro` here without this change (missing `omarchy-pkgs` checkout / compositor).",
+  "draft": false,
+  "files": [
+    {
+      "sha": "8f404fa97f2ec9c82e6e07330e9405b235a33f41",
+      "filename": "bin/omarchy-bluetooth-agent-start",
+      "status": "added",
+      "additions": 33,
+      "deletions": 0,
+      "changes": 33,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/bin%2Fomarchy-bluetooth-agent-start",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/bin%2Fomarchy-bluetooth-agent-start",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-bluetooth-agent-start?ref=fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "patch": "@@ -0,0 +1,33 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Start the BlueZ pairing agent once the adapter exists\n+# omarchy:group=bluetooth\n+# omarchy:hidden=true\n+\n+# bt-agent must be the session's default pairing agent or bluetoothctl pair\n+# (used by the Omarchy Bluetooth panel) fails with \"No agent available\".\n+# The user unit used to skip forever when /sys/class/bluetooth was missing at\n+# graphical-session start. USB adapters (Broadcom on Intel MacBooks, dongles)\n+# often appear a few seconds later, so wait for them, then exec bt-agent.\n+# If nothing shows up, exit 0 so systemd does not restart-loop on machines\n+# without Bluetooth.\n+\n+set -euo pipefail\n+\n+wait_seconds=${OMARCHY_BT_AGENT_WAIT_SECONDS:-60}\n+sysfs=${OMARCHY_BT_SYSFS:-/sys/class/bluetooth}\n+agent=${OMARCHY_BT_AGENT:-/usr/bin/bt-agent}\n+\n+deadline=$((SECONDS + wait_seconds))\n+while (( SECONDS <= deadline )); do\n+  if [[ -d $sysfs ]] && systemctl is-active --quiet bluetooth.service; then\n+    exec \"$agent\" -c NoInputNoOutput\n+  fi\n+  if (( wait_seconds == 0 )); then\n+    break\n+  fi\n+  sleep 1\n+done\n+\n+echo \"No Bluetooth adapter after ${wait_seconds}s; pairing agent not started\" >&2\n+exit 0"
+    },
+    {
+      "sha": "77876f09609a737aff0b09bcddebd66322543e26",
+      "filename": "default/systemd/user/bt-agent.service",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 6,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/default%2Fsystemd%2Fuser%2Fbt-agent.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/default%2Fsystemd%2Fuser%2Fbt-agent.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fuser%2Fbt-agent.service?ref=fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "patch": "@@ -1,21 +1,21 @@\n [Unit]\n Description=Bluetooth pairing agent (auto-accept)\n Documentation=man:bt-agent(1)\n-ConditionPathIsDirectory=/sys/class/bluetooth\n-# bluez must be reachable on the system bus before we can register.\n+# Do not ConditionPathIsDirectory=/sys/class/bluetooth. That directory is\n+# missing at graphical-session start on USB adapters (Broadcom on Intel\n+# MacBooks, dongles). A failed Condition skips the unit forever; Restart=\n+# does not apply. The ExecStart wrapper waits, then gives up with exit 0\n+# on machines that never grow an adapter.\n After=dbus.socket\n Requires=dbus.socket\n \n [Service]\n Type=simple\n-# If bluetoothd is unavailable (for example in VMs or machines without a\n-# usable adapter), skip cleanly instead of entering a restart loop.\n-ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service\n # NoInputNoOutput auto-accepts pair requests. Safe because the adapter\n # is only `pairable: true` when the user explicitly opens the omarchy\n # bluetoothPanel and starts scanning; outside that window bluez refuses\n # inbound pair attempts at a lower layer.\n-ExecStart=/usr/bin/bt-agent -c NoInputNoOutput\n+ExecStart=/usr/bin/omarchy-bluetooth-agent-start\n Restart=on-failure\n RestartSec=2\n "
+    },
+    {
+      "sha": "e81cb0312cca7d5c981de171043edc82c092d843",
+      "filename": "migrations/1787815267.sh",
+      "status": "added",
+      "additions": 12,
+      "deletions": 0,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/migrations%2F1787815267.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/migrations%2F1787815267.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787815267.sh?ref=fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "patch": "@@ -0,0 +1,12 @@\n+echo \"Restart the Bluetooth pairing agent so it waits for late USB adapters\"\n+\n+# The packaged unit used to skip forever when /sys/class/bluetooth was missing\n+# at graphical-session start (Broadcom on Intel MacBooks, USB dongles). Reload\n+# so the user manager picks up the wait-then-exec wrapper, then bounce a live\n+# or skipped agent. Login starts it for everyone else.\n+systemctl --user daemon-reload\n+\n+if systemctl --user is-enabled --quiet bt-agent.service 2>/dev/null; then\n+  systemctl --user reset-failed bt-agent.service 2>/dev/null || true\n+  systemctl --user restart bt-agent.service || true\n+fi"
+    },
+    {
+      "sha": "cf581908671d6509b43f73174786e9094f8c2827",
+      "filename": "test/shell.d/bluetooth-test.sh",
+      "status": "modified",
+      "additions": 47,
+      "deletions": 3,
+      "changes": 50,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/test%2Fshell.d%2Fbluetooth-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/test%2Fshell.d%2Fbluetooth-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbluetooth-test.sh?ref=fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "patch": "@@ -4,9 +4,13 @@ set -euo pipefail\n \n source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n \n-grep -q '^ConditionPathIsDirectory=/sys/class/bluetooth$' \"$ROOT/default/systemd/user/bt-agent.service\" || \\\n-  fail \"bt-agent is skipped on machines without Bluetooth hardware\"\n-pass \"bt-agent is skipped on machines without Bluetooth hardware\"\n+# USB/Broadcom adapters often appear after graphical-session starts. A\n+# ConditionPathIsDirectory skip is permanent (Restart= does not apply).\n+grep -q '^ConditionPathIsDirectory=/sys/class/bluetooth$' \"$ROOT/default/systemd/user/bt-agent.service\" && \\\n+  fail \"bt-agent must not skip forever when /sys/class/bluetooth is missing at login\"\n+grep -Fx 'ExecStart=/usr/bin/omarchy-bluetooth-agent-start' \"$ROOT/default/systemd/user/bt-agent.service\" >/dev/null || \\\n+  fail \"bt-agent waits for a late adapter instead of starting bt-agent immediately\"\n+pass \"bt-agent waits for a late adapter instead of skipping at login\"\n \n run_node_test <<'JS'\n const fs = require('fs')\n@@ -280,3 +284,43 @@ pass \"bluetooth counts a secondary controller as on\"\n grep -q 'AutoEnable=false' \"$ROOT/install/hardware/bluetooth.sh\" &&\n   fail \"bluetooth install leaves AutoEnable at its default\"\n pass \"bluetooth install leaves AutoEnable at its default\"\n+\n+agent_mock=\"$device_tmp/agent\"\n+mkdir -p \"$agent_mock/sys\" \"$agent_mock/bin\"\n+cat >\"$agent_mock/bin/systemctl\" <<'SH'\n+#!/bin/bash\n+[[ $1 == is-active && $3 == bluetooth.service ]] && exit 0\n+exit 1\n+SH\n+cat >\"$agent_mock/bin/bt-agent\" <<'SH'\n+#!/bin/bash\n+printf 'bt-agent %s\\n' \"$*\" >\"$AGENT_RAN\"\n+exit 0\n+SH\n+chmod +x \"$agent_mock/bin/systemctl\" \"$agent_mock/bin/bt-agent\"\n+\n+# No adapter: give up with success so systemd does not restart-loop.\n+: >\"$device_tmp/agent-ran\"\n+if ! PATH=\"$agent_mock/bin:$PATH\" \\\n+  OMARCHY_BT_AGENT_WAIT_SECONDS=0 \\\n+  OMARCHY_BT_SYSFS=\"$agent_mock/missing\" \\\n+  OMARCHY_BT_AGENT=\"$agent_mock/bin/bt-agent\" \\\n+  AGENT_RAN=\"$device_tmp/agent-ran\" \\\n+  \"$ROOT/bin/omarchy-bluetooth-agent-start\"; then\n+  fail \"pairing agent start exits 0 when no adapter appears\"\n+fi\n+[[ ! -s $device_tmp/agent-ran ]] || fail \"pairing agent is not started without an adapter\"\n+pass \"pairing agent start exits 0 when no adapter appears\"\n+\n+# Adapter already present: exec bt-agent immediately.\n+: >\"$device_tmp/agent-ran\"\n+PATH=\"$agent_mock/bin:$PATH\" \\\n+  OMARCHY_BT_AGENT_WAIT_SECONDS=0 \\\n+  OMARCHY_BT_SYSFS=\"$agent_mock/sys\" \\\n+  OMARCHY_BT_AGENT=\"$agent_mock/bin/bt-agent\" \\\n+  AGENT_RAN=\"$device_tmp/agent-ran\" \\\n+  \"$ROOT/bin/omarchy-bluetooth-agent-start\" ||\n+  fail \"pairing agent start runs bt-agent when the adapter is already up\"\n+grep -qx \"bt-agent -c NoInputNoOutput\" \"$device_tmp/agent-ran\" ||\n+  fail \"pairing agent start execs NoInputNoOutput bt-agent\" \"$(cat \"$device_tmp/agent-ran\")\"\n+pass \"pairing agent start execs bt-agent once the adapter exists\""
+    },
+    {
+      "sha": "a813426dae7a27d09f330becd1fd7de47503d07f",
+      "filename": "test/shell.d/systemd-test.sh",
+      "status": "modified",
+      "additions": 7,
+      "deletions": 2,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/test%2Fshell.d%2Fsystemd-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/fca54fde72d1ffd0f38e2094b230e45b8b1e74ce/test%2Fshell.d%2Fsystemd-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fsystemd-test.sh?ref=fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "patch": "@@ -6,8 +6,13 @@ source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n \n service=\"$ROOT/default/systemd/user/bt-agent.service\"\n \n-grep -Fx 'ExecCondition=/usr/bin/systemctl is-active --quiet bluetooth.service' \"$service\" >/dev/null\n-pass \"bt-agent skips when bluetooth.service is inactive\"\n+grep -Fx 'ExecStart=/usr/bin/omarchy-bluetooth-agent-start' \"$service\" >/dev/null ||\n+  fail \"bt-agent still launches bt-agent immediately, which races USB adapters\"\n+pass \"bt-agent waits for bluetoothd and sysfs before registering\"\n+\n+grep -q '^ExecCondition=' \"$service\" &&\n+  fail \"ExecCondition skips the unit with no Restart= when bluetoothd is not up yet\"\n+pass \"bt-agent does not skip permanently when bluetoothd is still starting\"\n \n grep -Fx 'Restart=on-failure' \"$service\" >/dev/null\n pass \"bt-agent still restarts after runtime failures\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758540013",
+      "html_url": "https://github.com/omacom/omarchy/pull/8572#issuecomment-5758540013",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8572",
+      "id": 5758540013,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzxY7Q",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:48:37Z",
+      "updated_at": "2026-09-21T09:48:37Z",
+      "body": "Automated duplication check: this pull request looks similar to #9131, which covers the same Bluetooth agent wait. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758540013/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5040173607,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLGryJw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds a bounded startup wrapper so the BlueZ pairing agent can handle adapters appearing after login.\n\n**Changes:**\n- Waits up to 60 seconds for Bluetooth readiness.\n- Reloads and restarts existing user services.\n- Adds service configuration and shell tests.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.\n> Click \"Convert to draft\" or run `gh pr ready --undo`.\n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 4 out of 5 changed files in this pull request and generated 2 comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `bin/omarchy-bluetooth-agent-start` | Adds bounded readiness polling before launching the agent. |\r\n| `default/systemd/user/bt-agent.service` | Replaces permanently skipping conditions with the wrapper. |\r\n| `migrations/1787815267.sh` | Reloads and restarts the updated user service. |\r\n| `test/shell.d/bluetooth-test.sh` | Tests wrapper startup outcomes. |\r\n| `test/shell.d/systemd-test.sh` | Verifies the updated unit configuration. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8572#pullrequestreview-5040173607",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8572",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8572#pullrequestreview-5040173607"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8572"
+        }
+      },
+      "submitted_at": "2026-08-27T11:24:19Z",
+      "commit_id": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3871240833",
+      "pull_request_review_id": 5040173607,
+      "id": 3871240833,
+      "node_id": "PRRC_kwDOO0Cobs7mvnKB",
+      "diff_hunk": "@@ -0,0 +1,12 @@\n+echo \"Restart the Bluetooth pairing agent so it waits for late USB adapters\"\n+\n+# The packaged unit used to skip forever when /sys/class/bluetooth was missing\n+# at graphical-session start (Broadcom on Intel MacBooks, USB dongles). Reload\n+# so the user manager picks up the wait-then-exec wrapper, then bounce a live\n+# or skipped agent. Login starts it for everyone else.\n+systemctl --user daemon-reload",
+      "path": "migrations/1787815267.sh",
+      "commit_id": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "original_commit_id": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This unguarded reload aborts the migration under the runner's `bash -euo pipefail` when an update is run from a TTY/SSH session without a live user manager. That is a supported update path, and it prevents the intended \u201clogin starts it\u201d fallback because the migration remains pending. Make the reload best-effort so the fresh manager can load the packaged unit at the next login.",
+      "created_at": "2026-08-27T11:24:18Z",
+      "updated_at": "2026-08-27T11:24:19Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8572#discussion_r3871240833",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8572",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3871240833"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8572#discussion_r3871240833"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8572"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3871240833/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 7,
+      "original_line": 7,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 7,
+      "position": 9,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3871240873",
+      "pull_request_review_id": 5040173607,
+      "id": 3871240873,
+      "node_id": "PRRC_kwDOO0Cobs7mvnKp",
+      "diff_hunk": "@@ -280,3 +284,43 @@ pass \"bluetooth counts a secondary controller as on\"\n grep -q 'AutoEnable=false' \"$ROOT/install/hardware/bluetooth.sh\" &&\n   fail \"bluetooth install leaves AutoEnable at its default\"\n pass \"bluetooth install leaves AutoEnable at its default\"\n+\n+agent_mock=\"$device_tmp/agent\"\n+mkdir -p \"$agent_mock/sys\" \"$agent_mock/bin\"\n+cat >\"$agent_mock/bin/systemctl\" <<'SH'\n+#!/bin/bash\n+[[ $1 == is-active && $3 == bluetooth.service ]] && exit 0\n+exit 1\n+SH\n+cat >\"$agent_mock/bin/bt-agent\" <<'SH'\n+#!/bin/bash\n+printf 'bt-agent %s\\n' \"$*\" >\"$AGENT_RAN\"\n+exit 0\n+SH\n+chmod +x \"$agent_mock/bin/systemctl\" \"$agent_mock/bin/bt-agent\"\n+\n+# No adapter: give up with success so systemd does not restart-loop.\n+: >\"$device_tmp/agent-ran\"\n+if ! PATH=\"$agent_mock/bin:$PATH\" \\\n+  OMARCHY_BT_AGENT_WAIT_SECONDS=0 \\\n+  OMARCHY_BT_SYSFS=\"$agent_mock/missing\" \\\n+  OMARCHY_BT_AGENT=\"$agent_mock/bin/bt-agent\" \\\n+  AGENT_RAN=\"$device_tmp/agent-ran\" \\\n+  \"$ROOT/bin/omarchy-bluetooth-agent-start\"; then\n+  fail \"pairing agent start exits 0 when no adapter appears\"\n+fi\n+[[ ! -s $device_tmp/agent-ran ]] || fail \"pairing agent is not started without an adapter\"\n+pass \"pairing agent start exits 0 when no adapter appears\"\n+\n+# Adapter already present: exec bt-agent immediately.",
+      "path": "test/shell.d/bluetooth-test.sh",
+      "commit_id": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "original_commit_id": "fca54fde72d1ffd0f38e2094b230e45b8b1e74ce",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "The new tests cover only \u201cmissing forever\u201d and \u201calready present,\u201d so they never exercise the polling path that is the purpose of this change; an implementation that checks only once would still pass. Add a case where the mock sysfs directory (and ideally bluetoothd readiness) changes after the first probe, then verify the agent runs before the timeout.",
+      "created_at": "2026-08-27T11:24:19Z",
+      "updated_at": "2026-08-27T11:24:19Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8572#discussion_r3871240873",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8572",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3871240873"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8572#discussion_r3871240873"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8572"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3871240873/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": 315,
+      "original_line": 315,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 49,
+      "position": 49,
+      "subject_type": "line"
+    }
+  ]
+}

@@ -1,0 +1,712 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8221",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-scanning"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "77a606aaf84f544154d7c50424dfe9a37bf90c59",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8221,
+  "checked_at": "2026-09-21T11:57:46.820047+00:00",
+  "title": "Reference count the Wi-Fi scanner so a closed panel cannot scan",
+  "author": "xraid",
+  "head_sha": "77a606aaf84f544154d7c50424dfe9a37bf90c59",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-20T03:43:11Z",
+  "state": "open",
+  "body": "Fixes #7896.\n\n## The bug\n\n`scannerEnabled` is a plain shared `bool` on a long-lived `WifiDevice`, but the network bar widget is instantiated once per monitor \u2014 and again transiently while a plugin reload overlaps the outgoing instance, which happens on single-monitor machines too. Several instances therefore write to one flag.\n\nPer-instance bookkeeping cannot express \"another panel still wants this on\" or \"nobody wants this any more\". That gives two failures from one hole:\n\n- A claim that is never released leaves NetworkManager scanning **every 10s behind a closed panel**. `mScanIntervalMs = 10001` in quickshell's `src/network/nm/wireless.hpp` is exactly the cadence measured in #7896.\n- `Component.onDestruction` unconditionally cleared the flag, so a dying instance **stops scanning under a panel still open** on another monitor.\n\nOn a slow radio the first one is destructive rather than cosmetic: on the BCM43224 / `brcmsmac` in #7896 a 37-channel scan parks the card off its operating channel for ~11s, so a scan every 10s loses inbound frames continuously \u2014 measured there at 19.7% loss to the gateway.\n\n## The fix\n\nClaims move into `Scanner.js`, keyed by owner: the scanner runs exactly while at least one live instance holds a claim, and stops the moment the last one lets go.\n\nA claim is never trusted on its own. It counts only while its owner is still alive and still open \u2014 a destroyed `QObject` throws on property access rather than reading back `null`, and that throw is what makes a dead owner detectable instead of leaving a permanent claim. A 30s reconcile sweeps on that basis: it drops claims whose owner died or closed and drives the device from what is left, including forcing off a device nothing is claiming. That is what bounds a missed release, rather than each instance merely re-asserting its own claim.\n\nTo be straight about scope: the indefinite stuck state in #7896 could not be reproduced on demand, there or here. This makes that class impossible for anything going through `setScannerEnabled`, and bounds a leaked or abandoned claim to one sweep interval. It is not a fix for a reproduced hang.\n\nOne behavioural note: with two panels open, one instance's `refresh(true)` off/on toggle no longer force-restarts the scan globally, since the sibling's claim holds it on. Scanning is already in flight in that case, so it is benign.\n\n## Second commit: an open panel on a slow radio\n\nThe first commit stops a *closed* panel from scanning. An open one still scans\ncontinuously, and on a slow card that is its own outage: quickshell re-arms\nevery 10001ms while a sweep on a BCM43224 / `brcmsmac` takes ~11s, so the radio\nis off-channel essentially the whole time the panel is up. Ping to 1.1.1.1 on\nthat card: **18.75% loss during a sweep, 0% with none in flight**. A download\ndies because the Wi-Fi panel is open \u2014 which is what you open when a download\nlooks stuck.\n\nTwo widget settings, both defaulting to today's behaviour exactly:\n\n| Setting | Default | Effect |\n|---|---|---|\n| `scanOnOpen` | `true` | opening the panel starts a sweep, as now |\n| `scanHoldSec` | `0` | the scanner stays claimed while the panel is open, as now |\n\nAbove zero, `scanHoldSec` turns the claim into a pulse \u2014 released that many\nseconds after a sweep starts even though the panel is still open, with the next\nsweep waiting for `r`. With `scanOnOpen` false, opening costs no airtime at all\nand a header says the list is cached rather than letting stale results read as\nlive. On the affected hardware, `scanOnOpen: false` + `scanHoldSec: 15` gives\n**0 scans and 0% loss across 120s with the panel open**, against ~4 sweeps per\n45s before.\n\n`r` now calls `refresh(true)`; it called a bare `refresh()` before, which\nrepainted from results already held and never actually rescanned.\n\n## Third commit: a rescan button\n\n`r` alone is not an affordance \u2014 nothing said the key existed, and a mouse user\nhad no rescan at all, which with `scanOnOpen` false means a list that can never\nbe refreshed without a keyboard. The third commit adds a rescan action to the\npanel header beside the QR and speed-test buttons, using their existing\n`Button` / `hasCursor` / `setHeaderCursor` wiring so it works by click and by\nheader navigation. The tooltip names the shortcut and reads \"Scanning\u2026\" during\na sweep, which is what makes `r` discoverable on the default configuration as\nwell. It is present whenever there is a radio to scan with, not only when a\nhold is configured.\n\nTests assert the pulse cases and that the defaults still reproduce the old\nbehaviour \u2014 127 assertions pass. Happy to split this into its own PR if you\nwould rather keep the first commit single-purpose.\n\n## Tests\n\n`test/shell.d/network-test.sh` already `eval`'d the old helper directly, so it had to be updated. It now also covers the two-instance case, a repeated release, a device destroyed underneath a live claim, an owner destroyed without releasing, a panel closed without releasing, a scanner enabled with nothing claiming it, and a sweep that must spare a live open sibling. 120 assertions pass.\n\n`./test/all` has 4 pre-existing failures on this machine (`config`, `runtime-smoke`, `snapper`, `unowned-system-paths`); all four fail identically on a clean tree.\n\n## Verified on the affected hardware\n\nOmarchy 4.0.0-1, quickshell-git 0.3.0.r20.g28771c7-2, MacBookAir5,2 / BCM43224. Scans counted via NetworkManager's `LastScan` property:\n\n| Panel state | Scans |\n|---|---|\n| closed, 40s | **0** |\n| open, 40s | **2** |\n| closed again, 40s | **0** |\n\nTwo scans in 40s is the expected rate when each sweep takes ~11s. Instrumented logging confirmed every transition, including startup correctly refusing to claim while closed, and the reconcile firing on schedule.\n\n\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "6881a6a91345d687d9eaa3f1a36dd1bb164fe97a",
+      "filename": "shell/plugins/panels/network/Panel.qml",
+      "status": "modified",
+      "additions": 138,
+      "deletions": 29,
+      "changes": 167,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77a606aaf84f544154d7c50424dfe9a37bf90c59/shell%2Fplugins%2Fpanels%2Fnetwork%2FPanel.qml",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77a606aaf84f544154d7c50424dfe9a37bf90c59/shell%2Fplugins%2Fpanels%2Fnetwork%2FPanel.qml",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fpanels%2Fnetwork%2FPanel.qml?ref=77a606aaf84f544154d7c50424dfe9a37bf90c59",
+      "patch": "@@ -7,6 +7,7 @@ import Quickshell.Networking\n import qs.Ui\n import qs.Commons\n import \"Model.js\" as Model\n+import \"Scanner.js\" as Scanner\n \n Panel {\n   id: root\n@@ -130,10 +131,18 @@ Panel {\n   // radio to switch. On a wired box it would otherwise sit there reading\n   // \"off\" beside a perfectly live Ethernet connection.\n   readonly property bool canToggleWifi: networkManagerAvailable && wifiStationAvailable\n-  readonly property int qrHeaderIndex: canShareWifi ? 0 : -1\n-  readonly property int speedHeaderIndex: canRunSpeedTest ? (canShareWifi ? 1 : 0) : -1\n-  readonly property int toggleHeaderIndex: canToggleWifi ? (canShareWifi ? 1 : 0) + (canRunSpeedTest ? 1 : 0) : -1\n-  readonly property int headerActionCount: (canShareWifi ? 1 : 0) + (canRunSpeedTest ? 1 : 0) + (canToggleWifi ? 1 : 0)\n+  // Rescanning has to be reachable without a keyboard, and `r` has to be\n+  // discoverable at all: a scan the panel no longer starts on its own is only\n+  // useful if there is something to press. The action exists whenever there is\n+  // a radio to scan with, independently of the scan settings, so the mouse\n+  // path does not disappear on the default configuration.\n+  readonly property bool canRescanWifi: networkManagerAvailable && wifiStationAvailable\n+  readonly property int rescanHeaderIndex: canRescanWifi ? 0 : -1\n+  readonly property int qrHeaderIndex: canShareWifi ? (canRescanWifi ? 1 : 0) : -1\n+  readonly property int speedHeaderIndex: canRunSpeedTest ? (canRescanWifi ? 1 : 0) + (canShareWifi ? 1 : 0) : -1\n+  readonly property int toggleHeaderIndex: canToggleWifi ? (canRescanWifi ? 1 : 0) + (canShareWifi ? 1 : 0) + (canRunSpeedTest ? 1 : 0) : -1\n+  readonly property int headerActionCount: (canRescanWifi ? 1 : 0) + (canShareWifi ? 1 : 0) + (canRunSpeedTest ? 1 : 0) + (canToggleWifi ? 1 : 0)\n+  readonly property bool rescanHeaderHasCursor: cursorActive && focusSection === \"header\" && headerIndex === rescanHeaderIndex\n   readonly property bool qrHeaderHasCursor: cursorActive && focusSection === \"header\" && headerIndex === qrHeaderIndex\n   readonly property bool speedHeaderHasCursor: cursorActive && focusSection === \"header\" && headerIndex === speedHeaderIndex\n   readonly property bool toggleHeaderHasCursor: cursorActive && focusSection === \"header\" && headerIndex === toggleHeaderIndex\n@@ -223,7 +232,8 @@ Panel {\n   }\n \n   function activateHeader() {\n-    if (headerIndex === qrHeaderIndex) summonWifiQr()\n+    if (headerIndex === rescanHeaderIndex) refresh(true)\n+    else if (headerIndex === qrHeaderIndex) summonWifiQr()\n     else if (headerIndex === speedHeaderIndex) summonSpeedTest()\n     else if (headerIndex === toggleHeaderIndex) toggleNetwork()\n   }\n@@ -292,34 +302,102 @@ Panel {\n   readonly property color hoverFill: bar ? Style.hoverFillFor(bar.foreground, Color.accent) : \"transparent\"\n   readonly property color selectedFill: bar ? Style.selectedFillFor(bar.foreground, Color.accent) : \"transparent\"\n \n-  // scannerEnabled lives on the shared WifiDevice, which has no reference\n-  // counting, and a bar widget is instantiated once per monitor. Tracking the\n-  // device this instance turned scanning on for keeps the release correct when\n-  // the panel closes, the device is replaced, or the widget is destroyed \u2014\n-  // without a closed instance ever claiming the scanner.\n-  property var scannerDevice: null\n-\n+  // scannerEnabled is shared mutable state on the WifiDevice and this widget\n+  // outlives no instance alone \u2014 one per monitor, plus a transient overlap\n+  // across a plugin reload \u2014 so claims are reference counted in\n+  // Scanner.js rather than tracked per instance. This instance holds a claim\n+  // exactly while its own panel is open; the scanner stops when the last\n+  // instance lets go, and keeps running for the panels that still want it.\n+  // How much airtime an open panel may spend. A full sweep parks the radio off\n+  // its operating channel for as long as it runs \u2014 seconds on an older card \u2014\n+  // and quickshell re-arms the scanner every 10001ms, so a claim held for as\n+  // long as the panel is open can leave the radio off-channel almost\n+  // continuously. On a fast card that is invisible. On a slow one it stalls\n+  // every connection in flight for as long as the panel is up.\n+  //\n+  // Both settings default to what the panel has always done:\n+  //   scanOnOpen  true \u2014 opening the panel starts a sweep\n+  //   scanHoldSec 0    \u2014 the scanner stays claimed while the panel is open\n+  // A scanHoldSec above zero turns the claim into a pulse: it is dropped that\n+  // many seconds after a sweep starts even though the panel is still open, and\n+  // the next sweep waits for the user to ask with `r`.\n+  readonly property bool scanOnOpen: settings.scanOnOpen === undefined ? true : !!settings.scanOnOpen\n+  readonly property int scanHoldSec: {\n+    var value = parseInt(settings.scanHoldSec)\n+    return isNaN(value) || value < 0 ? 0 : value\n+  }\n+  readonly property bool scanPulsed: scanHoldSec > 0\n+  property bool scanPulseActive: false\n+\n+  // With no hold configured this is the original rule verbatim \u2014 panel open,\n+  // claim held. With one, the pulse owns the claim and an open panel alone is\n+  // no longer enough to keep it.\n   function setScannerEnabled(enabled) {\n-    var nextDevice = opened ? wifiDevice : null\n+    var wanted = opened && enabled && (!scanPulsed || scanPulseActive)\n+    Scanner.acquire(root, wanted ? wifiDevice : null)\n+  }\n \n-    if (scannerDevice && scannerDevice !== nextDevice)\n-      scannerDevice.scannerEnabled = false\n+  // One sweep, then let go. Restarting a running pulse extends it rather than\n+  // stacking claims \u2014 Scanner.acquire is keyed by owner.\n+  function startScanPulse() {\n+    if (!opened || !wifiDevice) return\n+    if (!scanPulsed) {\n+      setScannerEnabled(true)\n+      return\n+    }\n+    scanPulseActive = true\n+    scanPulseTimer.restart()\n+    setScannerEnabled(true)\n+  }\n \n-    scannerDevice = nextDevice\n+  // Release mid-open. scanPulseActive drops first so setScannerEnabled resolves\n+  // to a release, and the reconcile below keeps driving the device off for as\n+  // long as no pulse is running.\n+  function endScanPulse() {\n+    scanPulseActive = false\n+    scanPulseTimer.stop()\n+    setScannerEnabled(false)\n+    scanning = false\n+  }\n \n-    if (scannerDevice)\n-      scannerDevice.scannerEnabled = enabled\n+  Timer {\n+    id: scanPulseTimer\n+    interval: Math.max(1, root.scanHoldSec) * 1000\n+    repeat: false\n+    onTriggered: root.endScanPulse()\n   }\n \n-  Component.onDestruction: {\n-    if (scannerDevice) scannerDevice.scannerEnabled = false\n+  Component.onDestruction: Scanner.release(root)\n+\n+  // The scanner costs real airtime \u2014 a full scan parks the radio off-channel\n+  // for seconds on a slow card \u2014 so re-assert the invariant periodically\n+  // instead of trusting every release path to fire. The sweep is what bounds\n+  // a missed release: it drops claims whose owner died or closed and drives\n+  // the device from what is left, so no instance can pin the scanner on after\n+  // its panel is gone.\n+  Timer {\n+    interval: 30000\n+    repeat: true\n+    running: true\n+    onTriggered: {\n+      // Reconciling inside the 100ms scanRestart window would re-enable the\n+      // scanner early and undo the deferral that keeps opening the panel off\n+      // NetworkManager's access-point flood.\n+      if (scanRestart.running) return\n+      // Once a hold is configured an open panel alone no longer counts, so\n+      // this is what drives the device off after a pulse expires.\n+      root.setScannerEnabled(root.opened && (!root.scanPulsed || root.scanPulseActive))\n+      Scanner.sweep(root.wifiDevice)\n+    }\n   }\n \n   // KeyboardPanel primes layer-shell focus whenever the panel opens. That's\n   // what makes the SUPER+CTRL+W keybind land here with navigation ready.\n   onOpenedChanged: {\n     if (opened) {\n-      refresh(true)\n+      // scanOnOpen false means opening the panel costs no airtime at all: the\n+      // list renders from NetworkManager's last results and `r` refreshes it.\n+      refresh(scanOnOpen)\n       selectedIndex = wifiNetworks.length > 0 ? 0 : -1\n       wifiActionFocused = false\n       focusSection = wifiNetworks.length > 0 ? \"wifi\" : \"dns\"\n@@ -332,6 +410,7 @@ Panel {\n       // the 100ms window reuses the running timer and re-enables the scanner\n       // almost immediately, undoing the deferral #6605 restored.\n       scanRestart.stop()\n+      root.endScanPulse()\n       // Reset throughput tracking so the next open doesn't compute a fake\n       // rate from a sample taken minutes ago.\n       prevSampleTime = 0\n@@ -486,9 +565,11 @@ Panel {\n         scanning = true\n         setScannerEnabled(false)\n         scanRestart.start()\n-      } else {\n+      } else if (!scanPulsed) {\n         setScannerEnabled(true)\n       }\n+      // With a hold configured a bare refresh() never re-claims \u2014 the claim\n+      // belongs to the pulse and expires with it.\n     }\n     syncWifiNetworks()\n   }\n@@ -822,7 +903,7 @@ Panel {\n     repeat: false\n     onTriggered: {\n       if (root.opened && root.wifiDevice) {\n-        root.setScannerEnabled(true)\n+        root.startScanPulse()\n         scanDone.start()\n       }\n     }\n@@ -961,10 +1042,11 @@ Panel {\n \n     onPressed: function(b) {\n       if (root.opened) root.close()\n-      // open() is enough: onOpenedChanged runs refresh(true), which defers the\n-      // PHY scan past the first frame. The bare refresh() that used to follow\n-      // took the no-scan branch and set scannerEnabled synchronously, undoing\n-      // that deferral and stalling the open on NetworkManager's AP flood.\n+      // open() is enough: onOpenedChanged runs refresh(scanOnOpen), which\n+      // defers any PHY scan past the first frame. The bare refresh() that used\n+      // to follow took the no-scan branch and set scannerEnabled synchronously,\n+      // undoing that deferral and stalling the open on NetworkManager's AP\n+      // flood.\n       else root.open()\n     }\n   }\n@@ -1071,7 +1153,7 @@ Panel {\n       onCloseRequested: root.close()\n       onTabRequested: function(direction) { root.switchPanel(direction) }\n       onTextKey: function(t) {\n-        if (t === \"r\" || t === \"R\") root.refresh()\n+        if (t === \"r\" || t === \"R\") root.refresh(true)\n         else if (t === \"w\" || t === \"W\") root.toggleNetwork()\n       }\n \n@@ -1107,6 +1189,22 @@ Panel {\n           anchors.right: parent.right\n           anchors.verticalCenter: parent.verticalCenter\n \n+          Button {\n+            id: rescanAction\n+            visible: root.canRescanWifi\n+            iconText: \"\udb81\udc50\"\n+            tooltipText: root.scanning ? \"Scanning\u2026\" : \"Rescan Wi-Fi (r)\"\n+            foreground: root.bar.foreground\n+            fontFamily: root.bar.fontFamily\n+            iconSize: Style.font.subtitle * 1.5\n+            horizontalPadding: Style.space(5)\n+            verticalPadding: Style.space(2)\n+            hasCursor: root.rescanHeaderHasCursor\n+            Layout.alignment: Qt.AlignVCenter\n+            onHovered: function(on) { if (on) root.setHeaderCursor(root.rescanHeaderIndex) }\n+            onClicked: root.refresh(true)\n+          }\n+\n           Button {\n             id: qrAction\n             visible: root.canShareWifi\n@@ -1460,12 +1558,23 @@ Panel {\n       }\n \n       PanelSectionHeader {\n-        visible: root.wifiStationAvailable && root.scanning\n+        // A sweep outlives the 1.5s repaint that clears `scanning`, so track the\n+        // pulse too rather than reading idle mid-sweep.\n+        visible: root.wifiStationAvailable && (root.scanning || root.scanPulseActive)\n         text: \"SCANNING WI-FI\u2026\"\n         foreground: root.bar.foreground\n         fontFamily: root.bar.fontFamily\n       }\n \n+      // Under a hold the list stops refreshing itself once the pulse ends, so\n+      // say so rather than letting stale results read as live ones.\n+      PanelSectionHeader {\n+        visible: root.wifiStationAvailable && root.scanPulsed && !root.scanning && !root.scanPulseActive\n+        text: \"NEARBY WI-FI (CACHED) \u00b7 PRESS R OR \udb81\udc50 TO RESCAN\"\n+        foreground: root.bar.foreground\n+        fontFamily: root.bar.fontFamily\n+      }\n+\n       // Scrollable network list \u2014 cap the height so a busy neighbourhood\n       // doesn't push the popup off-screen. ListView (vs Repeater+Column)\n       // gives us positionViewAtIndex for free, which is what keeps the"
+    },
+    {
+      "sha": "bc2324958837c6e9e2c64f3d2ca10730c75b4d16",
+      "filename": "shell/plugins/panels/network/Scanner.js",
+      "status": "added",
+      "additions": 96,
+      "deletions": 0,
+      "changes": 96,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77a606aaf84f544154d7c50424dfe9a37bf90c59/shell%2Fplugins%2Fpanels%2Fnetwork%2FScanner.js",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77a606aaf84f544154d7c50424dfe9a37bf90c59/shell%2Fplugins%2Fpanels%2Fnetwork%2FScanner.js",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fpanels%2Fnetwork%2FScanner.js?ref=77a606aaf84f544154d7c50424dfe9a37bf90c59",
+      "patch": "@@ -0,0 +1,96 @@\n+.pragma library\n+\n+// Reference counting for WifiDevice.scannerEnabled.\n+//\n+// scannerEnabled is a plain shared bool on a long-lived WifiDevice, but the\n+// network bar widget is instantiated once per monitor, and again transiently\n+// while a plugin reload overlaps the outgoing instance, so several panel\n+// instances write to it. Per-instance bookkeeping cannot express \"another\n+// panel still wants this on\" or \"nobody wants this on any more\": a release\n+// from one instance stops scanning under an open panel on another monitor,\n+// and a claim that is never released leaves the radio scanning every 10s\n+// with no panel open at all (basecamp/omarchy#7896).\n+//\n+// Claims live here instead, keyed by owner. A claim is never trusted on its\n+// own: it counts only while its owner is still alive and still open, so an\n+// instance that dies without releasing cannot pin the scanner on. That makes\n+// the registry self-healing rather than dependent on every release path\n+// firing. .pragma library keeps this a single shared scope engine-wide.\n+\n+var claims = []  // [{ owner, device }]\n+\n+// A destroyed QObject throws on property access rather than reading back\n+// null, so the throw is what makes a dead owner detectable here instead of\n+// lingering as a permanent claim.\n+function ownerWants(claim) {\n+  try {\n+    return !!claim.owner && claim.owner.opened === true\n+  } catch (e) {\n+    return false\n+  }\n+}\n+\n+function indexOfOwner(owner) {\n+  for (var i = 0; i < claims.length; i++) {\n+    if (claims[i].owner === owner) return i\n+  }\n+  return -1\n+}\n+\n+// Only live, open owners count. A stale claim is ignored rather than kept.\n+function claimCount(device) {\n+  var count = 0\n+  for (var i = 0; i < claims.length; i++) {\n+    if (claims[i].device === device && ownerWants(claims[i])) count++\n+  }\n+  return count\n+}\n+\n+// Drive the device to whatever its valid claims say. A device that is gone\n+// took its scanner with it, so a throw here is nothing to do.\n+function apply(device) {\n+  if (!device) return\n+  try {\n+    var wanted = claimCount(device) > 0\n+    if (device.scannerEnabled !== wanted) device.scannerEnabled = wanted\n+  } catch (e) {\n+  }\n+}\n+\n+// Hold the scanner on `device` for `owner`, dropping any device this owner\n+// held before. A null device releases without claiming anything.\n+function acquire(owner, device) {\n+  var index = indexOfOwner(owner)\n+  var previous = index >= 0 ? claims[index].device : null\n+\n+  if (index >= 0) claims.splice(index, 1)\n+  if (device) claims.push({ owner: owner, device: device })\n+\n+  if (previous !== device) apply(previous)\n+  apply(device)\n+}\n+\n+function release(owner) {\n+  acquire(owner, null)\n+}\n+\n+// Drop claims whose owner died or closed, then drive every device that was\n+// mentioned -- including `device`, so a device left with no valid claims is\n+// forced off even when the registry never held a claim for it. This is what\n+// bounds a missed release, rather than trusting the caller's own claim.\n+function sweep(device) {\n+  var devices = device ? [device] : []\n+\n+  for (var i = 0; i < claims.length; i++) {\n+    var claimed = claims[i].device\n+    if (claimed && devices.indexOf(claimed) === -1) devices.push(claimed)\n+  }\n+\n+  var kept = []\n+  for (var j = 0; j < claims.length; j++) {\n+    if (ownerWants(claims[j])) kept.push(claims[j])\n+  }\n+  claims = kept\n+\n+  for (var k = 0; k < devices.length; k++) apply(devices[k])\n+}"
+    },
+    {
+      "sha": "4bfa940b106b461d2c393ae7945c91e6b2903637",
+      "filename": "shell/plugins/panels/network/manifest.json",
+      "status": "modified",
+      "additions": 22,
+      "deletions": 1,
+      "changes": 23,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77a606aaf84f544154d7c50424dfe9a37bf90c59/shell%2Fplugins%2Fpanels%2Fnetwork%2Fmanifest.json",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77a606aaf84f544154d7c50424dfe9a37bf90c59/shell%2Fplugins%2Fpanels%2Fnetwork%2Fmanifest.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/shell%2Fplugins%2Fpanels%2Fnetwork%2Fmanifest.json?ref=77a606aaf84f544154d7c50424dfe9a37bf90c59",
+      "patch": "@@ -15,6 +15,27 @@\n     \"displayName\": \"Network\",\n     \"description\": \"Wi-Fi list and connection state\",\n     \"category\": \"Network\",\n-    \"allowMultiple\": false\n+    \"allowMultiple\": false,\n+    \"defaults\": {\n+      \"scanOnOpen\": true,\n+      \"scanHoldSec\": 0\n+    },\n+    \"schema\": [\n+      {\n+        \"key\": \"scanOnOpen\",\n+        \"type\": \"boolean\",\n+        \"label\": \"Scan for networks when the panel opens\",\n+        \"defaultValue\": true\n+      },\n+      {\n+        \"key\": \"scanHoldSec\",\n+        \"type\": \"integer\",\n+        \"label\": \"Stop scanning this many seconds after a sweep starts (0 = keep scanning while open)\",\n+        \"min\": 0,\n+        \"max\": 300,\n+        \"step\": 5,\n+        \"defaultValue\": 0\n+      }\n+    ]\n   }\n }"
+    },
+    {
+      "sha": "b857a6863b21f5f34ab849d3f7d56ad76af3d8b4",
+      "filename": "test/shell.d/network-test.sh",
+      "status": "modified",
+      "additions": 213,
+      "deletions": 21,
+      "changes": 234,
+      "blob_url": "https://github.com/omacom/omarchy/blob/77a606aaf84f544154d7c50424dfe9a37bf90c59/test%2Fshell.d%2Fnetwork-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/77a606aaf84f544154d7c50424dfe9a37bf90c59/test%2Fshell.d%2Fnetwork-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fnetwork-test.sh?ref=77a606aaf84f544154d7c50424dfe9a37bf90c59",
+      "patch": "@@ -36,44 +36,171 @@ assert(scanRestart, 'network has the deferred scan restart timer')\n assert(/root\\.opened/.test(scanRestart[0]), 'network re-checks the panel before the deferred restart re-enables scanning')\n assert(/scanRestart\\.stop\\(\\)/.test(panelSource), 'network cancels a pending scan restart when the panel closes')\n \n-// scannerEnabled lives on a shared WifiDevice with no reference counting, so\n-// the panel has to own what it enabled. Run the helper's own JavaScript against\n-// stand-in devices: the two invariants it carries are that a closed panel never\n-// takes a device, and that adopting a new one releases the previous.\n+// scannerEnabled is a plain shared bool on a WifiDevice, and this widget is\n+// instantiated once per monitor, so ownership is reference counted in\n+// Scanner.js. Load that module the way the QML engine does -- one shared scope\n+// for every instance -- and drive it with stand-in panels and devices.\n+const scannerSource = fs.readFileSync(root + '/shell/plugins/panels/network/Scanner.js', 'utf8')\n+assert(/^\\.pragma library/m.test(scannerSource), 'network scanner claims share one engine-wide scope')\n+\n+function loadScanner() {\n+  const body = scannerSource.replace(/^\\.pragma library/m, '')\n+  return new Function(body + '\\nreturn { acquire, release, claimCount, sweep }')()\n+}\n+\n const scannerHelper = panelSource.match(/function setScannerEnabled\\(enabled\\) \\{[\\s\\S]*?\\n {2}\\}/)\n assert(scannerHelper, 'network has a scanner ownership helper')\n+assert(/Scanner\\.acquire\\(root,/.test(scannerHelper[0]), 'network claims the scanner through the reference-counted registry')\n+\n+// Bind the helper's free variables explicitly rather than leaking a `root`\n+// into this scope, so the panel under test is the stand-in and not the suite.\n+function bindSetScannerEnabled(Scanner, panel, opened, wifiDevice, scanPulsed, scanPulseActive) {\n+  // A claim counts only while its owner reports itself open, so the stand-in\n+  // has to carry the same state the helper is being handed. scanPulsed defaults\n+  // to false, which is the shipped default (scanHoldSec 0) and the behaviour\n+  // every case below this one asserts.\n+  panel.opened = opened\n+  return new Function(\n+    'Scanner', 'root', 'opened', 'wifiDevice', 'scanPulsed', 'scanPulseActive',\n+    scannerHelper[0] + '\\nreturn setScannerEnabled'\n+  )(Scanner, panel, opened, wifiDevice, !!scanPulsed, !!scanPulseActive)\n+}\n \n-var opened = false\n-var wifiDevice = { scannerEnabled: false }\n-var scannerDevice = null\n-eval(scannerHelper[0])\n-\n-setScannerEnabled(true)\n+// A closed panel must never claim the scanner, whatever it asks for.\n+var Scanner = loadScanner()\n+const closedPanel = { name: 'closed' }\n+const idleDevice = { scannerEnabled: false }\n+bindSetScannerEnabled(Scanner, closedPanel, false, idleDevice)(true)\n assert(\n-  scannerDevice === null && wifiDevice.scannerEnabled === false,\n+  idleDevice.scannerEnabled === false && Scanner.claimCount(idleDevice) === 0,\n   'network does not let a closed panel claim or enable a scanner device'\n )\n \n-var previousScannerDevice = { scannerEnabled: true }\n-var replacementScannerDevice = { scannerEnabled: false }\n-opened = true\n-scannerDevice = previousScannerDevice\n-wifiDevice = replacementScannerDevice\n-setScannerEnabled(true)\n+// Adopting a replacement device must release the one left behind.\n+Scanner = loadScanner()\n+const openPanel = { name: 'open' }\n+const previousScannerDevice = { scannerEnabled: false }\n+const replacementScannerDevice = { scannerEnabled: false }\n+bindSetScannerEnabled(Scanner, openPanel, true, previousScannerDevice)(true)\n+bindSetScannerEnabled(Scanner, openPanel, true, replacementScannerDevice)(true)\n assert(\n   previousScannerDevice.scannerEnabled === false &&\n-    scannerDevice === replacementScannerDevice &&\n-    replacementScannerDevice.scannerEnabled === true,\n+    replacementScannerDevice.scannerEnabled === true &&\n+    Scanner.claimCount(previousScannerDevice) === 0,\n   'network releases the previous scanner device before enabling its replacement'\n )\n \n+// Closing releases: the same panel asking with opened=false drops its claim.\n+bindSetScannerEnabled(Scanner, openPanel, false, replacementScannerDevice)(false)\n+assert(\n+  replacementScannerDevice.scannerEnabled === false &&\n+    Scanner.claimCount(replacementScannerDevice) === 0,\n+  'network releases the scanner when its panel closes'\n+)\n+\n+// The bug this reference counting exists for: one panel per monitor sharing a\n+// device. Whoever closes first must not stop the scan the other is watching,\n+// and the last one out must stop it. Without counting, either the scanner dies\n+// under an open panel or it runs on forever behind a closed one.\n+Scanner = loadScanner()\n+var sharedDevice = { scannerEnabled: false }\n+var panelA = { name: 'a', opened: true }\n+var panelB = { name: 'b', opened: true }\n+Scanner.acquire(panelA, sharedDevice)\n+Scanner.acquire(panelB, sharedDevice)\n+Scanner.release(panelA)\n+assert(sharedDevice.scannerEnabled === true, 'network keeps scanning while another monitor still has the panel open')\n+Scanner.release(panelB)\n+assert(sharedDevice.scannerEnabled === false, 'network stops scanning once the last open panel lets go')\n+\n+// Releasing twice must not disturb a claim someone else has since taken.\n+Scanner.release(panelB)\n+Scanner.acquire(panelA, sharedDevice)\n+Scanner.release(panelB)\n+assert(sharedDevice.scannerEnabled === true, 'network ignores a repeated release from an instance holding no claim')\n+Scanner.release(panelA)\n+\n+// A device destroyed underneath a live claim throws on property access rather\n+// than reading back null; releasing it must not take the shell down with it.\n+Scanner = loadScanner()\n+var destroyedDevice = {\n+  get scannerEnabled() { throw new TypeError('Cannot read property of null') },\n+  set scannerEnabled(value) { throw new TypeError('Cannot write property of null') }\n+}\n+Scanner.acquire(panelA, destroyedDevice)\n+Scanner.release(panelA)\n+pass('network survives releasing a device that was destroyed underneath it')\n+\n // Destruction is the case a guard-only fix misses: the widget dies with the\n // panel still open, as a bar reload does, and nothing else would release it.\n assert(\n-  /Component\\.onDestruction[\\s\\S]{0,140}scannerDevice\\.scannerEnabled = false/.test(panelSource),\n+  /Component\\.onDestruction: Scanner\\.release\\(root\\)/.test(panelSource),\n   'network releases the scanner it owns when the widget is destroyed'\n )\n-assert(!/wifiDevice\\.scannerEnabled\\s*=/.test(panelSource), 'network writes scanner state through its owned device reference rather than the moving wifiDevice reference')\n+assert(!/wifiDevice\\.scannerEnabled\\s*=/.test(panelSource), 'network writes scanner state through the registry rather than the moving wifiDevice reference')\n+\n+// A claim is only as good as its owner. An instance that dies without its\n+// release running, or one whose release is simply missed, must not be able to\n+// pin the scanner on -- that is the exact failure #7896 describes.\n+Scanner = loadScanner()\n+const abandonedDevice = { scannerEnabled: false }\n+const doomedPanel = { opened: true }\n+Scanner.acquire(doomedPanel, abandonedDevice)\n+assert(abandonedDevice.scannerEnabled === true, 'network scans while an open panel holds the claim')\n+\n+// Destroyed: property access throws rather than reading back null.\n+Object.defineProperty(doomedPanel, 'opened', {\n+  get() { throw new TypeError('Cannot read property of null') },\n+  configurable: true\n+})\n+Scanner.sweep(abandonedDevice)\n+assert(\n+  abandonedDevice.scannerEnabled === false && Scanner.claimCount(abandonedDevice) === 0,\n+  'network drops the claim of an owner destroyed without releasing'\n+)\n+\n+// Closed but never released: same outcome, without the destruction.\n+Scanner = loadScanner()\n+const forgottenDevice = { scannerEnabled: false }\n+const forgottenPanel = { opened: true }\n+Scanner.acquire(forgottenPanel, forgottenDevice)\n+forgottenPanel.opened = false\n+Scanner.sweep(forgottenDevice)\n+assert(forgottenDevice.scannerEnabled === false, 'network drops a claim whose panel closed without releasing')\n+\n+// A device enabled out of band with nothing claiming it must still be driven\n+// off -- releasing alone never touches a device the registry has no claim for.\n+Scanner = loadScanner()\n+const strayDevice = { scannerEnabled: true }\n+Scanner.sweep(strayDevice)\n+assert(strayDevice.scannerEnabled === false, 'network turns off a scanner nothing is claiming')\n+\n+// The sweep must not be indiscriminate: a live open panel keeps its scan.\n+Scanner = loadScanner()\n+const sharedLive = { scannerEnabled: false }\n+const stillOpen = { opened: true }\n+const alsoDead = { opened: true }\n+Scanner.acquire(stillOpen, sharedLive)\n+Scanner.acquire(alsoDead, sharedLive)\n+Object.defineProperty(alsoDead, 'opened', {\n+  get() { throw new TypeError('Cannot read property of null') },\n+  configurable: true\n+})\n+Scanner.sweep(sharedLive)\n+assert(\n+  sharedLive.scannerEnabled === true && Scanner.claimCount(sharedLive) === 1,\n+  'network sweeps the dead owner but keeps scanning for the open one'\n+)\n+\n+// The scanner is shared mutable state on a long-lived device, so a missed\n+// release must not be able to leave the radio scanning indefinitely.\n+const scannerReconcile = panelSource.match(/Timer \\{\\s*interval: 30000[\\s\\S]*?\\n {2}\\}/)\n+assert(scannerReconcile, 'network re-asserts scanner state on a timer so a stale claim cannot persist')\n+assert(/running: true/.test(scannerReconcile[0]), 'network runs the scanner reconcile whether or not its panel is open')\n+assert(/Scanner\\.sweep\\(root\\.wifiDevice\\)/.test(scannerReconcile[0]), 'network sweeps dead claims on reconcile rather than only re-asserting its own')\n+// Reconciling inside the deferred-restart window would re-enable the scanner\n+// early and undo the deferral that keeps panel opening off the AP flood.\n+assert(/if \\(scanRestart\\.running\\) return/.test(scannerReconcile[0]), 'network skips reconciling while a deferred scan restart is pending')\n \n // A row is a primitive snapshot that can outlive its WifiNetwork, and\n // disconnect() falls back to the live connection when handed null, so row\n@@ -293,4 +420,69 @@ assertDeepEqual(\n \n assertEqual(network.headerDetail({ type: 'wifi', freq: '5745' }), '', 'network keeps wifi band state out of the hero')\n assertEqual(network.headerDetail({ type: 'ethernet', speed: '100' }), '100mbit', 'network keeps ethernet speed in the hero')\n+\n+// scanHoldSec turns the claim into a pulse. The point of the setting is that a\n+// panel can be open without the radio being off-channel, so an open panel with\n+// no pulse running must not claim -- the case that is a plain bug when the\n+// setting is off.\n+Scanner = loadScanner()\n+const heldDevice = { scannerEnabled: false }\n+const heldPanel = { name: 'held' }\n+bindSetScannerEnabled(Scanner, heldPanel, true, heldDevice, true, false)(true)\n+assert(\n+  heldDevice.scannerEnabled === false && Scanner.claimCount(heldDevice) === 0,\n+  'network does not claim the scanner for an open panel once its pulse has expired'\n+)\n+\n+Scanner = loadScanner()\n+const pulsingDevice = { scannerEnabled: false }\n+const pulsingPanel = { name: 'pulsing' }\n+bindSetScannerEnabled(Scanner, pulsingPanel, true, pulsingDevice, true, true)(true)\n+assert(\n+  pulsingDevice.scannerEnabled === true && Scanner.claimCount(pulsingDevice) === 1,\n+  'network claims the scanner while a pulse is live'\n+)\n+\n+// A pulse cannot resurrect a closed panel's claim either.\n+Scanner = loadScanner()\n+const closedPulseDevice = { scannerEnabled: false }\n+bindSetScannerEnabled(Scanner, { name: 'closed-pulse' }, false, closedPulseDevice, true, true)(true)\n+assert(\n+  closedPulseDevice.scannerEnabled === false && Scanner.claimCount(closedPulseDevice) === 0,\n+  'network keeps a closed panel from claiming even with a pulse marked live'\n+)\n+\n+// The defaults have to reproduce the old behaviour exactly, or this setting is\n+// a silent regression for everyone who never sets it.\n+const networkManifest = JSON.parse(fs.readFileSync(root + '/shell/plugins/panels/network/manifest.json', 'utf8'))\n+assertEqual(networkManifest.barWidget.defaults.scanOnOpen, true, 'network still scans on open by default')\n+assertEqual(networkManifest.barWidget.defaults.scanHoldSec, 0, 'network still holds the scanner while open by default')\n+assert(\n+  /settings\\.scanOnOpen/.test(panelSource) && /settings\\.scanHoldSec/.test(panelSource),\n+  'network reads both scan settings from its widget config'\n+)\n+assert(\n+  /refresh\\(scanOnOpen\\)/.test(panelSource),\n+  'network routes the panel-open scan through the scanOnOpen setting'\n+)\n+\n+// A scan the panel no longer starts on its own needs something to press, and\n+// the keyboard path alone leaves mouse users with no way to rescan at all.\n+assert(/id: rescanAction/.test(panelSource), 'network offers a rescan button in the panel header')\n+const rescanButton = panelSource.match(/Button \\{\\s*\\n\\s*id: rescanAction[\\s\\S]*?\\n {10}\\}/)\n+assert(rescanButton, 'network rescan button is a complete header action')\n+assert(/onClicked: root\\.refresh\\(true\\)/.test(rescanButton[0]), 'network rescan button starts a real sweep')\n+assert(/visible: root\\.canRescanWifi/.test(rescanButton[0]), 'network shows the rescan button whenever there is a radio to scan with')\n+assert(/tooltipText:[^\\n]*\\(r\\)/.test(rescanButton[0]), 'network rescan button names its keyboard shortcut')\n+\n+const activateHeaderFn = panelSource.match(/function activateHeader\\(\\)[\\s\\S]*?\\n {2}\\}/)\n+assert(activateHeaderFn, 'network has an activateHeader dispatcher')\n+assert(\n+  /headerIndex === rescanHeaderIndex\\) refresh\\(true\\)/.test(activateHeaderFn[0]),\n+  'network keyboard-activates the rescan header action'\n+)\n+assert(\n+  /headerActionCount:[^\\n]*canRescanWifi/.test(panelSource),\n+  'network counts the rescan action so header navigation can reach it'\n+)\n JS"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5441792794",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#issuecomment-5441792794",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8221",
+      "id": 5441792794,
+      "node_id": "IC_kwDOO0Cobs8AAAABRFsrGg",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-27T16:01:04Z",
+      "updated_at": "2026-08-27T16:01:04Z",
+      "body": "## Addendum: closed-panel confirmation on the affected hardware\n\nThe PR body was straight that the indefinite stuck state in #7896 was never\nreproduced on demand, and that what this change offers is a structural\nguarantee rather than a fix for a reproduced hang. This is the confirmation\nrun that was missing.\n\nSame machine as #7896 (MacBookAir5,2 / BCM43224 / `brcmsmac`), kernel\n7.1.9-arch1-2, fresh boot, refcounted scanner live on the bar.\n\nScans counted by polling NetworkManager's `Device.Wireless.LastScan` every 2s\nand treating each change as one completed scan. Worth noting for anyone trying\nto reproduce this: `dbus-monitor --system` is useless for the job. It cannot\nsee method calls on the system bus, so it reports zero `RequestScan` calls\nforever \u2014 with stderr redirected that is indistinguishable from a clean\nresult, and it produced a false baseline earlier in this work.\n\n### Every scan in a 49-minute boot, accounted for\n\n| Time | Scans | Cause |\n|---|---|---|\n| boot \u2192 panel first opened | 0 | Wi-Fi associated 46s after boot with no scan involved |\n| panel opened (3 separate times) | 1 each | expected: an open panel is supposed to scan |\n| after a `nmcli connection up` reconnect | 1 | expected |\n| deliberate `nmcli device wifi rescan` control | 1 | instrument check, see below |\n| **every window with the panel closed** | **0** | \u2014 |\n\nLongest uninterrupted closed-panel window: **18m46s, zero scans.** Two earlier\nwindows of 4m36s and 5m54s, also zero. Nothing scanned behind a closed panel\nat any point.\n\nThe control scan matters: an unprivileged scan counter that silently reads\nzero confirms whatever you hoped to see, so one scan was forced deliberately\nto prove the counter was live before trusting any zero it reported.\n\n### Startup, tested directly\n\nRestarting the shell with the panel closed is the case where a fresh instance\ncould claim the scanner at construction. Watched for 150s across a restart\nwith the panel never opened: **0 scans**. Repeated with the panel opened 11s\nafter the restart, watched 140s: **0 scans**.\n\n### One scan not accounted for\n\nAt 17:44:20 a scan completed roughly 48 seconds after a shell restart, with\nthe panel open. Nothing in the NetworkManager or quickshell journal explains\nit, and neither restart shape above reproduces it. `omarchy-network-band`,\nwhich the panel polls every 4s while open, is ruled out \u2014 it reads the cache\nwith `--rescan no`. It is not a closed-panel scan, so it does not bear on what\nthis PR claims, but it is recorded here rather than left out. Attributing a\nscan to its D-Bus caller needs `WIFI_SCAN` logging enabled as root, which is\nwhere this would go next if it recurs.\n\nSince that scan: **16m31s with zero scans**, spanning two shell restarts and a\n140s panel open.\n\n### What a single sweep actually costs on this radio\n\nMeasured with ping to 1.1.1.1 while the panel was open:\n\n| Window | Loss |\n|---|---|\n| during one sweep | **18.75%** |\n| no sweep in flight | **0%**, 2.3ms avg |\n\nThat is the 19.7% from #7896 reproduced on demand, and it is why a leaked\nclaim on this hardware is destructive rather than cosmetic: 11s off-channel\nagainst a 10001ms re-arm is a continuous outage, not a periodic hiccup.\n\n### Out of scope, but worth recording\n\nThe same numbers say that on a radio this slow an *open* panel is also close\nto 100% off-channel, since `mScanIntervalMs = 10001` re-arms faster than an\n~11s sweep completes. That is quickshell's constant and not something this PR\ntouches \u2014 flagging it only because it means \"the panel is open\" is itself an\nexpensive state on old hardware, independent of the leak this PR closes.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5441792794/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5443108874",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#issuecomment-5443108874",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8221",
+      "id": 5443108874,
+      "node_id": "IC_kwDOO0Cobs8AAAABRG9ACg",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-27T17:56:08Z",
+      "updated_at": "2026-08-27T17:56:08Z",
+      "body": "## Correction, and the sweep measured from the kernel\n\n**Correction to the addendum above.** It records one scan at 17:44:20 as\nunattributed and says it \"has not recurred\". It did recur \u2014 18:16:15, same\nshape \u2014 so that line should not stand as written. Both scans happened with the\npanel **open**, so neither is a closed-panel scan and neither bears on what this\nPR claims, but \"has not recurred\" was wrong and the trigger for both is still\nunconfirmed rather than absent.\n\nThe honest version: two sweeps this boot happened while the panel was open\nwithout my having asked for one that I can prove. Everything else is accounted\nfor, and nothing scanned behind a closed panel at any point.\n\n### The 11s figure, measured directly\n\nThe second occurrence was caught by `iw event -t`, which timestamps the kernel's\nown scan start and finish. The PR body's \"~11s, 37 channels\" was inferred from\n`LastScan` deltas; this is the thing itself:\n\n```\n18:16:03.183  scan started\n18:16:14.243  scan finished: 2412 2417 2422 2427 2432 2437 2442 2447 2452 2457\n                             2462 2467 2472 5180 5200 5220 5240 5260 5280 5300\n                             5320 5500 5520 5540 5560 5580 5600 5620 5640 5660\n                             5680 5700 5745 5765 5785 5805 5825, \"\"\n```\n\n**11.06 seconds across 37 channels** \u2014 13 on 2.4GHz, 24 on 5GHz. Against\nquickshell's 10001ms re-arm, a held claim on this card means the radio finishes\none sweep and starts the next with no gap, which is what makes a leaked claim\ndestructive here rather than merely wasteful. `wpa_supplicant` also logged\n`Reject scan trigger since one is already pending` mid-sweep, so requests were\narriving faster than the radio could serve them.\n\n### Current state\n\n9 scans in a 173-minute boot, all but the two above attributable. **99 minutes\nsince the last one**, including several panel opens with `scanOnOpen` false, and\n0% packet loss at each of the three 30-minute heartbeats in that window.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5443108874/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5443197502",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#issuecomment-5443197502",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8221",
+      "id": 5443197502,
+      "node_id": "IC_kwDOO0Cobs8AAAABRHCaPg",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-27T18:03:25Z",
+      "updated_at": "2026-08-27T18:03:25Z",
+      "body": "## The 11s sweep is the *connected* case, and that matters here\n\n`iw event -t` has now caught six sweeps on this card, and they fall into two\nclean groups:\n\n| Started | State | Duration | Channels |\n|---|---|---|---|\n| 18:16:03 | connected | **11.06s** | 37 |\n| 19:59:03 | disconnected | 3.63s | 37 |\n| 19:59:07 | disconnected | 3.56s | 37 |\n| 19:59:11 | disconnected | 2.41s (aborted) | 37 |\n| 19:59:13 | disconnected | 3.55s | 37 |\n| 20:01:19 | connected | **11.07s** | 37 |\n\nSame 37 channels every time \u2014 13 on 2.4GHz, 24 on 5GHz. The disconnected sweeps\nare the four NetworkManager ran to re-associate after a Wi-Fi toggle; the two\n11s ones happened while associated.\n\nSo the ~11s figure quoted in this PR is not the raw cost of scanning 37\nchannels \u2014 that is about 3.6s. It is the cost of interleaving a scan with an\nactive connection, where the driver has to keep returning to the operating\nchannel between dwells. Roughly a 3x penalty, and it applies *only* while\nconnected.\n\nThat sharpens the argument rather than weakening it. The expensive case is\nexactly the one a leaked claim produces: scanning while connected, repeatedly,\nagainst a 10001ms re-arm. A stuck scanner is not spending 3.6s per sweep, it is\nspending 11s per sweep with 10s between the starts \u2014 which is why the loss is\ncontinuous rather than periodic.\n\nBoth 11s sweeps also followed a panel open by a few seconds, on a build with\n`scanOnOpen: false`, where opening alone is verified not to scan \u2014 so both were\nmanual rescans. That is the same shape as the two scans the comments above\nrecord as unattributed, which is the benign reading of those, though still not\na confirmed one.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5443197502/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5452916726",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#issuecomment-5452916726",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8221",
+      "id": 5452916726,
+      "node_id": "IC_kwDOO0Cobs8AAAABRQTn9g",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-28T13:09:57Z",
+      "updated_at": "2026-08-28T13:27:46Z",
+      "body": "Screenshot of the rescan button from 1bc1dbb, running live on my bar:\r\n\r\n<img width=\"394\" height=\"490\" alt=\"image\" src=\"https://github.com/user-attachments/assets/152dca68-1f6d-493d-97ec-57b8eaf3577b\" />\r\n\r\nThe action sits in the panel header, left of the QR and speed-test buttons, and\r\ndraws `nf-md-refresh` (`U+F0450`) \u2014 the same glyph dev-gallery uses for Refresh.\r\nClicking it calls `refresh(true)`, the same path as the `r` key, and the tooltip\r\nnames the key, so the shortcut is discoverable rather than folklore. Header\r\nnavigation reaches it too; the header indices shift by one when the button is\r\npresent.\r\n\r\nBefore this commit `r` was the only way to rescan and nothing advertised it, so\r\nmouse users had no way to trigger a sweep at all. That matters more with the\r\nsecond commit in place: once `scanHoldSec` releases the scanner claim, an open\r\npanel stops refreshing on its own, and an explicit rescan becomes the way to get\r\na fresh list.\r\n\r\n`test/shell.d/network-test.sh` passes 135 assertions, including coverage of the\r\nbutton, its keyboard activation, and the header index shift.\r\n\r\nSSIDs and addresses in the screenshot are redacted.\r\n\r\n##\r\n\r\nWhen i open WiFi - it is not always for change endpoint but to see stats . then issue r or click re-scan button do that . else just old stupid re-scan by default when i just want to look,\r\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5452916726/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5747398731",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#issuecomment-5747398731",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8221",
+      "id": 5747398731,
+      "node_id": "IC_kwDOO0Cobs8AAAABVpJYSw",
+      "user": {
+        "login": "murdawkmedia",
+        "id": 119478503,
+        "node_id": "U_kgDOBx8Y5w",
+        "avatar_url": "https://avatars.githubusercontent.com/u/119478503?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/murdawkmedia",
+        "html_url": "https://github.com/murdawkmedia",
+        "followers_url": "https://api.github.com/users/murdawkmedia/followers",
+        "following_url": "https://api.github.com/users/murdawkmedia/following{/other_user}",
+        "gists_url": "https://api.github.com/users/murdawkmedia/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/murdawkmedia/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/murdawkmedia/subscriptions",
+        "organizations_url": "https://api.github.com/users/murdawkmedia/orgs",
+        "repos_url": "https://api.github.com/users/murdawkmedia/repos",
+        "events_url": "https://api.github.com/users/murdawkmedia/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/murdawkmedia/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-20T03:43:11Z",
+      "updated_at": "2026-09-20T03:43:11Z",
+      "body": "Additional field report from related Broadcom hardware.\n\nTest system:\n\n- MacBookAir6,2\n- Broadcom BCM4360 (`14e4:43a0`) using the `wl` driver\n- Omarchy 4.0.4-1\n\nIntermittent connectivity loss stopped recurring after removing the `omarchy.network` widget from the bar as an A/B mitigation. I kept a launcher that could restore the widget for emergency network selection, then hide it again. After the latest successful association, NetworkManager recorded no Wi-Fi disconnect for more than 21 hours.\n\nThis is not a direct validation of the branch implementation: the test used the packaged shell plus the widget-disable workaround, and Bluetooth was also off during the observation window. It does support the failure mechanism and the need to make scanning bounded and fully releasable. The proposed reference-counted ownership and optional scan pulse are a much better upstream answer than removing the network widget on affected Macs.\n",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5747398731/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5020388467,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKz0Mcw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nIntroduces reference-counted Wi-Fi scanner ownership across panel instances.\n\n**Changes:**\n- Adds a shared scanner claim registry.\n- Updates panel lifecycle handling and periodic reconciliation.\n- Expands multi-panel scanner tests.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 3 out of 3 changed files in this pull request and generated 2 comments.\n\n| File | Description |\n| ---- | ----------- |\n| `Scanner.js` | Implements scanner claim tracking. |\n| `Panel.qml` | Uses claims throughout panel lifecycle. |\n| `network-test.sh` | Tests scanner ownership scenarios. |\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#pullrequestreview-5020388467",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#pullrequestreview-5020388467"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "submitted_at": "2026-08-25T14:51:07Z",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e"
+    },
+    {
+      "id": 5020625282,
+      "node_id": "PRR_kwDOO0Cobs8AAAABK0Cpgg",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?u=f804146a9790b435fc2a234d1d33db8324529652&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#pullrequestreview-5020625282",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#pullrequestreview-5020625282"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "submitted_at": "2026-08-25T15:12:40Z",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e"
+    },
+    {
+      "id": 5020625524,
+      "node_id": "PRR_kwDOO0Cobs8AAAABK0CqdA",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?u=f804146a9790b435fc2a234d1d33db8324529652&v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#pullrequestreview-5020625524",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "author_association": "NONE",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#pullrequestreview-5020625524"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "submitted_at": "2026-08-25T15:12:41Z",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e"
+    }
+  ],
+  "inline": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854221899",
+      "pull_request_review_id": 5020388467,
+      "id": 3854221899,
+      "node_id": "PRRC_kwDOO0Cobs7lusJL",
+      "diff_hunk": "@@ -292,27 +293,27 @@ Panel {\n   readonly property color hoverFill: bar ? Style.hoverFillFor(bar.foreground, Color.accent) : \"transparent\"\n   readonly property color selectedFill: bar ? Style.selectedFillFor(bar.foreground, Color.accent) : \"transparent\"\n \n-  // scannerEnabled lives on the shared WifiDevice, which has no reference\n-  // counting, and a bar widget is instantiated once per monitor. Tracking the\n-  // device this instance turned scanning on for keeps the release correct when\n-  // the panel closes, the device is replaced, or the widget is destroyed \u2014\n-  // without a closed instance ever claiming the scanner.\n-  property var scannerDevice: null\n-\n+  // scannerEnabled is shared mutable state on the WifiDevice and this widget\n+  // outlives no instance alone \u2014 one per monitor, plus a transient overlap\n+  // across a plugin reload \u2014 so claims are reference counted in\n+  // Scanner.js rather than tracked per instance. This instance holds a claim\n+  // exactly while its own panel is open; the scanner stops when the last\n+  // instance lets go, and keeps running for the panels that still want it.\n   function setScannerEnabled(enabled) {\n-    var nextDevice = opened ? wifiDevice : null\n-\n-    if (scannerDevice && scannerDevice !== nextDevice)\n-      scannerDevice.scannerEnabled = false\n-\n-    scannerDevice = nextDevice\n-\n-    if (scannerDevice)\n-      scannerDevice.scannerEnabled = enabled\n+    Scanner.acquire(root, opened && enabled ? wifiDevice : null)\n   }\n \n-  Component.onDestruction: {\n-    if (scannerDevice) scannerDevice.scannerEnabled = false\n+  Component.onDestruction: Scanner.release(root)\n+\n+  // The scanner costs real airtime \u2014 a full scan parks the radio off-channel\n+  // for seconds on a slow card \u2014 so re-assert the invariant periodically\n+  // instead of trusting every release path to fire. A claim that outlives its\n+  // open panel is dropped within the interval rather than scanning for hours.\n+  Timer {\n+    interval: 30000\n+    repeat: true\n+    running: true\n+    onTriggered: root.setScannerEnabled(root.opened)",
+      "path": "shell/plugins/panels/network/Panel.qml",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "original_commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This timer can fire during the intentional 100 ms `scanRestart` window started by `refresh(true)` and immediately re-enable scanning, defeating the deferred restart that avoids blocking panel opening. Skip reconciliation while `scanRestart.running` is true.",
+      "created_at": "2026-08-25T14:51:06Z",
+      "updated_at": "2026-08-25T14:51:07Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854221899",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854221899"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854221899"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854221899/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 316,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 50,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854221966",
+      "pull_request_review_id": 5020388467,
+      "id": 3854221966,
+      "node_id": "PRRC_kwDOO0Cobs7lusKO",
+      "diff_hunk": "@@ -292,27 +293,27 @@ Panel {\n   readonly property color hoverFill: bar ? Style.hoverFillFor(bar.foreground, Color.accent) : \"transparent\"\n   readonly property color selectedFill: bar ? Style.selectedFillFor(bar.foreground, Color.accent) : \"transparent\"\n \n-  // scannerEnabled lives on the shared WifiDevice, which has no reference\n-  // counting, and a bar widget is instantiated once per monitor. Tracking the\n-  // device this instance turned scanning on for keeps the release correct when\n-  // the panel closes, the device is replaced, or the widget is destroyed \u2014\n-  // without a closed instance ever claiming the scanner.\n-  property var scannerDevice: null\n-\n+  // scannerEnabled is shared mutable state on the WifiDevice and this widget\n+  // outlives no instance alone \u2014 one per monitor, plus a transient overlap\n+  // across a plugin reload \u2014 so claims are reference counted in\n+  // Scanner.js rather than tracked per instance. This instance holds a claim\n+  // exactly while its own panel is open; the scanner stops when the last\n+  // instance lets go, and keeps running for the panels that still want it.\n   function setScannerEnabled(enabled) {\n-    var nextDevice = opened ? wifiDevice : null\n-\n-    if (scannerDevice && scannerDevice !== nextDevice)\n-      scannerDevice.scannerEnabled = false\n-\n-    scannerDevice = nextDevice\n-\n-    if (scannerDevice)\n-      scannerDevice.scannerEnabled = enabled\n+    Scanner.acquire(root, opened && enabled ? wifiDevice : null)\n   }\n \n-  Component.onDestruction: {\n-    if (scannerDevice) scannerDevice.scannerEnabled = false\n+  Component.onDestruction: Scanner.release(root)\n+\n+  // The scanner costs real airtime \u2014 a full scan parks the radio off-channel\n+  // for seconds on a slow card \u2014 so re-assert the invariant periodically\n+  // instead of trusting every release path to fire. A claim that outlives its\n+  // open panel is dropped within the interval rather than scanning for hours.",
+      "path": "shell/plugins/panels/network/Panel.qml",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "original_commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "user": {
+        "login": "Copilot",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Copilot",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/Copilot/followers",
+        "following_url": "https://api.github.com/users/Copilot/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Copilot/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Copilot/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Copilot/subscriptions",
+        "organizations_url": "https://api.github.com/users/Copilot/orgs",
+        "repos_url": "https://api.github.com/users/Copilot/repos",
+        "events_url": "https://api.github.com/users/Copilot/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Copilot/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "This reconcile only calls `release(root)` for the timer's own panel. A stale claim owned by a destroyed/outgoing panel remains in `claims`, so `claimCount(device)` stays positive indefinitely; with zero claims, an out-of-band `scannerEnabled = true` is also untouched because no device is applied. The 30-second bound described here therefore does not hold for the failure modes this PR targets. The registry needs a real sweep that removes dead/closed owners and applies the current device, with a stale-owner test.",
+      "created_at": "2026-08-25T14:51:07Z",
+      "updated_at": "2026-08-25T14:51:07Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854221966",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854221966"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854221966"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854221966/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 310,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 311,
+      "side": "RIGHT",
+      "author_association": "CONTRIBUTOR",
+      "original_position": 45,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854419300",
+      "pull_request_review_id": 5020625282,
+      "id": 3854419300,
+      "node_id": "PRRC_kwDOO0Cobs7lvcVk",
+      "diff_hunk": "@@ -292,27 +293,27 @@ Panel {\n   readonly property color hoverFill: bar ? Style.hoverFillFor(bar.foreground, Color.accent) : \"transparent\"\n   readonly property color selectedFill: bar ? Style.selectedFillFor(bar.foreground, Color.accent) : \"transparent\"\n \n-  // scannerEnabled lives on the shared WifiDevice, which has no reference\n-  // counting, and a bar widget is instantiated once per monitor. Tracking the\n-  // device this instance turned scanning on for keeps the release correct when\n-  // the panel closes, the device is replaced, or the widget is destroyed \u2014\n-  // without a closed instance ever claiming the scanner.\n-  property var scannerDevice: null\n-\n+  // scannerEnabled is shared mutable state on the WifiDevice and this widget\n+  // outlives no instance alone \u2014 one per monitor, plus a transient overlap\n+  // across a plugin reload \u2014 so claims are reference counted in\n+  // Scanner.js rather than tracked per instance. This instance holds a claim\n+  // exactly while its own panel is open; the scanner stops when the last\n+  // instance lets go, and keeps running for the panels that still want it.\n   function setScannerEnabled(enabled) {\n-    var nextDevice = opened ? wifiDevice : null\n-\n-    if (scannerDevice && scannerDevice !== nextDevice)\n-      scannerDevice.scannerEnabled = false\n-\n-    scannerDevice = nextDevice\n-\n-    if (scannerDevice)\n-      scannerDevice.scannerEnabled = enabled\n+    Scanner.acquire(root, opened && enabled ? wifiDevice : null)\n   }\n \n-  Component.onDestruction: {\n-    if (scannerDevice) scannerDevice.scannerEnabled = false\n+  Component.onDestruction: Scanner.release(root)\n+\n+  // The scanner costs real airtime \u2014 a full scan parks the radio off-channel\n+  // for seconds on a slow card \u2014 so re-assert the invariant periodically\n+  // instead of trusting every release path to fire. A claim that outlives its\n+  // open panel is dropped within the interval rather than scanning for hours.",
+      "path": "shell/plugins/panels/network/Panel.qml",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "original_commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Correct on both counts, and the 30s bound I described in the PR body did not hold. Confirmed before changing anything, driving the registry's own JavaScript with an owner that dies without its release running:\n\n```\nafter dead panel claims:      scannerEnabled = true\nafter survivor reconciles:    scannerEnabled = true   <- should have been false\nclaims still held: 1\n```\n\nTwo separate holes, as you say: a stale claim kept `claimCount` positive forever, and `acquire(owner, null)` with no prior claim applies no device at all, so a scanner enabled with zero claims was never driven off either.\n\nFixed by not trusting a claim on its own. It now counts only while its owner is alive and still open \u2014 a destroyed `QObject` throws on property access rather than reading back `null`, and that throw is what makes a dead owner detectable. `sweep(device)` prunes dead or closed owners and drives every device involved, including one nothing is claiming.\n\nAll four shapes now behave, covered by new tests:\n\n- owner destroyed without releasing -> swept, scanner off, 0 claims\n- panel closed without releasing -> swept, scanner off\n- `scannerEnabled = true` with zero claims -> forced off\n- a live open sibling -> keeps scanning (the sweep must not be indiscriminate)\n\nRe-verified on the affected hardware: still 0 scans closed / 2 open / 0 closed, so the sweep is not culling legitimate claims. The PR body has been corrected rather than left overstating the guarantee.",
+      "created_at": "2026-08-25T15:12:40Z",
+      "updated_at": "2026-08-25T15:12:40Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854419300",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854419300"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854419300"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854419300/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": 310,
+      "start_side": "RIGHT",
+      "line": null,
+      "original_line": 311,
+      "side": "RIGHT",
+      "in_reply_to_id": 3854221966,
+      "author_association": "NONE",
+      "original_position": 45,
+      "position": 1,
+      "subject_type": "line"
+    },
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854419519",
+      "pull_request_review_id": 5020625524,
+      "id": 3854419519,
+      "node_id": "PRRC_kwDOO0Cobs7lvcY_",
+      "diff_hunk": "@@ -292,27 +293,27 @@ Panel {\n   readonly property color hoverFill: bar ? Style.hoverFillFor(bar.foreground, Color.accent) : \"transparent\"\n   readonly property color selectedFill: bar ? Style.selectedFillFor(bar.foreground, Color.accent) : \"transparent\"\n \n-  // scannerEnabled lives on the shared WifiDevice, which has no reference\n-  // counting, and a bar widget is instantiated once per monitor. Tracking the\n-  // device this instance turned scanning on for keeps the release correct when\n-  // the panel closes, the device is replaced, or the widget is destroyed \u2014\n-  // without a closed instance ever claiming the scanner.\n-  property var scannerDevice: null\n-\n+  // scannerEnabled is shared mutable state on the WifiDevice and this widget\n+  // outlives no instance alone \u2014 one per monitor, plus a transient overlap\n+  // across a plugin reload \u2014 so claims are reference counted in\n+  // Scanner.js rather than tracked per instance. This instance holds a claim\n+  // exactly while its own panel is open; the scanner stops when the last\n+  // instance lets go, and keeps running for the panels that still want it.\n   function setScannerEnabled(enabled) {\n-    var nextDevice = opened ? wifiDevice : null\n-\n-    if (scannerDevice && scannerDevice !== nextDevice)\n-      scannerDevice.scannerEnabled = false\n-\n-    scannerDevice = nextDevice\n-\n-    if (scannerDevice)\n-      scannerDevice.scannerEnabled = enabled\n+    Scanner.acquire(root, opened && enabled ? wifiDevice : null)\n   }\n \n-  Component.onDestruction: {\n-    if (scannerDevice) scannerDevice.scannerEnabled = false\n+  Component.onDestruction: Scanner.release(root)\n+\n+  // The scanner costs real airtime \u2014 a full scan parks the radio off-channel\n+  // for seconds on a slow card \u2014 so re-assert the invariant periodically\n+  // instead of trusting every release path to fire. A claim that outlives its\n+  // open panel is dropped within the interval rather than scanning for hours.\n+  Timer {\n+    interval: 30000\n+    repeat: true\n+    running: true\n+    onTriggered: root.setScannerEnabled(root.opened)",
+      "path": "shell/plugins/panels/network/Panel.qml",
+      "commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "original_commit_id": "24177177c9ba1b15fcab6d1595976bb01bb0428e",
+      "user": {
+        "login": "xraid",
+        "id": 426,
+        "node_id": "MDQ6VXNlcjQyNg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/426?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/xraid",
+        "html_url": "https://github.com/xraid",
+        "followers_url": "https://api.github.com/users/xraid/followers",
+        "following_url": "https://api.github.com/users/xraid/following{/other_user}",
+        "gists_url": "https://api.github.com/users/xraid/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/xraid/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/xraid/subscriptions",
+        "organizations_url": "https://api.github.com/users/xraid/orgs",
+        "repos_url": "https://api.github.com/users/xraid/repos",
+        "events_url": "https://api.github.com/users/xraid/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/xraid/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "Agreed \u2014 the window is narrow (100ms out of every 30s, so ~0.3% of opens) and the cost is a stall on open rather than a correctness break, but there is no reason to leave it. The reconcile now returns early while the deferred restart is pending:\n\n```qml\nif (scanRestart.running) return\n```\n\nCovered by a new assertion so it cannot regress: \"network skips reconciling while a deferred scan restart is pending\".",
+      "created_at": "2026-08-25T15:12:41Z",
+      "updated_at": "2026-08-25T15:12:41Z",
+      "html_url": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854419519",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8221",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854419519"
+        },
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8221#discussion_r3854419519"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8221"
+        }
+      },
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/pulls/comments/3854419519/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "start_line": null,
+      "original_start_line": null,
+      "start_side": null,
+      "line": null,
+      "original_line": 316,
+      "side": "RIGHT",
+      "in_reply_to_id": 3854221899,
+      "author_association": "NONE",
+      "original_position": 50,
+      "position": 1,
+      "subject_type": "line"
+    }
+  ]
+}

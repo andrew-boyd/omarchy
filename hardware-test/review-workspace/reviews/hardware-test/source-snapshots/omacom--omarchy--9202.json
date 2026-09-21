@@ -1,0 +1,81 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9202",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cpu-power"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "b505874ffa18274a6b4710ceaee99df0c11870d5",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9202,
+  "checked_at": "2026-09-21T11:56:15.085658+00:00",
+  "title": "Stop a stuck PROCHOT from pinning T2 Macs at 800 MHz",
+  "author": "phedoreanu",
+  "head_sha": "b505874ffa18274a6b4710ceaee99df0c11870d5",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:24Z",
+  "state": "open",
+  "body": "## Summary\n\n- On T2 Macs the SMC can leave the external PROCHOT line asserted. The CPU then honors it and every core sits at its 800 MHz minimum even under an all-core load, while the package is cool (65 \u00b0C) and the CPU's own thermal status is clear. The MSRs tell the story: `CORE_PERF_LIMIT_REASONS` (0x64F) reports PROCHOT as the active limit, `THERM_STATUS` (0x19C) shows the external PROCHOT event but no thermal event, and `POWER_CTL` (0x1FC) has BD PROCHOT enabled. Nothing in userspace (governor, EPP, thermald, RAPL limits) is involved.\n- Ship `omarchy-t2-prochot.service`, a oneshot that clears BD PROCHOT in `POWER_CTL` on every core so the CPU ignores that line. Firmware restores the bit on resume, so the unit is also wanted by the sleep targets and runs after each wake. Install `msr-tools` with the other T2 packages, install and enable the unit from `fix-t2.sh`, and migrate existing installs.\n- Extend `t2-hardware-test.sh` to cover the fresh setup, the unit contents, the migration, its idempotency, and the non-T2 path.\n\nThe CPU keeps all of its own protections (thermal throttling, power limits); only the platform-driven PROCHOT input is ignored. This is the same override the `throttled` project applies on ThinkPads for the same symptom.\n\n## Verification\n\n- `bash test/shell.d/t2-hardware-test.sh` (9 passing)\n- `./test/all`: only the pre-existing environment failures also present on `quattro` (missing `omarchy-pkgs` checkout, theme-install URL check)\n- MacBookPro16,1, linux-t2 7.1.8, Omarchy 4.0.1, on AC, battery full: after a day of use with several suspend cycles the machine was pinned at 800 MHz on all 16 threads under load. Running the migration (which installs and starts the unit) cleared BD PROCHOT; `CORE_PERF_LIMIT_REASONS` dropped the PROCHOT bit and the same load immediately ran at 3.8\u20134.0 GHz.\n- After a subsequent deep-sleep cycle the unit re-ran on resume (`suspend.target`), BD PROCHOT stayed cleared and the cores ran at 3.5\u20134.5 GHz under load.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "2bfbf14977dcd1dd720be5eee5bba515a07786ad",
+      "filename": "default/systemd/system/omarchy-t2-prochot.service",
+      "status": "added",
+      "additions": 15,
+      "deletions": 0,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b505874ffa18274a6b4710ceaee99df0c11870d5/default%2Fsystemd%2Fsystem%2Fomarchy-t2-prochot.service",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b505874ffa18274a6b4710ceaee99df0c11870d5/default%2Fsystemd%2Fsystem%2Fomarchy-t2-prochot.service",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fsystemd%2Fsystem%2Fomarchy-t2-prochot.service?ref=b505874ffa18274a6b4710ceaee99df0c11870d5",
+      "patch": "@@ -0,0 +1,15 @@\n+[Unit]\n+Description=Ignore the SMC's stuck PROCHOT assertion on T2 Macs\n+# The T2's SMC can leave the external PROCHOT line asserted, pinning every core\n+# at its minimum frequency even though the CPU's own thermal status is clear.\n+# Clearing BD PROCHOT in POWER_CTL makes the CPU ignore that line; firmware\n+# restores the bit on resume, so this also runs after every sleep.\n+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target\n+\n+[Service]\n+Type=oneshot\n+ExecStartPre=/usr/bin/modprobe msr\n+ExecStart=/bin/bash -c 'wrmsr -a 0x1fc $(( 0x$(rdmsr 0x1fc) & ~1 ))'\n+\n+[Install]\n+WantedBy=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target"
+    },
+    {
+      "sha": "ddaec121c03ec5f24cdcc2481f1ea3b2aacbefbd",
+      "filename": "install/hardware/apple/fix-t2.sh",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 1,
+      "changes": 10,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b505874ffa18274a6b4710ceaee99df0c11870d5/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b505874ffa18274a6b4710ceaee99df0c11870d5/install%2Fhardware%2Fapple%2Ffix-t2.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-t2.sh?ref=b505874ffa18274a6b4710ceaee99df0c11870d5",
+      "patch": "@@ -8,7 +8,8 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n     linux-t2-headers \\\n     apple-t2-audio-config \\\n     apple-bcm-firmware \\\n-    t2fanrd\n+    t2fanrd \\\n+    msr-tools\n \n   # Enable T2 fan control\n   systemctl enable t2fanrd.service\n@@ -26,6 +27,13 @@ if lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n   echo \"MODULES+=(t2bce_vhci usbhid hid_apple hid_generic xhci_pci xhci_hcd)\" > \\\n     /etc/mkinitcpio.conf.d/apple-t2.conf\n \n+  # The SMC can leave the external PROCHOT line asserted, which pins every core\n+  # at its minimum frequency. Clear BD PROCHOT at boot and after each resume so\n+  # the CPU ignores it.\n+  install -Dm644 \"$OMARCHY_PATH/default/systemd/system/omarchy-t2-prochot.service\" \\\n+    /etc/systemd/system/omarchy-t2-prochot.service\n+  systemctl enable omarchy-t2-prochot.service\n+\n   mkdir -p /etc/limine-entry-tool.d\n   cat > /etc/limine-entry-tool.d/t2-mac.conf <<'EOF'\n # Generated by Omarchy installer for T2 Mac support"
+    },
+    {
+      "sha": "6f2a6e16afe70acf605031b2286e81669116646d",
+      "filename": "migrations/1788105580.sh",
+      "status": "added",
+      "additions": 19,
+      "deletions": 0,
+      "changes": 19,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b505874ffa18274a6b4710ceaee99df0c11870d5/migrations%2F1788105580.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b505874ffa18274a6b4710ceaee99df0c11870d5/migrations%2F1788105580.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1788105580.sh?ref=b505874ffa18274a6b4710ceaee99df0c11870d5",
+      "patch": "@@ -0,0 +1,19 @@\n+echo \"Stop a stuck PROCHOT from pinning T2 Macs at 800 MHz\"\n+\n+if ! lspci -nn | grep \"106b:180[12]\" >/dev/null; then\n+  exit 0\n+fi\n+\n+unit=\"${OMARCHY_T2_PROCHOT_UNIT:-/etc/systemd/system/omarchy-t2-prochot.service}\"\n+\n+if [[ -f $unit ]]; then\n+  exit 0\n+fi\n+\n+# The SMC can leave the external PROCHOT line asserted, which pins every core\n+# at its minimum frequency even though the CPU's own thermal status is clear.\n+# Clearing BD PROCHOT at boot and after each resume makes the CPU ignore it.\n+omarchy-pkg-add msr-tools\n+sudo install -Dm644 \"$OMARCHY_PATH/default/systemd/system/omarchy-t2-prochot.service\" \"$unit\"\n+sudo systemctl daemon-reload\n+sudo systemctl enable --now omarchy-t2-prochot.service"
+    },
+    {
+      "sha": "f2d485282ffe1f2e6658083f7393cb3f2ddf48f2",
+      "filename": "test/shell.d/t2-hardware-test.sh",
+      "status": "modified",
+      "additions": 67,
+      "deletions": 0,
+      "changes": 67,
+      "blob_url": "https://github.com/omacom/omarchy/blob/b505874ffa18274a6b4710ceaee99df0c11870d5/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/b505874ffa18274a6b4710ceaee99df0c11870d5/test%2Fshell.d%2Ft2-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Ft2-hardware-test.sh?ref=b505874ffa18274a6b4710ceaee99df0c11870d5",
+      "patch": "@@ -7,6 +7,8 @@ source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n fix_t2=\"$ROOT/install/hardware/apple/fix-t2.sh\"\n other_packages=\"$ROOT/install/omarchy-other.packages\"\n migration=\"$ROOT/migrations/1785944594.sh\"\n+prochot_unit=\"$ROOT/default/systemd/system/omarchy-t2-prochot.service\"\n+prochot_migration=\"$ROOT/migrations/1788105580.sh\"\n \n grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sleep_default=deep\"' \"$fix_t2\" ||\n   fail \"T2 setup installs the suspend kernel parameters\"\n@@ -20,6 +22,16 @@ grep -Fq 'KERNEL_CMDLINE[default]+=\" intel_iommu=on iommu=pt pm_async=off mem_sl\n   fail \"T2 setup leaves optional Touch Bar customization uninstalled\"\n ! grep -qx 'tiny-dfr' \"$other_packages\" ||\n   fail \"the ISO no longer caches tiny-dfr\"\n+grep -Fq 'msr-tools' \"$fix_t2\" ||\n+  fail \"T2 setup installs msr-tools for the PROCHOT override\"\n+grep -Fq 'default/systemd/system/omarchy-t2-prochot.service' \"$fix_t2\" ||\n+  fail \"T2 setup installs the PROCHOT override unit\"\n+grep -Fq 'systemctl enable omarchy-t2-prochot.service' \"$fix_t2\" ||\n+  fail \"T2 setup enables the PROCHOT override unit\"\n+grep -Fq \"wrmsr -a 0x1fc \\$(( 0x\\$(rdmsr 0x1fc) & ~1 ))\" \"$prochot_unit\" ||\n+  fail \"the PROCHOT override unit clears BD PROCHOT on every core\"\n+grep -Fq 'WantedBy=multi-user.target suspend.target' \"$prochot_unit\" ||\n+  fail \"the PROCHOT override unit runs at boot and after resume\"\n pass \"fresh T2 setup uses t2bce-compatible suspend, fan, and Touch Bar defaults\"\n \n test_tmp=$(mktemp -d)\n@@ -81,6 +93,14 @@ cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n SH\n \n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n chmod +x \"$stub_bin\"/*\n \n limine_conf=\"$test_tmp/t2-mac.conf\"\n@@ -212,3 +232,50 @@ grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n   fail \"T2 rerun migration rebuilds the boot image\"\n [[ -f $repair_marker ]] || fail \"T2 rerun migration records the machine-wide repair\"\n pass \"T2 rerun migration repairs installs the broken hardware check skipped\"\n+\n+prochot_unit_target=\"$test_tmp/system/omarchy-t2-prochot.service\"\n+rm -rf \"$test_tmp/system\"\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=1 \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_T2_PROCHOT_UNIT=\"$prochot_unit_target\" \\\n+  bash -euo pipefail \"$prochot_migration\" >/dev/null\n+\n+cmp -s \"$prochot_unit\" \"$prochot_unit_target\" ||\n+  fail \"T2 PROCHOT migration installs the shipped unit\"\n+grep -Fq $'omarchy-pkg-add\\tmsr-tools' \"$calls\" ||\n+  fail \"T2 PROCHOT migration installs msr-tools\"\n+grep -Fq $'systemctl\\tdaemon-reload' \"$calls\" ||\n+  fail \"T2 PROCHOT migration reloads systemd\"\n+grep -Fq $'systemctl\\tenable\\t--now\\tomarchy-t2-prochot.service' \"$calls\" ||\n+  fail \"T2 PROCHOT migration enables and starts the override\"\n+pass \"T2 PROCHOT migration unpins existing installs\"\n+\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=1 \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_T2_PROCHOT_UNIT=\"$prochot_unit_target\" \\\n+  bash -euo pipefail \"$prochot_migration\" >/dev/null\n+\n+[[ ! -s $calls ]] || fail \"an already repaired T2 install is left unchanged\" \"$(cat \"$calls\")\"\n+pass \"T2 PROCHOT migration is idempotent\"\n+\n+rm -rf \"$test_tmp/system\"\n+: >\"$calls\"\n+\n+PATH=\"$stub_bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  T2_HARDWARE=0 \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_T2_PROCHOT_UNIT=\"$prochot_unit_target\" \\\n+  bash -euo pipefail \"$prochot_migration\" >/dev/null\n+\n+[[ ! -e $prochot_unit_target ]] || fail \"non-T2 systems get no PROCHOT override\"\n+[[ ! -s $calls ]] || fail \"non-T2 systems skip the PROCHOT repair\" \"$(cat \"$calls\")\"\n+pass \"T2 PROCHOT migration skips unrelated hardware\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

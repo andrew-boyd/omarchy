@@ -1,0 +1,133 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8585",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "model-docs"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "3be31f0fa503b3b9fd586a1e3a6da5da7f81c01f",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8585,
+  "checked_at": "2026-09-21T11:56:52.727641+00:00",
+  "title": "Add the 2020 Intel MacBook Air to the T2 device list",
+  "author": "equivalent",
+  "head_sha": "3be31f0fa503b3b9fd586a1e3a6da5da7f81c01f",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:30Z",
+  "state": "open",
+  "body": "The T2 list in `manual/44-mac-support.md` skips the Intel MacBook Air (Retina, 13-inch, 2020) \u2014 `MacBookAir9,1`, model A2179. It goes from the 2018 Air straight to the 2020 MacBook Pros, even though Apple lists the 2020 Air among [Mac computers with the Apple T2 Security Chip](https://support.apple.com/en-us/103265).\r\n\r\nI own one, and I installed Omarchy on it recently. The install went through without trouble and pretty much everything is working, so the machine belongs on that list.\r\n\r\nThat matches how the installer actually behaves: `install/hardware/apple/fix-t2.sh` detects a T2 by PCI ID (`106b:180[12]`) rather than by model, so my A2179 got `linux-t2`, `apple-t2-audio-config`, `apple-bcm-firmware`, and `t2fanrd` like every other machine already listed. Only the documentation left its owners guessing.\r\n\r\nAdded in date order, between the 2019 MacBook Pros and the 2020 ones.\r\n\r\n\r\n<img width=\"671\" height=\"900\" alt=\"image\" src=\"https://github.com/user-attachments/assets/c1829e1e-a5a1-43e8-8f11-dd9a47968b4e\" />\r\n\r\nAcceptance test was. done by my daughter, she was  playing SuperTux2 entire day on it \r\n\r\n<img width=\"458\" height=\"592\" alt=\"image\" src=\"https://github.com/user-attachments/assets/37cec98d-3475-4057-9690-ed0115029bc9\" />\r\n\r\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a0c5056b90aa930677e61a6ae21560f823db30fa",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/3be31f0fa503b3b9fd586a1e3a6da5da7f81c01f/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/3be31f0fa503b3b9fd586a1e3a6da5da7f81c01f/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=3be31f0fa503b3b9fd586a1e3a6da5da7f81c01f",
+      "patch": "@@ -65,6 +65,7 @@ The Apple T2 Security Chip was introduced in 2017. The T2 chip was discontinued\n - MacBook Pro 13-inch (2019, two Thunderbolt 3 ports) \u2013 Model: A2159\n - MacBook Pro 13-inch (2019, four Thunderbolt 3 ports) \u2013 Model: A2178\n - MacBook Pro 15-inch (2019) \u2013 Model: A1990\n+- MacBook Air (Retina, 13-inch, 2020) \u2013 Model: A2179\n - MacBook Pro 13-inch (2020, two Thunderbolt 3 ports) \u2013 Model: A2265\n - MacBook Pro 15-inch (2020) \u2013 Model: A1990\n "
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5448378640",
+      "html_url": "https://github.com/omacom/omarchy/pull/8585#issuecomment-5448378640",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8585",
+      "id": 5448378640,
+      "node_id": "IC_kwDOO0Cobs8AAAABRL-pEA",
+      "user": {
+        "login": "spuder",
+        "id": 242382,
+        "node_id": "MDQ6VXNlcjI0MjM4Mg==",
+        "avatar_url": "https://avatars.githubusercontent.com/u/242382?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/spuder",
+        "html_url": "https://github.com/spuder",
+        "followers_url": "https://api.github.com/users/spuder/followers",
+        "following_url": "https://api.github.com/users/spuder/following{/other_user}",
+        "gists_url": "https://api.github.com/users/spuder/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/spuder/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/spuder/subscriptions",
+        "organizations_url": "https://api.github.com/users/spuder/orgs",
+        "repos_url": "https://api.github.com/users/spuder/repos",
+        "events_url": "https://api.github.com/users/spuder/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/spuder/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-28T04:20:30Z",
+      "updated_at": "2026-08-28T04:20:30Z",
+      "body": "Can confirm. Also have omarchy running on 2020 macbook air. \r\n\r\nOnly issue I encountered was that wifi wouldn't reconnect after sleep. Claude made a slight change and fixed it. (Will open a separate issue if I can reverse engineer what claude did). ",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5448378640/reactions",
+        "total_count": 1,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 1,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5041570607,
+      "node_id": "PRR_kwDOO0Cobs8AAAABLIBDLw",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds the missing 2020 Intel MacBook Air to the documented T2-supported devices.\n\n**Changes:**\n- Adds model A2179 in chronological order.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8585#pullrequestreview-5041570607",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8585",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8585#pullrequestreview-5041570607"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8585"
+        }
+      },
+      "submitted_at": "2026-08-27T13:52:32Z",
+      "commit_id": "3be31f0fa503b3b9fd586a1e3a6da5da7f81c01f"
+    }
+  ],
+  "inline": []
+}

@@ -1,0 +1,8 @@
+[
+  {"url": "https://github.com/omacom/omarchy-pkgs/pull/544", "origin": "previous-intake-and-current-discovery", "group": "alpine-ridge"},
+  {"url": "https://github.com/omacom/omarchy/pull/12590", "origin": "current-discovery", "group": "t2-fan-resume"},
+  {"url": "https://github.com/omacom/omarchy/pull/10468", "origin": "current-discovery-shared-keyboard-context", "group": "keyboard-device"},
+  {"url": "https://github.com/omacom/omarchy/pull/11514", "origin": "explicit-successor-of-8149", "group": "cpu-instructions"},
+  {"url": "https://github.com/omacom/omarchy/pull/9131", "origin": "explicit-successor-of-8572", "group": "bluetooth-discovery"},
+  {"url": "https://github.com/omacom/omarchy/pull/8560", "origin": "explicit-successor-of-9181", "group": "lid-wake"}
+]

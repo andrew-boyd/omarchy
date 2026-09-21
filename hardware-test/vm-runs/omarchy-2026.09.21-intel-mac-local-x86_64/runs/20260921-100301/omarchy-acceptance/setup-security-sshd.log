@@ -1,0 +1,11 @@
+[32mSetting up SSH server access with key-based authentication.
+[0m
+Installing and starting the OpenSSH server...
+]3008;start=9343b8c3da1f4a648d903d5d8adc778f;user=omarchy;hostname=omarchy-test;machineid=c73f678636e745bf99b02f28ad5227f5;bootid=21d287f039d54973bccee2e845944974;pid=7872;pidfdid=25438;comm=sudo;targetuser=root;type=session\^@]3008;end=9343b8c3da1f4a648d903d5d8adc778f\Opening the SSH port in the firewall (rate limited against brute force)...
+
+Authorized key: 256 SHA256:mZ2aDmIFK3On1K3Vmwgy76r17IGjzg96JYlCE6kWI/k omarchy-acceptance (ED25519)
+Disabling SSH password authentication, now that a key is authorized...
+]3008;start=800b5931d4184f108b423bef11351772;user=omarchy;hostname=omarchy-test;machineid=c73f678636e745bf99b02f28ad5227f5;bootid=21d287f039d54973bccee2e845944974;pid=8464;pidfdid=5305;comm=sudo;targetuser=root;type=session\]3008;end=800b5931d4184f108b423bef11351772\]3008;start=5f9733f5ff1f43d68031c10c7573652f;user=omarchy;hostname=omarchy-test;machineid=c73f678636e745bf99b02f28ad5227f5;bootid=21d287f039d54973bccee2e845944974;pid=8468;pidfdid=25447;comm=sudo;targetuser=root;type=session\]3008;end=5f9733f5ff1f43d68031c10c7573652f\]3008;start=8f08980abfbd4ef3b9bf9b77bcde63ef;user=omarchy;hostname=omarchy-test;machineid=c73f678636e745bf99b02f28ad5227f5;bootid=21d287f039d54973bccee2e845944974;pid=8478;pidfdid=25451;comm=sudo;targetuser=root;type=session\]3008;end=8f08980abfbd4ef3b9bf9b77bcde63ef\[32m
+Perfect! The SSH server is running and your key is authorized.[0m
+Password logins are off; this machine now accepts authorized keys only.
+You can now connect with: ssh omarchy@omarchy-test

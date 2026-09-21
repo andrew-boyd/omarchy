@@ -1,0 +1,12 @@
+c3b6f5a212df7f74b61224a2698a3d1bba28c29e
+test/shell.d/locate-test.sh
+test/shell.d/omarchy-kernel-migration-test.sh
+
+Auto-merging docs/file-layout.md
+Auto-merging shell/plugins/lock/LockView.qml
+Auto-merging shell/plugins/lock/Service.qml
+Auto-merging test/shell.d/factory-reset-accounts-test.sh
+Auto-merging test/shell.d/locate-test.sh
+CONFLICT (content): Merge conflict in test/shell.d/locate-test.sh
+Auto-merging test/shell.d/omarchy-kernel-migration-test.sh
+CONFLICT (content): Merge conflict in test/shell.d/omarchy-kernel-migration-test.sh

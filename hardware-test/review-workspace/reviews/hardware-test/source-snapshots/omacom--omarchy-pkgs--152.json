@@ -1,0 +1,75 @@
+{
+  "url": "https://github.com/omacom/omarchy-pkgs/pull/152",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "t1-touchbar"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+      "state": "open"
+    },
+    {
+      "head_sha": "67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+      "state": "open",
+      "updated_at": "2026-09-18T19:18:36Z"
+    }
+  ],
+  "repository": "omacom/omarchy-pkgs",
+  "number": 152,
+  "checked_at": "2026-09-21T11:57:12.034041+00:00",
+  "title": "Build apple-ib-tb on kernel 6.12+ from Heratiki's fork",
+  "author": "shawnyeager",
+  "head_sha": "67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+  "base_sha": "c409cb6d6a75282a874eac055a98ea666269db10",
+  "base_ref": "master",
+  "updated_at": "2026-09-18T19:18:36Z",
+  "state": "open",
+  "body": "Pairs with [basecamp/omarchy#7064](https://github.com/basecamp/omarchy/pull/7064). That PR installs T1 firmware and the udev rebind; this package is what actually compiles `apple-ib-tb`.\n\nVerified on MacBookPro14,3 / linux 7.1.8: the packaged `0+git.315` DKMS build fails, Heratiki's `touchbar-driver-hid-driver` builds `apple-ibridge` / `apple-ib-tb` / `apple-ib-als`, and the bar lights up after the iBridge is rebound.\n\n`sync: false` so the next AUR pass does not put marc-git back.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e11bf32b5a0a8eafd9b34735ee95d36d55f9d2f5",
+      "filename": "pkgbuilds/macbook12-spi-driver-dkms/.omarchy/package.json",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/67c20f8f01a38b8c1427cafd89b0c68a4add16bc/pkgbuilds%2Fmacbook12-spi-driver-dkms%2F.omarchy%2Fpackage.json",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/67c20f8f01a38b8c1427cafd89b0c68a4add16bc/pkgbuilds%2Fmacbook12-spi-driver-dkms%2F.omarchy%2Fpackage.json",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-spi-driver-dkms%2F.omarchy%2Fpackage.json?ref=67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+      "patch": "@@ -1,4 +1,5 @@\n {\n   \"source\": \"aur\",\n+  \"sync\": false,\n   \"upstream_commit\": \"38f085c6470eee409c22a4753eaf58d58b4759fd\"\n }"
+    },
+    {
+      "sha": "4fd59538bdd071ed87d51e34618462ac3d506303",
+      "filename": "pkgbuilds/macbook12-spi-driver-dkms/PKGBUILD",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 9,
+      "changes": 18,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/67c20f8f01a38b8c1427cafd89b0c68a4add16bc/pkgbuilds%2Fmacbook12-spi-driver-dkms%2FPKGBUILD",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/67c20f8f01a38b8c1427cafd89b0c68a4add16bc/pkgbuilds%2Fmacbook12-spi-driver-dkms%2FPKGBUILD",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-spi-driver-dkms%2FPKGBUILD?ref=67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+      "patch": "@@ -2,24 +2,24 @@\n # Maintainer: Andrey Melentyev <andrey.melentyev@protonmail.com>\n _pkgbase=macbook12-spi-driver\n pkgname=(${_pkgbase}-dkms)\n-pkgver=0+git.315\n+# 316 = last AUR git-count plus the kernel 6.12+ build fix. Do not let\n+# pkgver() recount Heratiki's history or the package goes backwards from 315.\n+pkgver=0+git.316\n pkgrel=1\n pkgdesc=\"Driver for the keyboard, touchpad and touchbar found in newer MacBook (Pro) models\"\n arch=('i686' 'x86_64')\n-url=\"https://github.com/marc-git/macbook12-spi-driver\"\n+url=\"https://github.com/Heratiki/macbook12-spi-driver\"\n license=('GPL2')\n depends=('dkms')\n makedepends=('git')\n optdepends=()\n-source=(git+https://github.com/marc-git/macbook12-spi-driver.git#branch=touchbar-driver-hid-driver\n+# marc-git's touchbar-driver-hid-driver does not build on kernel 6.11+:\n+# platform .remove became void, hid report_fixup is const, acpi_driver.owner\n+# is gone. Heratiki's fork is that branch plus those fixes.\n+source=(git+https://github.com/Heratiki/macbook12-spi-driver.git#branch=touchbar-driver-hid-driver\n         dkms.conf)\n sha256sums=('SKIP'\n-            'e42243352d015a78e5d13260361d3052d0b84c4105bcb89191a319f2249cc47b')\n-\n-pkgver() {\n-    cd $_pkgbase\n-    echo \"0+git.$(git rev-list HEAD --count)\"\n-}\n+            'd1ebfc3b20ea6cc0454301e02d63eed32f808ff2d3f1ce1dcb60cf182cb92172')\n \n package() {\n     install -dm755 \"${pkgdir}\"/usr/src/${_pkgbase}-${pkgver}"
+    },
+    {
+      "sha": "3a20f6687098c8e141e6738ec896c314cd32f6eb",
+      "filename": "pkgbuilds/macbook12-spi-driver-dkms/dkms.conf",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 7,
+      "changes": 13,
+      "blob_url": "https://github.com/omacom/omarchy-pkgs/blob/67c20f8f01a38b8c1427cafd89b0c68a4add16bc/pkgbuilds%2Fmacbook12-spi-driver-dkms%2Fdkms.conf",
+      "raw_url": "https://github.com/omacom/omarchy-pkgs/raw/67c20f8f01a38b8c1427cafd89b0c68a4add16bc/pkgbuilds%2Fmacbook12-spi-driver-dkms%2Fdkms.conf",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy-pkgs/contents/pkgbuilds%2Fmacbook12-spi-driver-dkms%2Fdkms.conf?ref=67c20f8f01a38b8c1427cafd89b0c68a4add16bc",
+      "patch": "@@ -3,15 +3,14 @@ PACKAGE_VERSION=\"@PKGVER@\"\n AUTOINSTALL=\"yes\"\n CLEAN=\"make clean\"\n \n-BUILT_MODULE_NAME[0]=\"applespi\"\n-BUILT_MODULE_NAME[1]=\"apple-ibridge\"\n-BUILT_MODULE_NAME[2]=\"apple-ib-tb\"\n-BUILT_MODULE_NAME[3]=\"apple-ib-als\"\n+# applespi is in-tree since 5.3; the Heratiki Makefile only builds it on older\n+# kernels, so listing it here makes DKMS fail on every current Omarchy kernel.\n+BUILT_MODULE_NAME[0]=\"apple-ibridge\"\n+BUILT_MODULE_NAME[1]=\"apple-ib-tb\"\n+BUILT_MODULE_NAME[2]=\"apple-ib-als\"\n MAKE[0]=\"make KDIR=/usr/lib/modules/$kernelver/build\"\n MAKE[1]=\"make KDIR=/usr/lib/modules/$kernelver/build\"\n MAKE[2]=\"make KDIR=/usr/lib/modules/$kernelver/build\"\n-MAKE[3]=\"make KDIR=/usr/lib/modules/$kernelver/build\"\n-DEST_MODULE_LOCATION[0]=\"/kernel/drivers/spi\"\n+DEST_MODULE_LOCATION[0]=\"/kernel/drivers/misc\"\n DEST_MODULE_LOCATION[1]=\"/kernel/drivers/misc\"\n DEST_MODULE_LOCATION[2]=\"/kernel/drivers/misc\"\n-DEST_MODULE_LOCATION[3]=\"/kernel/drivers/misc\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

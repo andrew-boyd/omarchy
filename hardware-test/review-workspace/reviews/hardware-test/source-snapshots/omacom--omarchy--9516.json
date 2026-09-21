@@ -1,0 +1,158 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9516",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger",
+    "published-source-table"
+  ],
+  "groups": [
+    "cs8409"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "state": "open"
+    },
+    {
+      "head_sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "state": "open",
+      "updated_at": "2026-09-08T16:50:21Z"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9516,
+  "checked_at": "2026-09-21T11:56:21.408303+00:00",
+  "title": "Install CS8409 speaker driver on pre-T2 MacBook Pros and iMacs",
+  "author": "j7j7",
+  "head_sha": "db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T09:30:35Z",
+  "state": "closed",
+  "body": "## Summary\n- Installs `snd-hda-macbookpro-dkms` (+ `linux-headers`) on pre-T2 Macs whose speakers stay silent under in-tree `snd_hda_codec_cs8409`: **MacBookPro13,x / 14,x** and **iMac18,x / iMac19,x**.\n- Builds on @shawnyeager's work in #7140 (detector, install hook, migration, tests, manual). This PR rebases that onto current `quattro` and extends detection / docs / tests for iMacs.\n- Depends on the matching package PR: https://github.com/omacom/omarchy-pkgs/pull/155 (or the follow-up that widens its description for iMacs).\n\nIn-tree CS8409 binds the codec but never programs the external amps / CS42L83 path, so PipeWire shows a healthy unmuted sink with no output. The DKMS module replaces `snd-hda-codec-cs8409` under `updates/` after reboot.\n\nT2 Macs stay on `fix-t2.sh` / `apple-t2-audio-config` and are excluded (`iMacPro1,1`, `MacBookPro15,1`, etc.).\n\n## Hardware note\nVerified on **iMac18,3** (CS8409/CS42L83, codec subsystem `0x106b1000`) on linux 7.1.9: speakers work once the Apple CS8409 path is loaded. MacBook Pro coverage is from #7140 (MacBookPro14,3).\n\n## Test plan\n- [x] `./test/shell.d/cs8409-audio-test.sh` (MacBook + iMac match/skip cases, install hook, migration, manual wording)\n- [ ] On iMac18/19 or MacBookPro13/14: install / migrate \u2192 reboot \u2192 `lsmod | grep cs8409`, `aplay -l` shows CS8409/CS42L83, speakers play\n- [ ] T2 Mac (`MacBookPro15,1` / `iMacPro1,1`): hook and migration no-op\n\nSupersedes / can close #7140 and draft #8285 once this and the pkgs package land together.\n\nMade with [Cursor](https://cursor.com)",
+  "draft": false,
+  "files": [
+    {
+      "sha": "04ab4f323191e62e066b237d5a7c284f32853cb5",
+      "filename": "bin/omarchy-hw-apple-cs8409",
+      "status": "added",
+      "additions": 12,
+      "deletions": 0,
+      "changes": 12,
+      "blob_url": "https://github.com/omacom/omarchy/blob/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/bin%2Fomarchy-hw-apple-cs8409",
+      "raw_url": "https://github.com/omacom/omarchy/raw/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/bin%2Fomarchy-hw-apple-cs8409",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-apple-cs8409?ref=db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "patch": "@@ -0,0 +1,12 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Detect whether the computer is a pre-T2 Mac with CS8409 audio\n+# omarchy:hidden=true\n+\n+# Cirrus CS8409 + MAX98706/SSM3515/TAS5764L (or CS42L83 on iMac). In-tree\n+# snd_hda_codec_cs8409 does not program those amps. Covers:\n+# - 2016\u20132017 MacBook Pros (MacBookPro13,x / 14,x), including two-port 13\"\n+# - 2017\u20132019 iMacs (iMac18,x / iMac19,x) with the same CS8409 bridge\n+# T2 and later use a different codec and must not get this driver.\n+product_name=$(cat \"${OMARCHY_DMI_PRODUCT_NAME:-/sys/class/dmi/id/product_name}\" 2>/dev/null)\n+[[ $product_name =~ MacBookPro13,[123]|MacBookPro14,[123]|iMac18,[123]|iMac19,[12] ]]"
+    },
+    {
+      "sha": "27dc832a370eb46074931fff451ba0e549b2c991",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0,
+      "changes": 1,
+      "blob_url": "https://github.com/omacom/omarchy/blob/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "patch": "@@ -36,6 +36,7 @@ run_logged \"$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-cs8409-audio.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-brcmfmac-supplicant.sh\""
+    },
+    {
+      "sha": "45df48eb1588c15001fc4e737ee23a5cb3eaf395",
+      "filename": "install/hardware/apple/fix-cs8409-audio.sh",
+      "status": "added",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-cs8409-audio.sh?ref=db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "patch": "@@ -0,0 +1,9 @@\n+# Pre-T2 Macs with a Cirrus CS8409 HDA bridge (2016\u20132017 MacBook Pros and\n+# 2017\u20132019 iMacs) leave the speaker amps unprogrammed under the in-tree\n+# codec driver. snd-hda-macbookpro-dkms is the Apple path that enables them.\n+\n+if omarchy-hw-apple-cs8409; then\n+  echo \"Detected Mac with Cirrus CS8409 audio\"\n+\n+  omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms\n+fi"
+    },
+    {
+      "sha": "995981068a62c373faa8f871d8c1548216d5e49b",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "patch": "@@ -35,7 +35,7 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n 3. Select the orange EFI Boot device\n 4. Proceed with the [install as normal](02-getting-started.md)\n \n-The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n+The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, the CS8409 speaker driver on 2016\u20132017 MacBook Pros and 2017\u20132019 iMacs, and an NVMe suspend fix for those same MacBook models.\n \n ### Known Limitations\n \n@@ -51,7 +51,7 @@ The Apple T1 chip was introduced in late 2016 and used exclusively in the first-\n #### Known Issues\n \n - Touch Bar is non-functional\n-- Sound is not functioning\n+- Internal microphone capture is quiet and not fully wired up yet on the T1 MacBook Pros. Speakers and headphones work on those models and on 2017\u20132019 iMacs with the CS8409 bridge; the installer installs the CS8409 driver (`snd-hda-macbookpro-dkms`) automatically. Reboot once after install so the patched module replaces the silent in-tree codec.\n \n #### Devices with T2 Chip\n "
+    },
+    {
+      "sha": "70937d4aebf81a551be5a9a48b128cc202a015e3",
+      "filename": "migrations/1786889011.sh",
+      "status": "added",
+      "additions": 9,
+      "deletions": 0,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/migrations%2F1786889011.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/migrations%2F1786889011.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1786889011.sh?ref=db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "patch": "@@ -0,0 +1,9 @@\n+echo \"Install the CS8409 speaker driver on pre-T2 Macs\"\n+\n+# 2016\u20132017 MacBook Pros and 2017\u20132019 iMacs with CS8409. T2 and other\n+# Apple hardware is unchanged.\n+if ! omarchy-hw-apple-cs8409; then\n+  exit 0\n+fi\n+\n+omarchy-pkg-add linux-headers snd-hda-macbookpro-dkms"
+    },
+    {
+      "sha": "7ecbd52cdfea5a05cfa1743cbec0737e56accef5",
+      "filename": "test/shell.d/cs8409-audio-test.sh",
+      "status": "added",
+      "additions": 147,
+      "deletions": 0,
+      "changes": 147,
+      "blob_url": "https://github.com/omacom/omarchy/blob/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/test%2Fshell.d%2Fcs8409-audio-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72/test%2Fshell.d%2Fcs8409-audio-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fcs8409-audio-test.sh?ref=db6d259d76cc19c4c7cdd19d87d0a4119d8c4b72",
+      "patch": "@@ -0,0 +1,147 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+hw=\"$ROOT/bin/omarchy-hw-apple-cs8409\"\n+fix=\"$ROOT/install/hardware/apple/fix-cs8409-audio.sh\"\n+migration=\"$ROOT/migrations/1786889011.sh\"\n+manual=\"$ROOT/manual/44-mac-support.md\"\n+\n+assert_hw() {\n+  local model=$1 expect=$2 description=$3\n+  local tmp got\n+  tmp=$(mktemp)\n+  printf '%s\\n' \"$model\" >\"$tmp\"\n+  if OMARCHY_DMI_PRODUCT_NAME=\"$tmp\" \"$hw\"; then\n+    got=yes\n+  else\n+    got=no\n+  fi\n+  rm -f \"$tmp\"\n+  [[ $got == \"$expect\" ]] || fail \"$description\"\n+  pass \"$description\"\n+}\n+\n+assert_hw MacBookPro14,3 yes \"MacBookPro14,3 has CS8409 audio\"\n+assert_hw MacBookPro14,2 yes \"MacBookPro14,2 has CS8409 audio\"\n+assert_hw MacBookPro14,1 yes \"MacBookPro14,1 has CS8409 audio\"\n+assert_hw MacBookPro13,3 yes \"MacBookPro13,3 has CS8409 audio\"\n+assert_hw MacBookPro13,2 yes \"MacBookPro13,2 has CS8409 audio\"\n+assert_hw MacBookPro13,1 yes \"MacBookPro13,1 has CS8409 audio\"\n+assert_hw iMac18,3 yes \"iMac18,3 has CS8409 audio\"\n+assert_hw iMac18,2 yes \"iMac18,2 has CS8409 audio\"\n+assert_hw iMac18,1 yes \"iMac18,1 has CS8409 audio\"\n+assert_hw iMac19,1 yes \"iMac19,1 has CS8409 audio\"\n+assert_hw iMac19,2 yes \"iMac19,2 has CS8409 audio\"\n+assert_hw MacBookPro15,1 no \"MacBookPro15,1 is T2, not CS8409\"\n+assert_hw iMacPro1,1 no \"iMacPro1,1 is T2, not CS8409\"\n+assert_hw MacBook8,1 no \"MacBook8,1 is SPI-only\"\n+\n+grep -Fq 'fix-cs8409-audio.sh' \"$ROOT/install/hardware/all.sh\" ||\n+  fail \"hardware install runs the CS8409 hook\"\n+pass \"CS8409 install hook is wired\"\n+\n+grep -Fq 'snd-hda-macbookpro-dkms' \"$fix\" ||\n+  fail \"install hook names the omarchy-pkgs package\"\n+grep -Fq 'omarchy-hw-apple-cs8409' \"$fix\" ||\n+  fail \"install hook is gated on CS8409 detection\"\n+pass \"install hook installs snd-hda-macbookpro-dkms\"\n+\n+grep -Fq 'snd-hda-macbookpro-dkms' \"$manual\" ||\n+  fail \"Mac support chapter names the CS8409 package\"\n+grep -Fq '2017\u20132019 iMacs' \"$manual\" ||\n+  fail \"Mac support chapter documents iMac CS8409 speakers\"\n+! grep -q 'Sound is not functioning' \"$manual\" ||\n+  fail \"Mac support chapter no longer lists speakers as unsupported\"\n+pass \"Mac support chapter documents CS8409 speakers\"\n+\n+[[ -f $migration ]] || fail \"CS8409 migration exists\"\n+grep -Fq 'omarchy-hw-apple-cs8409' \"$migration\" ||\n+  fail \"migration is gated on CS8409 detection\"\n+grep -Fq 'snd-hda-macbookpro-dkms' \"$migration\" ||\n+  fail \"migration installs the CS8409 package\"\n+! head -1 \"$migration\" | grep -q '^#!' ||\n+  fail \"migration has no shebang\"\n+pass \"migration installs the driver on CS8409 hardware only\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+chmod +x \"$stub_bin/omarchy-pkg-add\"\n+\n+dmi=\"$test_tmp/dmi\"\n+printf 'MacBookPro14,1\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"install hook adds headers and the CS8409 package on a two-port 13-inch\"\n+pass \"install hook runs on MacBookPro14,1 (CS8409, no Touch Bar)\"\n+\n+: >\"$calls\"\n+printf 'MacBookPro15,1\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+[[ ! -s $calls ]] || fail \"T2 hardware skips the CS8409 package\" \"$(cat \"$calls\")\"\n+pass \"install hook skips T2 hardware\"\n+\n+: >\"$calls\"\n+printf 'MacBookPro14,3\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  bash -euo pipefail \"$migration\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"migration installs the CS8409 package on a 15-inch T1\"\n+pass \"migration installs the driver on MacBookPro14,3\"\n+\n+: >\"$calls\"\n+printf 'iMac18,3\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  OMARCHY_PATH=\"$ROOT\" \\\n+  OMARCHY_INSTALL=\"$ROOT/install\" \\\n+  bash -c 'source \"$1\"' _ \"$fix\"\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"install hook adds headers and the CS8409 package on iMac18,3\"\n+pass \"install hook runs on iMac18,3 (CS8409)\"\n+\n+: >\"$calls\"\n+printf 'iMac18,3\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  bash -euo pipefail \"$migration\" >/dev/null\n+grep -Fq $'omarchy-pkg-add\\tlinux-headers\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"migration installs the CS8409 package on iMac18,3\"\n+pass \"migration installs the driver on iMac18,3\"\n+\n+: >\"$calls\"\n+printf 'MacBookPro16,1\\n' >\"$dmi\"\n+PATH=\"$stub_bin:$ROOT/bin:$PATH\" \\\n+  TEST_LOG=\"$calls\" \\\n+  OMARCHY_DMI_PRODUCT_NAME=\"$dmi\" \\\n+  bash -euo pipefail \"$migration\" >/dev/null\n+[[ ! -s $calls ]] || fail \"migration skips non-CS8409 hardware\" \"$(cat \"$calls\")\"\n+pass \"migration skips non-CS8409 hardware\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758320380",
+      "html_url": "https://github.com/omacom/omarchy/pull/9516#issuecomment-5758320380",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9516",
+      "id": 5758320380,
+      "node_id": "IC_kwDOO0Cobs8AAAABVzj-_A",
+      "user": {
+        "login": "bjarneo",
+        "id": 1419214,
+        "node_id": "MDQ6VXNlcjE0MTkyMTQ=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/1419214?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/bjarneo",
+        "html_url": "https://github.com/bjarneo",
+        "followers_url": "https://api.github.com/users/bjarneo/followers",
+        "following_url": "https://api.github.com/users/bjarneo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/bjarneo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/bjarneo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/bjarneo/subscriptions",
+        "organizations_url": "https://api.github.com/users/bjarneo/orgs",
+        "repos_url": "https://api.github.com/users/bjarneo/repos",
+        "events_url": "https://api.github.com/users/bjarneo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/bjarneo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T09:30:33Z",
+      "updated_at": "2026-09-21T09:30:33Z",
+      "body": "Automated duplication check: this pull request looks similar to #8285, which covers the same CS8409 MacBook speaker driver. I keep that one open and close this one to consolidate review.\n\nIf you feel this is the wrong decision, please open the PR again with a note on the difference.",
+      "author_association": "MEMBER",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5758320380/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

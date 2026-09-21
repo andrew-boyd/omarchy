@@ -1,0 +1,92 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/9218",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "bcm5974-trackpad"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "df56e11c5743aad990d83c18a0168dfb34cfebd0",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 9218,
+  "checked_at": "2026-09-21T11:56:03.657154+00:00",
+  "title": "Detect Apple bcm5974 trackpads in omarchy-hw-touchpad",
+  "author": "DeanWahle",
+  "head_sha": "df56e11c5743aad990d83c18a0168dfb34cfebd0",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:24Z",
+  "state": "open",
+  "body": "Fixes #9190.\n\nOn 2013/2014-era MacBooks the built-in trackpad is exposed to libinput/Hyprland as `bcm5974`, the bare kernel driver name. `omarchy-hw-touchpad` only matched device names containing `touchpad` or `trackpad`, so detection came up empty and every command chained through it (`omarchy toggle touchpad on|off|toggle`) reported \"No touchpad device found\" and did nothing.\n\n**Fix:** add `bcm5974` to the name pattern in the jq filter, with a comment explaining why it's there. Verified the filter picks `bcm5974` out of a device list while ignoring regular mice.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "12ec940378046e1fba1f364317021321da9cfcc4",
+      "filename": "bin/omarchy-hw-touchpad",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 1,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/df56e11c5743aad990d83c18a0168dfb34cfebd0/bin%2Fomarchy-hw-touchpad",
+      "raw_url": "https://github.com/omacom/omarchy/raw/df56e11c5743aad990d83c18a0168dfb34cfebd0/bin%2Fomarchy-hw-touchpad",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-touchpad?ref=df56e11c5743aad990d83c18a0168dfb34cfebd0",
+      "patch": "@@ -2,5 +2,7 @@\n \n # omarchy:summary=Print the detected Hyprland touchpad or trackpad device name\n \n-device=$(hyprctl devices -j | jq -r '[.mice[] | .name | select(test(\"touchpad|trackpad\"; \"i\"))] | first // empty')\n+# Apple's bcm5974 driver reports the built-in trackpad to libinput under the\n+# bare driver name, so match it alongside the conventional touchpad names.\n+device=$(hyprctl devices -j | jq -r '[.mice[] | .name | select(test(\"touchpad|trackpad|bcm5974\"; \"i\"))] | first // empty')\n [[ -n $device ]] && echo \"$device\""
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5470475045",
+      "html_url": "https://github.com/omacom/omarchy/pull/9218#issuecomment-5470475045",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/9218",
+      "id": 5470475045,
+      "node_id": "IC_kwDOO0Cobs8AAAABRhDTJQ",
+      "user": {
+        "login": "DeanWahle",
+        "id": 60762514,
+        "node_id": "MDQ6VXNlcjYwNzYyNTE0",
+        "avatar_url": "https://avatars.githubusercontent.com/u/60762514?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/DeanWahle",
+        "html_url": "https://github.com/DeanWahle",
+        "followers_url": "https://api.github.com/users/DeanWahle/followers",
+        "following_url": "https://api.github.com/users/DeanWahle/following{/other_user}",
+        "gists_url": "https://api.github.com/users/DeanWahle/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/DeanWahle/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/DeanWahle/subscriptions",
+        "organizations_url": "https://api.github.com/users/DeanWahle/orgs",
+        "repos_url": "https://api.github.com/users/DeanWahle/repos",
+        "events_url": "https://api.github.com/users/DeanWahle/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/DeanWahle/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-08-30T18:26:02Z",
+      "updated_at": "2026-08-30T18:26:02Z",
+      "body": "@ryanrhughes One-line fix for #9190: omarchy-hw-touchpad only matched device names containing touchpad or trackpad, so Apple's bcm5974 trackpad (which reports the bare driver name) was never found and the toggle commands silently failed on 2013/2014 MacBooks.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5470475045/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

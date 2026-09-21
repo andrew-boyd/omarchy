@@ -1,0 +1,205 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/8149",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "cpu-instructions"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "03d5442cafa3476c38793582af49859577ee09fe",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 8149,
+  "checked_at": "2026-09-21T11:56:12.368971+00:00",
+  "title": "Skip Claude and Pi on CPUs without SSE4.2/POPCNT",
+  "author": "Chessing234",
+  "head_sha": "03d5442cafa3476c38793582af49859577ee09fe",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-21T07:17:24Z",
+  "state": "closed",
+  "body": "Default user setup always installed Claude and Pi through mise. On x86-64-v1 CPUs without SSE4.2/POPCNT (Bun's linux-x64 baseline) both natives install then SIGILL.\n\n`omarchy-hw-cpu-sse4_2` detects that baseline before install. Missing either flag skips and prints why; ARM/aarch64 (including Apple Silicon/Asahi) still installs. Choosing Claude/Pi as the default agent is refused on incompatible CPUs, and those menu rows are hidden.\n\n`bun-agent-cpu-test.sh` stubs cpuinfo: skip without sse4_2, install with flags, install on aarch64.\n\nFixes #7881\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "5083f23169317283b689c2f3a456beb5e89977ce",
+      "filename": "bin/omarchy-default-agent",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/bin%2Fomarchy-default-agent",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/bin%2Fomarchy-default-agent",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-default-agent?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -45,6 +45,11 @@ esac\n \n agent_package=${agent_package:-$agent}\n \n+if [[ $agent == claude || $agent == pi ]] && ! omarchy-hw-cpu-sse4_2; then\n+  echo \"Cannot install $name: this CPU lacks SSE4.2/POPCNT, which Bun's linux-x64 builds need\" >&2\n+  exit 1\n+fi\n+\n # Hermes reaches mise through its own installer rather than straight from\n # here: it needs its interpreter pinned, and a bare `mise use` has nowhere to\n # say so. See omarchy-install-hermes-cli. OpenClaw comes from its pacman"
+    },
+    {
+      "sha": "a7b75e31e1aa5eed973773d02764b85df4705d25",
+      "filename": "bin/omarchy-hw-cpu-sse4_2",
+      "status": "added",
+      "additions": 47,
+      "deletions": 0,
+      "changes": 47,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/bin%2Fomarchy-hw-cpu-sse4_2",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/bin%2Fomarchy-hw-cpu-sse4_2",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-hw-cpu-sse4_2?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -0,0 +1,47 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Returns true when the CPU has SSE4.2 and POPCNT, or is not x86_64.\n+\n+# Bun's linux-x64 target needs SSE4.2 and POPCNT. x86-64-v1 CPUs (Core 2 Duo,\n+# first-gen Atom, \u2026) install the natives then SIGILL. ARM/aarch64 \u2014 including\n+# Apple Silicon and Asahi \u2014 uses a different build and should still install.\n+#\n+# OMARCHY_CPUINFO and OMARCHY_ARCH override /proc/cpuinfo and uname for tests.\n+\n+cpuinfo=${OMARCHY_CPUINFO:-/proc/cpuinfo}\n+arch=${OMARCHY_ARCH:-}\n+\n+cpu_has_bun_x64_flags() {\n+  local flags=$1\n+\n+  [[ \" $flags \" == *\" sse4_2 \"* && \" $flags \" == *\" popcnt \"* ]]\n+}\n+\n+if [[ -z $arch && -r $cpuinfo ]]; then\n+  if grep -q '^flags[[:space:]]*:' \"$cpuinfo\"; then\n+    arch=x86_64\n+  elif grep -qiE '^(features|cpu architecture)[[:space:]]*:' \"$cpuinfo\"; then\n+    arch=aarch64\n+  fi\n+fi\n+\n+if [[ -z $arch ]]; then\n+  arch=$(uname -m)\n+fi\n+\n+case $arch in\n+aarch64 | arm64)\n+  exit 0\n+  ;;\n+esac\n+\n+flags=\"\"\n+if [[ -r $cpuinfo ]]; then\n+  flags=$(awk -F: '/^flags[[:space:]]*:/{print $2; exit}' \"$cpuinfo\")\n+fi\n+\n+if [[ -z $flags ]] && command -v lscpu >/dev/null; then\n+  flags=$(lscpu 2>/dev/null | awk -F: '/^Flags:/{print $2; exit}')\n+fi\n+\n+cpu_has_bun_x64_flags \"$flags\""
+    },
+    {
+      "sha": "9ff64c8e57a2622c299211d1536e9f69a560f590",
+      "filename": "bin/omarchy-mise-install-bun",
+      "status": "added",
+      "additions": 19,
+      "deletions": 0,
+      "changes": 19,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/bin%2Fomarchy-mise-install-bun",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/bin%2Fomarchy-mise-install-bun",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/bin%2Fomarchy-mise-install-bun?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -0,0 +1,19 @@\n+#!/bin/bash\n+\n+# omarchy:summary=Install a Bun linux-x64 agent when the CPU can run it.\n+# omarchy:args=<package> [command-name [bin-name]]\n+# omarchy:hidden=true\n+\n+# Claude and Pi ship Bun linux-x64 natives that SIGILL without SSE4.2/POPCNT.\n+# Skip (don't install) on incompatible x86; ARM/aarch64 still installs.\n+\n+if [[ -z $1 ]]; then\n+  echo \"Usage: omarchy-mise-install-bun <package> [command-name [bin-name]]\"\n+  exit 1\n+fi\n+\n+if omarchy-hw-cpu-sse4_2; then\n+  omarchy-mise-install \"$@\"\n+else\n+  echo \"Skipping $1: this CPU lacks SSE4.2/POPCNT, which Bun's linux-x64 builds need\"\n+fi"
+    },
+    {
+      "sha": "d34f33dfdc56bf01e509d236e5ac63168a7f1f16",
+      "filename": "default/omarchy/omarchy-menu.jsonc",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/default%2Fomarchy%2Fomarchy-menu.jsonc",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/default%2Fomarchy%2Fomarchy-menu.jsonc",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/default%2Fomarchy%2Fomarchy-menu.jsonc?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -136,7 +136,7 @@\n   \"setup.default\": {\"icon\":\"\uf005\",\"label\":\"Defaults\",\"aliases\":[\"default\",\"defaults\"]},\n   \"setup.default.agent\": {\"icon\":\"\udb81\udea9\",\"label\":\"Agent\",\"title\":\"Default Agent\"},\n   \"setup.default.agent.agy\": {\"icon\":\"\udb82\udee2\",\"label\":\"Antigravity\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"agy\\\" ]]\",\"action\":\"omarchy-default-agent agy\"},\n-  \"setup.default.agent.claude\": {\"icon\":\"\udb81\udec4\",\"label\":\"Claude\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"claude\\\" ]]\",\"action\":\"omarchy-default-agent claude\"},\n+  \"setup.default.agent.claude\": {\"icon\":\"\udb81\udec4\",\"label\":\"Claude\",\"when\":\"omarchy-hw-cpu-sse4_2\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"claude\\\" ]]\",\"action\":\"omarchy-default-agent claude\"},\n   \"setup.default.agent.codex\": {\"icon\":\"\ue905\",\"iconFont\":\"omarchy\",\"label\":\"Codex\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"codex\\\" ]]\",\"action\":\"omarchy-default-agent codex\"},\n   \"setup.default.agent.copilot\": {\"icon\":\"\uf4b8\",\"label\":\"Copilot\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"copilot\\\" ]]\",\"action\":\"omarchy-default-agent copilot\"},\n   \"setup.default.agent.crush\": {\"icon\":\"\udb80\uded1\",\"label\":\"Crush\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"crush\\\" ]]\",\"action\":\"omarchy-default-agent crush\"},\n@@ -147,7 +147,7 @@\n   \"setup.default.agent.openclaw\": {\"icon\":\"\ue90c\",\"iconFont\":\"omarchy\",\"label\":\"OpenClaw\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"openclaw\\\" ]]\",\"action\":\"omarchy-default-agent openclaw\"},\n   \"setup.default.agent.opencode\": {\"icon\":\"\ue902\",\"iconFont\":\"omarchy\",\"label\":\"OpenCode\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"opencode\\\" ]]\",\"action\":\"omarchy-default-agent opencode\"},\n   \"setup.default.agent.ori\": {\"icon\":\"\ue909\",\"iconFont\":\"omarchy\",\"label\":\"Ori\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"ori\\\" ]]\",\"action\":\"omarchy-default-agent ori\"},\n-  \"setup.default.agent.pi\": {\"icon\":\"\ue901\",\"iconFont\":\"omarchy\",\"label\":\"Pi\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"pi\\\" ]]\",\"action\":\"omarchy-default-agent pi\"},\n+  \"setup.default.agent.pi\": {\"icon\":\"\ue901\",\"iconFont\":\"omarchy\",\"label\":\"Pi\",\"when\":\"omarchy-hw-cpu-sse4_2\",\"checked\":\"[[ \\\"$(omarchy-default-agent)\\\" == \\\"pi\\\" ]]\",\"action\":\"omarchy-default-agent pi\"},\n   \"setup.default.browser\": {\"icon\":\"\uf488\",\"label\":\"Browser\",\"title\":\"Default Browser\"},\n   \"setup.default.browser.chromium\": {\"icon\":\"\uf268\",\"label\":\"Chromium\",\"checked\":\"[[ \\\"$(omarchy-default-browser)\\\" == \\\"chromium\\\" ]]\",\"action\":\"omarchy-default-browser chromium\"},\n   \"setup.default.browser.chrome\": {\"icon\":\"\udb80\udeaf\",\"label\":\"Chrome\",\"checked\":\"[[ \\\"$(omarchy-default-browser)\\\" == \\\"chrome\\\" ]]\",\"action\":\"omarchy-default-browser chrome\"},"
+    },
+    {
+      "sha": "ee8b65a04b19525bcc3447ef2889bbe1401cc322",
+      "filename": "install/user/mise.sh",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/install%2Fuser%2Fmise.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/install%2Fuser%2Fmise.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fuser%2Fmise.sh?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -1,12 +1,12 @@\n omarchy-mise-install codex\n-omarchy-mise-install claude\n+omarchy-mise-install-bun claude\n omarchy-mise-install crush\n omarchy-mise-install antigravity-cli agy\n omarchy-mise-install gh\n omarchy-mise-install copilot\n omarchy-mise-install opencode\n omarchy-mise-install npm:playwright playwright\n-omarchy-mise-install pi\n+omarchy-mise-install-bun pi\n omarchy-mise-install github:can1357/oh-my-pi omp\n omarchy-mise-install npm:@xai-official/grok grok\n # Cursor's own installer links the same path, so a re-provision keeps it."
+    },
+    {
+      "sha": "ca932295869700181eac381ebe74c28751d94d58",
+      "filename": "test/shell.d/bun-agent-cpu-test.sh",
+      "status": "added",
+      "additions": 170,
+      "deletions": 0,
+      "changes": 170,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/test%2Fshell.d%2Fbun-agent-cpu-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/test%2Fshell.d%2Fbun-agent-cpu-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fbun-agent-cpu-test.sh?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -0,0 +1,170 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+mock_bin=\"$test_tmp/bin\"\n+test_home=\"$test_tmp/home\"\n+cpuinfo_dir=\"$test_tmp/cpuinfo\"\n+mise_log=\"$test_tmp/mise\"\n+skip_log=\"$test_tmp/skip\"\n+mkdir -p \"$mock_bin\" \"$test_home\" \"$cpuinfo_dir\"\n+\n+cat >\"$mock_bin/omarchy-mise-install\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$OMARCHY_TEST_MISE_LOG\"\n+SH\n+chmod +x \"$mock_bin/omarchy-mise-install\"\n+\n+cat >\"$cpuinfo_dir/core2duo\" <<'EOF'\n+processor\t: 0\n+vendor_id\t: GenuineIntel\n+cpu family\t: 6\n+model\t\t: 23\n+model name\t: Intel(R) Core(TM)2 Duo CPU     E7600  @ 3.06GHz\n+stepping\t: 10\n+flags\t\t: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx lm constant_tsc art arch_perfmon pebs bts rep_good nopl aperfmperf pni dtes64 monitor ds_cpl vmx smx est tm2 ssse3 cx16 xtpr pdcm sse4_1 lahf_lm tpr_shadow vnmi flexpriority\n+EOF\n+\n+cat >\"$cpuinfo_dir/haswell\" <<'EOF'\n+processor\t: 0\n+vendor_id\t: GenuineIntel\n+cpu family\t: 6\n+model\t\t: 60\n+model name\t: Intel(R) Core(TM) i5-4590 CPU @ 3.30GHz\n+stepping\t: 3\n+flags\t\t: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm cpuid_fault epb pti ssbd ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid xsaveopt dtherm ida arat pln pts md_clear flush_l1d\n+EOF\n+\n+cat >\"$cpuinfo_dir/aarch64\" <<'EOF'\n+processor\t: 0\n+BogoMIPS\t: 48.00\n+Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop\n+CPU implementer\t: 0x41\n+CPU architecture: 8\n+CPU variant\t: 0x4\n+CPU part\t: 0xd0b\n+CPU revision\t: 1\n+EOF\n+\n+cat >\"$cpuinfo_dir/sse4_2-only\" <<'EOF'\n+processor\t: 0\n+vendor_id\t: GenuineIntel\n+flags\t\t: fpu sse sse2 sse3 ssse3 sse4_1 sse4_2\n+EOF\n+\n+export PATH=\"$mock_bin:$ROOT/bin:$PATH\"\n+export HOME=\"$test_home\"\n+export OMARCHY_PATH=\"$ROOT\"\n+export OMARCHY_TEST_MISE_LOG=\"$mise_log\"\n+\n+hw_cpu() {\n+  \"$ROOT/bin/omarchy-hw-cpu-sse4_2\"\n+}\n+\n+assert_hw() {\n+  local description=$1 expected=$2\n+  local actual=no\n+\n+  hw_cpu && actual=yes\n+  [[ $actual == \"$expected\" ]] || fail \"$description\" \"expected $expected, got $actual\"\n+  pass \"$description\"\n+}\n+\n+OMARCHY_CPUINFO=\"$cpuinfo_dir/core2duo\" assert_hw \"x86 without sse4_2 is not Bun linux-x64 compatible\" no\n+OMARCHY_CPUINFO=\"$cpuinfo_dir/sse4_2-only\" assert_hw \"x86 with sse4_2 but no popcnt is not Bun linux-x64 compatible\" no\n+OMARCHY_CPUINFO=\"$cpuinfo_dir/haswell\" assert_hw \"x86 with sse4_2 and popcnt is Bun linux-x64 compatible\" yes\n+OMARCHY_CPUINFO=\"$cpuinfo_dir/aarch64\" assert_hw \"aarch64 cpuinfo is Bun linux-x64 compatible\" yes\n+OMARCHY_ARCH=aarch64 OMARCHY_CPUINFO=\"$cpuinfo_dir/core2duo\" assert_hw \"OMARCHY_ARCH=aarch64 still installs even with x86 cpuinfo\" yes\n+\n+run_mise() {\n+  : >\"$mise_log\"\n+  OMARCHY_CPUINFO=$1 source \"$ROOT/install/user/mise.sh\" >\"$skip_log\" 2>&1\n+}\n+\n+assert_skipped() {\n+  if grep -qx 'claude' \"$mise_log\"; then\n+    fail \"$1 still installs claude\"\n+  fi\n+  if grep -qx 'pi' \"$mise_log\"; then\n+    fail \"$1 still installs pi\"\n+  fi\n+  grep -q 'Skipping claude:' \"$skip_log\" || fail \"$1 does not explain skipping claude\"\n+  grep -q 'Skipping pi:' \"$skip_log\" || fail \"$1 does not explain skipping pi\"\n+  grep -qx 'codex' \"$mise_log\" || fail \"$1 still installs other mise tools\"\n+}\n+\n+assert_installed() {\n+  grep -qx 'claude' \"$mise_log\" || fail \"$1 does not install claude\"\n+  grep -qx 'pi' \"$mise_log\" || fail \"$1 does not install pi\"\n+  if grep -q 'Skipping' \"$skip_log\"; then\n+    fail \"$1 skips bun agents on a compatible CPU\"\n+  fi\n+}\n+\n+run_mise \"$cpuinfo_dir/core2duo\"\n+assert_skipped \"missing sse4_2\"\n+pass \"user setup skips claude and pi when SSE4.2 is missing\"\n+\n+run_mise \"$cpuinfo_dir/haswell\"\n+assert_installed \"sse4_2+popcnt\"\n+pass \"user setup installs claude and pi when SSE4.2 and POPCNT are present\"\n+\n+run_mise \"$cpuinfo_dir/aarch64\"\n+assert_installed \"aarch64\"\n+pass \"user setup installs claude and pi on aarch64\"\n+\n+cat >\"$mock_bin/mise\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$OMARCHY_TEST_MISE_LOG\"\n+if [[ $1 == \"where\" ]]; then\n+  [[ ${OMARCHY_TEST_AGENT_INSTALLED:-false} == \"true\" ]]\n+  exit\n+fi\n+exit 0\n+SH\n+\n+cat >\"$mock_bin/omarchy-launch-floating-terminal-with-presentation\" <<'SH'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$OMARCHY_TEST_TERMINAL_LOG\"\n+SH\n+\n+cat >\"$mock_bin/omarchy-agent\" <<'SH'\n+#!/bin/bash\n+exit 0\n+SH\n+chmod +x \"$mock_bin\"/*\n+\n+terminal_log=\"$test_tmp/terminal\"\n+export OMARCHY_TEST_TERMINAL_LOG=\"$terminal_log\"\n+\n+: >\"$mise_log\"\n+: >\"$terminal_log\"\n+mkdir -p \"$test_home/.config/omarchy/defaults\"\n+if OMARCHY_CPUINFO=\"$cpuinfo_dir/core2duo\" omarchy-default-agent claude >\"$skip_log\" 2>&1; then\n+  fail \"default agent installs claude on a CPU without SSE4.2\"\n+fi\n+grep -q 'SSE4.2' \"$skip_log\" || fail \"default agent explains why claude cannot be installed\"\n+[[ ! -s $mise_log ]] || fail \"default agent does not invoke mise for an incompatible claude\"\n+[[ ! -s $terminal_log ]] || fail \"default agent does not open an install terminal for incompatible claude\"\n+[[ ! -f $test_home/.config/omarchy/defaults/agent ]] || fail \"default agent does not record an incompatible claude\"\n+pass \"default agent refuses claude on a CPU without SSE4.2\"\n+\n+: >\"$mise_log\"\n+: >\"$skip_log\"\n+if OMARCHY_CPUINFO=\"$cpuinfo_dir/core2duo\" omarchy-default-agent pi >\"$skip_log\" 2>&1; then\n+  fail \"default agent installs pi on a CPU without SSE4.2\"\n+fi\n+grep -q 'SSE4.2' \"$skip_log\" || fail \"default agent explains why pi cannot be installed\"\n+[[ ! -s $mise_log ]] || fail \"default agent does not invoke mise for an incompatible pi\"\n+pass \"default agent refuses pi on a CPU without SSE4.2\"\n+\n+: >\"$mise_log\"\n+OMARCHY_CPUINFO=\"$cpuinfo_dir/haswell\" OMARCHY_TEST_AGENT_INSTALLED=true omarchy-default-agent claude >/dev/null\n+grep -q 'use -g claude' \"$mise_log\" || fail \"default agent still installs claude when the CPU can run Bun\"\n+[[ $(<\"$test_home/.config/omarchy/defaults/agent\") == claude ]] || fail \"default agent records claude on a compatible CPU\"\n+pass \"default agent still installs claude when SSE4.2 and POPCNT are present\""
+    },
+    {
+      "sha": "9731dddd363e610196289e0897e539a6378fb3cd",
+      "filename": "test/shell.d/menu-test.sh",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 3,
+      "changes": 7,
+      "blob_url": "https://github.com/omacom/omarchy/blob/03d5442cafa3476c38793582af49859577ee09fe/test%2Fshell.d%2Fmenu-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/03d5442cafa3476c38793582af49859577ee09fe/test%2Fshell.d%2Fmenu-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmenu-test.sh?ref=03d5442cafa3476c38793582af49859577ee09fe",
+      "patch": "@@ -215,13 +215,14 @@ assertEqual(\n   'setup.reset',\n   'menu lists Reset Computer last under Setup'\n )\n+const bunX64When = 'omarchy-hw-cpu-sse4_2'\n const expectedAgents = {\n   agy: { icon: '\udb82\udee2', label: 'Antigravity' },\n-  pi: { icon: '\\ue901', iconFont: 'omarchy', label: 'Pi' },\n+  pi: { icon: '\\ue901', iconFont: 'omarchy', label: 'Pi', when: bunX64When },\n   omp: { icon: '\\ue903', iconFont: 'omarchy', label: 'omp' },\n   opencode: { icon: '\\ue902', iconFont: 'omarchy', label: 'OpenCode' },\n   ori: { icon: '\\ue909', iconFont: 'omarchy', label: 'Ori' },\n-  claude: { icon: '\udb81\udec4', label: 'Claude' },\n+  claude: { icon: '\udb81\udec4', label: 'Claude', when: bunX64When },\n   codex: { icon: '\\ue905', iconFont: 'omarchy', label: 'Codex' },\n   grok: { icon: '\\ue904', iconFont: 'omarchy', label: 'Grok' },\n   hermes: { icon: '\\ue90a', iconFont: 'omarchy', label: 'Hermes' },\n@@ -238,7 +239,7 @@ assert(\n       && entry.iconFont === (expected.iconFont || '')\n       && entry.label === expected.label\n       && entry.action === `omarchy-default-agent ${agent}`\n-      && !entry.when\n+      && entry.when === (expected.when || '')\n       && entry.checked.includes(`== \\\"${agent}\\\"`)\n   }),\n   'menu exposes every mise-installable coding agent with its own glyph under Defaults > Agent'"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5756813142",
+      "html_url": "https://github.com/omacom/omarchy/pull/8149#issuecomment-5756813142",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/8149",
+      "id": 5756813142,
+      "node_id": "IC_kwDOO0Cobs8AAAABVyH_Vg",
+      "user": {
+        "login": "Chessing234",
+        "id": 134995372,
+        "node_id": "U_kgDOCAvdrA",
+        "avatar_url": "https://avatars.githubusercontent.com/u/134995372?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Chessing234",
+        "html_url": "https://github.com/Chessing234",
+        "followers_url": "https://api.github.com/users/Chessing234/followers",
+        "following_url": "https://api.github.com/users/Chessing234/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Chessing234/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Chessing234/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Chessing234/subscriptions",
+        "organizations_url": "https://api.github.com/users/Chessing234/orgs",
+        "repos_url": "https://api.github.com/users/Chessing234/repos",
+        "events_url": "https://api.github.com/users/Chessing234/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Chessing234/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-21T07:17:22Z",
+      "updated_at": "2026-09-21T07:17:22Z",
+      "body": "folded into #11514 with the other mise/default-agent fixes.",
+      "author_association": "CONTRIBUTOR",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5756813142/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [
+    {
+      "id": 5014787828,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKueW9A",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nPrevents Bun-based Claude and Pi binaries from running on unsupported x86 CPUs.\n\n**Changes:**\n- Adds CPU capability detection and guarded mise installation.\n- Blocks incompatible default-agent selections and hides menu entries.\n- Adds CPU and menu tests.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 4 out of 7 changed files in this pull request and generated no comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `bin/omarchy-hw-cpu-sse4_2` | Detects Bun-compatible CPUs. |\r\n| `bin/omarchy-mise-install-bun` | Skips incompatible agents. |\r\n| `bin/omarchy-default-agent` | Rejects incompatible selections. |\r\n| `install/user/mise.sh` | Applies guarded installation to Claude and Pi. |\r\n| `default/omarchy/omarchy-menu.jsonc` | Hides incompatible agent options. |\r\n| `test/shell.d/bun-agent-cpu-test.sh` | Tests detection and installation behavior. |\r\n| `test/shell.d/menu-test.sh` | Verifies menu guards. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/8149#pullrequestreview-5014787828",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/8149",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/8149#pullrequestreview-5014787828"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/8149"
+        }
+      },
+      "submitted_at": "2026-08-25T03:54:33Z",
+      "commit_id": "7649372f3405a98aea163f37d99c68e74aeef16f"
+    }
+  ],
+  "inline": []
+}

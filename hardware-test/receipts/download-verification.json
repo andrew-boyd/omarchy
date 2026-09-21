@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-21T13:58:19.638729+00:00",
+  "url": "https://omarchy.tailf2b317.ts.net:8443/omarchy-intel-mac-20260921-9e6288ef.iso",
+  "bytes": 6215624704,
+  "sha256": "9e6288ef5cc1eadce519cdd7384c8030286eb938a6288eb218f025a61b433252",
+  "full_download_matches_iso": true,
+  "scope": "Private Tailscale Serve; existing 443 routes preserved; no Funnel",
+  "systemd_unit": "vintage-iso-download.service",
+  "vm_validation": "required individual checks satisfied; original runtime aggregate failed, with three qualified clean-overlay reruns; see final-validation.json",
+  "companion_archive": {
+    "url": "https://omarchy.tailf2b317.ts.net:8443/intel-mac-companions-9e6288ef.tar.gz",
+    "bytes": 11182321,
+    "sha256": "2a56569086336894aaeb6892217fba57d65cbcec8f14dcb0faa549e4112df1ec",
+    "full_download_matches_archive": true
+  }
+}

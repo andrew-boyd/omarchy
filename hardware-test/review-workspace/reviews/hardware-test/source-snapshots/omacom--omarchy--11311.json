@@ -1,0 +1,104 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11311",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "wifi-legacy"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "31c64fb3d50d6af966a6673c2d765ace49d85588",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11311,
+  "checked_at": "2026-09-21T11:57:36.659346+00:00",
+  "title": "Install b43-firmware for BCM4322 Wi-Fi (older MacBooks)",
+  "author": "Infringer13",
+  "head_sha": "31c64fb3d50d6af966a6673c2d765ace49d85588",
+  "base_sha": "b5589faaf80c6f87c07d4560fca37c4a81722f28",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-12T19:01:55Z",
+  "state": "open",
+  "body": "## Summary\nOlder MacBooks with **Broadcom BCM4322** (PCI `14e4:432b`, Apple AirPort Extreme) load the in-tree `b43` driver but have **no Wi-Fi interface** until cut firmware is installed. `linux-firmware-broadcom` does not ship `b43/ucode16_mimo.fw`; the AUR package `b43-firmware` does.\n\n### Symptoms (Omarchy 4.0.3, real hardware)\n- dmesg: `b43-phy0 ERROR: Firmware file \"b43/ucode16_mimo.fw\" not found`\n- NetworkManager: `WIFI-HW: missing`, no `wlan0`\n- After `b43-firmware` + reload `b43`: `wlan0` appears and associates normally\n\n### What this changes\n- Extends `install/hardware/fix-bcm43xx.sh` to detect `14e4:432b` and install `b43-firmware` via `omarchy-pkg-aur-add` when the AUR is reachable\n- Leaves the existing BCM4360 / BCM4331 `broadcom-wl-dkms` path unchanged\n- Adds a migration so already-installed systems pick this up on update\n\nRelated but different: #1143 covered mid-2010s BCM4360-style chips, not BCM4322.\n\n## Test plan\n- [ ] BCM4322 machine: install/update yields `b43-firmware` installed and `wlan0` usable\n- [ ] BCM4360/4331 machine: still gets `broadcom-wl-dkms` only (no regression)\n- [ ] Machine without those PCI IDs: no Broadcom Wi-Fi packages added\n- [ ] AUR unreachable: install continues with a clear message (no hard abort beyond existing helper behavior)",
+  "draft": false,
+  "files": [
+    {
+      "sha": "69fbef69b0587b75c9d5605607d03622c5e5ca14",
+      "filename": "install/hardware/fix-bcm43xx.sh",
+      "status": "modified",
+      "additions": 13,
+      "deletions": 2,
+      "changes": 15,
+      "blob_url": "https://github.com/omacom/omarchy/blob/31c64fb3d50d6af966a6673c2d765ace49d85588/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/31c64fb3d50d6af966a6673c2d765ace49d85588/install%2Fhardware%2Ffix-bcm43xx.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Ffix-bcm43xx.sh?ref=31c64fb3d50d6af966a6673c2d765ace49d85588",
+      "patch": "@@ -1,10 +1,21 @@\n # Install Wi-Fi drivers for Broadcom chips found in some MacBooks, as well as other systems:\n-# - BCM4360 (2013\u20132015 MacBooks)\n-# - BCM4331 (2012, early 2013 MacBooks)\n+# - BCM4360 (2013\u20132015 MacBooks) / BCM4331 (2012, early 2013): proprietary STA via broadcom-wl-dkms\n+# - BCM4322 (older AirPort Extreme, PCI 14e4:432b): in-tree b43 needs AUR b43-firmware\n \n pci_info=$(lspci -nn)\n \n if (echo \"$pci_info\" | grep -q \"14e4:43a0\" || echo \"$pci_info\" | grep -q \"14e4:4331\"); then\n   echo \"BCM4360 / BCM4331 detected\"\n   omarchy-pkg-add broadcom-wl-dkms linux-headers\n fi\n+\n+# BCM4322 (and the open b43 path) needs cut firmware that linux-firmware does not ship.\n+# Without it, dmesg reports missing b43/ucode16_mimo.fw and no wlan interface appears.\n+if echo \"$pci_info\" | grep -q \"14e4:432b\"; then\n+  echo \"BCM4322 detected (b43 firmware required)\"\n+  if omarchy-pkg-aur-accessible; then\n+    omarchy-pkg-aur-add b43-firmware\n+  else\n+    echo \"AUR unavailable; install b43-firmware later so BCM4322 Wi-Fi can load firmware\"\n+  fi\n+fi"
+    },
+    {
+      "sha": "3c9129c39ee1b3aaca1d00e98fdb7288dd993f96",
+      "filename": "migrations/1789091260.sh",
+      "status": "added",
+      "additions": 8,
+      "deletions": 0,
+      "changes": 8,
+      "blob_url": "https://github.com/omacom/omarchy/blob/31c64fb3d50d6af966a6673c2d765ace49d85588/migrations%2F1789091260.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/31c64fb3d50d6af966a6673c2d765ace49d85588/migrations%2F1789091260.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1789091260.sh?ref=31c64fb3d50d6af966a6673c2d765ace49d85588",
+      "patch": "@@ -0,0 +1,8 @@\n+echo \"Install b43-firmware on BCM4322 MacBooks so Wi-Fi gets a wlan interface\"\n+\n+# Older AirPort Extreme (BCM4322) loads b43 but needs AUR firmware linux-firmware lacks.\n+if omarchy-cmd-present lspci && lspci -nn | grep -q \"14e4:432b\"; then\n+  if omarchy-pkg-aur-accessible; then\n+    omarchy-pkg-aur-add b43-firmware || true\n+  fi\n+fi"
+    }
+  ],
+  "comments": [
+    {
+      "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5648026043",
+      "html_url": "https://github.com/omacom/omarchy/pull/11311#issuecomment-5648026043",
+      "issue_url": "https://api.github.com/repos/omacom/omarchy/issues/11311",
+      "id": 5648026043,
+      "node_id": "IC_kwDOO0Cobs8AAAABUKYJuw",
+      "user": {
+        "login": "kvnloo",
+        "id": 7121943,
+        "node_id": "MDQ6VXNlcjcxMjE5NDM=",
+        "avatar_url": "https://avatars.githubusercontent.com/u/7121943?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/kvnloo",
+        "html_url": "https://github.com/kvnloo",
+        "followers_url": "https://api.github.com/users/kvnloo/followers",
+        "following_url": "https://api.github.com/users/kvnloo/following{/other_user}",
+        "gists_url": "https://api.github.com/users/kvnloo/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/kvnloo/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/kvnloo/subscriptions",
+        "organizations_url": "https://api.github.com/users/kvnloo/orgs",
+        "repos_url": "https://api.github.com/users/kvnloo/repos",
+        "events_url": "https://api.github.com/users/kvnloo/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/kvnloo/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "created_at": "2026-09-12T19:01:55Z",
+      "updated_at": "2026-09-12T19:01:55Z",
+      "body": "Broadcom/wifi leftover cluster (same driver class; DMI-gated; do not retarget BCM4331).\n\nAlready in flight:\n- #11311 b43-firmware for BCM4322 (older MacBooks) \u2014 #10994\n- #11434 reload brcmfmac after S3 (some Broadcom parts do not survive suspend)\n\nRelated, not the same PR:\n- #10975 4.0.3 replaces broadcom-wl with DKMS without kernel headers\n- #10857 wifi-resume gate references a script that is not in tree / misses BCM4388\n\nPrefer merge #11311 + #11434 as the firmware/resume pair rather than a third overlapping helper. No competing PR from me.",
+      "author_association": "NONE",
+      "reactions": {
+        "url": "https://api.github.com/repos/omacom/omarchy/issues/comments/5648026043/reactions",
+        "total_count": 0,
+        "+1": 0,
+        "-1": 0,
+        "laugh": 0,
+        "hooray": 0,
+        "confused": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+      },
+      "performed_via_github_app": null,
+      "minimized": null
+    }
+  ],
+  "reviews": [],
+  "inline": []
+}

@@ -1,0 +1,7 @@
+{
+  "checked_at": "2026-09-21T14:37:48.930292+00:00",
+  "sources_checked": 188,
+  "changed": [],
+  "unchanged": 188,
+  "method": "Fresh authenticated REST PR metadata for every registered source; no cached response reuse; no remote writes."
+}

@@ -1,0 +1,57 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/11592",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "intel-video"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 11592,
+  "checked_at": "2026-09-21T11:56:31.558369+00:00",
+  "title": "Fix legacy Intel VA-API driver detection",
+  "author": "aladh",
+  "head_sha": "5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28",
+  "base_sha": "31bd80daa4613ffdee995ac27467fce5a2990806",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-13T00:21:37Z",
+  "state": "open",
+  "body": "Intel VA-API selection currently keys off product branding: any `HD Graphics` or `Iris` name gets the Broadwell+ `intel-media-driver`, while only `GMA` reaches the legacy `libva-intel-driver`. This sends Ivy Bridge HD Graphics to the wrong driver and leaves devices reported by `lspci` as `Haswell-ULT Integrated Graphics Controller` without either driver.\n\nClassify known pre-Broadwell generations before the existing modern Intel check. The regression test covers the Haswell MacBook string, Ivy Bridge HD Graphics, Broadwell, an unknown Intel device, and a non-Intel device. Unknown devices retain the existing no-op behavior.\n\nFixes #7866.\nAddresses the Haswell driver-selection problem described in #8388.\n\nValidation:\n\n```text\nbash test/shell.d/intel-video-acceleration-test.sh\nok - Haswell uses the legacy Intel VA-API driver\nok - Ivy Bridge HD Graphics uses the legacy Intel VA-API driver\nok - Broadwell uses the current Intel media driver\nok - an unknown Intel GPU keeps the existing no-op behavior\nok - non-Intel graphics installs no Intel media driver\n```\n\nAlso passed `bash -n` for both changed shell files and `git diff --check`.\n",
+  "draft": false,
+  "files": [
+    {
+      "sha": "a65a12981e561c36996403739cfa20944a99d0de",
+      "filename": "install/hardware/intel/video-acceleration.sh",
+      "status": "modified",
+      "additions": 4,
+      "deletions": 5,
+      "changes": 9,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28/install%2Fhardware%2Fintel%2Fvideo-acceleration.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28/install%2Fhardware%2Fintel%2Fvideo-acceleration.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fintel%2Fvideo-acceleration.sh?ref=5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28",
+      "patch": "@@ -1,11 +1,10 @@\n # This installs hardware video acceleration for Intel GPUs\n \n if INTEL_GPU=$(lspci | grep -iE 'vga|3d|display' | grep -i 'intel'); then\n-  # HD Graphics / Iris / Xe / Arc / Non-Arc Panther Lake use intel-media-driver + VPL\n-  if [[ ${INTEL_GPU,,} =~ (hd\\ graphics|uhd\\ graphics|xe|iris|arc|panther\\ lake) ]]; then\n-    omarchy-pkg-add intel-media-driver libvpl vpl-gpu-rt\n-  elif [[ ${INTEL_GPU,,} =~ \"gma\" ]]; then\n-    # Older generations from 2008 to ~2014-2017 use libva-intel-driver\n+  # Intel generations before Broadwell use the legacy i965 driver.\n+  if [[ ${INTEL_GPU,,} =~ (gma|ironlake|sandy\\ bridge|2nd\\ gen\\ core|ivy\\ bridge|3rd\\ gen\\ core|haswell|crystal\\ well|4th\\ gen\\ core) ]]; then\n     omarchy-pkg-add libva-intel-driver\n+  elif [[ ${INTEL_GPU,,} =~ (hd\\ graphics|uhd\\ graphics|xe|iris|arc|panther\\ lake) ]]; then\n+    omarchy-pkg-add intel-media-driver libvpl vpl-gpu-rt\n   fi\n fi"
+    },
+    {
+      "sha": "2a107c0cb2329c4a6a2b34a6fc9bf4a38bfbe9a1",
+      "filename": "test/shell.d/intel-video-acceleration-test.sh",
+      "status": "added",
+      "additions": 52,
+      "deletions": 0,
+      "changes": 52,
+      "blob_url": "https://github.com/omacom/omarchy/blob/5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28/test%2Fshell.d%2Fintel-video-acceleration-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28/test%2Fshell.d%2Fintel-video-acceleration-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fintel-video-acceleration-test.sh?ref=5e727e50b6c13bca04d1c8f39c58b9d2ed9a6e28",
+      "patch": "@@ -0,0 +1,52 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+test_dir=$(mktemp -d)\n+trap 'rm -rf \"$test_dir\"' EXIT\n+\n+mkdir -p \"$test_dir/bin\"\n+\n+cat >\"$test_dir/bin/lspci\" <<'EOF'\n+#!/bin/bash\n+printf '%s\\n' \"$LSPCI_OUTPUT\"\n+EOF\n+\n+cat >\"$test_dir/bin/omarchy-pkg-add\" <<'EOF'\n+#!/bin/bash\n+printf '%s\\n' \"$*\" >>\"$PACKAGE_LOG\"\n+EOF\n+\n+chmod +x \"$test_dir/bin/lspci\" \"$test_dir/bin/omarchy-pkg-add\"\n+\n+run_installer() {\n+  local lspci_output=$1\n+\n+  : >\"$test_dir/packages\"\n+  PATH=\"$test_dir/bin:$PATH\" \\\n+    LSPCI_OUTPUT=\"$lspci_output\" \\\n+    PACKAGE_LOG=\"$test_dir/packages\" \\\n+    bash \"$ROOT/install/hardware/intel/video-acceleration.sh\"\n+}\n+\n+run_installer \"00:02.0 VGA compatible controller: Intel Corporation Haswell-ULT Integrated Graphics Controller (rev 09)\"\n+[[ $(<\"$test_dir/packages\") == \"libva-intel-driver\" ]] || fail \"Haswell uses the legacy Intel VA-API driver\"\n+pass \"Haswell uses the legacy Intel VA-API driver\"\n+\n+run_installer \"00:02.0 VGA compatible controller: Intel Corporation Ivy Bridge mobile GT2 [HD Graphics 4000] (rev 09)\"\n+[[ $(<\"$test_dir/packages\") == \"libva-intel-driver\" ]] || fail \"Ivy Bridge HD Graphics uses the legacy Intel VA-API driver\"\n+pass \"Ivy Bridge HD Graphics uses the legacy Intel VA-API driver\"\n+\n+run_installer \"00:02.0 VGA compatible controller: Intel Corporation Broadwell-U GT2 [HD Graphics 5500] (rev 09)\"\n+[[ $(<\"$test_dir/packages\") == \"intel-media-driver libvpl vpl-gpu-rt\" ]] || fail \"Broadwell uses the current Intel media driver\"\n+pass \"Broadwell uses the current Intel media driver\"\n+\n+run_installer \"00:02.0 VGA compatible controller: Intel Corporation Unknown Integrated Graphics Controller (rev 09)\"\n+[[ ! -s $test_dir/packages ]] || fail \"an unknown Intel GPU keeps the existing no-op behavior\"\n+pass \"an unknown Intel GPU keeps the existing no-op behavior\"\n+\n+run_installer \"01:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Device\"\n+[[ ! -s $test_dir/packages ]] || fail \"non-Intel graphics installs no Intel media driver\"\n+pass \"non-Intel graphics installs no Intel media driver\""
+    }
+  ],
+  "comments": [],
+  "reviews": [],
+  "inline": []
+}

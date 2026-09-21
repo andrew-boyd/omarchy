@@ -1,0 +1,1 @@
+PASS: installed lock rejects an incorrect password and unlocks with the valid guest password.

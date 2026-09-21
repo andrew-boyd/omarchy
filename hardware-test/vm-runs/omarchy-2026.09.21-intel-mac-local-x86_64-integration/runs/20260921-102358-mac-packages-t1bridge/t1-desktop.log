@@ -1,0 +1,4 @@
+T1BRIDGE-DESKTOP 1 13 100 0
+T1BRIDGE-DESKTOP 1 13 37 0
+T1BRIDGE-DESKTOP 1 13 37 1
+PASS: exact installed desktop provider exposes virtual audio, changes volume, toggles mute, restores audio, and renders OSD/notification. Optional auto-brightness remains inactive.

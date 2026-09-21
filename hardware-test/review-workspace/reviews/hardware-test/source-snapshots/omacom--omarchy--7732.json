@@ -1,0 +1,170 @@
+{
+  "url": "https://github.com/omacom/omarchy/pull/7732",
+  "origins": [
+    "original-group-inventory",
+    "expanded-family-ledger"
+  ],
+  "groups": [
+    "mbp131-bundle"
+  ],
+  "prior_snapshots": [
+    {
+      "head_sha": "58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "state": "open"
+    }
+  ],
+  "repository": "omacom/omarchy",
+  "number": 7732,
+  "checked_at": "2026-09-21T11:56:50.351234+00:00",
+  "title": "Add MacBookPro13,1 hardware support",
+  "author": "gjinali",
+  "head_sha": "58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+  "base_sha": "5b91db503c904bbfc5f34bdaaa9c708814958f3d",
+  "base_ref": "quattro",
+  "updated_at": "2026-09-08T16:50:37Z",
+  "state": "open",
+  "body": "## Summary\r\n\r\n- install model-gated Cirrus audio and FaceTime HD camera packages during fresh setup and hardware replay\r\n- migrate existing MacBookPro13,1 systems away from the obsolete SPI DKMS package while retaining in-tree applespi\r\n- include the offline compatibility packages and document the MacBookPro13,1 normal-boot support boundary\r\n\r\nDepends on omacom-io/omarchy-pkgs#182.\r\n\r\n## Validation\r\n\r\n- MacBookPro13,1 focused shell test: 17/17 passed\r\n- package and offline DKMS validation passed on Linux 7.1.8\r\n- live migration, reboot, audio, microphone, camera, keyboard, trackpad, and keyboard-backlight checks passed\r\n- official hardware replay passed with before/after state unchanged except timestamp\r\n\r\nDeep suspend and hibernation are not supported on MacBookPro13,1. The reference-device deep-suspend test left both analog audio outputs silent until reboot, so no experimental downstream workaround is included. See the upstream [deep-suspend audio proposal](https://github.com/davidjo/snd_hda_macbookpro/pull/198) and [jack-detection issue](https://github.com/davidjo/snd_hda_macbookpro/issues/199) for technical background.",
+  "draft": false,
+  "files": [
+    {
+      "sha": "e2dba1e5cef455c37ad93f09cb3ef45e7cab84a8",
+      "filename": "install/hardware/all.sh",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 0,
+      "changes": 2,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fall.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fall.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fall.sh?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -32,6 +32,8 @@ run_logged \"$OMARCHY_INSTALL/hardware/asus/fix-z13-touchpad.sh\"\n \n run_logged \"$OMARCHY_INSTALL/hardware/framework/qmk-hid.sh\"\n \n+run_logged \"$OMARCHY_INSTALL/hardware/apple/install-macbookpro13-1-audio.sh\"\n+run_logged \"$OMARCHY_INSTALL/hardware/apple/install-macbookpro13-1-camera.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-spi-keyboard.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-suspend-nvme.sh\"\n run_logged \"$OMARCHY_INSTALL/hardware/apple/fix-t2.sh\""
+    },
+    {
+      "sha": "8e0119030dadaa464d49b78bcba2d5510d6e167d",
+      "filename": "install/hardware/apple/fix-spi-keyboard.sh",
+      "status": "modified",
+      "additions": 3,
+      "deletions": 1,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Ffix-spi-keyboard.sh?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -3,7 +3,9 @@ product_name=\"$(cat /sys/class/dmi/id/product_name 2>/dev/null)\"\n if [[ $product_name =~ MacBook[89],1|MacBook1[02],1|MacBookPro13,[123]|MacBookPro14,[123] ]]; then\n   echo \"Detected MacBook with SPI keyboard\"\n \n-  omarchy-pkg-add macbook12-spi-driver-dkms\n+  if [[ $product_name != \"MacBookPro13,1\" ]]; then\n+    omarchy-pkg-add macbook12-spi-driver-dkms\n+  fi\n   sudo mkdir -p /etc/mkinitcpio.conf.d\n   if [[ $product_name == \"MacBook8,1\" ]]; then\n     echo \"MODULES=(applespi spi_pxa2xx_platform spi_pxa2xx_pci)\" | \\"
+    },
+    {
+      "sha": "678139e6a089adfc8c727a4091b6329b77ea47d1",
+      "filename": "install/hardware/apple/install-macbookpro13-1-audio.sh",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fapple%2Finstall-macbookpro13-1-audio.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fapple%2Finstall-macbookpro13-1-audio.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Finstall-macbookpro13-1-audio.sh?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -0,0 +1,4 @@\n+if omarchy-hw-match '^MacBookPro13,1$'; then\n+  echo \"Installing MacBookPro13,1 Cirrus audio support\"\n+  omarchy-pkg-add snd-hda-macbookpro-dkms\n+fi"
+    },
+    {
+      "sha": "ba920f37c815e7ea894a89be0595a0ce28fdccc7",
+      "filename": "install/hardware/apple/install-macbookpro13-1-camera.sh",
+      "status": "added",
+      "additions": 4,
+      "deletions": 0,
+      "changes": 4,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fapple%2Finstall-macbookpro13-1-camera.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fhardware%2Fapple%2Finstall-macbookpro13-1-camera.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fhardware%2Fapple%2Finstall-macbookpro13-1-camera.sh?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -0,0 +1,4 @@\n+if omarchy-hw-match '^MacBookPro13,1$'; then\n+  echo \"Installing MacBookPro13,1 FaceTime HD camera support\"\n+  omarchy-pkg-add facetimehd-dkms facetimehd-firmware\n+fi"
+    },
+    {
+      "sha": "b860ccb7be52a6007de7c0bc86effb07b2a749dc",
+      "filename": "install/omarchy-other.packages",
+      "status": "modified",
+      "additions": 5,
+      "deletions": 0,
+      "changes": 5,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fomarchy-other.packages",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/install%2Fomarchy-other.packages",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/install%2Fomarchy-other.packages?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -65,6 +65,11 @@ dell-xps-touchpad-haptics\n # Speaker tunings (LV2 limiter every tuning ends in)\n lsp-plugins-lv2\n \n+# MacBookPro13,1 compatibility\n+facetimehd-dkms\n+facetimehd-firmware\n+snd-hda-macbookpro-dkms\n+\n # T2 MacBook support packages\n apple-bcm-firmware\n apple-t2-audio-config"
+    },
+    {
+      "sha": "8bdff1682ae4b7a109ec8be99902a0039043c5e6",
+      "filename": "manual/44-mac-support.md",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 3,
+      "changes": 11,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/manual%2F44-mac-support.md",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/manual%2F44-mac-support.md",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/manual%2F44-mac-support.md?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -37,15 +37,20 @@ It is necessary to disable Apple's Secure Boot in order to boot the bootable USB\n \n The installer detects Mac hardware and applies the needed fixes automatically: Broadcom Wi-Fi drivers and firmware, the SPI keyboard driver on the MacBook models that need it, and an NVMe suspend fix for those same models.\n \n+#### MacBookPro13,1\n+\n+Omarchy supports the exact DMI model `MacBookPro13,1` (the 13-inch 2016 MacBook Pro with two Thunderbolt 3 ports, model A1708) on the stock Omarchy kernel. Fresh installations and hardware replay automatically install the Cirrus audio driver and FaceTime HD camera driver and firmware. The keyboard uses the kernel's in-tree `applespi` driver, and Omarchy's existing NVMe power workaround remains enabled.\n+\n+After a normal boot, the built-in speakers, headphones, microphone, camera, and keyboard backlight are supported. Deep suspend and hibernation are not supported because audio and camera do not always recover after wake and may remain unavailable until reboot. Use a normal shutdown instead. For technical background, see the upstream [deep-suspend audio proposal](https://github.com/davidjo/snd_hda_macbookpro/pull/198) and [jack-detection issue](https://github.com/davidjo/snd_hda_macbookpro/issues/199).\n+\n ### Known Limitations\n \n Members of the community are constantly working on solutions to these challenges so if these are problematic for you, join #omarchy-on-other in our [Discord](https://discord.gg/tXFUdasqhY) and see if there's any up-to-date methods for resolving these.\n \n #### Devices with T1 Chip\n \n-The Apple T1 chip was introduced in late 2016 and used exclusively in the first-generation MacBook Pro models with Touch Bar.\n-- MacBook Pro 13-inch (2016, two Thunderbolt 3 ports) \u2013 Model: A1706\n-- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) \u2013 Model: A1708\n+The Apple T1 chip was introduced in late 2016 and used in the first-generation MacBook Pro models with Touch Bar. The supported `MacBookPro13,1`/A1708 does not have a T1 chip.\n+- MacBook Pro 13-inch (2016, four Thunderbolt 3 ports) \u2013 Model: A1706\n - MacBook Pro 15-inch (2016) \u2013 Model: A1707\n \n #### Known Issues"
+    },
+    {
+      "sha": "03f04d44661223b74ae25507ad9337cff8e2970e",
+      "filename": "migrations/1787257711.sh",
+      "status": "added",
+      "additions": 11,
+      "deletions": 0,
+      "changes": 11,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/migrations%2F1787257711.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/migrations%2F1787257711.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/migrations%2F1787257711.sh?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -0,0 +1,11 @@\n+echo \"Install MacBookPro13,1 audio and camera compatibility support\"\n+\n+compatibility_marker=\"${OMARCHY_MACBOOKPRO13_1_MIGRATION_MARKER:-/var/lib/omarchy/migrations/macbookpro13-1-compatibility}\"\n+\n+if omarchy-hw-match '^MacBookPro13,1$' && [[ ! -e $compatibility_marker ]]; then\n+  omarchy-pkg-add snd-hda-macbookpro-dkms facetimehd-dkms facetimehd-firmware\n+  omarchy-pkg-drop macbook12-spi-driver-dkms\n+  sudo limine-mkinitcpio\n+  omarchy-state set reboot-required\n+  sudo install -Dm644 /dev/null \"$compatibility_marker\"\n+fi"
+    },
+    {
+      "sha": "7953123a8833e817f46385a1d1618687d09b1d07",
+      "filename": "test/shell.d/macbookpro13-1-hardware-test.sh",
+      "status": "added",
+      "additions": 194,
+      "deletions": 0,
+      "changes": 194,
+      "blob_url": "https://github.com/omacom/omarchy/blob/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/test%2Fshell.d%2Fmacbookpro13-1-hardware-test.sh",
+      "raw_url": "https://github.com/omacom/omarchy/raw/58bad8242bd38bdb52c5dc3c836730add5b7a5d9/test%2Fshell.d%2Fmacbookpro13-1-hardware-test.sh",
+      "contents_url": "https://api.github.com/repos/omacom/omarchy/contents/test%2Fshell.d%2Fmacbookpro13-1-hardware-test.sh?ref=58bad8242bd38bdb52c5dc3c836730add5b7a5d9",
+      "patch": "@@ -0,0 +1,194 @@\n+#!/bin/bash\n+\n+set -euo pipefail\n+\n+source \"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)/base-test.sh\"\n+\n+audio_installer=\"$ROOT/install/hardware/apple/install-macbookpro13-1-audio.sh\"\n+camera_installer=\"$ROOT/install/hardware/apple/install-macbookpro13-1-camera.sh\"\n+hardware_all=\"$ROOT/install/hardware/all.sh\"\n+spi_installer=\"$ROOT/install/hardware/apple/fix-spi-keyboard.sh\"\n+offline_packages=\"$ROOT/install/omarchy-other.packages\"\n+migration=\"$ROOT/migrations/1787257711.sh\"\n+mac_support_manual=\"$ROOT/manual/44-mac-support.md\"\n+\n+test_tmp=$(mktemp -d)\n+trap 'rm -rf \"$test_tmp\"' EXIT\n+\n+stub_bin=\"$test_tmp/bin\"\n+calls=\"$test_tmp/calls.log\"\n+mkdir -p \"$stub_bin\"\n+: >\"$calls\"\n+\n+cat >\"$stub_bin/omarchy-hw-match\" <<'SH'\n+#!/bin/bash\n+\n+(( ${MATCHING_HARDWARE:-0} == 1 ))\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-add\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-add' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-pkg-drop\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-pkg-drop' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/omarchy-state\" <<'SH'\n+#!/bin/bash\n+\n+printf 'omarchy-state' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+SH\n+\n+cat >\"$stub_bin/sudo\" <<'SH'\n+#!/bin/bash\n+\n+printf 'sudo' >>\"$TEST_LOG\"\n+printf '\\t%s' \"$@\" >>\"$TEST_LOG\"\n+printf '\\n' >>\"$TEST_LOG\"\n+\"$@\"\n+SH\n+\n+cat >\"$stub_bin/limine-mkinitcpio\" <<'SH'\n+#!/bin/bash\n+\n+echo 'limine-mkinitcpio' >>\"$TEST_LOG\"\n+SH\n+\n+chmod +x \"$stub_bin\"/*\n+\n+run_capability_installer() {\n+  local installer=\"$1\" matching_hardware=\"$2\"\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" MATCHING_HARDWARE=\"$matching_hardware\" \\\n+    bash -eE -o pipefail -c 'source \"$1\"' bash \"$installer\" >/dev/null\n+}\n+\n+run_migration() {\n+  local matching_hardware=\"$1\"\n+  : >\"$calls\"\n+  PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" MATCHING_HARDWARE=\"$matching_hardware\" \\\n+    OMARCHY_MACBOOKPRO13_1_MIGRATION_MARKER=\"$compatibility_marker\" \\\n+    bash -euo pipefail \"$migration\" >/dev/null\n+}\n+\n+run_capability_installer \"$audio_installer\" 1\n+\n+grep -Fxq $'omarchy-pkg-add\\tsnd-hda-macbookpro-dkms' \"$calls\" ||\n+  fail \"MacBookPro13,1 audio setup installs the Cirrus DKMS package\" \"$(cat \"$calls\")\"\n+pass \"MacBookPro13,1 audio setup installs the Cirrus DKMS package\"\n+\n+run_capability_installer \"$audio_installer\" 0\n+\n+[[ ! -s $calls ]] ||\n+  fail \"audio setup leaves other models untouched\" \"$(cat \"$calls\")\"\n+pass \"audio setup leaves other models untouched\"\n+\n+run_capability_installer \"$camera_installer\" 1\n+\n+grep -Fxq $'omarchy-pkg-add\\tfacetimehd-dkms\\tfacetimehd-firmware' \"$calls\" ||\n+  fail \"MacBookPro13,1 camera setup installs the driver and firmware packages\" \"$(cat \"$calls\")\"\n+pass \"MacBookPro13,1 camera setup installs the driver and firmware packages\"\n+\n+run_capability_installer \"$camera_installer\" 0\n+\n+[[ ! -s $calls ]] ||\n+  fail \"camera setup leaves other models untouched\" \"$(cat \"$calls\")\"\n+pass \"camera setup leaves other models untouched\"\n+\n+grep -Fq 'apple/install-macbookpro13-1-audio.sh' \"$hardware_all\" &&\n+  grep -Fq 'apple/install-macbookpro13-1-camera.sh' \"$hardware_all\" ||\n+  fail \"hardware setup replays both MacBookPro13,1 capabilities\"\n+pass \"hardware setup replays both MacBookPro13,1 capabilities\"\n+\n+product_name=\"$test_tmp/product_name\"\n+spi_conf_dir=\"$test_tmp/mkinitcpio.conf.d\"\n+spi_test_script=\"$test_tmp/fix-spi-keyboard.sh\"\n+sed -e \"s|/sys/class/dmi/id/product_name|$product_name|g\" \\\n+    -e \"s|/etc/mkinitcpio.conf.d|$spi_conf_dir|g\" \\\n+    \"$spi_installer\" >\"$spi_test_script\"\n+\n+printf '%s\\n' 'MacBookPro13,1' >\"$product_name\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+  bash -eE -o pipefail -c 'source \"$1\"' bash \"$spi_test_script\" >/dev/null\n+\n+! grep -Fq $'omarchy-pkg-add\\tmacbook12-spi-driver-dkms' \"$calls\" ||\n+  fail \"MacBookPro13,1 SPI setup uses the in-tree driver\" \"$(cat \"$calls\")\"\n+pass \"MacBookPro13,1 SPI setup uses the in-tree driver\"\n+\n+grep -Fxq 'MODULES=(applespi intel_lpss_pci spi_pxa2xx_platform)' \\\n+  \"$spi_conf_dir/macbook_spi_modules.conf\" ||\n+  fail \"MacBookPro13,1 SPI setup keeps the applespi initramfs configuration\"\n+pass \"MacBookPro13,1 SPI setup keeps the applespi initramfs configuration\"\n+\n+rm -rf \"$spi_conf_dir\"\n+printf '%s\\n' 'MacBookPro13,2' >\"$product_name\"\n+: >\"$calls\"\n+PATH=\"$stub_bin:$PATH\" TEST_LOG=\"$calls\" \\\n+  bash -eE -o pipefail -c 'source \"$1\"' bash \"$spi_test_script\" >/dev/null\n+\n+grep -Fq $'omarchy-pkg-add\\tmacbook12-spi-driver-dkms' \"$calls\" ||\n+  fail \"other supported MacBooks keep the SPI DKMS package\" \"$(cat \"$calls\")\"\n+pass \"other supported MacBooks keep the SPI DKMS package\"\n+\n+for package in facetimehd-dkms facetimehd-firmware snd-hda-macbookpro-dkms; do\n+  grep -Fxq \"$package\" \"$offline_packages\" ||\n+    fail \"the offline package set includes MacBookPro13,1 compatibility packages\" \"$package is missing\"\n+done\n+pass \"the offline package set includes MacBookPro13,1 compatibility packages\"\n+\n+compatibility_marker=\"$test_tmp/macbookpro13-1-compatibility\"\n+run_migration 1\n+\n+grep -Fxq $'omarchy-pkg-add\\tsnd-hda-macbookpro-dkms\\tfacetimehd-dkms\\tfacetimehd-firmware' \"$calls\" ||\n+  fail \"the compatibility migration installs MacBookPro13,1 audio and camera support\" \"$(cat \"$calls\")\"\n+pass \"the compatibility migration installs MacBookPro13,1 audio and camera support\"\n+\n+grep -Fxq $'omarchy-pkg-drop\\tmacbook12-spi-driver-dkms' \"$calls\" ||\n+  fail \"the compatibility migration removes the obsolete SPI DKMS package\" \"$(cat \"$calls\")\"\n+pass \"the compatibility migration removes the obsolete SPI DKMS package\"\n+\n+grep -Fxq 'limine-mkinitcpio' \"$calls\" ||\n+  fail \"the compatibility migration regenerates the boot image\" \"$(cat \"$calls\")\"\n+pass \"the compatibility migration regenerates the boot image\"\n+\n+grep -Fxq $'omarchy-state\\tset\\treboot-required' \"$calls\" ||\n+  fail \"the compatibility migration requests reboot\" \"$(cat \"$calls\")\"\n+pass \"the compatibility migration requests reboot\"\n+\n+[[ -f $compatibility_marker ]] ||\n+  fail \"the compatibility migration records machine-level completion\"\n+pass \"the compatibility migration records machine-level completion\"\n+\n+run_migration 1\n+\n+[[ ! -s $calls ]] ||\n+  fail \"the compatibility migration is machine-idempotent\" \"$(cat \"$calls\")\"\n+pass \"the compatibility migration is machine-idempotent\"\n+\n+rm -f \"$compatibility_marker\"\n+run_migration 0\n+\n+[[ ! -s $calls && ! -e $compatibility_marker ]] ||\n+  fail \"the compatibility migration leaves other models untouched\" \"$(cat \"$calls\")\"\n+pass \"the compatibility migration leaves other models untouched\"\n+\n+grep -Fq '`MacBookPro13,1`' \"$mac_support_manual\" &&\n+  grep -Eqi 'deep suspend.*not supported|not supported.*deep suspend' \"$mac_support_manual\" &&\n+  grep -Eqi 'hibernation.*not supported|not supported.*hibernation' \"$mac_support_manual\" &&\n+  grep -Eqi 'audio.*camera.*do not always recover' \"$mac_support_manual\" &&\n+  grep -Eqi 'shutdown.*reboot|reboot.*shutdown' \"$mac_support_manual\" &&\n+  ! grep -Eqi 'first[- ]iteration' \"$mac_support_manual\" ||\n+  fail \"the Mac manual documents the exact support contract and upstream limitations\"\n+pass \"the Mac manual documents the exact support contract and upstream limitations\""
+    }
+  ],
+  "comments": [],
+  "reviews": [
+    {
+      "id": 4998727862,
+      "node_id": "PRR_kwDOO0Cobs8AAAABKfKItg",
+      "user": {
+        "login": "copilot-pull-request-reviewer[bot]",
+        "id": 175728472,
+        "node_id": "BOT_kgDOCnlnWA",
+        "avatar_url": "https://avatars.githubusercontent.com/in/946600?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D",
+        "html_url": "https://github.com/apps/copilot-pull-request-reviewer",
+        "followers_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/followers",
+        "following_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/following{/other_user}",
+        "gists_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/subscriptions",
+        "organizations_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/orgs",
+        "repos_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/repos",
+        "events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/copilot-pull-request-reviewer%5Bbot%5D/received_events",
+        "type": "Bot",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "body": "## Pull request overview\n\nAdds targeted MacBookPro13,1 support while preserving existing behavior for other Apple models.\n\n**Changes:**\n- Adds model-gated audio and camera installation.\n- Migrates existing systems from the obsolete SPI DKMS driver.\n- Adds offline packages, documentation, and focused tests.\n\n> [!TIP]\n> If you aren't ready for review, convert to a draft PR.  \n> Click \"Convert to draft\" or run `gh pr ready --undo`.  \n> Click \"Ready for review\" or run `gh pr ready` to reengage.\n\n### Reviewed changes\n\nCopilot reviewed 8 out of 8 changed files in this pull request and generated no comments.\n\n<details>\n<summary>Show a summary per file</summary>\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `install/hardware/all.sh` | Runs the new hardware installers. |\r\n| `install/hardware/apple/fix-spi-keyboard.sh` | Uses in-tree `applespi` for this model. |\r\n| `install/hardware/apple/install-macbookpro13-1-audio.sh` | Installs Cirrus audio support. |\r\n| `install/hardware/apple/install-macbookpro13-1-camera.sh` | Installs camera driver and firmware. |\r\n| `install/omarchy-other.packages` | Caches compatibility packages offline. |\r\n| `migrations/1787257711.sh` | Migrates existing installations. |\r\n| `manual/44-mac-support.md` | Documents support and limitations. |\r\n| `test/shell.d/macbookpro13-1-hardware-test.sh` | Tests setup, migration, and documentation contracts. |\n</details>\n\n\n\n\n\n\n\n\n---\n\n\ud83d\udca1 <a href=\"/basecamp/omarchy/new/quattro?filename=.github/skills/code-review/SKILL.md\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Add a `code-review` agent skill</a> or configure MCP servers for context-aware, tailored reviews. <a href=\"https://docs.github.com/en/copilot/how-tos/use-copilot-agents/request-a-code-review/use-code-review#mcp-servers-and-agent-skills\" class=\"Link--inTextBlock\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more in the docs.</a>",
+      "state": "COMMENTED",
+      "html_url": "https://github.com/omacom/omarchy/pull/7732#pullrequestreview-4998727862",
+      "pull_request_url": "https://api.github.com/repos/omacom/omarchy/pulls/7732",
+      "author_association": "CONTRIBUTOR",
+      "_links": {
+        "html": {
+          "href": "https://github.com/omacom/omarchy/pull/7732#pullrequestreview-4998727862"
+        },
+        "pull_request": {
+          "href": "https://api.github.com/repos/omacom/omarchy/pulls/7732"
+        }
+      },
+      "submitted_at": "2026-08-22T02:46:30Z",
+      "commit_id": "3bce6e963f4baf24e560b3178d9d2bdb977c3921"
+    }
+  ],
+  "inline": []
+}
