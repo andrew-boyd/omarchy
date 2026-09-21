@@ -78,6 +78,15 @@ rm -f "$PKG_STATE"
 EOF
 chmod +x "$tmp_dir/bin/omarchy-pkg-present" "$tmp_dir/bin/omarchy-pkg-drop"
 
+# In-tree module fixture; real module metadata is checked in the VM scenario.
+export OMARCHY_SPI_MODULES_DIR="$tmp_dir/modules"
+export OMARCHY_SPI_DMI_PRODUCT="$tmp_dir/product_name"
+printf 'MacBook10,1\n' >"$OMARCHY_SPI_DMI_PRODUCT"
+mkdir -p "$OMARCHY_SPI_MODULES_DIR/kernel-one/kernel/drivers/input/keyboard"
+echo linux >"$OMARCHY_SPI_MODULES_DIR/kernel-one/pkgbase"
+touch "$OMARCHY_SPI_MODULES_DIR/kernel-one/kernel/drivers/input/keyboard/applespi.ko"
+printf '#!/bin/bash\necho applespi\n' >"$tmp_dir/bin/modinfo"
+chmod +x "$tmp_dir/bin/modinfo"
 migration="$ROOT/migrations/1788476400.sh"
 : >"$tmp_dir/pkg.installed"
 : >"$tmp_dir/pkg-drop.log"
@@ -94,3 +103,17 @@ PKG_STATE="$tmp_dir/pkg.installed" PKG_DROP_LOG="$tmp_dir/pkg-drop.log" \
 pass "installed machines get the obsolete DKMS package removed once"
 
 pass "SPI keyboard detection writes only the needed initramfs drop-in"
+
+: >"$tmp_dir/pkg.installed"
+: >"$tmp_dir/pkg-drop.log"
+printf 'MacBookPro14,3\n' >"$OMARCHY_SPI_DMI_PRODUCT"
+if PKG_STATE="$tmp_dir/pkg.installed" PKG_DROP_LOG="$tmp_dir/pkg-drop.log" \
+  PATH="$tmp_dir/bin:$PATH" bash -euo pipefail "$migration"; then fail "unprepared T1 retirement remains pending"; fi
+[[ -e $tmp_dir/pkg.installed && ! -s $tmp_dir/pkg-drop.log ]] || fail "unprepared T1 keeps the legacy package"
+printf 'MacBook10,1\n' >"$OMARCHY_SPI_DMI_PRODUCT"
+mkdir -p "$OMARCHY_SPI_MODULES_DIR/kernel-two"
+echo linux-other >"$OMARCHY_SPI_MODULES_DIR/kernel-two/pkgbase"
+if PKG_STATE="$tmp_dir/pkg.installed" PKG_DROP_LOG="$tmp_dir/pkg-drop.log" \
+  PATH="$tmp_dir/bin:$PATH" bash -euo pipefail "$migration"; then fail "missing retained-kernel replacement remains pending"; fi
+[[ -e $tmp_dir/pkg.installed && ! -s $tmp_dir/pkg-drop.log ]] || fail "unverified kernel keeps the legacy package"
+pass "retirement preserves the legacy package when T1 prerequisites or retained-kernel replacements are missing"
