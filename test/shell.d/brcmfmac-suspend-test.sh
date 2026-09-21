@@ -126,10 +126,12 @@ run_migration "Apple Inc." 43a3 0
 pass "the migration is idempotent"
 
 printf '# local tweak\n' >> "$hook"
-run_migration "Apple Inc." 43a3 0
-cmp -s "$source_hook" "$hook" ||
-  fail "the migration refreshes a modified hook"
-pass "the migration refreshes a modified hook"
+cp "$hook" "$test_tmp/custom-hook"
+if run_migration "Apple Inc." 43a3 0; then
+  fail "a custom hook must leave the migration pending"
+fi
+cmp -s "$test_tmp/custom-hook" "$hook" || fail "the migration preserves a customized hook"
+pass "the migration preserves a customized hook and reports that manual reconciliation is required"
 
 rm -f "$hook"
 run_migration "LENOVO" 43a3 0
@@ -155,6 +157,19 @@ grep -qx '0000:02:00.0' "$driver/unbind" ||
 [[ -f $state_file ]] || fail "pre-sleep records the unbound device"
 pass "pre-sleep unbinds the bound device"
 
+# A real successful unbind removes the driver's device symlink.
+rm "$driver/0000:02:00.0"
+"$hook_script" pre
+grep -qx '0000:02:00.0' "$state_file" || fail "a second pre retains pending devices"
+pass "repeated pre-sleep retains a device already unbound"
+
+rm "$driver/bind"
+mkdir "$driver/bind"
+if "$hook_script" post 2>/dev/null; then fail "failed bind reports failure"; fi
+grep -qx '0000:02:00.0' "$state_file" || fail "failed bind retains retry state"
+pass "failed rebind retains the device for retry"
+rmdir "$driver/bind"
+touch "$driver/bind"
 "$hook_script" post
 grep -qx '0000:02:00.0' "$driver/bind" ||
   fail "post-sleep rebinds the same device" "$(cat "$driver/bind")"
@@ -168,3 +183,47 @@ rm -f "$state_file"
 "$hook_script" post
 [[ ! -s $driver/bind ]] || fail "post without pre writes nothing"
 pass "post without pre is a no-op"
+
+# Already bound devices do not need a second bind; stale records may follow
+# an interruption between the successful bind and the state replacement.
+printf '%s\n' 0000:02:00.0 > "$state_file"
+ln -s /stub/device "$driver/0000:02:00.0"
+: > "$driver/bind"
+"$hook_script" post
+[[ ! -e $state_file && ! -s $driver/bind ]] || fail "already-bound records clear without rebinding"
+pass "an interrupted successful bind can be retried without rebinding"
+
+printf '%s\n' invalid-device > "$state_file"
+if "$hook_script" post 2>/dev/null; then fail "invalid saved device is not accepted"; fi
+[[ ! -s $driver/bind ]] || fail "invalid saved device never reaches sysfs"
+grep -qx invalid-device "$state_file" || fail "invalid records remain available for investigation"
+pass "invalid device records are retained and never written to sysfs"
+
+# A partial recovery retains only the device that failed. Keep the first
+# device bound and force the second bind to fail.
+printf '%s\n' 0000:02:00.0 0000:03:00.0 > "$state_file"
+rm "$driver/bind"
+mkdir "$driver/bind"
+if "$hook_script" post 2>/dev/null; then fail "partial recovery reports failure"; fi
+[[ $(cat "$state_file") == 0000:03:00.0 ]] || fail "only unresolved recovery remains"
+rmdir "$driver/bind"
+touch "$driver/bind"
+"$hook_script" post
+[[ ! -e $state_file ]] || fail "retry completes partial recovery"
+pass "partial recovery keeps only failed devices and a later retry completes"
+
+# Re-run the setup leaf directly with the redirected copy and a customized
+# target, without run_leaf's fresh-install reset.
+run_leaf "Apple Inc." 43a3 0 >/dev/null
+printf '# custom\n' >> "$hook"
+cp "$hook" "$test_tmp/custom-hook"
+if WIFI_ID=43a3 T2_HARDWARE=0 PATH="$stub_bin:$PATH" TEST_LOG="$calls" \
+  bash -eE -o pipefail -c 'source "$1"' bash "$test_tmp/leaf.sh" 2>/dev/null; then
+  fail "setup reports a customized target"
+fi
+cmp "$test_tmp/custom-hook" "$hook" || fail "setup preserves custom contents"
+rm "$hook"
+ln -s "$test_tmp/custom-hook" "$hook"
+if run_migration "Apple Inc." 43a3 0 2>/dev/null; then fail "migration refuses a symlink target"; fi
+[[ -L $hook ]] || fail "migration preserves the symlink"
+pass "setup and migration preserve customized and symlinked hooks"

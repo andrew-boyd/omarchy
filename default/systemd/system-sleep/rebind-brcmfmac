@@ -8,23 +8,57 @@
 # firmware to reload cleanly, so NetworkManager sees a fresh interface and
 # reconnects on its own.
 
+set -euo pipefail
+umask 077
+
 driver=/sys/bus/pci/drivers/brcmfmac
 state_file=${OMARCHY_BRCMFMAC_SLEEP_STATE:-/run/omarchy-brcmfmac-sleep}
 
+case "${1:-}" in pre|post) ;; *) exit 0 ;; esac
+[[ ! -L $state_file && ! -L $state_file.lock ]] || exit 1
+exec 9>"$state_file.lock"
+flock 9
+
+failed=0
 case "$1" in
   pre)
-    : > "$state_file"
+    # Keep pending devices across repeated pre calls. Record intent before
+    # unbinding so interruption cannot strand a device without recovery state.
+    touch "$state_file"
     for bound in "$driver"/0000:*; do
       [[ -L $bound ]] || continue
-      device=$(basename "$bound")
-      echo "$device" > "$driver/unbind" 2>/dev/null && echo "$device" >> "$state_file"
+      device=${bound##*/}
+      [[ $device =~ ^0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$ ]] || continue
+      if ! grep -Fxq "$device" "$state_file"; then
+        printf '%s\n' "$device" >>"$state_file"
+      fi
+      if ! { printf '%s\n' "$device" >"$driver/unbind"; } 2>/dev/null; then
+        echo "brcmfmac: could not unbind $device; recovery state retained" >&2
+        failed=1
+      fi
     done
     ;;
   post)
     [[ -f $state_file ]] || exit 0
-    while read -r device; do
-      echo "$device" > "$driver/bind" 2>/dev/null || true
-    done < "$state_file"
-    rm -f "$state_file"
+    pending=$(mktemp "$state_file.XXXXXX")
+    trap 'rm -f "$pending"' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
+    while IFS= read -r device || [[ -n $device ]]; do
+      if [[ $device =~ ^0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$ ]] &&
+        { [[ -L $driver/$device ]] || { printf '%s\n' "$device" >"$driver/bind"; } 2>/dev/null; }; then
+        continue
+      fi
+      echo "brcmfmac: could not restore $device; retry state retained" >&2
+      printf '%s\n' "$device" >>"$pending"
+      failed=1
+    done <"$state_file"
+    if [[ -s $pending ]]; then
+      mv "$pending" "$state_file"
+    else
+      rm -f "$state_file"
+    fi
     ;;
 esac
+exit "$failed"
