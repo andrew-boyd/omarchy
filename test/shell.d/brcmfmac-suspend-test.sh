@@ -90,10 +90,17 @@ cmp -s "$source_hook" "$hook" ||
   fail "the installed hook matches the source"
 pass "a Mac with a BCM4350 gets the sleep hook"
 
-run_leaf "Apple Inc." 4488 1 >/dev/null
-[[ -x $hook ]] ||
-  fail "a T2 Mac gets the sleep hook"
-pass "a T2 Mac gets the sleep hook"
+for wifi_id in 43ba 43bb 43bc; do
+  run_leaf "Apple Inc." "$wifi_id" 0 >/dev/null
+  [[ -x $hook ]] || fail "a supported BCM43602 variant gets the sleep hook" "$wifi_id"
+done
+pass "BCM4350 and the existing BCM43602 variants retain coverage"
+
+for wifi_id in 43dc 4464 4488 4425 4433; do
+  run_leaf "Apple Inc." "$wifi_id" 1 >/dev/null
+  [[ ! -e $hook ]] || fail "T2-era radios do not get the pre-T2 hook" "$wifi_id"
+done
+pass "the T2 bridge does not widen the recovery allowlist"
 
 run_leaf "Apple Inc." 43a0 0 >/dev/null
 [[ ! -e $hook ]] || fail "a Mac whose Wi-Fi brcmfmac does not drive is left alone"
@@ -138,11 +145,23 @@ run_migration "LENOVO" 43a3 0
 [[ ! -e $hook ]] || fail "the migration skips non-Apple hardware"
 pass "the migration skips non-Apple hardware"
 
+for wifi_id in 43dc 4464 4488 4425 4433; do
+  run_migration "Apple Inc." "$wifi_id" 1
+  [[ ! -e $hook && ! -s $calls ]] || fail "migration leaves T2 recovery separate" "$wifi_id"
+done
+pass "the migration does not install the pre-T2 hook on T2-era radios"
+
 # The hook itself: run it against a stub sysfs where unbind and bind are real
 # files, so the writes land and can be checked. /run is writable in tests.
 driver="$test_tmp/sys/bus/pci/drivers/brcmfmac"
 mkdir -p "$driver"
-ln -s "/sys/devices/pci0000:00/0000:02:00.0" "$driver/0000:02:00.0"
+mkdir -p "$test_tmp/devices/0000:02:00.0" "$test_tmp/devices/0000:04:00.0"
+printf '0x14e4\n' > "$test_tmp/devices/0000:02:00.0/vendor"
+printf '0x43ba\n' > "$test_tmp/devices/0000:02:00.0/device"
+printf '0x14e4\n' > "$test_tmp/devices/0000:04:00.0/vendor"
+printf '0x4464\n' > "$test_tmp/devices/0000:04:00.0/device"
+ln -s "$test_tmp/devices/0000:02:00.0" "$driver/0000:02:00.0"
+ln -s "$test_tmp/devices/0000:04:00.0" "$driver/0000:04:00.0"
 touch "$driver/unbind" "$driver/bind"
 
 hook_script="$test_tmp/rebind-brcmfmac"
@@ -155,6 +174,7 @@ export OMARCHY_BRCMFMAC_SLEEP_STATE="$state_file"
 grep -qx '0000:02:00.0' "$driver/unbind" ||
   fail "pre-sleep unbinds the bound device" "$(cat "$driver/unbind")"
 [[ -f $state_file ]] || fail "pre-sleep records the unbound device"
+[[ $(cat "$state_file") == 0000:02:00.0 ]] || fail "runtime excludes a bound BCM4364 alongside the supported radio"
 pass "pre-sleep unbinds the bound device"
 
 # A real successful unbind removes the driver's device symlink.

@@ -7,6 +7,9 @@
 # brings Wi-Fi back. Unbinding before sleep and rebinding after wake forces the
 # firmware to reload cleanly, so NetworkManager sees a fresh interface and
 # reconnects on its own.
+# Only BCM4350/BCM43602 use this lifecycle (omacom/omarchy#7333). T2-era
+# radios require separate comparison; a supplicant workaround is not evidence
+# that the same pre-sleep unbind is appropriate for them.
 
 set -euo pipefail
 umask 077
@@ -27,6 +30,12 @@ case "$1" in
     touch "$state_file"
     for bound in "$driver"/0000:*; do
       [[ -L $bound ]] || continue
+      [[ -r $bound/vendor && -r $bound/device ]] || continue
+      [[ $(cat "$bound/vendor" 2>/dev/null) == "0x14e4" ]] || continue
+      case "$(cat "$bound/device" 2>/dev/null)" in
+        0x43a3|0x43ba|0x43bb|0x43bc) ;;
+        *) continue ;;
+      esac
       device=${bound##*/}
       [[ $device =~ ^0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$ ]] || continue
       if ! grep -Fxq "$device" "$state_file"; then
